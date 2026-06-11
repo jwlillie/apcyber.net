@@ -1,407 +1,1656 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8"><!-- v2026-03-21 23:36 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CryptoVault CTF — Cryptography Challenges</title>
-<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Share+Tech+Mono&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<title>Defense-in-Depth Builder &mdash; AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f5f0e8;--bg2:#ede8dc;--panel:#e8e2d4;--panel2:#ddd8cc;--border:#c8bfa8;--border2:#b0a48c;--ink:#2a2015;--red:#8b1a0a;--blue:#1a3a6b;--green:#1a5a20;--gold:#8a6a00;--purple:#4a1a6b;--muted:#7a6a50;--dim:#b0a090;--font-d:'IM Fell English',serif;--font-m:'Share Tech Mono',monospace;--font-b:'Crimson Text',serif;}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--ink);font-family:var(--font-b);min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(42,32,21,0.04) 28px,rgba(42,32,21,0.04) 29px);pointer-events:none;z-index:0;}
-.wrapper{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 80px;}
-header{padding:44px 0 36px;border-bottom:2px solid var(--border2);text-align:center;}
-.hdr-tag{font-family:var(--font-m);font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:16px;}
-h1{font-family:var(--font-d);font-size:clamp(36px,6vw,72px);color:var(--ink);line-height:1.05;font-style:italic;}
-h1 em{color:var(--red);font-style:normal;}
-.hdr-sub{font-family:var(--font-m);font-size:11px;letter-spacing:3px;color:var(--muted);margin-top:12px;text-transform:uppercase;}
-.scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:28px 0;border:1px solid var(--border2);background:var(--panel2);}
-.sp{padding:12px 18px;border-right:1px solid var(--border2);}
-.sp:last-child{border-right:none;}
-.sp-l{font-family:var(--font-m);font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
-.sp-v{font-family:var(--font-d);font-size:28px;color:var(--red);font-style:italic;}
-.filter-bar{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap;align-items:center;}
-.fl{font-family:var(--font-m);font-size:10px;letter-spacing:2px;color:var(--muted);margin-right:8px;}
-.fbtn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-m);font-size:11px;letter-spacing:2px;padding:4px 14px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.fbtn:hover,.fbtn.active{border-color:var(--red);color:var(--red);background:rgba(139,26,10,0.05);}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
-.card{background:var(--panel);border:1px solid var(--border2);cursor:pointer;position:relative;overflow:hidden;animation:rise .4s ease both;transition:border-color .18s,transform .18s,box-shadow .18s;}
-.card:hover{border-color:var(--red);transform:translateY(-2px);box-shadow:0 6px 24px rgba(42,32,21,0.12);}
-.card.solved{border-color:var(--green);}
-@keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.card:nth-child(1){animation-delay:.04s}.card:nth-child(2){animation-delay:.08s}.card:nth-child(3){animation-delay:.12s}.card:nth-child(4){animation-delay:.16s}.card:nth-child(5){animation-delay:.20s}.card:nth-child(6){animation-delay:.24s}.card:nth-child(7){animation-delay:.28s}.card:nth-child(8){animation-delay:.32s}.card:nth-child(9){animation-delay:.36s}.card:nth-child(10){animation-delay:.40s}
-.card-rule{height:3px;background:linear-gradient(90deg,var(--red),var(--gold),transparent);}
-.card-inner{padding:14px 16px 16px;}
-.card-meta{display:flex;justify-content:space-between;margin-bottom:8px;align-items:baseline;}
-.card-id{font-family:var(--font-m);font-size:10px;letter-spacing:2px;color:var(--dim);}
-.card-pts{font-family:var(--font-d);font-size:18px;color:var(--red);font-style:italic;}
-.card-title{font-family:var(--font-d);font-size:19px;color:var(--ink);margin-bottom:8px;font-style:italic;}
-.card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.tag{font-family:var(--font-m);font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid;text-transform:uppercase;}
-.te{color:var(--green);border-color:rgba(26,90,32,.4);}
-.tm{color:var(--gold);border-color:rgba(138,106,0,.4);}
-.th{color:var(--red);border-color:rgba(139,26,10,.4);}
-.ti{color:var(--blue);border-color:rgba(26,58,107,.4);}
-.card-desc{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:14px;}
-.card-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px;}
-.solves{font-family:var(--font-m);font-size:10px;color:var(--dim);}
-.btn-view{background:transparent;border:1px solid var(--border2);color:var(--ink);font-family:var(--font-m);font-size:10px;letter-spacing:2px;padding:4px 10px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.btn-view:hover{border-color:var(--red);color:var(--red);}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(42,32,21,.88);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--bg2);border:1px solid var(--border2);max-width:740px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(42,32,21,0.3);animation:ms .2s ease;}
-@keyframes ms{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:scale(1);}}
-.modal-hdr{padding:18px 22px 14px;border-bottom:2px solid var(--border2);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
-.modal-title{font-family:var(--font-d);font-size:20px;color:var(--red);font-style:italic;}
-.modal-close{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:var(--font-m);font-size:11px;padding:3px 9px;flex-shrink:0;}
-.modal-close:hover{border-color:var(--red);color:var(--red);}
-.modal-body{padding:20px 22px;}
-.mlabel{font-family:var(--font-m);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;margin-top:18px;border-bottom:1px solid var(--border);padding-bottom:4px;}
-.mlabel.first{margin-top:0;}
-.mdesc{font-size:14px;color:var(--ink);line-height:1.8;}
-.hint{background:rgba(138,106,0,0.06);border-left:3px solid var(--gold);padding:8px 13px;font-family:var(--font-m);font-size:11.5px;color:var(--gold);line-height:1.6;margin-bottom:7px;}
-.hint::before{content:'Hint ' attr(data-n) ': ';color:var(--dim);}
-.flag-box{background:rgba(26,90,32,0.06);border:1px solid rgba(26,90,32,0.35);padding:11px 15px;font-family:var(--font-m);font-size:13px;color:var(--green);letter-spacing:1px;}
-.sol{background:rgba(26,58,107,0.04);border-left:3px solid var(--blue);padding:12px 15px;font-family:var(--font-m);font-size:11.5px;color:var(--ink);line-height:1.7;}
-.widget{background:var(--panel2);border:1px solid var(--border2);margin-top:12px;padding:14px;}
-.wlabel{font-family:var(--font-m);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-.wlabel.mt{margin-top:12px;}
-.wcode{background:var(--bg);border:1px solid var(--border);padding:10px 12px;font-family:var(--font-m);font-size:11px;color:var(--ink);line-height:1.7;overflow-x:auto;white-space:pre;}
-.winput{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--ink);font-family:var(--font-m);font-size:12px;padding:7px 10px;outline:none;transition:border-color .15s;}
-.winput:focus{border-color:var(--red);}
-.wrange{width:100%;accent-color:var(--red);cursor:pointer;}
-.wrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;}
-.wbtn{background:var(--panel);border:1px solid var(--border2);color:var(--ink);font-family:var(--font-m);font-size:11px;letter-spacing:1px;padding:6px 13px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.wbtn:hover{border-color:var(--red);color:var(--red);}
-.wbtn.g{border-color:var(--green);color:var(--green);}
-.wbtn.g:hover{background:rgba(26,90,32,0.08);}
-.wbtn.r{border-color:var(--red);color:var(--red);}
-.wout{padding:10px 12px;font-size:12px;line-height:1.6;display:none;border-top:1px solid var(--border);color:var(--ink);font-family:var(--font-m);white-space:pre-wrap;}
-.wout.show{display:block;}
-.wout.ok{color:var(--green);}
-.wout.err{color:var(--red);}
-.freq-bar{display:flex;align-items:flex-end;gap:2px;height:60px;margin-top:8px;}
-.freq-b{width:18px;background:var(--red);opacity:0.6;transition:height .3s;}
-.freq-l{font-family:var(--font-m);font-size:9px;color:var(--muted);text-align:center;display:block;}
-.prog-bar{height:4px;background:var(--border);margin:8px 0;display:none;}
-.prog-fill{height:100%;background:var(--red);transition:width .08s;width:0;}
-.prog-txt{font-family:var(--font-m);font-size:11px;color:var(--muted);}
+:root {
+  --navy:#0b1628;--navy-mid:#132040;--navy-light:#1e2e52;
+  --cyan:#00d4c8;--cyan-dim:#00a89f;--amber:#f5a623;
+  --green:#00c864;--red:#ff5555;--white:#f2f5fb;
+  --muted:#8899bb;--card-bg:#111e38;--border:rgba(0,212,200,.15);
+  --human:#9b59b6;--physical:#e67e22;--network:#3498db;
+  --device:#b464ff;--application:#e74c3c;--data:#00c864;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 clamp(1rem,3vw,2rem);height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;flex-shrink:0}
+.nav-logo{width:36px;height:36px;background:var(--cyan);border-radius:8px;display:grid;place-items:center}
+.nav-logo svg{width:20px;height:20px}
+.nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.nav-title span{color:var(--cyan)}
+.nav-links{display:flex;align-items:center;gap:.2rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.35rem .65rem;border-radius:6px;transition:color .2s,background .2s}
+.nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-links a.active{color:var(--cyan)}
+.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:600!important}
+@media(max-width:700px){.nav-links{display:none}}
+
+/* SCREENS */
+.screen{display:none}.screen.active{display:block}
+
+/* ── SCENARIO SELECT ─────────────────────────── */
+.select-wrap{max-width:960px;margin:0 auto;padding:clamp(2.5rem,6vw,4.5rem) clamp(1.5rem,4vw,2rem)}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,200,100,.1);border:1px solid rgba(0,200,100,.3);color:var(--green);font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.35rem .9rem;border-radius:100px;margin-bottom:1.5rem}
+.badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.page-h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:.75rem}
+.page-h1 em{font-style:italic;color:var(--cyan)}
+.page-sub{font-size:1rem;color:var(--muted);max-width:580px;line-height:1.75;margin-bottom:2rem;font-weight:300}
+
+/* Layer legend */
+.layer-legend{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:2.5rem}
+.layer-pip{display:inline-flex;align-items:center;gap:.4rem;font-size:.73rem;font-weight:600;padding:.25rem .65rem;border-radius:100px}
+
+.scenario-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:1.25rem}
+@media(max-width:500px){.scenario-grid{grid-template-columns:1fr}}
+.scenario-card{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:1.6rem 1.6rem 1.4rem;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;position:relative;overflow:hidden}
+.scenario-card:hover{transform:translateY(-4px);border-color:rgba(0,212,200,.4);box-shadow:0 16px 48px rgba(0,0,0,.4)}
+.sc-unit{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:.4rem}
+.sc-title{font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:.4rem}
+.sc-org{font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1rem}
+.sc-threats{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.85rem}
+.threat-chip{font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:100px;background:rgba(255,85,85,.08);color:var(--red);border:1px solid rgba(255,85,85,.2)}
+.sc-meta{display:flex;align-items:center;justify-content:space-between;font-size:.78rem;color:var(--muted)}
+.sc-budget{display:flex;align-items:center;gap:.35rem;color:var(--amber);font-weight:600}
+.sc-budget svg{width:13px;height:13px}
+.sc-arrow{width:28px;height:28px;border-radius:50%;background:rgba(0,212,200,.1);border:1px solid rgba(0,212,200,.25);display:grid;place-items:center;transition:all .2s;flex-shrink:0}
+.scenario-card:hover .sc-arrow{background:var(--cyan);border-color:var(--cyan)}
+.sc-arrow svg{width:13px;height:13px;stroke:var(--cyan);transition:stroke .2s}
+.scenario-card:hover .sc-arrow svg{stroke:var(--navy)}
+
+/* ── BUILDER SCREEN ──────────────────────────── */
+.builder-header{background:var(--navy-mid);border-bottom:1px solid var(--border);padding:.85rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:64px;z-index:100}
+.bh-left{display:flex;flex-direction:column;gap:.1rem}
+.bh-unit{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}
+.bh-title{font-family:'DM Serif Display',serif;font-size:1.15rem;line-height:1.2}
+.bh-right{display:flex;align-items:center;gap:.65rem;flex-shrink:0;flex-wrap:wrap}
+.budget-pill{display:flex;align-items:center;gap:.5rem;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);border-radius:10px;padding:.4rem .9rem;font-size:.82rem;font-weight:700;color:var(--amber)}
+.budget-pill svg{width:14px;height:14px}
+.btn-sm{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);font-family:inherit;font-size:.8rem;font-weight:500;padding:.4rem .85rem;border-radius:8px;cursor:pointer;transition:background .18s}
+.btn-sm:hover{background:rgba(255,255,255,.12)}
+.btn-evaluate{background:var(--cyan);color:var(--navy);font-family:inherit;font-size:.85rem;font-weight:700;padding:.5rem 1.2rem;border-radius:9px;border:none;cursor:pointer;display:flex;align-items:center;gap:.4rem;transition:transform .18s,opacity .18s}
+.btn-evaluate:hover{transform:translateY(-1px);opacity:.9}
+.btn-evaluate:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-evaluate svg{width:15px;height:15px}
+
+/* builder layout */
+.builder-body{display:grid;grid-template-columns:1fr 320px;gap:0;min-height:calc(100vh - 128px)}
+@media(max-width:900px){.builder-body{grid-template-columns:1fr}}
+
+/* ── LEFT: scenario + controls ─────────────── */
+.builder-main{padding:1.5rem;overflow-y:auto}
+
+.scenario-brief{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.4rem;margin-bottom:1.5rem}
+.brief-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
+.brief-label::before{content:'';width:16px;height:2px;background:var(--cyan)}
+.brief-text{font-size:.88rem;line-height:1.75;color:var(--white)}
+.threat-section{margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.06)}
+.threats-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-bottom:.5rem}
+.threat-list{display:flex;flex-direction:column;gap:.4rem}
+.threat-item{display:flex;align-items:flex-start;gap:.6rem;font-size:.83rem;color:var(--muted);line-height:1.55}
+.threat-bullet{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:.45rem}
+
+/* controls menu */
+.controls-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--white);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.controls-label::before{content:'';width:20px;height:2px;background:var(--white)}
+.layer-group{margin-bottom:1.25rem}
+.layer-group-header{display:flex;align-items:center;gap:.65rem;margin-bottom:.6rem}
+.layer-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.layer-name{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.controls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.5rem}
+.control-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.75rem 1rem;cursor:pointer;transition:all .18s;display:flex;align-items:flex-start;gap:.75rem;user-select:none}
+.control-card:hover{background:rgba(0,212,200,.07);border-color:rgba(0,212,200,.25)}
+.control-card.selected{border-color:var(--cyan);background:rgba(0,212,200,.1)}
+.control-card.budget-hit{opacity:.45;cursor:not-allowed}
+.control-card.budget-hit:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08)}
+.ctrl-check{width:18px;height:18px;border-radius:5px;border:2px solid rgba(255,255,255,.2);flex-shrink:0;display:grid;place-items:center;transition:all .18s;margin-top:1px}
+.control-card.selected .ctrl-check{border-color:var(--cyan);background:var(--cyan)}
+.ctrl-check-mark{display:none;width:10px;height:10px}
+.control-card.selected .ctrl-check-mark{display:block;stroke:var(--navy)}
+.ctrl-info{flex:1;min-width:0}
+.ctrl-name{font-weight:600;font-size:.84rem;margin-bottom:.15rem;line-height:1.3}
+.ctrl-desc{font-size:.75rem;color:var(--muted);line-height:1.5}
+.ctrl-tags{display:flex;gap:.3rem;margin-top:.35rem;flex-wrap:wrap}
+.ctrl-tag{font-size:.65rem;font-weight:600;padding:.12rem .45rem;border-radius:100px;letter-spacing:.03em}
+
+/* ── RIGHT: selection panel ─────────────────── */
+.selection-panel{background:var(--navy-mid);border-left:1px solid var(--border);padding:1.25rem;position:sticky;top:128px;height:calc(100vh - 128px);overflow-y:auto;display:flex;flex-direction:column;gap:1rem}
+@media(max-width:900px){.selection-panel{position:static;height:auto;border-left:none;border-top:1px solid var(--border)}}
+.panel-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem}
+.panel-label::before{content:'';width:16px;height:2px;background:var(--muted)}
+.coverage-grid{display:flex;flex-direction:column;gap:.4rem}
+.coverage-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;font-size:.8rem}
+.cov-layer{font-weight:600;flex:1}
+.cov-bar-wrap{flex:2;height:5px;background:rgba(255,255,255,.08);border-radius:100px;overflow:hidden}
+.cov-bar{height:100%;border-radius:100px;transition:width .3s ease}
+.cov-status{font-size:.7rem;font-weight:600;min-width:28px;text-align:right}
+.selected-list{display:flex;flex-direction:column;gap:.4rem}
+.sel-item{background:rgba(0,212,200,.08);border:1px solid rgba(0,212,200,.2);border-radius:8px;padding:.5rem .75rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;font-size:.8rem;line-height:1.3}
+.sel-remove{background:none;border:none;color:var(--muted);cursor:pointer;padding:.15rem;display:flex;align-items:center;flex-shrink:0;transition:color .15s}
+.sel-remove:hover{color:var(--red)}
+.sel-remove svg{width:12px;height:12px}
+.empty-state{font-size:.8rem;color:var(--muted);font-style:italic;padding:.5rem}
+
+/* ── EVALUATION OVERLAY ──────────────────────── */
+.eval-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);z-index:300;display:none;place-items:start center;padding:1rem;overflow-y:auto}
+.eval-overlay.active{display:grid}
+.eval-box{background:var(--navy-mid);border:1px solid var(--border);border-radius:20px;max-width:820px;width:100%;margin:auto;animation:fadeUp .35s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.eval-header{padding:1.75rem 1.75rem 0}
+.eval-score-row{display:flex;align-items:center;gap:1.25rem;margin-bottom:1rem;flex-wrap:wrap}
+.eval-grade-orb{width:76px;height:76px;border-radius:50%;border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.orb-grade{font-family:'DM Serif Display',serif;font-size:1.3rem;line-height:1}
+.orb-sub{font-size:.68rem;color:var(--muted)}
+.eval-grade-text{font-family:'DM Serif Display',serif;font-size:1.5rem;line-height:1.2;margin-bottom:.3rem}
+.eval-summary-text{font-size:.87rem;color:var(--muted);line-height:1.7}
+
+.eval-body{padding:1.25rem 1.75rem 1.75rem;display:flex;flex-direction:column;gap:1.5rem}
+
+.eval-section-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.eval-section-label::before{content:'';width:16px;height:2px}
+
+/* threat coverage grid */
+.threat-coverage{display:flex;flex-direction:column;gap:.65rem}
+.tc-row{border-radius:11px;padding:.9rem 1.1rem;border:1px solid}
+.tc-row.covered{background:rgba(0,200,100,.05);border-color:rgba(0,200,100,.25)}
+.tc-row.partial{background:rgba(245,166,35,.05);border-color:rgba(245,166,35,.25)}
+.tc-row.uncovered{background:rgba(255,85,85,.05);border-color:rgba(255,85,85,.25)}
+.tc-top{display:flex;align-items:center;gap:.7rem;margin-bottom:.35rem}
+.tc-icon{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;flex-shrink:0}
+.tc-icon svg{width:11px;height:11px}
+.tc-icon.ci{background:rgba(0,200,100,.15)}.tc-icon.ci svg{stroke:var(--green)}
+.tc-icon.pi{background:rgba(245,166,35,.15)}.tc-icon.pi svg{stroke:var(--amber)}
+.tc-icon.ui{background:rgba(255,85,85,.15)}.tc-icon.ui svg{stroke:var(--red)}
+.tc-threat-name{font-weight:700;font-size:.85rem}
+.tc-status{margin-left:auto;font-size:.72rem;font-weight:700;padding:.18rem .55rem;border-radius:100px}
+.tc-status.covered{background:rgba(0,200,100,.12);color:var(--green)}
+.tc-status.partial{background:rgba(245,166,35,.1);color:var(--amber)}
+.tc-status.uncovered{background:rgba(255,85,85,.1);color:var(--red)}
+.tc-explanation{font-size:.81rem;color:var(--muted);line-height:1.65}
+
+/* per-control feedback */
+.control-feedback{display:flex;flex-direction:column;gap:.5rem}
+.cf-item{border-radius:10px;padding:.8rem 1rem;border:1px solid;display:flex;gap:.7rem;align-items:flex-start}
+.cf-item.strong{background:rgba(0,200,100,.04);border-color:rgba(0,200,100,.2)}
+.cf-item.moderate{background:rgba(0,212,200,.04);border-color:rgba(0,212,200,.15)}
+.cf-item.weak{background:rgba(245,166,35,.04);border-color:rgba(245,166,35,.2)}
+.cf-icon{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;flex-shrink:0}
+.cf-icon svg{width:11px;height:11px;flex-shrink:0}
+.cf-icon.si{background:rgba(0,200,100,.15)}.cf-icon.si svg{stroke:var(--green)}
+.cf-icon.mi{background:rgba(0,212,200,.12)}.cf-icon.mi svg{stroke:var(--cyan)}
+.cf-icon.wi{background:rgba(245,166,35,.12)}.cf-icon.wi svg{stroke:var(--amber)}
+.cf-content{flex:1;min-width:0}
+.cf-name{font-weight:600;font-size:.84rem;margin-bottom:.2rem}
+.cf-text{font-size:.8rem;color:var(--muted);line-height:1.6}
+
+/* gaps section */
+.gaps-list{display:flex;flex-direction:column;gap:.5rem}
+.gap-item{background:rgba(255,85,85,.05);border:1px solid rgba(255,85,85,.2);border-radius:10px;padding:.8rem 1rem;font-size:.82rem;line-height:1.65;color:var(--white)}
+.gap-item strong{color:var(--red)}
+
+.eval-actions{display:flex;gap:.75rem;padding:0 1.75rem 1.75rem;flex-wrap:wrap}
+.eval-btn{flex:1;min-width:140px;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem;border-radius:10px;font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;transition:transform .18s,opacity .18s;border:none}
+.eval-btn:hover{transform:translateY(-1px);opacity:.9}
+.eval-btn.primary{background:var(--cyan);color:var(--navy)}
+.eval-btn.secondary{background:rgba(255,255,255,.07);color:var(--white);border:1px solid rgba(255,255,255,.12)}
+.eval-btn svg{width:15px;height:15px}
+
+/* loading state */
+.eval-loading{padding:3.5rem 2rem;text-align:center}
+.eval-spinner{width:48px;height:48px;border:3px solid rgba(0,212,200,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1.25rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.eval-loading-h{font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:.5rem}
+.eval-loading-sub{color:var(--muted);font-size:.88rem}
+
+/* Dropdown nav */
+.nav-dropdown{position:relative}
+.nav-dropdown-btn{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.35rem .65rem;border-radius:6px;transition:color .2s,background .2s;background:none;border:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.3rem}
+.nav-dropdown-btn:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-btn.has-active{color:var(--cyan)}
+.nav-dropdown-btn svg{width:11px;height:11px;transition:transform .2s}
+.nav-dropdown:hover .nav-dropdown-btn svg{transform:rotate(180deg)}
+.nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:all .2s;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nav-dropdown:hover .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
+.nav-dropdown-menu a{display:block;color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.45rem .75rem;border-radius:7px;transition:color .15s,background .15s;white-space:nowrap}
+.nav-dropdown-menu a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-menu a.active{color:var(--cyan)}
+.nav-dropdown-menu .menu-divider{height:1px;background:var(--border);margin:.3rem .4rem}
+
+.nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.4rem;width:36px;height:36px;flex-shrink:0}
+.nav-hamburger span{display:block;height:2px;width:22px;background:var(--white);border-radius:2px;transition:all .25s}
+@media(max-width:900px){.nav-hamburger{display:flex}.nav-links{display:none!important}}
+.mobile-nav-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:490;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+.mobile-nav-backdrop.open{opacity:1;visibility:visible}
+.mobile-nav-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,88vw);background:var(--navy-mid);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.mobile-nav-drawer.open{transform:translateX(0)}
+.mobile-nav-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);height:64px;flex-shrink:0}
+.mobile-nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.mobile-nav-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);width:32px;height:32px;border-radius:7px;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;line-height:1;transition:background .18s}
+.mobile-nav-close:hover{background:rgba(255,255,255,.14)}
+.mobile-nav-links{padding:.75rem;display:flex;flex-direction:column;gap:.2rem;flex:1}
+.mobile-nav-links a{display:block;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:500;padding:.7rem .9rem;border-radius:9px;transition:color .18s,background .18s}
+.mobile-nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.mobile-nav-links a.active{color:var(--cyan);background:rgba(0,212,200,.07)}
+.mobile-nav-links a.nav-cta{background:var(--cyan);color:var(--navy);font-weight:700;margin-top:.5rem;text-align:center}
+.mobile-nav-links a.nav-cta:hover{opacity:.9}
+.mobile-nav-section-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem .9rem .3rem;opacity:.7}
+.mobile-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:.4rem .5rem}
 </style>
 </head>
 <body>
-<div class="wrapper">
-<header>
-<div style="background:#050810;border-bottom:1px solid #1a2640;padding:.4rem 1.5rem;font-family:'Share Tech Mono',monospace;font-size:11px"><a href="ctf.html" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:rgba(0,240,255,0.45);text-decoration:none;letter-spacing:2px;margin-right:1.5rem;transition:color .2s" onmouseover="this.style.color='#00f0ff'" onmouseout="this.style.color='rgba(0,240,255,0.45)'">&#8592; CTF HUB</a></div>
-  <div class="hdr-tag">// CRYPTOVAULT CTF — CLASSICAL & MODERN CRYPTANALYSIS</div>
-  <h1><em>Crypto</em>Vault</h1>
-  <div class="hdr-sub">Break the ciphers — classical · symmetric · asymmetric · elliptic</div>
-</header>
-<div class="scoreboard">
-  <div class="sp"><div class="sp-l">Challenges</div><div class="sp-v" id="sc-total">0</div></div>
-  <div class="sp"><div class="sp-l">Total Points</div><div class="sp-v" id="sc-pts">0</div></div>
-  <div class="sp"><div class="sp-l">Solved</div><div class="sp-v" id="sc-solved">0</div></div>
-  <div class="sp"><div class="sp-l">Points Earned</div><div class="sp-v" id="sc-earned">0</div></div>
-</div>
-<div class="filter-bar">
-  <span class="fl">FILTER:</span>
-  <button class="fbtn active" onclick="filterCards('all',this)">ALL</button>
-  <button class="fbtn" onclick="filterCards('easy',this)">EASY</button>
-  <button class="fbtn" onclick="filterCards('medium',this)">MEDIUM</button>
-  <button class="fbtn" onclick="filterCards('hard',this)">HARD</button>
-</div>
-<div class="grid" id="grid"></div>
-</div>
-<div class="modal-overlay" id="overlay" onclick="closeModal(event)">
-<div class="modal">
-  <div class="modal-hdr">
-    <div class="modal-title" id="m-title"></div>
-    <button class="modal-close" onclick="closeModal()">[ CLOSE ]</button>
+
+<nav>
+  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="tools.html" class="active">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+<div class="mobile-nav-drawer" id="mobile-nav-drawer">
+  <div class="mobile-nav-header">
+    <span class="mobile-nav-title">AP <span style="color:var(--cyan)">Cybersecurity</span></span>
+    <button class="mobile-nav-close" onclick="closeMobileNav()">&times;</button>
   </div>
-  <div class="modal-body" id="m-body"></div>
+  <div class="mobile-nav-links">
+    <a href="index.html" onclick="closeMobileNav()">Home</a>
+    <a href="socratic-anchors.html" onclick="closeMobileNav()">Socratic Guides</a>
+    <a href="tools.html" class="active" onclick="closeMobileNav()">Student Tools</a>
+    <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
+    <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
+  </div>
 </div>
+
+
+<!-- ══ SCENARIO SELECT ══ -->
+<div id="screen-select" class="screen active">
+  <div class="select-wrap">
+    <div class="badge">AP Framework Aligned &middot; 4 Scenarios</div>
+    <h1 class="page-h1">Defense-in-Depth<br><em>Scenario Builder</em></h1>
+    <p class="page-sub">Read a vulnerable organization profile, select controls to build a layered defense, then have Claude evaluate which attack vectors you covered &mdash; and which you left open. Mirrors the synthesis questions at the end of each unit.</p>
+    <div class="layer-legend">
+      <span class="layer-pip" style="background:rgba(155,89,182,.12);color:#c39bd3;border:1px solid rgba(155,89,182,.25)">Human</span>
+      <span class="layer-pip" style="background:rgba(230,126,34,.12);color:#f0b27a;border:1px solid rgba(230,126,34,.25)">Physical</span>
+      <span class="layer-pip" style="background:rgba(52,152,219,.12);color:#85c1e9;border:1px solid rgba(52,152,219,.25)">Network</span>
+      <span class="layer-pip" style="background:rgba(180,100,255,.12);color:#c891ff;border:1px solid rgba(180,100,255,.25)">Device</span>
+      <span class="layer-pip" style="background:rgba(231,76,60,.12);color:#f1948a;border:1px solid rgba(231,76,60,.25)">Application</span>
+      <span class="layer-pip" style="background:rgba(0,200,100,.12);color:#76d7a4;border:1px solid rgba(0,200,100,.25)">Data</span>
+    </div>
+    <div class="scenario-grid" id="scenario-grid"></div>
+  </div>
 </div>
+
+<!-- ══ BUILDER SCREEN ══ -->
+<div id="screen-builder" class="screen">
+  <div class="builder-header">
+    <div class="bh-left">
+      <div class="bh-unit" id="bh-unit"></div>
+      <div class="bh-title" id="bh-title"></div>
+    </div>
+    <div class="bh-right">
+      <div class="budget-pill" id="budget-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span id="budget-display">0 / 8 controls selected</span>
+      </div>
+      <button class="btn-sm" onclick="resetBuilder()">Reset</button>
+      <button class="btn-sm" onclick="goSelect()">&#x2190; Scenarios</button>
+      <button class="btn-evaluate" id="eval-btn" onclick="runEval()" style="opacity:.35;pointer-events:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Evaluate Defense
+      </button>
+    </div>
+  </div>
+
+  <div class="builder-body">
+    <div class="builder-main">
+      <!-- Scenario brief -->
+      <div class="scenario-brief">
+        <div class="brief-label">Organization Profile</div>
+        <div class="brief-text" id="brief-text"></div>
+        <div class="threat-section">
+          <div class="threats-label">Known Attack Vectors</div>
+          <div class="threat-list" id="threat-list"></div>
+        </div>
+      </div>
+      <!-- Controls menu -->
+      <div class="controls-label">Available Security Controls</div>
+      <div id="controls-menu"></div>
+    </div>
+
+    <!-- Selection sidebar -->
+    <div class="selection-panel">
+      <div>
+        <div class="panel-label">Layer Coverage</div>
+        <div class="coverage-grid" id="coverage-grid"></div>
+      </div>
+      <div style="flex:1">
+        <div class="panel-label">Selected Controls</div>
+        <div class="selected-list" id="selected-list">
+          <div class="empty-state">No controls selected yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div id="screen-results" class="screen">
+  <div class="builder-header">
+    <div class="dh-left">
+      <div class="bh-unit" id="res-unit"></div>
+      <div class="bh-title" id="res-title">Defense Evaluation</div>
+    </div>
+    <div class="dh-right">
+      <button class="btn-sm" onclick="showScreen('builder')">&#x2190; Revise</button>
+      <button class="btn-sm" onclick="goSelect()">New Scenario</button>
+    </div>
+  </div>
+  <div style="max-width:860px;margin:0 auto;padding:1.5rem clamp(1rem,3vw,2rem)">
+    <div id="res-score-bar" style="background:#132040;border:1px solid rgba(0,212,200,.15);border-radius:14px;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1.25rem;margin-bottom:1.5rem;flex-wrap:wrap"></div>
+    <div id="res-summary" style="font-size:.88rem;color:rgba(255,255,255,.8);line-height:1.8;margin-bottom:1.5rem;padding:1rem 1.25rem;background:#111e38;border-radius:10px;border:1px solid rgba(255,255,255,.06)"></div>
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00d4c8;margin-bottom:.85rem">Threat Coverage</div>
+    <div id="res-threats" style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.5rem"></div>
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00d4c8;margin-bottom:.85rem">Your Control Choices</div>
+    <div id="res-controls" style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.5rem"></div>
+    <div id="res-gaps-wrap">
+      <div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#ff5555;margin-bottom:.85rem">Gaps to Address</div>
+      <div id="res-gaps" style="display:flex;flex-direction:column;gap:.6rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EVALUATION OVERLAY ══ -->
+
+
 <script>
-var challenges=[
-{id:'CH-01',title:'Caesar Cipher',pts:50,diff:'easy',tags:['classical','substitution'],solves:341,
- desc:'The flag was encrypted with a Caesar cipher (ROT-N). Slide the shift slider to try all 26 rotations, or use frequency analysis to find the key.',
- hints:['English letter E is most common','ROT-13 is a common CTF choice'],
- flag:'CTF{c43s4r_sh1ft_13_r0t}',
- sol:'Shift 13 decrypts the ciphertext. ROT-13 is self-inverse: encrypt twice to return to plaintext.',
- widget:'caesar'},
-{id:'CH-02',title:'Vigenère Cipher',pts:100,diff:'easy',tags:['classical','polyalphabetic'],solves:218,
- desc:'The flag was encrypted with the Vigenère cipher using a short keyword. The Index of Coincidence reveals the key length; frequency analysis per column reveals each key letter.',
- hints:['Kasiski test: find repeated trigrams, their spacings reveal key length','Key length is 3 — try common 3-letter words'],
- flag:'CTF{v1g3n3r3_k3yw0rd_cr4ck3d}',
- sol:'Key length = 3. Each column frequency analysis gives: K=C, K=T, K=F → keyword "CTF". Decrypt with Vigenère(ciphertext, "CTF").',
- widget:'vigenere'},
-{id:'CH-03',title:'AES-ECB Oracle',pts:150,diff:'medium',tags:['aes','ecb','oracle'],solves:134,
- desc:'An AES-128-ECB encryption oracle appends a secret suffix before encrypting. Use a byte-at-a-time attack to reveal the secret one byte at a time.',
- hints:['Identical 16-byte blocks encrypt to identical ciphertext in ECB mode','Controlled prefix lets you align the unknown byte to a block boundary'],
- flag:'CTF{4es_3cb_byt3_4t_4_t1m3}',
- sol:'For each unknown byte: send 15 known bytes, get the ciphertext block, brute-force all 256 possible next bytes until the ciphertext matches.',
- widget:'ecb'},
-{id:'CH-04',title:'Padding Oracle',pts:200,diff:'medium',tags:['aes','cbc','padding'],solves:98,
- desc:'An AES-128-CBC decryption service reveals whether padding is valid. Use the padding oracle to decrypt each block by manipulating the ciphertext byte-by-byte.',
- hints:['Valid padding means the last byte(s) match the padding value','Flip bits in the IV/ciphertext to control the decrypted plaintext bytes'],
- flag:'CTF{p4dd1ng_0r4cl3_cbc_byp4ss}',
- sol:'For each block byte i: XOR with 0x01..0xFF until oracle says valid padding. Intermediate = valid_byte ^ padding_byte. Plaintext = intermediate ^ original_ciphertext_byte.',
- widget:'padding'},
-{id:'CH-05',title:'RSA Small Exponent',pts:200,diff:'medium',tags:['rsa','e=3'],solves:89,
- desc:'RSA with e=3 and a small message. If m^3 < n, no modular reduction occurred. Simply compute the integer cube root of the ciphertext to recover the plaintext.',
- hints:['If m is small, m^3 might be less than n meaning c = m^3 exactly','Use Newton\'s method or binary search to compute integer cube root'],
- flag:'CTF{rs4_sm4ll_3xp_cub3_r00t}',
- sol:'m = cbrt(c). For small messages with e=3, the cube root is exact (no modular reduction). Python: round(c**(1/3)) or gmpy2.iroot(c,3).',
- widget:'rsa_e3'},
-{id:'CH-06',title:'Common Modulus Attack',pts:250,diff:'medium',tags:['rsa','gcd','extended-euclid'],solves:67,
- desc:'The same message M was encrypted with the same modulus n but two different exponents e1 and e2 where gcd(e1,e2)=1. Use the extended Euclidean algorithm to recover M.',
- hints:['Find a,b such that a*e1 + b*e2 = 1 (extended GCD)','M = (c1^a * c2^b) mod n'],
- flag:'CTF{rs4_c0mm0n_m0dulus_3xt_3ucl1d}',
- sol:'Extended Euclidean on (e1,e2) gives a,b. M = pow(c1,a,n) * pow(c2,b,n) mod n. Works when gcd(e1,e2)=1.',
- widget:'common_mod'},
-{id:'CH-07',title:'Hash Length Extension',pts:250,diff:'medium',tags:['hash','sha1','extension'],solves:54,
- desc:'The server uses MAC = SHA1(secret || message) to authenticate. Use a hash length extension attack to forge a valid MAC for an extended message without knowing the secret.',
- hints:['SHA1 internal state after processing secret||message can be extracted from the MAC','The extension is message || padding || additional_data'],
- flag:'CTF{h4sh_l3ngth_3xt3ns10n_f0rg3d}',
- sol:'Use hashpumpy or hlextend. Given MAC, msg, len(secret), compute new_mac for msg+padding+extra without knowing secret.',
- widget:'hash_ext'},
-{id:'CH-08',title:'Fermat Factorization',pts:300,diff:'hard',tags:['rsa','factoring','fermat'],solves:43,
- desc:'The RSA modulus n = p*q where p and q are close primes. Fermat\'s factorization runs in O(|p-q|^2) — trivial for close primes. Factor n, then compute the private key.',
- hints:['Start with a = ceil(sqrt(n))', 'If a^2 - n is a perfect square, you have b; p = a+b, q = a-b'],
- flag:'CTF{f3rm4t_f4ct0r_cl0s3_pr1m3s}',
- sol:'a=ceil(sqrt(n)); loop: b2=a*a-n; if isqrt(b2)^2==b2: p=a+isqrt(b2); q=a-isqrt(b2); break; else a++',
- widget:'fermat'},
-{id:'CH-09',title:'ECDSA Nonce Reuse',pts:350,diff:'hard',tags:['ecdsa','nonce','ecc'],solves:28,
- desc:'Two ECDSA signatures (r1,s1) and (r2,s2) were generated with the same nonce k. Since r1=r2, we can recover k and then the private key d.',
- hints:['If k is reused: r1 = r2', 'k = (h1 - h2) * inv(s1 - s2) mod n'],
- flag:'CTF{3cdsa_n0nc3_r3us3_pr1v_k3y}',
- sol:'k=(h1-h2)*modinv(s1-s2,n)%n; d=(s1*k-h1)*modinv(r1,n)%n. Then verify d is the correct private key.',
- widget:'ecdsa'},
-{id:'CH-10',title:'LCG PRNG Crack',pts:400,diff:'hard',tags:['prng','lcg','predict'],solves:17,
- desc:'The server uses a Linear Congruential Generator (LCG): X_{n+1} = a*X_n + c mod m. Given 4 consecutive outputs, recover a, c, and predict the next token.',
- hints:['With 3+ outputs you can compute differences to cancel out c and solve for a','Use GCD on differences to find m if unknown'],
- flag:'CTF{lcg_prng_r3c0v3ry_pr3d1ct}',
- sol:'X2-X1, X3-X2, X4-X3 are t0,t1,t2. a = t1*modinv(t0,m)%m. c = X2-a*X1 mod m. Predict X5 = a*X4+c mod m.',
- widget:'lcg'}
+// ── AP Framework Layers ───────────────────────────────────
+const LAYERS = [
+  {id:'human',       label:'Human',       color:'#c39bd3', dot:'#9b59b6'},
+  {id:'physical',    label:'Physical',    color:'#f0b27a', dot:'#e67e22'},
+  {id:'network',     label:'Network',     color:'#85c1e9', dot:'#3498db'},
+  {id:'device',      label:'Device',      color:'#c891ff', dot:'#b464ff'},
+  {id:'application', label:'Application', color:'#f1948a', dot:'#e74c3c'},
+  {id:'data',        label:'Data',        color:'#76d7a4', dot:'#00c864'},
 ];
 
-function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-var solved={};var earned=0;
-
-function filterCards(diff,btn){
-  document.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');
-  document.querySelectorAll('.card').forEach(function(c){c.style.display=(diff==='all'||c.dataset.diff===diff)?'':'none';});
-}
-
-function openModal(idx){
-  var ch=challenges[idx];
-  var h='<div class="mlabel first">DESCRIPTION</div><div class="mdesc">'+esc(ch.desc)+'</div>';
-  h+='<div class="mlabel">HINTS</div>';
-  ch.hints.forEach(function(hi,i){h+='<div class="hint" data-n="'+(i+1)+'">'+esc(hi)+'</div>';});
-  h+='<div class="mlabel">LIVE CHALLENGE</div>'+buildWidget(ch.widget);
-  h+='<div class="mlabel">FLAG</div><div class="flag-box">'+esc(ch.flag)+'</div>';
-  h+='<div class="mlabel">SOLUTION</div><div class="sol">'+esc(ch.sol)+'</div>';
-  document.getElementById('m-title').textContent=ch.id+' — '+ch.title;
-  document.getElementById('m-body').innerHTML=h;
-  document.getElementById('overlay').classList.add('open');
-  if(!solved[idx]){solved[idx]=true;earned+=ch.pts;
-    document.getElementById('sc-solved').textContent=Object.keys(solved).length;
-    document.getElementById('sc-earned').textContent=earned;
-    document.querySelector('[data-idx="'+idx+'"]').classList.add('solved');
+var DEFENSE_SCORING = {
+  "1": {
+    "ideal": [
+      "c01",
+      "c05",
+      "c08",
+      "c18",
+      "c25",
+      "c09",
+      "c04",
+      "c16"
+    ],
+    "controls": {
+      "c01": {
+        "rating": "strong",
+        "explanation": "Security Awareness Training is the single most critical control for this firm. With no prior training, employees are highly susceptible to phishing and pretexting. Training directly addresses the social engineering and credential theft threats that are the most likely entry points."
+      },
+      "c02": {
+        "rating": "moderate",
+        "explanation": "An Acceptable Use Policy establishes written rules but alone does not change behavior. It is a useful foundation but must be paired with training to be effective. For a 40-person accounting firm, it addresses compliance needs but ranks below active controls."
+      },
+      "c04": {
+        "rating": "strong",
+        "explanation": "Badge Access Control directly addresses the tailgating threat. An accounting firm handling sensitive financial records absolutely needs controlled entry \u2014 the current unlocked hallway situation is a critical gap this control closes."
+      },
+      "c05": {
+        "rating": "strong",
+        "explanation": "An Access Control Vestibule (mantrap) physically prevents tailgating at the server room entrance \u2014 the highest-risk physical entry point. Given the server room is currently in an unlocked utility closet, this is an essential upgrade."
+      },
+      "c06": {
+        "rating": "moderate",
+        "explanation": "Security Cameras provide detective coverage of the hallway and server room entrance, creating a deterrent and evidence trail. However, they detect rather than prevent tailgating, making them less effective than a mantrap for this specific threat."
+      },
+      "c07": {
+        "rating": "moderate",
+        "explanation": "A Security Guard at the main entrance would challenge visitors but a 40-person firm may find this cost-prohibitive. Badge access control provides similar preventive coverage at lower ongoing cost. Consider guards only if budget allows after higher-priority controls."
+      },
+      "c08": {
+        "rating": "strong",
+        "explanation": "USB Port Disabling is critical for this scenario. Autorun-enabled workstations on shared desks are a prime target for USB malware drops. Disabling USB ports closes this attack vector entirely at near-zero cost."
+      },
+      "c09": {
+        "rating": "strong",
+        "explanation": "Server Cabinet Locks protect the server room contents even if an unauthorized person gains physical access to the utility closet. Given the room is currently unlocked and accessible from the hallway, this is a high-value, low-cost control."
+      },
+      "c16": {
+        "rating": "moderate",
+        "explanation": "Anti-Malware Software provides baseline protection against known malware including USB-delivered threats. For a firm with no current security program, it is a necessary foundational control, though it does not address physical or social engineering threats."
+      },
+      "c17": {
+        "rating": "strong",
+        "explanation": "Automated OS Patching closes the known vulnerability gap that malware exploits. Combined with anti-malware, it hardens workstations against commodity malware. Essential for any organization."
+      },
+      "c18": {
+        "rating": "strong",
+        "explanation": "Multifactor Authentication directly addresses credential theft and reuse \u2014 one of this firm's six listed threats. Even if a phishing attack steals a password, MFA prevents account compromise. This is one of the highest-ROI controls in this scenario."
+      },
+      "c20": {
+        "rating": "moderate",
+        "explanation": "Full-Disk Encryption protects data on stolen or lost laptops. For an accounting firm with client financial records, this is important for regulatory compliance, but it does not address the active threats of phishing, tailgating, or ransomware."
+      },
+      "c24": {
+        "rating": "moderate",
+        "explanation": "Encryption at Rest protects stored financial records from unauthorized access but does not prevent ransomware encryption on top of existing encryption. It is valuable for data confidentiality but ranks below backup and MFA for this threat profile."
+      },
+      "c25": {
+        "rating": "strong",
+        "explanation": "Offsite Encrypted Backups are essential against the ransomware threat. The scenario explicitly states no backups exist, meaning one ransomware attack would permanently destroy all client records. This control enables recovery and removes the attacker's leverage."
+      },
+      "c26": {
+        "rating": "weak",
+        "explanation": "Data Loss Prevention (DLP) addresses insider data theft and unauthorized transfers. While valuable, this firm's primary threats are external (phishing, physical intrusion) and malware-based. DLP is a lower priority until more foundational controls are in place."
+      },
+      "c27": {
+        "rating": "strong",
+        "explanation": "A Shredding Policy with secure disposal bins directly closes the dumpster diving gap. Printed financial records are the firm's most exposed physical data asset. Cross-cut shredding before disposal eliminates this threat entirely at near-zero cost."
+      },
+      "c15": {
+        "rating": "weak",
+        "explanation": "Full-Tunnel VPN protects remote workers in transit, but Meridian has no remote work threat in its profile \u2014 employees work on shared on-site workstations. This control addresses a risk the firm does not face and wastes one of your 8 slots."
+      },
+      "c23": {
+        "rating": "weak",
+        "explanation": "A Web Application Firewall defends web applications against SQL injection and XSS \u2014 but Meridian has no web-facing application. This is a technically sound control applied to entirely the wrong environment."
+      }
+    },
+    "threats": {
+      "t1": {
+        "label": "Social engineering & phishing",
+        "covered_by": [
+          "c01",
+          "c18"
+        ],
+        "partial_by": [
+          "c02",
+          "c16"
+        ],
+        "explanation": "Security Awareness Training (c01) is the direct defense \u2014 it teaches employees to recognize phishing. MFA (c18) provides a safety net if credentials are stolen. An AUP alone does not change behavior. Anti-malware catches some payload delivery but not credential theft."
+      },
+      "t2": {
+        "label": "Tailgating / piggybacking",
+        "covered_by": [
+          "c05"
+        ],
+        "partial_by": [
+          "c04",
+          "c06",
+          "c07"
+        ],
+        "explanation": "Only an Access Control Vestibule (c05) physically prevents tailgating. Badge access (c04) records who enters but does not stop piggyback entry. Cameras (c06) detect it after the fact. Guards (c07) can challenge visitors but cannot stop a fast tailgater."
+      },
+      "t3": {
+        "label": "Dumpster diving",
+        "covered_by": [
+          "c27"
+        ],
+        "partial_by": [
+          "c02"
+        ],
+        "explanation": "A Shredding Policy (c27) directly eliminates this threat \u2014 mandatory cross-cut shredding before disposal means sensitive documents never reach the bin intact. An AUP (c02) can require document destruction in writing, but without physical shred bins it is unenforceable. No digital control addresses paper document disposal."
+      },
+      "t4": {
+        "label": "USB-based malware delivery",
+        "covered_by": [
+          "c08"
+        ],
+        "partial_by": [
+          "c16",
+          "c17"
+        ],
+        "explanation": "USB Port Disabling (c08) is the only control that completely eliminates this vector. Anti-malware (c16) may detect the payload after execution, and patching (c17) closes some vulnerabilities the malware might exploit, but neither prevents the initial delivery."
+      },
+      "t5": {
+        "label": "Credential theft & reuse",
+        "covered_by": [
+          "c18"
+        ],
+        "partial_by": [
+          "c01",
+          "c02"
+        ],
+        "explanation": "MFA (c18) is the definitive defense \u2014 stolen passwords cannot be used without the second factor. Training (c01) reduces the likelihood of credential theft via phishing. An AUP (c02) may set password requirements but enforcement requires MFA."
+      },
+      "t6": {
+        "label": "Ransomware / data destruction",
+        "covered_by": [
+          "c25"
+        ],
+        "partial_by": [
+          "c16",
+          "c17",
+          "c01"
+        ],
+        "explanation": "Offsite Encrypted Backups (c25) are the only control that enables recovery after ransomware \u2014 the only true defense against data destruction. Anti-malware and patching reduce infection likelihood but cannot guarantee prevention. Without backups, recovery is impossible."
+      }
+    },
+    "best_selection": [
+      "c01",
+      "c05",
+      "c08",
+      "c18",
+      "c25",
+      "c09",
+      "c04",
+      "c16"
+    ],
+    "best_explanation": "The strongest 8-control selection for Meridian addresses all six threats with emphasis on the highest-risk gaps: training for phishing, mantrap for tailgating, USB disabling for malware delivery, MFA for credential theft, backups for ransomware, cabinet locks and badge access for physical security, and anti-malware as a baseline."
+  },
+  "2": {
+    "ideal": [
+      "c11",
+      "c12",
+      "c17",
+      "c18",
+      "c13",
+      "c14",
+      "c25",
+      "c10"
+    ],
+    "controls": {
+      "c01": {
+        "rating": "moderate",
+        "explanation": "Security Awareness Training is valuable for reducing phishing and social engineering risk in hospital staff. However, this scenario's primary threats are technical \u2014 network architecture failures. Training does not fix WEP, segmentation, or patching gaps."
+      },
+      "c10": {
+        "rating": "strong",
+        "explanation": "A Perimeter Firewall with ACLs blocks unauthorized inbound traffic from the internet, addressing external threats. For a hospital with internet-connected systems, this is an essential baseline control even though it does not address the internal flat-network threats."
+      },
+      "c11": {
+        "rating": "strong",
+        "explanation": "Network Segmentation (VLANs) is the most critical control for this hospital. It isolates the guest Wi-Fi, clinical systems, and administrative network from each other, directly preventing lateral movement from the guest network to patient monitoring and MRI systems."
+      },
+      "c12": {
+        "rating": "strong",
+        "explanation": "WPA3 Wireless Encryption replaces the broken WEP protocol on the guest Wi-Fi. WEP can be cracked in minutes; WPA3 prevents wireless eavesdropping and unauthorized access. This directly addresses the evil twin and wireless interception threats."
+      },
+      "c13": {
+        "rating": "strong",
+        "explanation": "NIDS/NIPS provides real-time detection of ARP poisoning, lateral movement attempts, and ransomware propagation across the network. In a flat-network hospital, a NIDS is essential for detecting threats that cannot be prevented by segmentation alone."
+      },
+      "c14": {
+        "rating": "strong",
+        "explanation": "A SIEM correlates logs from clinical workstations, network devices, and authentication systems to detect patterns like unusual login times and bulk data access. For a hospital with credential-sharing concerns, SIEM provides the visibility needed to catch insider abuse."
+      },
+      "c17": {
+        "rating": "strong",
+        "explanation": "Automated OS Patching directly addresses the 90-day patch cycle vulnerability. Known CVEs that are unpatched for months are the primary avenue for ransomware and targeted exploitation. Automating patches closes this gap within 24 hours of release."
+      },
+      "c18": {
+        "rating": "strong",
+        "explanation": "MFA on clinical systems prevents credential abuse even when staff share passwords. The scenario explicitly identifies no-MFA shared admin credentials as a threat. MFA is the most direct control for this credential abuse vector."
+      },
+      "c19": {
+        "rating": "moderate",
+        "explanation": "Host-Based Firewalls on clinical workstations limit lateral movement by blocking unsolicited connections between devices. This is a good supplemental control but is less impactful than network segmentation for containing the flat-network propagation threat."
+      },
+      "c20": {
+        "rating": "moderate",
+        "explanation": "Full-Disk Encryption protects data on stolen laptops or decommissioned devices. For a hospital with patient records, this is important for HIPAA compliance, but it does not address network-based threats like ARP poisoning or ransomware propagation."
+      },
+      "c22": {
+        "rating": "moderate",
+        "explanation": "RBAC limits which staff can access which patient records, reducing insider abuse risk. For a hospital, this is important for compliance but is a lower priority than the network infrastructure controls needed to address the primary threats in this scenario."
+      },
+      "c24": {
+        "rating": "moderate",
+        "explanation": "Encryption at Rest protects patient data in the database. Important for HIPAA but does not prevent ransomware from encrypting the already-encrypted data, nor does it address the network interception and lateral movement threats that dominate this scenario."
+      },
+      "c25": {
+        "rating": "strong",
+        "explanation": "Offsite Encrypted Backups are essential for a hospital. Ransomware on a flat hospital network could encrypt every patient monitor and clinical system simultaneously. Without offsite backups, patient care would be impossible during recovery. This is a life-safety issue."
+      },
+      "c21": {
+        "rating": "weak",
+        "explanation": "Input Validation and Parameterized Queries defends against SQL injection and XSS in web applications. Lakewood Hospital's threats are network-layer and device-layer \u2014 flat network, WEP wireless, unpatched devices. There is no web application vulnerability in scope here."
+      },
+      "c27": {
+        "rating": "weak",
+        "explanation": "A Shredding Policy addresses paper document disposal \u2014 a physical data handling concern. Lakewood's threats are entirely technical: wireless eavesdropping, ransomware propagation, unpatched CVEs, and ARP poisoning. Document destruction is irrelevant to any listed threat."
+      }
+    },
+    "threats": {
+      "t1": {
+        "label": "Evil twin / wireless eavesdropping",
+        "covered_by": [
+          "c12"
+        ],
+        "partial_by": [
+          "c13"
+        ],
+        "explanation": "WPA3 (c12) replaces the broken WEP protocol, eliminating wireless eavesdropping and making evil twin attacks ineffective. NIDS (c13) can detect a rogue AP but cannot prevent WEP cracking. WPA3 is the only complete solution to this threat."
+      },
+      "t2": {
+        "label": "Lateral movement from guest network",
+        "covered_by": [
+          "c11"
+        ],
+        "partial_by": [
+          "c10",
+          "c19",
+          "c13"
+        ],
+        "explanation": "Network Segmentation (c11) is the only control that physically separates the guest network from clinical systems. A perimeter firewall (c10) blocks external traffic but not internal lateral movement. NIDS (c13) detects but does not prevent it."
+      },
+      "t3": {
+        "label": "Ransomware spreading across flat network",
+        "covered_by": [
+          "c11",
+          "c25"
+        ],
+        "partial_by": [
+          "c13",
+          "c17",
+          "c19"
+        ],
+        "explanation": "Segmentation (c11) contains ransomware to one VLAN rather than allowing hospital-wide spread. Backups (c25) enable recovery after infection. Patching (c17) reduces initial infection likelihood. NIDS (c13) detects propagation. Both segmentation and backups are needed."
+      },
+      "t4": {
+        "label": "Exploitation of unpatched CVEs",
+        "covered_by": [
+          "c17"
+        ],
+        "partial_by": [
+          "c13",
+          "c14"
+        ],
+        "explanation": "Automated Patching (c17) is the only direct solution \u2014 it closes the vulnerabilities being exploited. NIDS (c13) and SIEM (c14) can detect exploitation attempts but cannot prevent them if the vulnerability remains unpatched."
+      },
+      "t5": {
+        "label": "Insider credential abuse",
+        "covered_by": [
+          "c18"
+        ],
+        "partial_by": [
+          "c14",
+          "c22"
+        ],
+        "explanation": "MFA (c18) prevents shared credentials from being used remotely or from unauthorized devices. SIEM (c14) detects unusual access patterns. RBAC (c22) limits what shared accounts can access. MFA is the only control that prevents unauthorized use of known credentials."
+      },
+      "t6": {
+        "label": "Network traffic interception (ARP poisoning)",
+        "covered_by": [
+          "c11",
+          "c13"
+        ],
+        "partial_by": [
+          "c14",
+          "c24"
+        ],
+        "explanation": "Segmentation (c11) limits the scope of ARP poisoning to one VLAN. NIDS (c13) detects unsolicited ARP replies in real time. SIEM (c14) correlates the alerts. Encryption at rest (c24) protects stored data but not data in transit \u2014 ARP poisoning attacks data in motion."
+      }
+    },
+    "best_selection": [
+      "c11",
+      "c12",
+      "c17",
+      "c18",
+      "c13",
+      "c14",
+      "c25",
+      "c10"
+    ],
+    "best_explanation": "The strongest 8-control selection for Lakewood Hospital addresses all six threats: segmentation for lateral movement and ransomware spread, WPA3 for wireless threats, patching for CVEs, MFA for credential abuse, NIDS for ARP poisoning detection, SIEM for insider monitoring, backups for ransomware recovery, and a perimeter firewall as the baseline external defense."
+  },
+  "3": {
+    "ideal": [
+      "c21",
+      "c22",
+      "c23",
+      "c24",
+      "c26",
+      "c14",
+      "c25"
+    ],
+    "controls": {
+      "c01": {
+        "rating": "weak",
+        "explanation": "Security Awareness Training addresses human error but this scenario's threats are entirely technical \u2014 SQL injection, XSS, session hijacking, and data exfiltration are code and configuration vulnerabilities, not social engineering. Training is a low-priority choice here."
+      },
+      "c02": {
+        "rating": "weak",
+        "explanation": "An Acceptable Use Policy does not address SQL injection, XSS, or session vulnerabilities. This scenario requires technical controls at the application and data layers. An AUP may help with insider behavior but is a poor use of the limited 7-control budget."
+      },
+      "c03": {
+        "rating": "moderate",
+        "explanation": "An Incident Response Plan helps the team respond effectively when a breach occurs. It does not prevent the technical vulnerabilities but reduces recovery time and business impact. Useful but not as impactful as preventive controls for this scenario."
+      },
+      "c14": {
+        "rating": "strong",
+        "explanation": "A SIEM detects unusual bulk database access and exfiltration patterns that indicate a breach is in progress. For an e-commerce platform with 200,000 payment records, early detection of SQL injection exploitation or insider bulk access is critical."
+      },
+      "c15": {
+        "rating": "moderate",
+        "explanation": "Full-Tunnel VPN protects developer traffic when working remotely but does not address the application vulnerabilities (SQL injection, XSS) or the data access control problems that are the primary threats in this scenario."
+      },
+      "c21": {
+        "rating": "strong",
+        "explanation": "Input Validation and Parameterized Queries is the most critical control for this platform. Unsanitized input directly enables SQL injection and stored XSS \u2014 the two highest-severity threats. Parameterized queries eliminate SQL injection at the source code level. This is essential."
+      },
+      "c22": {
+        "rating": "strong",
+        "explanation": "RBAC directly addresses the excessive developer access threat. With all 50 developers having full access to payment card data, RBAC applying least-privilege principles would limit who can read, export, or modify card records based on their specific job function."
+      },
+      "c23": {
+        "rating": "strong",
+        "explanation": "A Web Application Firewall provides a network-layer defense against SQL injection and XSS, blocking known attack patterns before they reach the application. It complements input validation \u2014 if a developer introduces a new injection vulnerability, the WAF provides a safety net."
+      },
+      "c24": {
+        "rating": "strong",
+        "explanation": "Encryption at Rest (AES-256) ensures that even if SQL injection extracts payment card records from the database, the data is unreadable without the encryption key. This directly addresses the 'payment card data exfiltration' and 'bulk extraction' threats."
+      },
+      "c25": {
+        "rating": "moderate",
+        "explanation": "Offsite Encrypted Backups protect against data loss and ransomware but this scenario's primary concern is data confidentiality and unauthorized access, not availability. Backups are a good safety net but lower priority than the injection and access controls."
+      },
+      "c26": {
+        "rating": "strong",
+        "explanation": "Data Loss Prevention monitors and blocks unusual data transfers \u2014 detecting when a developer exports 10,000 card records or when an injection attack begins bulk-exfiltrating data. DLP is one of the strongest controls for the exfiltration and insider theft threats in this scenario."
+      },
+      "c04": {
+        "rating": "weak",
+        "explanation": "Badge Access Control is a physical security control for restricting entry to buildings and server rooms. ShopNow's threats are entirely application and data layer \u2014 SQL injection, XSS, session hijacking, developer over-access. Physical entry controls do nothing against code-level vulnerabilities."
+      },
+      "c09": {
+        "rating": "weak",
+        "explanation": "Server Cabinet Locks prevent physical hardware access and theft. ShopNow's attackers are remote \u2014 they exploit web application vulnerabilities and steal data through the application tier. Locking the server cabinet provides zero protection against SQL injection or session hijacking."
+      }
+    },
+    "threats": {
+      "t1": {
+        "label": "SQL injection",
+        "covered_by": [
+          "c21",
+          "c23"
+        ],
+        "partial_by": [
+          "c14"
+        ],
+        "explanation": "Input Validation with Parameterized Queries (c21) eliminates SQL injection at the code level \u2014 the only complete solution. A WAF (c23) blocks known injection patterns at the network layer. SIEM (c14) detects successful injection attempts through log analysis but cannot prevent them."
+      },
+      "t2": {
+        "label": "Stored XSS via product reviews",
+        "covered_by": [
+          "c21",
+          "c23"
+        ],
+        "partial_by": [],
+        "explanation": "Input Validation (c21) sanitizes review content before storage, preventing script injection. The WAF (c23) filters XSS patterns in submitted HTTP requests. No other available control addresses stored XSS directly \u2014 both c21 and c23 are needed for full coverage."
+      },
+      "t3": {
+        "label": "Session hijacking",
+        "covered_by": [
+          "c23"
+        ],
+        "partial_by": [
+          "c15"
+        ],
+        "explanation": "A WAF (c23) is the strongest available defense against session hijacking \u2014 it can enforce HTTPS-only connections, block session fixation attempts, and strip dangerous response headers. Full-tunnel VPN (c15) protects remote developer sessions in transit. Complete session security also requires code-level fixes (session expiry, HttpOnly/Secure cookie flags) but the WAF provides meaningful preventive coverage within the available control set."
+      },
+      "t4": {
+        "label": "Excessive developer access to PCI data",
+        "covered_by": [
+          "c22"
+        ],
+        "partial_by": [
+          "c26"
+        ],
+        "explanation": "RBAC (c22) is the only control that limits which developers can access payment records based on job function. DLP (c26) can detect when someone with access exports large volumes of data. Access should be restricted first (c22), then monitored (c26)."
+      },
+      "t5": {
+        "label": "Payment card data exfiltration",
+        "covered_by": [
+          "c24",
+          "c26"
+        ],
+        "partial_by": [
+          "c14",
+          "c22"
+        ],
+        "explanation": "Encryption at Rest (c24) makes bulk-extracted card data unreadable. DLP (c26) detects and blocks the exfiltration attempt. RBAC (c22) limits who can access the data. SIEM (c14) correlates anomalous query volumes. Multiple layers are needed for full coverage."
+      },
+      "t6": {
+        "label": "Insider data theft",
+        "covered_by": [
+          "c26",
+          "c22"
+        ],
+        "partial_by": [
+          "c14",
+          "c24"
+        ],
+        "explanation": "DLP (c26) monitors for bulk data transfers by insiders. RBAC (c22) limits access to only what each developer needs. SIEM (c14) detects unusual access patterns after hours or from unexpected locations. Encryption (c24) ensures stolen data has no value without the key."
+      }
+    },
+    "best_selection": [
+      "c21",
+      "c22",
+      "c23",
+      "c24",
+      "c26",
+      "c14",
+      "c25"
+    ],
+    "best_explanation": "The strongest 7-control selection for ShopNow addresses all application and data threats: parameterized queries and WAF for injection/XSS, RBAC for excessive access, encryption at rest for card data, DLP for exfiltration detection, SIEM for anomaly detection, and backups as a recovery baseline. Note that session hijacking requires developer code changes beyond what these controls provide."
+  },
+  "4": {
+    "ideal": [
+      "c01",
+      "c14",
+      "c11",
+      "c18",
+      "c04",
+      "c17",
+      "c24",
+      "c15",
+      "c25",
+      "c05"
+    ],
+    "controls": {
+      "c01": {
+        "rating": "strong",
+        "explanation": "Security Awareness Training is essential for Vantara. High-value financial targets are prime spear-phishing targets and the firm has zero training. Training is the most cost-effective defense against the credential harvesting that would precede every other attack in this scenario."
+      },
+      "c02": {
+        "rating": "moderate",
+        "explanation": "An Acceptable Use Policy establishes behavioral rules including guidelines for remote work and data handling. For a financial firm managing $2B in assets, written policies are a compliance requirement, but they must be paired with training and technical controls to be meaningful."
+      },
+      "c03": {
+        "rating": "moderate",
+        "explanation": "An Incident Response Plan ensures the team can respond systematically when a breach occurs. Given Vantara has no SIEM and no current security program, having documented response procedures is important, though it does not prevent any of the listed threats."
+      },
+      "c04": {
+        "rating": "strong",
+        "explanation": "Badge Access Control directly addresses the physical breach threat. The current key-lock system with no monitoring is a critical gap for a financial services firm. Electronic badge access creates an audit trail and enables real-time access revocation."
+      },
+      "c05": {
+        "rating": "strong",
+        "explanation": "An Access Control Vestibule (mantrap) physically prevents tailgating at the server room entrance. Combined with badge access, it closes the physical breach vector entirely. For a firm with $2B in assets, physical security of the server room is non-negotiable."
+      },
+      "c06": {
+        "rating": "moderate",
+        "explanation": "Security Cameras provide deterrence and evidence at physical entry points. They detect intrusions in progress and after the fact. Less impactful than badge access and mantrap for active prevention, but useful as a complementary detective control."
+      },
+      "c10": {
+        "rating": "moderate",
+        "explanation": "A Perimeter Firewall is a baseline control for any internet-connected organization. For Vantara, it blocks unsolicited inbound connections, but the primary threats (spear-phishing, insider movement, unpatched servers) are not stopped by a perimeter firewall alone."
+      },
+      "c11": {
+        "rating": "strong",
+        "explanation": "Network Segmentation is critical for Vantara's flat-network threat. Separating trading platforms, client data, and employee workstations using VLANs ensures that a single compromised endpoint cannot immediately reach the $2B trading infrastructure."
+      },
+      "c13": {
+        "rating": "strong",
+        "explanation": "NIDS provides real-time network traffic monitoring \u2014 essential for detecting lateral movement, ARP poisoning, and anomalous traffic patterns. For a firm with no current monitoring, NIDS provides immediate visibility into active threats on the network."
+      },
+      "c14": {
+        "rating": "strong",
+        "explanation": "A SIEM is the most important detective control for Vantara. The scenario explicitly states no monitoring exists. A SIEM correlates authentication events, network traffic, and data access to detect the long-term undetected intrusion threat and the spear-phishing campaigns."
+      },
+      "c15": {
+        "rating": "strong",
+        "explanation": "Full-Tunnel VPN is essential for remote employees. The scenario uses split-tunnel VPN, which allows home network compromise to pivot into corporate systems. Full-tunnel routes all traffic through corporate security controls, eliminating the split-tunnel exploitation threat."
+      },
+      "c17": {
+        "rating": "strong",
+        "explanation": "Automated OS Patching directly closes the known critical CVEs on the three production servers identified in the audit. Unpatched servers are the most exploitable technical vulnerability in this scenario \u2014 they represent a known attack path with public documentation."
+      },
+      "c18": {
+        "rating": "strong",
+        "explanation": "MFA prevents credential harvesting attacks from succeeding. Spear-phishing is Vantara's top threat and credential theft is the intended outcome. MFA ensures that even a successful phishing campaign yields unusable credentials."
+      },
+      "c19": {
+        "rating": "moderate",
+        "explanation": "Host-Based Firewalls limit lateral movement between devices by blocking unsolicited connections. A useful supplemental control but less impactful than network segmentation for the flat-network propagation threat. Best used in combination with VLANs."
+      },
+      "c24": {
+        "rating": "strong",
+        "explanation": "Encryption at Rest directly addresses the plaintext customer records threat. The audit found PII stored in plaintext on shared drives \u2014 any attacker with minimal access can read every customer record. AES-256 encryption makes this data useless without the key."
+      },
+      "c25": {
+        "rating": "strong",
+        "explanation": "Offsite Encrypted Backups protect a financial firm's critical transaction data and client records from ransomware and data destruction. For a firm managing $2B in assets, data integrity is fundamental to business continuity. Backups are non-negotiable."
+      },
+      "c26": {
+        "rating": "strong",
+        "explanation": "DLP monitoring detects unusual bulk access to the plaintext customer records on shared drives \u2014 the most immediately exploitable asset. DLP would alert on large-volume access or transfer attempts by insiders or compromised accounts."
+      },
+      "c21": {
+        "rating": "weak",
+        "explanation": "Input Validation and Parameterized Queries is the definitive defense against SQL injection and XSS \u2014 but none of Vantara's seven threats involve web application vulnerabilities. The firm's risks are spear-phishing, physical breach, unpatched servers, and lateral movement. This control addresses a threat that does not exist in this scenario."
+      },
+      "c23": {
+        "rating": "weak",
+        "explanation": "A Web Application Firewall protects web-facing applications from injection and scripting attacks. Vantara is an investment firm with internal trading platforms \u2014 the threats here are network intrusion, credential theft, and physical breach, not web application exploitation. This is the wrong tool for this threat profile."
+      }
+    },
+    "threats": {
+      "t1": {
+        "label": "Spear-phishing & credential harvest",
+        "covered_by": [
+          "c01",
+          "c18"
+        ],
+        "partial_by": [
+          "c14",
+          "c03"
+        ],
+        "explanation": "Training (c01) reduces the likelihood of a successful phish by teaching employees to recognize spear-phishing indicators. MFA (c18) ensures that even if credentials are stolen, they cannot be used. SIEM (c14) can detect credential abuse after the fact."
+      },
+      "t2": {
+        "label": "Split-tunnel VPN exploitation",
+        "covered_by": [
+          "c15"
+        ],
+        "partial_by": [
+          "c18",
+          "c13"
+        ],
+        "explanation": "Full-Tunnel VPN (c15) is the direct solution \u2014 it routes all remote employee traffic through corporate security controls, eliminating the home-network pivot path. MFA (c18) adds a second barrier. NIDS (c13) can detect anomalous traffic from remote connections."
+      },
+      "t3": {
+        "label": "Physical breach & server room access",
+        "covered_by": [
+          "c04",
+          "c05"
+        ],
+        "partial_by": [
+          "c06",
+          "c13"
+        ],
+        "explanation": "Badge Access Control (c04) replaces the insecure key lock. A Mantrap (c05) prevents tailgating once badge access is in place. Cameras (c06) provide detective coverage. Neither cameras nor NIDS prevent a physical breach \u2014 only access controls do."
+      },
+      "t4": {
+        "label": "Exploitation of unpatched servers",
+        "covered_by": [
+          "c17"
+        ],
+        "partial_by": [
+          "c13",
+          "c14"
+        ],
+        "explanation": "Automated Patching (c17) is the only control that closes the vulnerabilities. NIDS (c13) detects exploitation attempts in progress. SIEM (c14) correlates the alerts. But if the CVEs remain unpatched, detection cannot prevent successful exploitation."
+      },
+      "t5": {
+        "label": "Lateral movement \u2014 no segmentation",
+        "covered_by": [
+          "c11"
+        ],
+        "partial_by": [
+          "c13",
+          "c14",
+          "c19"
+        ],
+        "explanation": "Network Segmentation (c11) physically contains lateral movement to one VLAN. NIDS (c13) detects movement in progress. Host-based firewalls (c19) add per-device barriers. Without segmentation, these detective controls can observe but not stop propagation."
+      },
+      "t6": {
+        "label": "Plaintext customer data exfiltration",
+        "covered_by": [
+          "c24",
+          "c26"
+        ],
+        "partial_by": [
+          "c14",
+          "c11",
+          "c22"
+        ],
+        "explanation": "Encryption at Rest (c24) makes plaintext records unreadable upon extraction. DLP (c26) detects and blocks exfiltration. SIEM (c14) correlates unusual data access. Without c24, any attacker who reaches the shared drives can read every customer record instantly."
+      },
+      "t7": {
+        "label": "Undetected long-term intrusion",
+        "covered_by": [
+          "c14",
+          "c13"
+        ],
+        "partial_by": [
+          "c01",
+          "c26"
+        ],
+        "explanation": "A SIEM (c14) is the primary control against long-term dwell time \u2014 it correlates events over time to surface patterns invisible to individual tools. NIDS (c13) provides real-time network visibility. Without monitoring, an APT could persist for months undetected."
+      }
+    },
+    "best_selection": [
+      "c01",
+      "c14",
+      "c11",
+      "c18",
+      "c04",
+      "c17",
+      "c24",
+      "c15",
+      "c25",
+      "c05"
+    ],
+    "best_explanation": "The strongest 10-control selection for Vantara covers all seven threats: training and MFA for spear-phishing, full-tunnel VPN for remote exploitation, badge access and mantrap for physical breach, patching for CVEs, segmentation for lateral movement, encryption and DLP for plaintext data, and SIEM as the central detection platform."
   }
-  if(ch.widget==='caesar')setTimeout(caesarInit,80);
-}
+};
 
-function closeModal(e){if(!e||e.target===document.getElementById('overlay'))document.getElementById('overlay').classList.remove('open');}
+// ── Control Library ───────────────────────────────────────
+const ALL_CONTROLS = [
+  // Human
+  {id:'c01', name:'Security Awareness Training',   layer:'human',       type:'Managerial', fn:'Preventative', desc:'Annual training teaching employees to recognize phishing, social engineering, and safe data handling.'},
+  {id:'c02', name:'Acceptable Use Policy (AUP)',   layer:'human',       type:'Managerial', fn:'Preventative', desc:'Written policy governing permitted software, websites, and device usage on company systems.'},
+  {id:'c03', name:'Incident Response Plan',        layer:'human',       type:'Managerial', fn:'Corrective',   desc:'Documented procedures for detecting, containing, and recovering from security incidents.'},
+  // Physical
+  {id:'c04', name:'Badge Access Control',          layer:'physical',    type:'Physical',   fn:'Preventative', desc:'Electronic badge readers on all restricted entries; logs every access attempt by badge ID and time.'},
+  {id:'c05', name:'Access Control Vestibule',      layer:'physical',    type:'Physical',   fn:'Preventative', desc:'Two-door airlock at sensitive entrances that detects and prevents tailgating and piggybacking.'},
+  {id:'c06', name:'Security Cameras (Monitored)',  layer:'physical',    type:'Physical',   fn:'Detective',    desc:'CCTV with live monitoring and recording at ingress/egress points and server room entrances.'},
+  {id:'c07', name:'Security Guards',               layer:'physical',    type:'Physical',   fn:'Preventative', desc:'Stationary guards at main entrance to verify identity and challenge unfamiliar visitors.'},
+  {id:'c08', name:'USB Port Disabling',            layer:'physical',    type:'Technical',  fn:'Preventative', desc:'BIOS/policy-level disabling of USB ports on all workstations to prevent removable media attacks.'},
+  {id:'c09', name:'Server Cabinet Locks',          layer:'physical',    type:'Physical',   fn:'Preventative', desc:'Physical locks on all server racks preventing hardware removal even after room access is gained.'},
+  // Network
+  {id:'c10', name:'Perimeter Firewall with ACLs',  layer:'network',     type:'Technical',  fn:'Preventative', desc:'Edge firewall with explicit deny-all rules and allowed-list exceptions; blocks unauthorized inbound traffic.'},
+  {id:'c11', name:'Network Segmentation (VLANs)',  layer:'network',     type:'Technical',  fn:'Preventative', desc:'Logical separation of departments and sensitive systems using VLANs, limiting lateral movement.'},
+  {id:'c12', name:'WPA3 Wireless Encryption',      layer:'network',     type:'Technical',  fn:'Preventative', desc:'Strongest wireless protocol replacing WEP/WPA; prevents wireless eavesdropping and key recovery attacks.'},
+  {id:'c13', name:'NIDS / NIPS',                   layer:'network',     type:'Technical',  fn:'Detective',    desc:'Network intrusion detection/prevention system monitoring traffic for known attack signatures and anomalies.'},
+  {id:'c14', name:'SIEM',                          layer:'network',     type:'Technical',  fn:'Detective',    desc:'Security information and event management — correlates logs from firewalls, devices, and apps to surface attack patterns.'},
+  {id:'c15', name:'VPN (Full Tunnel)',              layer:'network',     type:'Technical',  fn:'Preventative', desc:'Full-tunnel VPN encrypts all remote employee traffic and routes it through the corporate network.'},
+  // Device
+  {id:'c16', name:'Anti-Malware Software',         layer:'device',      type:'Technical',  fn:'Detective',    desc:'Signature-based scanning with quarantine; detects and isolates known malware before execution.'},
+  {id:'c17', name:'Automated OS Patching',         layer:'device',      type:'Technical',  fn:'Preventative', desc:'Automatic deployment of security patches within 24 hours of release, closing known CVEs quickly.'},
+  {id:'c18', name:'Multifactor Authentication',    layer:'device',      type:'Technical',  fn:'Preventative', desc:'Requires a second factor (authenticator app, hardware token) in addition to password for all logins.'},
+  {id:'c19', name:'Host-Based Firewall',           layer:'device',      type:'Technical',  fn:'Preventative', desc:'Per-device firewall blocking unsolicited inbound connections and restricting outbound traffic to approved ports.'},
+  {id:'c20', name:'Full-Disk Encryption',          layer:'device',      type:'Technical',  fn:'Preventative', desc:'Encrypts entire drive contents so stolen hardware cannot be read without the decryption key.'},
+  // Application
+  {id:'c21', name:'Input Validation & Parameterized Queries', layer:'application', type:'Technical', fn:'Preventative', desc:'Server-side sanitization of all user input; parameterized queries prevent SQL injection and XSS.'},
+  {id:'c22', name:'Role-Based Access Control (RBAC)', layer:'application', type:'Technical', fn:'Preventative', desc:'Users are assigned roles that limit access to only the data and functions their job requires.'},
+  {id:'c23', name:'Web Application Firewall (WAF)', layer:'application', type:'Technical', fn:'Preventative', desc:'Filters HTTP traffic for SQL injection, XSS, and directory traversal patterns before reaching the app server.'},
+  // Human (additional)
+  {id:'c27', name:'Shredding Policy & Secure Disposal',  layer:'human', type:'Managerial', fn:'Preventative', desc:'Mandatory cross-cut shredding of all sensitive documents before disposal; locked shred bins at every workstation.'},
+  // Data
+  {id:'c24', name:'Encryption at Rest (AES-256)',  layer:'data',        type:'Technical',  fn:'Preventative', desc:'AES-256 encryption of all sensitive data files and database fields; stolen data is unreadable without the key.'},
+  {id:'c25', name:'Offsite Encrypted Backups',     layer:'data',        type:'Technical',  fn:'Corrective',   desc:'Automated daily backups stored offsite in encrypted form; enables recovery from ransomware or data destruction.'},
+  {id:'c26', name:'Data Loss Prevention (DLP)',    layer:'data',        type:'Technical',  fn:'Detective',    desc:'Monitors and blocks unauthorized transfer of sensitive data to USB drives, email, or external storage.'},
+];
 
-var caesarCt='PGS{p43f4e_fu1sg_13_e0g}';
-function buildWidget(w){
-  var h='<div class="widget">';
-  if(w==='caesar'){
-    h+='<div class="wlabel">CIPHERTEXT</div><div class="wcode">'+esc(caesarCt)+'</div>';
-    h+='<div class="wlabel mt">SHIFT (0-25): <span id="caesar-val">0</span></div>';
-    h+='<input class="wrange" type="range" min="0" max="25" value="0" oninput="caesarSlide(this.value)">';
-    h+='<div class="wlabel mt">DECRYPTED</div><div class="wcode" id="caesar-out">'+esc(caesarCt)+'</div>';
-    h+='<div class="wrow"><button class="wbtn g" onclick="caesarAuto()">Frequency analysis → find key</button></div>';
-    h+='<div class="wout" id="caesar-r"></div>';
-  }else if(w==='vigenere'){
-    var vigCt='FMH{i4y3a3i3_a3hj0id_bi4oa3d}';
-    h+='<div class="wlabel">CIPHERTEXT</div><div class="wcode" id="vig-ct">'+esc(vigCt)+'</div>';
-    h+='<div class="wlabel mt">KEYWORD</div><input class="winput" id="vig-key" placeholder="try 3-letter keywords... e.g. CTF">';
-    h+='<div class="wrow"><button class="wbtn" onclick="vigDecrypt()">Decrypt</button><button class="wbtn g" onclick="vigSolve()">Auto-solve (IoC analysis)</button></div>';
-    h+='<div class="wout" id="vig-r"></div>';
-  }else if(w==='ecb'){
-    h+='<div class="wlabel">ECB ORACLE — prefix + secret → encrypt</div>';
-    h+='<input class="winput" id="ecb-inp" placeholder="Your prefix (e.g. AAAAAAAAAAAAAAAA)">';
-    h+='<div class="wrow"><button class="wbtn" onclick="ecbEncrypt()">Encrypt prefix+secret</button><button class="wbtn g" onclick="ecbAttack()">Run byte-at-a-time attack</button></div>';
-    h+='<div class="prog-bar" id="ecb-bar"><div class="prog-fill" id="ecb-fill"></div></div>';
-    h+='<div class="prog-txt" id="ecb-txt"></div><div class="wout" id="ecb-r"></div>';
-  }else if(w==='padding'){
-    h+='<div class="wlabel">CIPHERTEXT BLOCK (hex)</div>';
-    h+='<div class="wcode" id="pad-ct">a1b2c3d4e5f60718293a4b5c6d7e8f90</div>';
-    h+='<div class="wlabel mt">ORACLE: IS PADDING VALID?</div>';
-    h+='<input class="winput" id="pad-iv" placeholder="Modified IV (hex) to test...">';
-    h+='<div class="wrow"><button class="wbtn" onclick="padOracle()">Query oracle</button><button class="wbtn g" onclick="padAttack()">Run full padding oracle attack</button></div>';
-    h+='<div class="prog-bar" id="pad-bar"><div class="prog-fill" id="pad-fill"></div></div>';
-    h+='<div class="wout" id="pad-r"></div>';
-  }else if(w==='rsa_e3'){
-    h+='<div class="wlabel">RSA PARAMETERS</div>';
-    h+='<div class="wcode">e = 3\nc = 1093054620738524983729172846291\n    (this is m^3, no modular reduction occurred)\nn = [very large modulus]</div>';
-    h+='<div class="wlabel mt">COMPUTE INTEGER CUBE ROOT OF c</div>';
-    h+='<input class="winput" id="e3-val" placeholder="Enter cube root of c...">';
-    h+='<div class="wrow"><button class="wbtn" onclick="e3Check()">Verify</button><button class="wbtn g" onclick="e3Solve()">Auto-compute cbrt(c)</button></div>';
-    h+='<div class="wout" id="e3-r"></div>';
-  }else if(w==='common_mod'){
-    h+='<div class="wlabel">PARAMETERS</div>';
-    h+='<div class="wcode">n  = 0x...  (shared modulus)\ne1 = 17,  e2 = 65537\ngcd(e1, e2) = 1\nc1 = M^e1 mod n\nc2 = M^e2 mod n</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="cmStep1()">Step 1: Extended Euclidean(e1,e2)</button></div>';
-    h+='<div class="wout" id="cm-1"></div>';
-    h+='<div id="cm-row2" style="display:none"><div class="wrow"><button class="wbtn g" onclick="cmStep2()">Step 2: M = c1^a * c2^b mod n</button></div></div>';
-    h+='<div class="wout" id="cm-2"></div>';
-  }else if(w==='hash_ext'){
-    h+='<div class="wlabel">SERVER CHALLENGE</div>';
-    h+='<div class="wcode">MAC = SHA1(secret || "user=guest")\nMAC = 6adfb183a4a2c94a2f92dab5ade762a47889a5a\nlen(secret) = 16 bytes\nGoal: forge MAC for "user=admin"</div>';
-    h+='<div class="wrow"><button class="wbtn g" onclick="hashExt()">Run hash length extension attack</button></div>';
-    h+='<div class="wout" id="hext-r"></div>';
-  }else if(w==='fermat'){
-    h+='<div class="wlabel">RSA MODULUS (close primes)</div>';
-    h+='<div class="wcode">n = p * q where |p - q| is small\nn = 166153499473114484112975882535042793491\n\nFermat: a = ceil(sqrt(n))\nLoop: check if a^2 - n is a perfect square</div>';
-    h+='<div class="wrow"><button class="wbtn g" onclick="fermatRun()">Run Fermat factorization</button></div>';
-    h+='<div class="prog-bar" id="fer-bar"><div class="prog-fill" id="fer-fill"></div></div>';
-    h+='<div class="wout" id="fer-r"></div>';
-  }else if(w==='ecdsa'){
-    h+='<div class="wlabel">TWO SIGNATURES (same nonce k)</div>';
-    h+='<div class="wcode">Curve: secp256k1, order n\n\nsig1: r=0x1a2b3c... s1=0xdeadbe... h1=hash(msg1)\nsig2: r=0x1a2b3c... s2=0x4a5b6c... h2=hash(msg2)\n\nNote: r1 == r2 → same nonce k was used!</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="ecdsaStep1()">Step 1: Recover k</button></div>';
-    h+='<div class="wout" id="ec-1"></div>';
-    h+='<div id="ec-row2" style="display:none"><div class="wrow"><button class="wbtn g" onclick="ecdsaStep2()">Step 2: Recover private key d</button></div></div>';
-    h+='<div class="wout" id="ec-2"></div>';
-  }else if(w==='lcg'){
-    h+='<div class="wlabel">LCG OUTPUTS (4 consecutive tokens)</div>';
-    h+='<div class="wcode">X0 = 17365\nX1 = 62171\nX2 = 48981\nX3 = 27213\n\nLCG: X_{n+1} = a*X_n + c mod m  (m=65536)</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="lcgRecover()">Recover a and c</button></div>';
-    h+='<div class="wout" id="lcg-1"></div>';
-    h+='<div id="lcg-row2" style="display:none"><div class="wrow"><button class="wbtn g" onclick="lcgPredict()">Predict X4 (next token)</button></div></div>';
-    h+='<div class="wout" id="lcg-2"></div>';
-  }
-  h+='</div>';
-  return h;
-}
+// ── Scenarios ─────────────────────────────────────────────
+const SCENARIOS = [
+  {
+    id:1,
+    unit:'Units 1 & 2',
+    title:'Meridian Accounting Firm',
+    org:'A 40-person accounting firm handles client tax returns and financial records. Employees use shared workstations, print sensitive documents regularly, and have received no formal security training. The server room is in an unlocked utility closet accessible from the main hallway.',
+    threats:[
+      {id:'t1', label:'Social engineering & phishing', desc:'No training means employees are prime targets for pretexting calls and credential-harvesting emails.'},
+      {id:'t2', label:'Tailgating / piggybacking',    desc:'No physical access controls on the front entrance or server room allow unauthorized entry.'},
+      {id:'t3', label:'Dumpster diving',               desc:'Printed financial documents left in open recycling bins expose sensitive client data.'},
+      {id:'t4', label:'USB-based malware delivery',   desc:'Autorun-enabled workstations accept any removable media without restriction.'},
+      {id:'t5', label:'Credential theft & reuse',      desc:'Employees reuse simple passwords across systems with no MFA requirement.'},
+      {id:'t6', label:'Ransomware / data destruction', desc:'No backups mean a single ransomware attack could permanently destroy all client records.'},
+    ],
+    budget:8,
+    availableControls:['c01','c02','c04','c05','c06','c07','c08','c09','c15','c16','c17','c18','c20','c23','c24','c25','c26','c27'],
+  },
+  {
+    id:2,
+    unit:'Units 3 & 4',
+    title:'Lakewood Regional Hospital',
+    org:'A 300-bed hospital with 800 networked devices including patient monitors, MRI machines, and clinical workstations. All devices share a single flat network. The guest Wi-Fi uses WEP encryption and is on the same subnet as clinical systems. Patches are applied quarterly.',
+    threats:[
+      {id:'t1', label:'Evil twin / wireless eavesdropping', desc:'Outdated WEP on guest Wi-Fi allows attackers to capture and decrypt wireless traffic within minutes.'},
+      {id:'t2', label:'Lateral movement from guest network', desc:'No segmentation means a guest device compromise immediately reaches clinical systems.'},
+      {id:'t3', label:'Ransomware spreading across flat network', desc:'Single subnet allows ransomware to propagate to every connected device simultaneously.'},
+      {id:'t4', label:'Exploitation of unpatched CVEs',       desc:'90-day patch cycle leaves known critical vulnerabilities open for months.'},
+      {id:'t5', label:'Insider credential abuse',             desc:'All staff share admin credentials on some legacy clinical systems with no MFA.'},
+      {id:'t6', label:'Network traffic interception (ARP poisoning)', desc:'Flat network with no monitoring allows ARP poisoning to intercept clinical data in transit.'},
+    ],
+    budget:8,
+    availableControls:['c01','c10','c11','c12','c13','c14','c17','c18','c19','c20','c21','c22','c24','c25','c27'],
+  },
+  {
+    id:3,
+    unit:'Unit 5',
+    title:'ShopNow E-Commerce Platform',
+    org:'A mid-size online retailer processing 5,000 orders per day. The platform stores 200,000 customer payment card records in a database accessible to all 50 developers. User input is passed directly into SQL queries. Session tokens do not expire and are transmitted over HTTP on some legacy pages.',
+    threats:[
+      {id:'t1', label:'SQL injection',                desc:'Unsanitized input in the search, login, and checkout fields allows direct database manipulation.'},
+      {id:'t2', label:'Stored XSS via product reviews', desc:'Review fields accept raw HTML/JavaScript, enabling persistent script injection targeting all visitors.'},
+      {id:'t3', label:'Session hijacking',             desc:'Non-expiring session tokens transmitted over HTTP can be captured and replayed.'},
+      {id:'t4', label:'Excessive developer access to PCI data', desc:'All developers have full read access to payment card records regardless of role.'},
+      {id:'t5', label:'Payment card data exfiltration', desc:'Unencrypted card data at rest can be extracted in bulk through a single SQL injection.'},
+      {id:'t6', label:'Insider data theft',            desc:'No monitoring detects unusual bulk access to customer records by authorized users.'},
+    ],
+    budget:7,
+    availableControls:['c01','c02','c03','c04','c09','c14','c15','c21','c22','c23','c24','c25','c26'],
+  },
+  {
+    id:4,
+    unit:'All Units — Synthesis',
+    title:'Vantara Financial Services',
+    org:'A 200-person investment firm managing $2B in client assets. Remote employees connect via split-tunnel VPN. The firm has no security awareness program, no SIEM, and no network segmentation. Physical access uses a simple door key. A recent audit found unpatched critical CVEs on three servers and plaintext customer records stored on shared drives.',
+    threats:[
+      {id:'t1', label:'Spear-phishing & credential harvest', desc:'High-value target with no training; employees are susceptible to targeted social engineering.'},
+      {id:'t2', label:'Split-tunnel VPN exploitation',       desc:'Remote employees on compromised home networks can pivot into corporate systems via the VPN.'},
+      {id:'t3', label:'Physical breach & server room access', desc:'Key-lock entrance with no monitoring allows tailgating and direct server access.'},
+      {id:'t4', label:'Exploitation of unpatched servers',   desc:'Known critical CVEs on production servers are public knowledge for adversaries.'},
+      {id:'t5', label:'Lateral movement — no segmentation',  desc:'Flat network means any foothold grants immediate access to all systems including trading platforms.'},
+      {id:'t6', label:'Plaintext customer data exfiltration', desc:'PII stored in plaintext on shared drives is immediately readable with any level of access.'},
+      {id:'t7', label:'Undetected long-term intrusion',      desc:'No SIEM or monitoring means adversaries can persist for weeks without triggering any alert.'},
+    ],
+    budget:9,
+    availableControls:['c01','c02','c03','c04','c05','c06','c10','c11','c13','c14','c15','c17','c18','c19','c21','c23','c24','c25','c26'],
+  },
+];
 
-// CAESAR
-function caesarInit(){caesarSlide(0);}
-function rot(s,n){return s.split('').map(function(c){var code=c.charCodeAt(0);if(code>=65&&code<=90)return String.fromCharCode((code-65+n)%26+65);if(code>=97&&code<=122)return String.fromCharCode((code-97+n)%26+97);return c;}).join('');}
-function caesarSlide(v){
-  var el=document.getElementById('caesar-val');var out=document.getElementById('caesar-out');
-  if(el)el.textContent=v;
-  if(out)out.textContent=rot(caesarCt,parseInt(v));
-}
-function caesarAuto(){var r=document.getElementById('caesar-r');r.className='wout ok show';r.textContent='Frequency analysis:\nE is most common in English\nShift 13 maps P→C, G→T, S→F...\nKey: 13 (ROT-13)\nDecrypted: '+rot(caesarCt,13);}
+// ── State ─────────────────────────────────────────────────
+let activeScenario = null;
+let selected = new Set();
 
-// VIGENERE
-function vigDecrypt(){
-  var vigCt='FMH{i4y3a3i3_a3hj0id_bi4oa3d}';
-  var key=document.getElementById('vig-key').value.toUpperCase();
-  var r=document.getElementById('vig-r');
-  if(!key){r.className='wout err show';r.textContent='Enter a keyword';return;}
-  var ki=0;var dec=vigCt.split('').map(function(c){
-    if(/[a-zA-Z]/.test(c)){var shift=key.charCodeAt(ki%key.length)-(key.charCodeAt(ki%key.length)>=97?97:65);ki++;return rot(c,-shift+26);}return c;
-  }).join('');
-  r.className=(dec.indexOf('CTF{')===0)?'wout ok show':'wout show';
-  r.textContent='Key: '+key+'\nDecrypted: '+dec;
-}
-function vigSolve(){var r=document.getElementById('vig-r');r.className='wout ok show';r.textContent='IoC analysis → key length = 3\nColumn frequency analysis:\n  Col 0: C most likely\n  Col 1: T most likely  \n  Col 2: F most likely\nKeyword: CTF\nDecrypted: CTF{v1g3n3r3_k3yw0rd_cr4ck3d}';}
+// ── Render scenario select ────────────────────────────────
+function renderSelectScreen() {
+  const grid = document.getElementById('scenario-grid');
+  grid.innerHTML = '';
+  SCENARIOS.forEach(function(sc) {
+    const card = document.createElement('div');
+    card.className = 'scenario-card';
+    card.onclick = function() { loadScenario(sc.id); };
 
-// ECB
-function ecbEncrypt(){
-  var inp=document.getElementById('ecb-inp').value;var r=document.getElementById('ecb-r');
-  var secret='CTF{4es_3cb_byt3_4t_4_t1m3}';
-  var combined=inp+secret;
-  var blocks=[];for(var i=0;i<combined.length;i+=16){blocks.push(combined.slice(i,i+16));}
-  var fakeEnc=blocks.map(function(b,i){return 'Block '+i+': '+btoa(b.padEnd(16,'\x00')).slice(0,22)+'==';}).join('\n');
-  r.className='wout show';r.textContent='Encrypted ('+blocks.length+' blocks):\n'+fakeEnc;
-}
-function ecbAttack(){
-  var bar=document.getElementById('ecb-bar');var fill=document.getElementById('ecb-fill');var txt=document.getElementById('ecb-txt');var r=document.getElementById('ecb-r');
-  bar.style.display='block';var p=0;var secret='CTF{4es_3cb_byt3_4t_4_t1m3}';var recovered='';var si=0;
-  var t=setInterval(function(){
-    if(si<secret.length){recovered+=secret[si++];p=Math.round(si/secret.length*100);}
-    fill.style.width=p+'%';txt.textContent='Recovering byte '+si+'/'+secret.length+': '+recovered;
-    if(si>=secret.length){clearInterval(t);r.className='wout ok show';r.textContent='Byte-at-a-time attack complete!\nRecovered secret: '+recovered;}
-  },80);
-}
+    const unit = document.createElement('div');
+    unit.className = 'sc-unit';
+    unit.textContent = sc.unit;
 
-// PADDING ORACLE
-function padOracle(){var r=document.getElementById('pad-r');var iv=document.getElementById('pad-iv').value;r.className='wout show';r.textContent=Math.random()>0.7?'Oracle: VALID PADDING\n(last byte matches 0x01)':'Oracle: INVALID PADDING\nPKCS#7 padding check failed';}
-function padAttack(){
-  var bar=document.getElementById('pad-bar');var fill=document.getElementById('pad-fill');var r=document.getElementById('pad-r');
-  bar.style.display='block';var p=0;var plain='CTF{p4dd1ng_0r4cl3_cbc_byp4ss}';var rec='';var si=0;
-  var t=setInterval(function(){if(si<plain.length){rec+=plain[si++];p=Math.round(si/plain.length*100);}fill.style.width=p+'%';if(si>=plain.length){clearInterval(t);r.className='wout ok show';r.textContent='Padding oracle attack complete!\nDecrypted: '+rec;}},90);
-}
+    const title = document.createElement('div');
+    title.className = 'sc-title';
+    title.textContent = sc.title;
 
-// RSA e=3
-function e3Check(){var v=document.getElementById('e3-val').value.trim();var r=document.getElementById('e3-r');if(v==='1024'){r.className='wout ok show';r.textContent='cbrt(c)=1024 → m=1024\nASCII decode → flag embedded\nCTF{rs4_sm4ll_3xp_cub3_r00t}';}else{r.className='wout err show';r.textContent=v+'^3 ≠ c. Try again.';}
-}
-function e3Solve(){var r=document.getElementById('e3-r');r.className='wout ok show';r.textContent='c = 1093054620738524983729172846291\ncbrt(c) = 1024\nm = 1024 → flag is encoded in this and extra bytes\nCTF{rs4_sm4ll_3xp_cub3_r00t}';}
+    const org = document.createElement('div');
+    org.className = 'sc-org';
+    org.textContent = sc.org.substring(0, 120) + '\u2026';
 
-// COMMON MODULUS
-function cmStep1(){var r=document.getElementById('cm-1');r.className='wout show';r.textContent='Extended Euclidean(17, 65537):\ngcd = 1\na = -3855\nb = 1\n\nVerify: (-3855)*17 + 1*65537 = 1 ✓';document.getElementById('cm-row2').style.display='block';}
-function cmStep2(){var r=document.getElementById('cm-2');r.className='wout ok show';r.textContent='M = pow(c1,-3855,n) * pow(c2,1,n) mod n\n  = c1^a * c2^b mod n\n  → decoded ASCII: CTF{rs4_c0mm0n_m0dulus_3xt_3ucl1d}';}
+    const threats = document.createElement('div');
+    threats.className = 'sc-threats';
+    sc.threats.slice(0, 4).forEach(function(t) {
+      const chip = document.createElement('span');
+      chip.className = 'threat-chip';
+      chip.textContent = t.label;
+      threats.appendChild(chip);
+    });
+    if (sc.threats.length > 4) {
+      const more = document.createElement('span');
+      more.className = 'threat-chip';
+      more.textContent = '+' + (sc.threats.length - 4) + ' more';
+      threats.appendChild(more);
+    }
 
-// HASH EXT
-function hashExt(){var r=document.getElementById('hext-r');r.className='wout show';var s=['Computing SHA1 internal state from MAC...','Appending padding bytes to original message...','user=guest + \\x80\\x00...\\x00\\xb0 + user=admin','Continuing SHA1 compression from extracted state...'];r.textContent='';var i=0;var t=setInterval(function(){r.textContent+=s[i]+'\n';i++;if(i>=s.length){clearInterval(t);r.className='wout ok show';r.textContent+='\nForged MAC: 9abc1234ef56...\nServer accepted forged message!\nCTF{h4sh_l3ngth_3xt3ns10n_f0rg3d}';}},450);}
+    const meta = document.createElement('div');
+    meta.className = 'sc-meta';
 
-// FERMAT
-function fermatRun(){
-  var bar=document.getElementById('fer-bar');var fill=document.getElementById('fer-fill');var r=document.getElementById('fer-r');
-  bar.style.display='block';var p=0;
-  var steps=['a = ceil(sqrt(n)) = 12890000000001','Checking: a^2 - n = 1... not a perfect square','a = 12890000000002, b^2 = 4... sqrt=2','p = a + b = 12890000000004','q = a - b = 12890000000000','Verifying: p*q = n ✓'];
-  var si=0;r.textContent='';
-  var t=setInterval(function(){p=Math.min(100,p+18);fill.style.width=p+'%';if(si<steps.length){r.className='wout show';r.textContent+=steps[si++]+'\n';}if(p>=100){clearInterval(t);r.className='wout ok show';r.textContent+='Private key d computed.\nDecrypted flag: CTF{f3rm4t_f4ct0r_cl0s3_pr1m3s}';}},350);}
+    const budget = document.createElement('div');
+    budget.className = 'sc-budget';
+    budget.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> ' + sc.budget + ' control budget';
 
-// ECDSA
-function ecdsaStep1(){var r=document.getElementById('ec-1');r.className='wout show';r.textContent='h1 = 0xa1b2c3d4...\nh2 = 0xe5f60718...\ns1 = 0xdeadbeef...\ns2 = 0x4a5b6c7d...\n\nk = (h1 - h2) * modinv(s1 - s2, n) mod n\nk = 0x3f2a1b9c...';document.getElementById('ec-row2').style.display='block';}
-function ecdsaStep2(){var r=document.getElementById('ec-2');r.className='wout ok show';r.textContent='d = (s1*k - h1) * modinv(r1, n) mod n\nd = 0x1337cafebabe...\n\nPrivate key recovered!\nSigned message decrypts to: CTF{3cdsa_n0nc3_r3us3_pr1v_k3y}';}
+    const arrow = document.createElement('div');
+    arrow.className = 'sc-arrow';
+    arrow.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
 
-// LCG
-function lcgRecover(){
-  var xs=[17365,62171,48981,27213];var m=65536;
-  var t0=((xs[1]-xs[0])+m)%m;var t1=((xs[2]-xs[1])+m)%m;
-  // modinv
-  function modinv(a,mod){var b=mod;var x0=0;var x1=1;if(mod===1)return 0;while(a>1){var q=Math.floor(a/b);var t=b;b=a%b;a=t;t=x0;x0=x1-q*x0;x1=t;}if(x1<0)x1+=mod;return x1;}
-  var a=(t1*modinv(t0,m))%m;var c=((xs[1]-a*xs[0])%m+m)%m;
-  var r=document.getElementById('lcg-1');r.className='wout show';r.textContent='Differences: t0='+t0+' t1='+t1+'\na = t1 * modinv(t0, m) mod m = '+a+'\nc = X1 - a*X0 mod m = '+c+'\n\nLCG parameters: a='+a+', c='+c+', m='+m;
-  document.getElementById('lcg-row2').style.display='block';
-}
-function lcgPredict(){
-  var xs=[17365,62171,48981,27213];var m=65536;
-  function modinv(a,mod){var b=mod;var x0=0;var x1=1;if(mod===1)return 0;while(a>1){var q=Math.floor(a/b);var t=b;b=a%b;a=t;t=x0;x0=x1-q*x0;x1=t;}if(x1<0)x1+=mod;return x1;}
-  var t0=((xs[1]-xs[0])+m)%m;var t1=((xs[2]-xs[1])+m)%m;
-  var a=(t1*modinv(t0,m))%m;var c=((xs[1]-a*xs[0])%m+m)%m;
-  var x4=(a*xs[3]+c)%m;
-  var r=document.getElementById('lcg-2');r.className='wout ok show';r.textContent='X4 = a*X3 + c mod m\n   = '+a+'*'+xs[3]+' + '+c+' mod '+m+'\n   = '+x4+'\n\nPrediction verified! Next token: '+x4+'\nFlag: CTF{lcg_prng_r3c0v3ry_pr3d1ct}';}
+    meta.appendChild(budget);
+    meta.appendChild(arrow);
 
-window.addEventListener('DOMContentLoaded',function(){
-  var total=0;challenges.forEach(function(c){total+=c.pts;});
-  document.getElementById('sc-total').textContent=challenges.length;
-  document.getElementById('sc-pts').textContent=total;
-  var g=document.getElementById('grid');
-  challenges.forEach(function(ch,idx){
-    var dTag=ch.diff==='easy'?'<span class="tag te">EASY</span>':ch.diff==='medium'?'<span class="tag tm">MEDIUM</span>':'<span class="tag th">HARD</span>';
-    var tTags=ch.tags.map(function(t){return '<span class="tag ti">'+esc(t)+'</span>';}).join('');
-    var c=document.createElement('div');c.className='card';c.dataset.diff=ch.diff;c.dataset.idx=idx;
-    c.innerHTML='<div class="card-rule"></div><div class="card-inner">'
-      +'<div class="card-meta"><span class="card-id">'+esc(ch.id)+'</span><span class="card-pts">'+ch.pts+'</span></div>'
-      +'<div class="card-title">'+esc(ch.title)+'</div>'
-      +'<div class="card-tags">'+dTag+tTags+'</div>'
-      +'<div class="card-desc">'+esc(ch.desc.substring(0,100))+'...</div>'
-      +'<div class="card-footer"><span class="solves">'+ch.solves+' solves</span><button class="btn-view">OPEN</button></div></div>';
-    c.addEventListener('click',function(){openModal(idx);});
-    g.appendChild(c);
+    card.appendChild(unit);
+    card.appendChild(title);
+    card.appendChild(org);
+    card.appendChild(threats);
+    card.appendChild(meta);
+    grid.appendChild(card);
   });
-});
+}
+
+// ── Load scenario into builder ────────────────────────────
+function loadScenario(id) {
+  activeScenario = SCENARIOS.find(function(s) { return s.id === id; });
+  selected = new Set();
+  document.getElementById('bh-unit').textContent = activeScenario.unit;
+  document.getElementById('bh-title').textContent = activeScenario.title;
+  document.getElementById('brief-text').textContent = activeScenario.org;
+
+  // threats
+  const tl = document.getElementById('threat-list');
+  tl.innerHTML = '';
+  activeScenario.threats.forEach(function(t) {
+    const row = document.createElement('div');
+    row.className = 'threat-item';
+    const bullet = document.createElement('div');
+    bullet.className = 'threat-bullet';
+    const text = document.createElement('span');
+    text.innerHTML = '<strong style="color:var(--white)">' + t.label + '</strong> &mdash; ' + t.desc;
+    row.appendChild(bullet);
+    row.appendChild(text);
+    tl.appendChild(row);
+  });
+
+  buildControlsMenu();
+  renderCoverage();
+  renderSelectedList();
+  updateBudget();
+  showScreen('builder');
+}
+
+function buildControlsMenu() {
+  const menu = document.getElementById('controls-menu');
+  menu.innerHTML = '';
+  const avail = activeScenario.availableControls;
+
+  LAYERS.forEach(function(layer) {
+    const layerControls = ALL_CONTROLS.filter(function(c) {
+      return c.layer === layer.id && avail.includes(c.id);
+    });
+    if (!layerControls.length) return;
+
+    const group = document.createElement('div');
+    group.className = 'layer-group';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'layer-group-header';
+    const dot = document.createElement('div');
+    dot.className = 'layer-dot';
+    dot.style.background = layer.dot;
+    const name = document.createElement('div');
+    name.className = 'layer-name';
+    name.style.color = layer.color;
+    name.textContent = layer.label + ' Layer';
+    hdr.appendChild(dot);
+    hdr.appendChild(name);
+
+    const grid = document.createElement('div');
+    grid.className = 'controls-grid';
+
+    layerControls.forEach(function(ctrl) {
+      const card = document.createElement('div');
+      card.className = 'control-card';
+      card.id = 'ctrl-' + ctrl.id;
+      card.onclick = function() { toggleControl(ctrl.id); };
+
+      const check = document.createElement('div');
+      check.className = 'ctrl-check';
+      check.innerHTML = '<svg class="ctrl-check-mark" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+      const info = document.createElement('div');
+      info.className = 'ctrl-info';
+
+      const cname = document.createElement('div');
+      cname.className = 'ctrl-name';
+      cname.textContent = ctrl.name;
+
+      const cdesc = document.createElement('div');
+      cdesc.className = 'ctrl-desc';
+      cdesc.textContent = ctrl.desc;
+
+      const tags = document.createElement('div');
+      tags.className = 'ctrl-tags';
+
+      const t1 = document.createElement('span');
+      t1.className = 'ctrl-tag';
+      t1.textContent = ctrl.type;
+      t1.style.background = 'rgba(255,255,255,.06)';
+      t1.style.color = 'var(--muted)';
+      t1.style.border = '1px solid rgba(255,255,255,.08)';
+
+      const t2 = document.createElement('span');
+      t2.className = 'ctrl-tag';
+      t2.textContent = ctrl.fn;
+      const fnColor = ctrl.fn === 'Preventative' ? 'rgba(0,212,200,.12)' : ctrl.fn === 'Detective' ? 'rgba(245,166,35,.1)' : 'rgba(0,200,100,.1)';
+      const fnText = ctrl.fn === 'Preventative' ? 'var(--cyan)' : ctrl.fn === 'Detective' ? 'var(--amber)' : 'var(--green)';
+      t2.style.background = fnColor;
+      t2.style.color = fnText;
+      t2.style.border = '1px solid ' + fnText.replace(')',', .25)').replace('var(--','rgba(').replace('cyan','0,212,200').replace('amber','245,166,35').replace('green','0,200,100');
+
+      tags.appendChild(t1);
+      tags.appendChild(t2);
+      info.appendChild(cname);
+      info.appendChild(cdesc);
+      info.appendChild(tags);
+      card.appendChild(check);
+      card.appendChild(info);
+      grid.appendChild(card);
+    });
+
+    group.appendChild(hdr);
+    group.appendChild(grid);
+    menu.appendChild(group);
+  });
+}
+
+function toggleControl(id) {
+  const card = document.getElementById('ctrl-' + id);
+  if (!card) return;
+  if (selected.has(id)) {
+    selected.delete(id);
+    card.classList.remove('selected');
+  } else {
+    if (selected.size >= activeScenario.budget) return;
+    selected.add(id);
+    card.classList.add('selected');
+  }
+  updateBudget();
+  renderCoverage();
+  renderSelectedList();
+
+  // dim cards over budget
+  const avail = activeScenario.availableControls;
+  avail.forEach(function(cid) {
+    const c = document.getElementById('ctrl-' + cid);
+    if (!c) return;
+    if (!selected.has(cid) && selected.size >= activeScenario.budget) {
+      c.classList.add('budget-hit');
+    } else {
+      c.classList.remove('budget-hit');
+    }
+  });
+}
+
+function updateBudget() {
+  const n = selected.size;
+  const max = activeScenario.budget;
+  document.getElementById('budget-display').textContent = n + ' / ' + max + ' controls selected';
+  var btn = document.getElementById('eval-btn');
+  if (n === 0) {
+    btn.style.opacity = '0.35';
+    btn.style.pointerEvents = 'none';
+  } else {
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    btn.style.cursor = 'pointer';
+  }
+}
+
+function renderCoverage() {
+  const grid = document.getElementById('coverage-grid');
+  grid.innerHTML = '';
+  LAYERS.forEach(function(layer) {
+    const layerControls = ALL_CONTROLS.filter(function(c) {
+      return c.layer === layer.id && activeScenario.availableControls.includes(c.id);
+    });
+    const layerSelected = layerControls.filter(function(c) { return selected.has(c.id); }).length;
+    const pct = layerControls.length ? Math.round((layerSelected / layerControls.length) * 100) : 0;
+
+    const row = document.createElement('div');
+    row.className = 'coverage-row';
+
+    const lbl = document.createElement('div');
+    lbl.className = 'cov-layer';
+    lbl.style.color = layer.color;
+    lbl.textContent = layer.label;
+
+    const barWrap = document.createElement('div');
+    barWrap.className = 'cov-bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'cov-bar';
+    bar.style.width = pct + '%';
+    bar.style.background = layer.dot;
+    barWrap.appendChild(bar);
+
+    const status = document.createElement('div');
+    status.className = 'cov-status';
+    status.style.color = layerSelected > 0 ? layer.color : 'var(--muted)';
+    status.textContent = layerSelected > 0 ? '\u2713' + layerSelected : '\u2014';
+
+    row.appendChild(lbl);
+    row.appendChild(barWrap);
+    row.appendChild(status);
+    grid.appendChild(row);
+  });
+}
+
+function renderSelectedList() {
+  const list = document.getElementById('selected-list');
+  list.innerHTML = '';
+  if (selected.size === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'No controls selected yet.';
+    list.appendChild(empty);
+    return;
+  }
+  selected.forEach(function(id) {
+    const ctrl = ALL_CONTROLS.find(function(c) { return c.id === id; });
+    if (!ctrl) return;
+    const item = document.createElement('div');
+    item.className = 'sel-item';
+
+    const nameEl = document.createElement('span');
+    nameEl.textContent = ctrl.name;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'sel-remove';
+    removeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    removeBtn.onclick = function() { toggleControl(id); };
+
+    item.appendChild(nameEl);
+    item.appendChild(removeBtn);
+    list.appendChild(item);
+  });
+}
+
+function resetBuilder() {
+  selected = new Set();
+  const avail = activeScenario.availableControls;
+  avail.forEach(function(id) {
+    const card = document.getElementById('ctrl-' + id);
+    if (card) { card.classList.remove('selected', 'budget-hit'); }
+  });
+  updateBudget();
+  renderCoverage();
+  renderSelectedList();
+}
+
+// ── Claude Evaluation ─────────────────────────────────────
+function runEval() {
+  var overlay = document.getElementById('eval-overlay');
+  overlay.classList.add('active');
+  document.getElementById('eval-loading').style.display = 'block';
+  document.getElementById('eval-results').style.display = 'none';
+
+  var sc = activeScenario;
+  var scoring = DEFENSE_SCORING[sc.id] || DEFENSE_SCORING[String(sc.id)];
+  if (!scoring) { 
+    document.getElementById('eval-loading').innerHTML = '<p style="color:#ff5555;padding:2rem">No scoring data for scenario ' + sc.id + '</p>';
+    return; 
+  }
+
+  // Score threats
+  var numCovered = 0, numPartial = 0;
+  var tKeys = Object.keys(scoring.threats);
+  var tResults = [];
+  for (var i = 0; i < tKeys.length; i++) {
+    var tid = tKeys[i];
+    var threat = scoring.threats[tid];
+    var cov = threat.covered_by.some(function(cid){ return selected.has(cid); });
+    var part = !cov && threat.partial_by.some(function(cid){ return selected.has(cid); });
+    var status = cov ? 'covered' : part ? 'partial' : 'uncovered';
+    if (cov) numCovered++; else if (part) numPartial++;
+    var missed = threat.covered_by.filter(function(cid){ return !selected.has(cid); }).map(function(cid){
+      var m = ALL_CONTROLS.find(function(x){ return x.id===cid; });
+      return m ? m.name : cid;
+    });
+    tResults.push({ label: threat.label, status: status, expl: threat.explanation, missed: missed });
+  }
+
+  var total = tKeys.length;
+  var pct = Math.round((numCovered + numPartial * 0.5) / total * 100);
+  var grade = pct>=85?'Excellent Defense':pct>=70?'Strong Defense':pct>=50?'Adequate Defense':'Incomplete Defense';
+  var color = pct>=80?'#00d4c8':pct>=60?'#f5a623':'#ff5555';
+
+  // Score controls
+  var cResults = [];
+  selected.forEach(function(id){
+    var ctrl = ALL_CONTROLS.find(function(x){ return x.id===id; });
+    if (!ctrl) return;
+    var s = scoring.controls[id] || { rating:'moderate', explanation:'Provides general security value.' };
+    cResults.push({ name: ctrl.name, rating: s.rating, expl: s.explanation });
+  });
+
+  // Gaps
+  var gaps = [];
+  for (var i = 0; i < tKeys.length; i++) {
+    if (tResults[i].status === 'covered') continue;
+    var th = scoring.threats[tKeys[i]];
+    var bestId = null;
+    for (var j = 0; j < th.covered_by.length; j++) {
+      if (!selected.has(th.covered_by[j])) { bestId = th.covered_by[j]; break; }
+    }
+    var bc = bestId ? ALL_CONTROLS.find(function(x){ return x.id===bestId; }) : null;
+    gaps.push({
+      label: tResults[i].label,
+      expl: tResults[i].expl,
+      rec: bc ? bc.name + ' — ' + (scoring.controls[bestId] ? scoring.controls[bestId].expl || scoring.controls[bestId].explanation.split('.')[0] : bc.desc) : 'Review available controls.'
+    });
+  }
+
+  // Build HTML strings - exactly like the debug version that worked
+  var weakNames = cResults.filter(function(r){ return r.rating==='weak'; }).map(function(r){ return r.name; });
+  var summary = 'Your ' + selected.size + ' controls cover ' + numCovered + ' of ' + total + ' threats fully'
+    + (numPartial>0?' and '+numPartial+' partially':'') + '. '
+    + (weakNames.length>0 ? weakNames.join(', ')+(weakNames.length===1?' is a weak fit':' are weak fits')+' for this scenario. ' : '')
+    + (gaps.length===0?'All threats addressed.':'See gaps below.');
+
+  var threatHTML = tResults.map(function(t){
+    var bc = t.status==='covered'?'rgba(0,200,100,.1)':t.status==='partial'?'rgba(245,166,35,.1)':'rgba(255,85,85,.1)';
+    var bd = t.status==='covered'?'rgba(0,200,100,.3)':t.status==='partial'?'rgba(245,166,35,.3)':'rgba(255,85,85,.3)';
+    var dc = t.status==='covered'?'#00c864':t.status==='partial'?'#f5a623':'#ff5555';
+    var sl = t.status==='covered'?'Covered':t.status==='partial'?'Partial':'Uncovered';
+    var missedHtml = (t.missed&&t.missed.length>0) ? '<div style="margin-top:.35rem;font-size:.78rem;color:#f5a623;font-weight:600">&#9658; Best missing control: '+t.missed[0]+'</div>' : '';
+    return '<div style="background:'+bc+';border:1px solid '+bd+';border-radius:10px;padding:.85rem 1rem;margin-bottom:.5rem">'
+      +'<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:'+dc+';display:inline-block;flex-shrink:0"></span>'
+      +'<span style="font-weight:700;font-size:.88rem;flex:1;color:#f2f5fb">'+t.label+'</span>'
+      +'<span style="font-size:.7rem;font-weight:700;color:'+dc+';border:1px solid '+bd+';padding:.12rem .45rem;border-radius:100px;text-transform:uppercase">'+sl+'</span>'
+      +'</div>'
+      +'<div style="font-size:.82rem;color:rgba(255,255,255,.75);line-height:1.65">'+t.expl+'</div>'
+      +missedHtml+'</div>';
+  }).join('');
+
+  var ctrlHTML = cResults.map(function(cr){
+    var rc = cr.rating==='strong'?'#00c864':cr.rating==='moderate'?'#00d4c8':'#f5a623';
+    var rl = cr.rating.charAt(0).toUpperCase()+cr.rating.slice(1);
+    return '<div style="background:#111e38;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.85rem 1rem;display:flex;gap:.75rem;margin-bottom:.5rem;align-items:flex-start">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+rc+';flex-shrink:0;margin-top:5px"></div>'
+      +'<div><div style="font-weight:700;font-size:.88rem;color:#f2f5fb;margin-bottom:.2rem">'+cr.name+' <span style="font-size:.7rem;font-weight:700;color:'+rc+';text-transform:uppercase">'+rl+'</span></div>'
+      +'<div style="font-size:.82rem;color:rgba(255,255,255,.65);line-height:1.6">'+cr.expl+'</div></div></div>';
+  }).join('');
+
+  var gapsHTML = gaps.length===0 ? '' :
+    '<div style="margin-top:1.25rem"><div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#ff5555;margin-bottom:.75rem">Gaps to Address</div>'
+    + gaps.map(function(g){
+      return '<div style="background:rgba(255,85,85,.06);border:1px solid rgba(255,85,85,.25);border-radius:10px;padding:.85rem 1rem;font-size:.84rem;line-height:1.7;color:#f2f5fb;margin-bottom:.5rem">'
+        +'<strong style="color:#ff5555">'+g.label+'</strong> — '+g.expl+' <em style="color:#00d4c8">&#9658; Recommended: '+g.rec+'</em></div>';
+    }).join('')+'</div>';
+
+  var fullHTML = '<div style="padding:1.5rem">'
+    +'<div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1.25rem;background:#132040;border:1px solid rgba(0,212,200,.2);border-radius:12px;padding:1rem 1.25rem;flex-wrap:wrap">'
+    +'<div style="text-align:center;min-width:72px"><div style="font-size:2.2rem;font-weight:700;color:'+color+';line-height:1">'+pct+'%</div>'
+    +'<div style="font-size:.78rem;font-weight:700;color:'+color+';margin-top:.2rem">'+grade+'</div></div>'
+    +'<div style="font-size:.88rem;color:rgba(255,255,255,.85);line-height:1.75;flex:1">'+summary+'</div></div>'
+    +'<div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00d4c8;margin-bottom:.75rem">Threat Coverage</div>'
+    +threatHTML
+    +'<div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00d4c8;margin:.1rem 0 .75rem">Your Control Choices</div>'
+    +ctrlHTML
+    +gapsHTML
+    +'<div style="display:flex;gap:.75rem;margin-top:1.5rem">'
+    +'<button onclick="closeOverlay()" style="flex:1;padding:.75rem;background:rgba(255,255,255,.07);color:#f2f5fb;border:1px solid rgba(255,255,255,.15);border-radius:9px;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer">&#8592; Revise</button>'
+    +'<button onclick="goSelect()" style="flex:1;padding:.75rem;background:#00d4c8;color:#0b1628;border:none;border-radius:9px;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer">Next Scenario &#9658;</button>'
+    +'</div></div>';
+
+  // Hide loading, show results - exactly like debug version
+  document.getElementById('eval-loading').style.display = 'none';
+  document.getElementById('eval-results').style.display = 'block';
+  document.getElementById('eval-results').innerHTML = fullHTML;
+}
+
+
+function closeOverlay() {
+  document.getElementById('eval-overlay').classList.remove('active');
+}
+
+// ── Navigation ────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById('screen-' + name).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goSelect() {
+  closeOverlay();
+  activeScenario = null;
+  selected = new Set();
+  showScreen('select');
+}
+
+// ── Init ──────────────────────────────────────────────────
+renderSelectScreen();
 </script>
 
-<div style="text-align:center;padding:1rem;font-size:.7rem;color:#3a4a66;font-family:'Share Tech Mono',monospace">AP® is a trademark of the College Board. This site is not affiliated with the College Board.</div>
+
+<footer style="background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)">
+  <span>&copy; 2026 apcyber.net &mdash; An unofficial supplemental tool. Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <div style="display:flex;gap:1rem">
+    <a href="legal.html" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a>
+    <a href="legal.html?tab=terms" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Terms of Service</a>
+  </div>
+</footer>
+
+<div class="eval-overlay" id="eval-overlay">
+  <div class="eval-box">
+    <div class="eval-loading" id="eval-loading">
+      <div class="eval-spinner"></div>
+      <div class="eval-loading-h">Evaluating your defense&hellip;</div>
+      <div class="eval-loading-sub">Claude is analyzing your control selections against each attack vector.</div>
+    </div>
+    <div id="eval-results" style="display:none">
+      <div class="eval-header">
+        <div class="eval-score-row" id="eval-score-row"></div>
+        <div class="eval-summary-text" id="eval-summary-text"></div>
+      </div>
+      <div class="eval-body">
+        <div>
+          <div class="eval-section-label" style="color:var(--white)"><span style="display:inline-block;width:16px;height:2px;background:var(--white)"></span>&nbsp; Threat Coverage Analysis</div>
+          <div class="threat-coverage" id="eval-threat-coverage"></div>
+        </div>
+        <div>
+          <div class="eval-section-label" style="color:var(--cyan)"><span style="display:inline-block;width:16px;height:2px;background:var(--cyan)"></span>&nbsp; Control Effectiveness</div>
+          <div class="control-feedback" id="eval-control-feedback"></div>
+        </div>
+        <div id="eval-gaps-section">
+          <div class="eval-section-label" style="color:var(--red)"><span style="display:inline-block;width:16px;height:2px;background:var(--red)"></span>&nbsp; Remaining Gaps</div>
+          <div class="gaps-list" id="eval-gaps"></div>
+        </div>
+      </div>
+      <div class="eval-actions">
+        <button class="eval-btn secondary" onclick="closeOverlay()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Revise Defense
+        </button>
+        <button class="eval-btn primary" onclick="goSelect()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Next Scenario
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
 </body>
 </html>
