@@ -1,39 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EdTech Privacy Tool</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #f5f3f0; }
-    #root { min-height: 100vh; }
-    #loading-screen {
-      position: fixed; inset: 0;
-      background: linear-gradient(135deg, #0f766e, #1c3557);
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; color: white; z-index: 99999;
-      transition: opacity .5s;
-    }
-    #loading-screen h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
-    #ls-msg  { font-size: 14px; opacity: .85; margin-bottom: 14px; }
-    #ls-bar-wrap {
-      width: 280px; height: 6px; background: rgba(255,255,255,.2);
-      border-radius: 99px; overflow: hidden; margin-bottom: 8px;
-    }
-    #ls-bar { height: 100%; width: 0%; background: #5eead4;
-              border-radius: 99px; transition: width .25s ease; }
-    #ls-sub  { font-size: 11px; opacity: .5; min-height: 16px; }
-    .spinner { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.25);
-      border-top-color: white; border-radius: 50%;
-      animation: spin .8s linear infinite; margin-bottom: 18px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  /* Nav overrides — push content below fixed nav */
-  body { padding-top: 64px; }
-  #loading-screen { top: 64px; }
-  </style>
-  <style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Tools &mdash; AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<style>
 
   :root {
     --navy: #0b1628;
@@ -919,25 +891,210 @@
 <body>
 
 <nav>
-  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="tools.html" class="active">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
 
 
-
-<div id="loading-screen">
-  <div class="spinner"></div>
-  <h1>🛡️ EdTech Privacy Tool</h1>
-  <p id="ls-msg">Starting up…</p>
-  <div id="ls-bar-wrap"><div id="ls-bar"></div></div>
-  <p id="ls-sub"></p>
+<div class="tools-hero">
+  <h1>Student <em>Tools</em></h1>
+  <p>Everything you need to prepare for the AP Cybersecurity exam &mdash; practice quizzes, interactive scenarios, flashcards, an AI tutor, and more. All free, no account required.</p>
 </div>
 
-<div id="root"></div>
+<div class="tools-section">
 
-<!-- ═══════════════════════════════════════════════════════════════════════
-     Step 1 — IndexedDB storage polyfill
-     Maps window.storage (Claude.ai API) to IndexedDB (50 MB+ limit).
-     localStorage has a 5 MB cap which the 6.7 MB analyses JSON exceeds.
-════════════════════════════════════════════════════════════════════════ -->
+  <div class="tools-section-label">Practice &amp; Assessment</div>
+  <div class="tools-grid">
+
+    <a href="quiz.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(0,212,200,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Quiz Engine</div>
+        <div class="tool-desc">Randomized multiple-choice questions by unit with instant feedback and detailed explanations after every answer.</div>
+        <span class="tool-tag" style="background:rgba(0,212,200,.1);color:var(--cyan)">5&ndash;25 questions &bull; 5 units</span>
+      </div>
+    </a>
+
+    <a href="exam.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(245,166,35,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">AP Exam Simulator</div>
+        <div class="tool-desc">Full 60-question timed mock exam across all 5 units, proportional to the real AP exam. Score report with unit and topic breakdowns.</div>
+        <span class="tool-tag" style="background:rgba(245,166,35,.1);color:var(--amber)">60 questions &bull; 90 minutes</span>
+      </div>
+    </a>
+
+    <a href="synthesis.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(100,180,255,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#64b4ff" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Synthesis Quiz</div>
+        <div class="tool-desc">AI-generated questions that connect concepts across multiple units &mdash; attack chains, control gaps, and detection strategies.</div>
+        <span class="tool-tag" style="background:rgba(100,180,255,.1);color:#64b4ff">Cross-unit &bull; AI-powered</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="tools-section-label">Interactive Scenarios</div>
+  <div class="tools-grid">
+
+    <a href="mapper.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(180,100,255,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b464ff" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Attack Chain Mapper</div>
+        <div class="tool-desc">Drag-and-drop real cyberattack events into the correct phases of the attack chain. Claude scores your placement.</div>
+        <span class="tool-tag" style="background:rgba(180,100,255,.1);color:#b464ff">4 scenarios &bull; 6 phases</span>
+      </div>
+    </a>
+
+    <a href="spot.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(255,85,85,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ff5555" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Spot the Attack</div>
+        <div class="tool-desc">AI generates realistic email, log, and incident scenarios. Identify the attack technique, adversary type, and best countermeasure.</div>
+        <span class="tool-tag" style="background:rgba(255,85,85,.1);color:var(--red)">3 difficulty levels &bull; AI-powered</span>
+      </div>
+    </a>
+
+    <a href="defense.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(0,200,100,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00c864" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Defense-in-Depth Builder</div>
+        <div class="tool-desc">Choose security controls for 4 real-world org scenarios under budget constraints. Claude evaluates coverage per threat vector.</div>
+        <span class="tool-tag" style="background:rgba(0,200,100,.1);color:var(--green)">4 scenarios &bull; 26 controls</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="tools-section-label">Study &amp; Review</div>
+  <div class="tools-grid">
+
+    <a href="flashcards.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(245,166,35,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Flashcard Generator</div>
+        <div class="tool-desc">AI generates term/definition and scenario recognition cards for any of 24 AP topics. Flip, mark missed, retake missed only.</div>
+        <span class="tool-tag" style="background:rgba(245,166,35,.1);color:var(--amber)">24 topics &bull; AI-powered</span>
+      </div>
+    </a>
+
+    <a href="matcher.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(0,212,200,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Vocab &amp; Concept Matcher</div>
+        <div class="tool-desc">16 decks sorted by unit. Match pairs mode and sort-by-category mode covering all 5 units of AP Cybersecurity vocabulary.</div>
+        <span class="tool-tag" style="background:rgba(0,212,200,.1);color:var(--cyan)">16 decks &bull; All units</span>
+      </div>
+    </a>
+
+
+  </div>
+
+  <div class="tools-section-label">Course Resources</div>
+  <div class="tools-grid">
+
+    <a href="socratic-anchors.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(0,212,200,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Socratic Anchor Guides</div>
+        <div class="tool-desc">9 downloadable .docx guides covering all 5 units. Each guide includes key concepts, Socratic discussion questions, and 25 practice items.</div>
+        <span class="tool-tag" style="background:rgba(0,212,200,.1);color:var(--cyan)">9 guides &bull; Units 1&ndash;5 &bull; Free download</span>
+      </div>
+    </a>
+
+    <a href="tutor.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(180,100,255,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b464ff" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Socratic AI Tutor</div>
+        <div class="tool-desc">Full-screen AI tutor locked to any of 24 AP topics. Uses Socratic questioning to deepen understanding, with AP framework citations.</div>
+        <span class="tool-tag" style="background:rgba(180,100,255,.1);color:#b464ff">24 topics &bull; Socratic method</span>
+      </div>
+    </a>
+
+    <a href="https://apcentral.collegeboard.org/media/pdf/ap-cybersecurity-course-and-exam-description.pdf" target="_blank" class="tool-card">
+      <div class="tool-icon" style="background:rgba(255,85,85,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ff5555" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Course &amp; Exam Description</div>
+        <div class="tool-desc">The official College Board CED PDF. The authoritative source for learning objectives, skills, and exam format for AP Cybersecurity.</div>
+        <span class="tool-tag" style="background:rgba(255,85,85,.1);color:var(--red)">Official College Board &bull; PDF</span>
+      </div>
+    </a>
+
+  <!-- CTF CHALLENGES SECTION -->
+  <div class="tools-section-label" style="margin-top:2rem">&#128681; CTF Challenge Labs</div>
+  <div class="tools-grid">
+
+    <a href="ctf.html" class="tool-card" style="border-color:rgba(0,240,255,.25)">
+      <div class="tool-icon" style="background:rgba(0,240,255,.08)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2" stroke-linecap="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="#00f0ff"/>
+        </svg>
+      </div>
+      <div class="tool-info">
+        <div class="tool-name">CTF Challenge Labs</div>
+        <div class="tool-desc">65 hands-on Capture the Flag challenges across 6 categories — Web, Networking, Crypto, Forensics, OSINT, and Steganography. All mapped to AP framework units.</div>
+        <div class="tool-tags">
+          <span class="tool-tag">65 Challenges</span>
+          <span class="tool-tag">6 Categories</span>
+          <span class="tool-tag">Units 1&ndash;5</span>
+          <span class="tool-tag">No Login</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  </div>
+
+</div>
+
+<footer style="background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)">
+  <span>&copy; 2026 apcyber.net &mdash; Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <div style="display:flex;gap:1rem">
+    <a href="legal.html" style="color:var(--muted);text-decoration:none">Privacy &amp; Terms</a>
+  </div>
+</footer>
+
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
 <script>
 (function () {
   var DB_NAME    = 'etpt-storage';
@@ -1007,20 +1164,93 @@
 })();
 </script>
 
+<!-- React + Babel -->
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+
+<script>
+(function () {
+  var DB_NAME    = 'etpt-storage';
+  var DB_VERSION = 1;
+  var _db        = null;
+
+  function openDB() {
+    if (_db) return Promise.resolve(_db);
+    return new Promise(function (rv, rj) {
+      var r = indexedDB.open(DB_NAME, DB_VERSION);
+      r.onupgradeneeded = function (e) {
+        var d = e.target.result;
+        if (!d.objectStoreNames.contains('user'))   d.createObjectStore('user');
+        if (!d.objectStoreNames.contains('shared')) d.createObjectStore('shared');
+      };
+      r.onsuccess = function (e) { _db = e.target.result; rv(_db); };
+      r.onerror   = function (e) { rj(e.target.error); };
+    });
+  }
+  function idbOp(store, mode, fn) {
+    return openDB().then(function (db) {
+      return new Promise(function (rv, rj) {
+        var req = fn(db.transaction(store, mode).objectStore(store));
+        req.onsuccess = function () { rv(req.result); };
+        req.onerror   = function () { rj(req.error); };
+      });
+    });
+  }
+
+  // Expose helpers globally so the boot script can use them too
+  window._idb = {
+    get:     function (s, k)    { return idbOp(s, 'readonly',  function (o) { return o.get(k); }); },
+    set:     function (s, k, v) { return idbOp(s, 'readwrite', function (o) { return o.put(v, k); }); },
+    del:     function (s, k)    { return idbOp(s, 'readwrite', function (o) { return o.delete(k); }); },
+    listKeys: function (s, pfx) {
+      return idbOp(s, 'readonly', function (o) { return o.getAllKeys(); }).then(function (keys) {
+        return pfx ? keys.filter(function (k) { return k.startsWith(pfx); }) : keys;
+      });
+    }
+  };
+
+  window.storage = {
+    get: async function (key, shared) {
+      var val = await window._idb.get(shared ? 'shared' : 'user', key);
+      if (val === undefined) throw new Error('Key not found: ' + key);
+      return { key: key, value: (typeof val === 'string') ? val : JSON.stringify(val), shared: !!shared };
+    },
+    set: async function (key, value, shared) {
+      var v = (typeof value === 'string') ? value : JSON.stringify(value);
+      await window._idb.set(shared ? 'shared' : 'user', key, v);
+      return { key: key, value: value, shared: !!shared };
+    },
+    delete: async function (key, shared) {
+      await window._idb.del(shared ? 'shared' : 'user', key);
+      return { key: key, deleted: true, shared: !!shared };
+    },
+    list: async function (prefix, shared) {
+      var keys = await window._idb.listKeys(shared ? 'shared' : 'user', prefix || '');
+      return { keys: keys, prefix: prefix, shared: !!shared };
+    }
+  };
+
+  window.__etpt_getExtraResources = function () {
+    try { return JSON.parse(localStorage.getItem('etpt-approved-suggestions') || '[]'); }
+    catch (e) { return []; }
+  };
+})();
+
+
 <!-- ═══════════════════════════════════════════════════════════════════════
      Step 2 — Load React + Babel synchronously (blocking).
      These must be available before the boot script runs.
 ════════════════════════════════════════════════════════════════════════ -->
-<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js">
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js">
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js">
 
 <!-- ═══════════════════════════════════════════════════════════════════════
      Step 3 — Boot sequence.
      Order guaranteed: preload data → transform JSX → mount React.
      No timing issues. No MutationObserver race conditions.
 ════════════════════════════════════════════════════════════════════════ -->
-<script>
 // Wrapped in an IIFE so none of these variables leak into the global scope
 // and conflict with the same-named constants inside EdTechPrivacyTool.jsx
 (function () {
@@ -1184,12 +1414,369 @@ function watchForMount() {
 })();
 
 })(); // end IIFE
-</script>
 
-<script>
+
 function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
 function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+
+</script>
+</body>
+</html
+<style>
+  /* Loading screen for React app */
+  #loading-screen {
+    position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, #0f766e, #1c3557);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; color: white; z-index: 9000;
+    transition: opacity .5s;
+  }
+  #loading-screen h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; font-family: Arial, sans-serif; }
+  #ls-msg  { font-size: 14px; opacity: .85; margin-bottom: 14px; font-family: Arial, sans-serif; }
+  #ls-bar-wrap { width: 280px; height: 6px; background: rgba(255,255,255,.2); border-radius: 99px; overflow: hidden; margin-bottom: 8px; }
+  #ls-bar { height: 100%; width: 0%; background: #5eead4; border-radius: 99px; transition: width .25s ease; }
+  #ls-sub  { font-size: 11px; opacity: .5; min-height: 16px; font-family: Arial, sans-serif; }
+  .etpt-spinner { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.25); border-top-color: white; border-radius: 50%; animation: etpt-spin .8s linear infinite; margin-bottom: 18px; }
+  @keyframes etpt-spin { to { transform: rotate(360deg); } }
+  #root { padding-top: 64px; min-height: calc(100vh - 64px); }
+</style>
+
+<div id="loading-screen">
+  <div class="etpt-spinner"></div>
+  <h1>🛡️ EdTech Privacy Tool</h1>
+  <p id="ls-msg">Starting up…</p>
+  <div id="ls-bar-wrap"><div id="ls-bar"></div></div>
+  <p id="ls-sub"></p>
+</div>
+
+<div id="root"></div>
+
+<script>
+(function () {
+  var DB_NAME    = 'etpt-storage';
+  var DB_VERSION = 1;
+  var _db        = null;
+
+  function openDB() {
+    if (_db) return Promise.resolve(_db);
+    return new Promise(function (rv, rj) {
+      var r = indexedDB.open(DB_NAME, DB_VERSION);
+      r.onupgradeneeded = function (e) {
+        var d = e.target.result;
+        if (!d.objectStoreNames.contains('user'))   d.createObjectStore('user');
+        if (!d.objectStoreNames.contains('shared')) d.createObjectStore('shared');
+      };
+      r.onsuccess = function (e) { _db = e.target.result; rv(_db); };
+      r.onerror   = function (e) { rj(e.target.error); };
+    });
+  }
+  function idbOp(store, mode, fn) {
+    return openDB().then(function (db) {
+      return new Promise(function (rv, rj) {
+        var req = fn(db.transaction(store, mode).objectStore(store));
+        req.onsuccess = function () { rv(req.result); };
+        req.onerror   = function () { rj(req.error); };
+      });
+    });
+  }
+
+  // Expose helpers globally so the boot script can use them too
+  window._idb = {
+    get:     function (s, k)    { return idbOp(s, 'readonly',  function (o) { return o.get(k); }); },
+    set:     function (s, k, v) { return idbOp(s, 'readwrite', function (o) { return o.put(v, k); }); },
+    del:     function (s, k)    { return idbOp(s, 'readwrite', function (o) { return o.delete(k); }); },
+    listKeys: function (s, pfx) {
+      return idbOp(s, 'readonly', function (o) { return o.getAllKeys(); }).then(function (keys) {
+        return pfx ? keys.filter(function (k) { return k.startsWith(pfx); }) : keys;
+      });
+    }
+  };
+
+  window.storage = {
+    get: async function (key, shared) {
+      var val = await window._idb.get(shared ? 'shared' : 'user', key);
+      if (val === undefined) throw new Error('Key not found: ' + key);
+      return { key: key, value: (typeof val === 'string') ? val : JSON.stringify(val), shared: !!shared };
+    },
+    set: async function (key, value, shared) {
+      var v = (typeof value === 'string') ? value : JSON.stringify(value);
+      await window._idb.set(shared ? 'shared' : 'user', key, v);
+      return { key: key, value: value, shared: !!shared };
+    },
+    delete: async function (key, shared) {
+      await window._idb.del(shared ? 'shared' : 'user', key);
+      return { key: key, deleted: true, shared: !!shared };
+    },
+    list: async function (prefix, shared) {
+      var keys = await window._idb.listKeys(shared ? 'shared' : 'user', prefix || '');
+      return { keys: keys, prefix: prefix, shared: !!shared };
+    }
+  };
+
+  window.__etpt_getExtraResources = function () {
+    try { return JSON.parse(localStorage.getItem('etpt-approved-suggestions') || '[]'); }
+    catch (e) { return []; }
+  };
+})();
+</script>
+
+<!-- React + Babel -->
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+
+<script>
+(function () {
+  var DB_NAME    = 'etpt-storage';
+  var DB_VERSION = 1;
+  var _db        = null;
+
+  function openDB() {
+    if (_db) return Promise.resolve(_db);
+    return new Promise(function (rv, rj) {
+      var r = indexedDB.open(DB_NAME, DB_VERSION);
+      r.onupgradeneeded = function (e) {
+        var d = e.target.result;
+        if (!d.objectStoreNames.contains('user'))   d.createObjectStore('user');
+        if (!d.objectStoreNames.contains('shared')) d.createObjectStore('shared');
+      };
+      r.onsuccess = function (e) { _db = e.target.result; rv(_db); };
+      r.onerror   = function (e) { rj(e.target.error); };
+    });
+  }
+  function idbOp(store, mode, fn) {
+    return openDB().then(function (db) {
+      return new Promise(function (rv, rj) {
+        var req = fn(db.transaction(store, mode).objectStore(store));
+        req.onsuccess = function () { rv(req.result); };
+        req.onerror   = function () { rj(req.error); };
+      });
+    });
+  }
+
+  // Expose helpers globally so the boot script can use them too
+  window._idb = {
+    get:     function (s, k)    { return idbOp(s, 'readonly',  function (o) { return o.get(k); }); },
+    set:     function (s, k, v) { return idbOp(s, 'readwrite', function (o) { return o.put(v, k); }); },
+    del:     function (s, k)    { return idbOp(s, 'readwrite', function (o) { return o.delete(k); }); },
+    listKeys: function (s, pfx) {
+      return idbOp(s, 'readonly', function (o) { return o.getAllKeys(); }).then(function (keys) {
+        return pfx ? keys.filter(function (k) { return k.startsWith(pfx); }) : keys;
+      });
+    }
+  };
+
+  window.storage = {
+    get: async function (key, shared) {
+      var val = await window._idb.get(shared ? 'shared' : 'user', key);
+      if (val === undefined) throw new Error('Key not found: ' + key);
+      return { key: key, value: (typeof val === 'string') ? val : JSON.stringify(val), shared: !!shared };
+    },
+    set: async function (key, value, shared) {
+      var v = (typeof value === 'string') ? value : JSON.stringify(value);
+      await window._idb.set(shared ? 'shared' : 'user', key, v);
+      return { key: key, value: value, shared: !!shared };
+    },
+    delete: async function (key, shared) {
+      await window._idb.del(shared ? 'shared' : 'user', key);
+      return { key: key, deleted: true, shared: !!shared };
+    },
+    list: async function (prefix, shared) {
+      var keys = await window._idb.listKeys(shared ? 'shared' : 'user', prefix || '');
+      return { keys: keys, prefix: prefix, shared: !!shared };
+    }
+  };
+
+  window.__etpt_getExtraResources = function () {
+    try { return JSON.parse(localStorage.getItem('etpt-approved-suggestions') || '[]'); }
+    catch (e) { return []; }
+  };
+})();
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     Step 2 — Load React + Babel synchronously (blocking).
+     These must be available before the boot script runs.
+════════════════════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js">
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js">
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js">
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     Step 3 — Boot sequence.
+     Order guaranteed: preload data → transform JSX → mount React.
+     No timing issues. No MutationObserver race conditions.
+════════════════════════════════════════════════════════════════════════ -->
+// Wrapped in an IIFE so none of these variables leak into the global scope
+// and conflict with the same-named constants inside EdTechPrivacyTool.jsx
+(function () {
+// ── DATA_VERSION: bump this string whenever you redeploy analyses-data.json
+//    Teachers' browsers auto-re-download on the next visit.
+var DATA_VERSION = '2026-06-10';
+var ANALYSES_URL = '/analyses-data.json';
+var ANALYSES_KEY = 'edtech-analyses-v3';
+var CHUNK_SIZE   = 400;
+
+function setMsg(t) { var e = document.getElementById('ls-msg'); if (e) e.textContent = t; }
+function setSub(t) { var e = document.getElementById('ls-sub'); if (e) e.textContent = t; }
+function setBar(p) { var e = document.getElementById('ls-bar'); if (e) e.style.width  = p + '%'; }
+
+// ── Fetch analyses-data.json and store in IndexedDB ──────────────────────
+async function preloadAnalyses() {
+  // Already current? Skip download.
+  try {
+    var v = await window._idb.get('user', 'etpt-data-version');
+    if (v === DATA_VERSION) {
+      setSub('Analysis data cached ✓');
+      setBar(45);
+      return;
+    }
+  } catch (e) { /* not stored yet */ }
+
+  setMsg('Downloading analysis data…');
+  setSub('~6.7 MB — one-time download, cached for future visits');
+  setBar(5);
+
+  var analyses;
+  try {
+    var resp = await fetch(ANALYSES_URL);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+    // Stream with live progress bar if server sends Content-Length
+    var cl = resp.headers.get('content-length');
+    if (cl && resp.body) {
+      var total = parseInt(cl, 10), received = 0;
+      var reader = resp.body.getReader(), parts = [];
+      while (true) {
+        var chunk = await reader.read();
+        if (chunk.done) break;
+        parts.push(chunk.value);
+        received += chunk.value.length;
+        setBar(5 + Math.round(received / total * 40));
+      }
+      analyses = JSON.parse(await new Blob(parts).text());
+    } else {
+      setBar(25);
+      analyses = await resp.json();
+    }
+  } catch (err) {
+    setSub('⚠️ Could not load analysis data: ' + err.message + ' — tool still works without it.');
+    setBar(45);
+    return;
+  }
+
+  // Store in IndexedDB using the exact same chunked format as the tool
+  setMsg('Saving analysis data…');
+  var entries   = Object.entries(analyses);
+  var numChunks = Math.max(1, Math.ceil(entries.length / CHUNK_SIZE));
+
+  for (var i = 0; i < numChunks; i++) {
+    var slice = entries.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+    var obj   = {};
+    slice.forEach(function (p) { obj[p[0]] = p[1]; });
+    await window._idb.set('shared', ANALYSES_KEY + '-chunk-' + i, JSON.stringify(obj));
+    setBar(45 + Math.round((i + 1) / numChunks * 20));
+    setSub('Storing chunk ' + (i + 1) + ' of ' + numChunks + '…');
+  }
+  // Manifest — plain number string, exactly how loadAnalysesChunked reads it
+  await window._idb.set('shared', ANALYSES_KEY + '-chunks', String(numChunks));
+  await window._idb.set('user', 'etpt-data-version', DATA_VERSION);
+
+  setSub(entries.length.toLocaleString() + ' analyses stored ✓');
+  setBar(65);
+}
+
+// ── Fetch, patch, transform, and execute the JSX ─────────────────────────
+async function loadApp() {
+  setMsg('Loading application…');
+  setBar(70);
+
+  var resp = await fetch('EdTechPrivacyTool.jsx');
+  if (!resp.ok) throw new Error('Could not load EdTechPrivacyTool.jsx — HTTP ' + resp.status);
+  var source = await resp.text();
+  setBar(80);
+
+  // 1. Replace ES module import with global React destructure
+  source = source.replace(
+    'import { useState, useEffect, useCallback, useRef } from "react";',
+    'const { useState, useEffect, useCallback, useRef } = React;'
+  );
+
+  // 2. Strip 'export default' — causes SyntaxError in non-module scripts
+  source = source.replace(
+    'export default function App()',
+    'function App()'
+  );
+
+  // 3. Append the ReactDOM mount call — Claude.ai handles this automatically
+  //    but on a standalone site we have to do it ourselves
+  source += '\nReactDOM.createRoot(document.getElementById(\'root\')).render(React.createElement(App));';
+
+  setMsg('Compiling…');
+  setBar(88);
+
+  // Transform JSX → plain JS using the already-loaded Babel standalone
+  var result = Babel.transform(source, {
+    presets: ['react'],
+    filename: 'EdTechPrivacyTool.jsx'
+  });
+
+  setBar(94);
+  setMsg('Starting…');
+
+  // Execute via Blob URL (avoids eval, works in strict CSP)
+  var blob    = new Blob([result.code], { type: 'text/javascript' });
+  var blobUrl = URL.createObjectURL(blob);
+  await new Promise(function (resolve, reject) {
+    var s    = document.createElement('script');
+    s.src    = blobUrl;
+    s.onload = resolve;
+    s.onerror = function () { reject(new Error('Script execution failed')); };
+    document.head.appendChild(s);
+  });
+  URL.revokeObjectURL(blobUrl);
+}
+
+// ── Hide loading screen once React populates #root ────────────────────────
+function watchForMount() {
+  var root     = document.getElementById('root');
+  var observer = new MutationObserver(function () {
+    if (root.children.length > 0) {
+      var screen = document.getElementById('loading-screen');
+      if (screen) { screen.style.opacity = '0'; setTimeout(function () { screen.remove(); }, 500); }
+      observer.disconnect();
+    }
+  });
+  observer.observe(root, { childList: true });
+  // Fallback: hide after 15 s regardless
+  setTimeout(function () {
+    var screen = document.getElementById('loading-screen');
+    if (screen) { screen.style.opacity = '0'; setTimeout(function () { screen.remove(); }, 500); }
+  }, 15000);
+}
+
+// ── Run ───────────────────────────────────────────────────────────────────
+(async function boot() {
+  try {
+    watchForMount();
+    await preloadAnalyses();
+    await loadApp();
+    setBar(100);
+  } catch (err) {
+    setMsg('⚠️ Error: ' + err.message);
+    setSub('Please refresh the page or contact support.');
+    console.error('Boot error:', err);
+  }
+})();
+
+})(); // end IIFE
+
+
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+
 </script>
 </body>
 </html>
