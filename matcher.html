@@ -3,197 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vocab &amp; Concept Matcher &mdash; AP Cybersecurity</title>
+<title>Privacy Policy &amp; Terms of Service &mdash; AP Cybersecurity</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <style>
-:root{
-  --navy:#0b1628;--navy-mid:#132040;--navy-light:#1e2e52;
-  --cyan:#00d4c8;--cyan-dim:#00a89f;--amber:#f5a623;
-  --green:#00c864;--red:#ff5555;--white:#f2f5fb;
-  --muted:#8899bb;--card-bg:#111e38;--border:rgba(0,212,200,.15);
-}
+:root{--navy:#0b1628;--navy-mid:#132040;--cyan:#00d4c8;--amber:#f5a623;--green:#00c864;--white:#f2f5fb;--muted:#8899bb;--card-bg:#111e38;--border:rgba(0,212,200,.15)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.6;overflow-x:hidden;min-height:100vh}
-
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.7}
 nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 clamp(1rem,3vw,2rem);height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
 .nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;flex-shrink:0}
 .nav-logo{width:36px;height:36px;background:var(--cyan);border-radius:8px;display:grid;place-items:center}
 .nav-logo svg{width:20px;height:20px}
 .nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
 .nav-title span{color:var(--cyan)}
-.nav-links{display:flex;align-items:center;gap:.2rem;list-style:none}
-.nav-links a{color:var(--muted);text-decoration:none;font-size:.78rem;font-weight:500;padding:.3rem .6rem;border-radius:6px;transition:color .2s,background .2s}
+.nav-links{display:flex;align-items:center;gap:.25rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.82rem;font-weight:500;padding:.35rem .7rem;border-radius:6px;transition:color .18s,background .18s}
 .nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
-.nav-links a.active{color:var(--cyan)}
-.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:600!important}
-@media(max-width:700px){.nav-links{display:none}}
-
-.screen{display:none}.screen.active{display:block}
-
-/* ── SETUP ──────────────────────────────── */
-.setup-wrap{max-width:980px;margin:0 auto;padding:clamp(2.5rem,5vw,4rem) clamp(1.5rem,4vw,2rem)}
-.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,212,200,.1);border:1px solid rgba(0,212,200,.3);color:var(--cyan);font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.35rem .9rem;border-radius:100px;margin-bottom:1.5rem}
-.badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--cyan);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
-.page-h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:.75rem}
-.page-h1 em{font-style:italic;color:var(--cyan)}
-.page-sub{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.75;margin-bottom:2.5rem;font-weight:300}
-
-/* category tabs */
-.cat-tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.25rem}
-.cat-tab{padding:.35rem .9rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--muted);transition:all .18s}
-.cat-tab:hover{border-color:rgba(0,212,200,.3);color:var(--white)}
-.cat-tab.active{background:rgba(0,212,200,.12);border-color:var(--cyan);color:var(--cyan)}
-
-/* deck grid */
-.deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;margin-bottom:2rem}
-.deck-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.3rem;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;position:relative}
-.deck-card:hover{transform:translateY(-3px);border-color:rgba(0,212,200,.4);box-shadow:0 12px 36px rgba(0,0,0,.4)}
-.deck-unit{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:.3rem}
-.deck-title{font-family:'DM Serif Display',serif;font-size:1.1rem;margin-bottom:.3rem}
-.deck-desc{font-size:.78rem;color:var(--muted);line-height:1.55;margin-bottom:.85rem}
-.deck-meta{display:flex;align-items:center;justify-content:space-between;font-size:.75rem}
-.deck-count{background:rgba(0,212,200,.08);color:var(--cyan);border:1px solid rgba(0,212,200,.2);border-radius:100px;padding:.18rem .65rem;font-weight:600}
-.deck-mode{color:var(--muted);display:flex;align-items:center;gap:.3rem}
-.deck-mode svg{width:12px;height:12px}
-
-/* mode icons */
-.mode-badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:700;padding:.18rem .6rem;border-radius:100px;letter-spacing:.03em}
-.mode-match{background:rgba(0,212,200,.08);color:var(--cyan);border:1px solid rgba(0,212,200,.2)}
-.mode-sort{background:rgba(245,166,35,.08);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
-.mode-map{background:rgba(155,89,182,.1);color:#c39bd3;border:1px solid rgba(155,89,182,.25)}
-
-/* ── GAME SCREEN ────────────────────────── */
-.game-header{background:var(--navy-mid);border-bottom:1px solid var(--border);padding:.8rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:64px;z-index:100}
-.gh-left h2{font-family:'DM Serif Display',serif;font-size:1.1rem;line-height:1.2}
-.gh-left .gh-sub{font-size:.75rem;color:var(--muted)}
-.gh-right{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap}
-.score-pill{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.4rem .9rem;font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
-.score-pill svg{width:14px;height:14px;stroke:var(--cyan)}
-.progress-pill{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.4rem .9rem;font-size:.82rem;color:var(--muted)}
-.btn-sm{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);font-family:inherit;font-size:.8rem;font-weight:500;padding:.38rem .8rem;border-radius:8px;cursor:pointer;transition:background .18s}
-.btn-sm:hover{background:rgba(255,255,255,.12)}
-
-.game-progress-bar{height:3px;background:rgba(255,255,255,.07)}
-.game-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--cyan-dim));transition:width .4s ease}
-
-/* ── MATCH MODE ─────────────────────────── */
-.match-wrap{max-width:1000px;margin:0 auto;padding:1.5rem clamp(1rem,3vw,2rem)}
-.match-instruction{text-align:center;font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
-.match-instruction svg{width:15px;height:15px;stroke:var(--cyan)}
-.match-layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-@media(max-width:640px){.match-layout{grid-template-columns:1fr}}
-
-.match-col-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
-.match-col-label::before{content:'';width:16px;height:2px;background:var(--muted)}
-.match-items{display:flex;flex-direction:column;gap:.5rem}
-
-.match-item{background:var(--card-bg);border:2px solid rgba(255,255,255,.08);border-radius:11px;padding:.85rem 1rem;cursor:pointer;transition:all .2s;font-size:.85rem;line-height:1.55;user-select:none;position:relative}
-.match-item:hover:not(.matched):not(.locked){border-color:rgba(0,212,200,.35);background:rgba(0,212,200,.06)}
-.match-item.selected{border-color:var(--cyan);background:rgba(0,212,200,.12);box-shadow:0 0 0 3px rgba(0,212,200,.15)}
-.match-item.matched-correct{border-color:rgba(0,200,100,.5);background:rgba(0,200,100,.08);cursor:default;animation:matchPop .3s ease}
-.match-item.matched-wrong{border-color:rgba(255,85,85,.5);background:rgba(255,85,85,.08);animation:shake .4s ease}
-.match-item.locked{opacity:.5;cursor:default}
-.match-badge{position:absolute;top:.5rem;right:.6rem;width:20px;height:20px;border-radius:50%;display:grid;place-items:center}
-.match-badge svg{width:12px;height:12px}
-.match-badge.correct{background:rgba(0,200,100,.2)}.match-badge.correct svg{stroke:var(--green)}
-.match-badge.wrong{background:rgba(255,85,85,.2)}.match-badge.wrong svg{stroke:var(--red)}
-
-@keyframes matchPop{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
-@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-
-/* ── SORT MODE ──────────────────────────── */
-.sort-wrap{max-width:980px;margin:0 auto;padding:1.5rem clamp(1rem,3vw,2rem)}
-.sort-instruction{text-align:center;font-size:.85rem;color:var(--muted);margin-bottom:1.5rem}
-.sort-items-pool{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center;margin-bottom:2rem;min-height:56px;padding:.6rem;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);border-radius:12px}
-.sort-chip{background:var(--card-bg);border:2px solid rgba(255,255,255,.1);border-radius:10px;padding:.6rem .9rem;cursor:pointer;font-size:.83rem;font-weight:500;transition:all .18s;user-select:none}
-.sort-chip:hover{border-color:rgba(0,212,200,.4);background:rgba(0,212,200,.08)}
-.sort-chip.selected{border-color:var(--cyan);background:rgba(0,212,200,.12)}
-.sort-chip.placed{opacity:.3;cursor:default}
-.sort-chip.placed:hover{border-color:rgba(255,255,255,.1);background:var(--card-bg)}
-
-.sort-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
-.sort-bucket{border-radius:14px;border:2px solid rgba(255,255,255,.08);min-height:100px;transition:all .2s;overflow:hidden}
-.sort-bucket.drag-over{border-color:rgba(0,212,200,.4);box-shadow:0 0 0 3px rgba(0,212,200,.1)}
-.sort-bucket-header{padding:.7rem 1rem;display:flex;align-items:center;gap:.6rem;border-bottom:1px solid rgba(255,255,255,.06)}
-.bucket-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.bucket-name{font-weight:700;font-size:.85rem}
-.sort-bucket-body{padding:.6rem;display:flex;flex-wrap:wrap;gap:.4rem;min-height:52px}
-.sort-bucket-body:empty::after{content:'Drop here';font-size:.75rem;color:rgba(255,255,255,.18);font-style:italic;align-self:center;width:100%;text-align:center;padding:.4rem}
-.placed-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.77rem;padding:.3rem .65rem;border-radius:8px;cursor:pointer;transition:all .15s;line-height:1.35;font-weight:500}
-.placed-chip:hover{opacity:.75}
-.placed-chip svg{width:9px;height:9px;flex-shrink:0;opacity:.6}
-
-/* ── ROUND RESULT FLASH ─────────────────── */
-.result-flash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:var(--card-bg);border:2px solid;border-radius:16px;padding:1.25rem 2rem;text-align:center;z-index:500;pointer-events:none;transition:transform .2s,opacity .2s}
-.result-flash.show{transform:translate(-50%,-50%) scale(1)}
-.result-flash.hide{opacity:0}
-.rf-icon{font-size:2rem;margin-bottom:.35rem}
-.rf-text{font-family:'DM Serif Display',serif;font-size:1.2rem}
-
-/* ── SUMMARY ────────────────────────────── */
-.summary-wrap{max-width:620px;margin:0 auto;padding:clamp(3rem,6vw,5rem) clamp(1.5rem,4vw,2rem);text-align:center}
-.sum-circle{width:130px;height:130px;border-radius:50%;border:4px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 1.5rem;box-shadow:0 0 50px rgba(0,212,200,.15)}
-.sum-pct{font-family:'DM Serif Display',serif;font-size:2.2rem;line-height:1}
-.sum-frac{font-size:.78rem;color:var(--muted);font-weight:500}
-.sum-h{font-family:'DM Serif Display',serif;font-size:clamp(1.6rem,3.5vw,2.2rem);margin-bottom:.5rem}
-.sum-sub{color:var(--muted);font-size:.92rem;line-height:1.7;margin-bottom:2rem;max-width:420px;margin-left:auto;margin-right:auto}
-.sum-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}
-.sum-stat{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1rem}
-.sum-stat-num{font-family:'DM Serif Display',serif;font-size:1.8rem;line-height:1;margin-bottom:.2rem}
-.sum-stat-lbl{font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
-.sum-actions{display:flex;flex-wrap:wrap;gap:.85rem;justify-content:center}
-.sum-btn{flex:1;min-width:150px;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.9rem 1.5rem;border-radius:11px;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:transform .18s,opacity .18s;border:none}
-.sum-btn:hover{transform:translateY(-2px);opacity:.9}
-.sum-btn.primary{background:var(--cyan);color:var(--navy)}
-.sum-btn.secondary{background:rgba(255,255,255,.07);color:var(--white);border:1px solid rgba(255,255,255,.12)}
-.sum-btn svg{width:16px;height:16px}
-
-/* missed review */
-.missed-review{margin-top:2rem;text-align:left}
-.mr-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
-.mr-label::before{content:'';width:20px;height:2px;background:var(--red)}
-.mr-item{background:var(--card-bg);border:1px solid rgba(255,85,85,.2);border-radius:10px;padding:.8rem 1rem;margin-bottom:.5rem;font-size:.83rem;line-height:1.6}
-.mr-item strong{color:var(--white)}
-.mr-item .mr-arrow{color:var(--cyan);margin:0 .35rem}
-
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.anim{animation:fadeUp .3s ease both}
-
-/* Dropdown nav */
-.nav-dropdown{position:relative}
-.nav-dropdown-btn{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.35rem .65rem;border-radius:6px;transition:color .2s,background .2s;background:none;border:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.3rem}
-.nav-dropdown-btn:hover{color:var(--white);background:rgba(255,255,255,.06)}
-.nav-dropdown-btn.has-active{color:var(--cyan)}
-.nav-dropdown-btn svg{width:11px;height:11px;transition:transform .2s}
-.nav-dropdown:hover .nav-dropdown-btn svg{transform:rotate(180deg)}
-.nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:all .2s;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,.5)}
-.nav-dropdown:hover .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
-.nav-dropdown-menu a{display:block;color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.45rem .75rem;border-radius:7px;transition:color .15s,background .15s;white-space:nowrap}
-.nav-dropdown-menu a:hover{color:var(--white);background:rgba(255,255,255,.06)}
-.nav-dropdown-menu a.active{color:var(--cyan)}
-.nav-dropdown-menu .menu-divider{height:1px;background:var(--border);margin:.3rem .4rem}
-
-.nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.4rem;width:36px;height:36px;flex-shrink:0}
-.nav-hamburger span{display:block;height:2px;width:22px;background:var(--white);border-radius:2px;transition:all .25s}
-@media(max-width:900px){.nav-hamburger{display:flex}.nav-links{display:none!important}}
+.nav-links a.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:600!important}
+.nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.4rem;width:36px;height:36px}
+.nav-hamburger span{display:block;height:2px;width:22px;background:var(--white);border-radius:2px}
+@media(max-width:700px){.nav-hamburger{display:flex}.nav-links{display:none}}
 .mobile-nav-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:490;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
 .mobile-nav-backdrop.open{opacity:1;visibility:visible}
-.mobile-nav-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,88vw);background:var(--navy-mid);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.mobile-nav-drawer{position:fixed;top:0;right:0;bottom:0;width:min(300px,85vw);background:var(--navy-mid);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column}
 .mobile-nav-drawer.open{transform:translateX(0)}
-.mobile-nav-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);height:64px;flex-shrink:0}
-.mobile-nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
-.mobile-nav-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);width:32px;height:32px;border-radius:7px;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;line-height:1;transition:background .18s}
-.mobile-nav-close:hover{background:rgba(255,255,255,.14)}
-.mobile-nav-links{padding:.75rem;display:flex;flex-direction:column;gap:.2rem;flex:1}
+.mobile-nav-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);height:64px}
+.mobile-nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem}
+.mobile-nav-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);width:32px;height:32px;border-radius:7px;font-size:1.2rem;cursor:pointer;display:grid;place-items:center}
+.mobile-nav-links{padding:.75rem;display:flex;flex-direction:column;gap:.2rem}
 .mobile-nav-links a{display:block;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:500;padding:.7rem .9rem;border-radius:9px;transition:color .18s,background .18s}
 .mobile-nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
-.mobile-nav-links a.active{color:var(--cyan);background:rgba(0,212,200,.07)}
 .mobile-nav-links a.nav-cta{background:var(--cyan);color:var(--navy);font-weight:700;margin-top:.5rem;text-align:center}
-.mobile-nav-links a.nav-cta:hover{opacity:.9}
-.mobile-nav-section-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem .9rem .3rem;opacity:.7}
-.mobile-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:.4rem .5rem}
+.page-wrap{max-width:800px;margin:0 auto;padding:clamp(2.5rem,6vw,4rem) clamp(1.5rem,4vw,2rem)}
+.doc-tabs{display:flex;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:.25rem;margin-bottom:2.5rem;width:fit-content}
+.doc-tab{padding:.55rem 1.25rem;border-radius:8px;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s}
+.doc-tab.active{background:var(--card-bg);color:var(--white);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.doc-content{display:none}
+.doc-content.active{display:block}
+.doc-badge{display:inline-flex;align-items:center;background:rgba(0,212,200,.1);border:1px solid rgba(0,212,200,.25);color:var(--cyan);font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .85rem;border-radius:100px;margin-bottom:.85rem}
+.doc-h1{font-family:'DM Serif Display',serif;font-size:clamp(1.8rem,4vw,2.6rem);line-height:1.15;margin-bottom:.5rem}
+.doc-meta{font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:2rem}
+.doc-meta strong{color:var(--white)}
+.zero-banner{background:rgba(0,200,100,.07);border:1px solid rgba(0,200,100,.25);border-radius:14px;padding:1.25rem 1.5rem;display:flex;gap:.85rem;align-items:flex-start;margin-bottom:2.5rem}
+.zero-banner svg{width:24px;height:24px;stroke:var(--green);flex-shrink:0;margin-top:2px}
+.zero-banner h3{font-size:1rem;font-weight:700;color:var(--green);margin-bottom:.3rem}
+.zero-banner p{font-size:.87rem;color:rgba(255,255,255,.75);line-height:1.7}
+.section{margin-bottom:2.25rem;scroll-margin-top:80px}
+.section-num{display:inline-block;background:rgba(0,212,200,.1);color:var(--cyan);font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:5px;margin-bottom:.5rem;letter-spacing:.04em}
+.section h2{font-family:'DM Serif Display',serif;font-size:1.35rem;margin-bottom:.75rem;color:var(--white)}
+.section p{font-size:.88rem;color:rgba(255,255,255,.8);line-height:1.8;margin-bottom:.75rem}
+.section p:last-child{margin-bottom:0}
+.section ul{padding-left:1.35rem;margin:.45rem 0 .75rem}
+.section li{font-size:.88rem;color:rgba(255,255,255,.8);line-height:1.75;margin-bottom:.25rem}
+.section ul li::marker{color:var(--cyan)}
+.doc-divider{height:1px;background:var(--border);margin:2rem 0}
+.contact-block{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:.85rem}
+.contact-block p{font-size:.86rem;color:rgba(255,255,255,.75);margin-bottom:.3rem}
+.contact-block strong{color:var(--white)}
 </style>
 </head>
 <body>
@@ -203,8 +69,8 @@ nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-fil
   <ul class="nav-links">
     <li><a href="index.html">Home</a></li>
     <li><a href="socratic-anchors.html">Socratic Guides</a></li>
-    <li><a href="tools.html" class="active">Student Tools</a></li>
-    <li><a href="legal.html">Legal</a></li>
+    <li><a href="tools.html">Student Tools</a></li>
+    <li><a href="legal.html" class="active">Legal</a></li>
     <li><a href="edtech-tool.html">EdTech Privacy</a></li>
     <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
   </ul>
@@ -221,972 +87,212 @@ nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-fil
   <div class="mobile-nav-links">
     <a href="index.html" onclick="closeMobileNav()">Home</a>
     <a href="socratic-anchors.html" onclick="closeMobileNav()">Socratic Guides</a>
-    <a href="tools.html" class="active" onclick="closeMobileNav()">Student Tools</a>
+    <a href="tools.html" onclick="closeMobileNav()">Student Tools</a>
     <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
     <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
   </div>
 </div>
 
+<div class="page-wrap">
 
-<!-- ══ SETUP ══ -->
-<div id="screen-setup" class="screen active">
-  <div class="setup-wrap">
-    <div class="badge">All 5 Units &middot; 3 Game Modes</div>
-    <h1 class="page-h1">Vocab &amp; Concept<br><em>Matcher</em></h1>
-    <p class="page-sub">Connect terms to definitions, sort attacks into categories, and map controls to the threats they address. Three game modes covering the dense vocabulary every AP Cybersecurity student needs to own.</p>
-
-    <div class="cat-tabs" id="cat-tabs">
-      <button class="cat-tab active" data-cat="all" onclick="filterCat('all')">All Decks</button>
-      <button class="cat-tab" data-cat="1" onclick="filterCat('1')">Unit 1</button>
-      <button class="cat-tab" data-cat="2" onclick="filterCat('2')">Unit 2</button>
-      <button class="cat-tab" data-cat="3" onclick="filterCat('3')">Unit 3</button>
-      <button class="cat-tab" data-cat="4" onclick="filterCat('4')">Unit 4</button>
-      <button class="cat-tab" data-cat="5" onclick="filterCat('5')">Unit 5</button>
-      <button class="cat-tab" data-cat="match" onclick="filterCat('match')">&#x1F517; Match</button>
-      <button class="cat-tab" data-cat="sort" onclick="filterCat('sort')">&#x1F4CB; Sort</button>
-    </div>
-
-    <div class="deck-grid" id="deck-grid"></div>
+  <div class="doc-tabs">
+    <button class="doc-tab active" onclick="switchDoc('privacy',this)">Privacy Policy</button>
+    <button class="doc-tab" onclick="switchDoc('terms',this)">Terms of Service</button>
   </div>
-</div>
 
-<!-- ══ GAME ══ -->
-<div id="screen-game" class="screen">
-  <div class="game-header">
-    <div class="gh-left">
-      <h2 id="gh-title"></h2>
-      <div class="gh-sub" id="gh-sub"></div>
+  <!-- PRIVACY POLICY -->
+  <div class="doc-content active" id="doc-privacy">
+
+    <div class="doc-badge">Privacy Policy</div>
+    <h1 class="doc-h1">Privacy Policy</h1>
+    <div class="doc-meta">
+      <strong>Effective Date:</strong> March 21, 2026 &nbsp;&bull;&nbsp;
+      <strong>Last Updated:</strong> March 21, 2026 &nbsp;&bull;&nbsp;
+      <strong>Site:</strong> apcyber.net
     </div>
-    <div class="gh-right">
-      <div class="score-pill">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
-        <span id="score-display">0 / 0</span>
+
+    <div class="zero-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <div>
+        <h3>This site collects zero personal data</h3>
+        <p>apcyber.net is a free, open educational resource. There are no accounts, no logins, no cookies, no tracking, and no analytics. Nothing you do on this site is recorded, stored, or transmitted anywhere.</p>
       </div>
-      <div class="progress-pill" id="progress-pill">Round 1</div>
-      <button class="btn-sm" onclick="resetRound()">Restart</button>
-      <button class="btn-sm" onclick="goSetup()">&#x2190; Decks</button>
     </div>
+
+    <div class="section">
+      <div class="section-num">Section 1</div>
+      <h2>What We Collect</h2>
+      <p><strong>Nothing.</strong> This site does not collect, store, process, or transmit any personal information from visitors. Specifically, we do not collect:</p>
+      <ul>
+        <li>Names, email addresses, or any contact information</li>
+        <li>IP addresses or device identifiers</li>
+        <li>Browser fingerprints or geolocation data</li>
+        <li>Cookies or persistent identifiers of any kind</li>
+        <li>Usage data, page views, or session recordings</li>
+        <li>Quiz answers, scores, or any activity data</li>
+        <li>Student or teacher information of any kind</li>
+      </ul>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 2</div>
+      <h2>How the Site Works</h2>
+      <p>apcyber.net is a collection of static HTML files hosted on Netlify. All interactive features &mdash; quizzes, flashcards, scenario tools &mdash; run entirely within your browser. No data is sent to any server operated by this site.</p>
+      <p>The AI-powered features (Flashcard Generator, AI Tutor, Spot the Attack, Synthesis Quiz, Defense Builder, and Attack Chain Mapper) send the text you type into those tools to <strong>Anthropic&rsquo;s Claude API</strong> to generate responses. This is the only outbound data transmission from this site. We have no access to these requests. Do not enter any personally identifiable information into AI prompt fields. Anthropic&rsquo;s <a href="https://www.anthropic.com/legal/privacy" target="_blank" style="color:var(--cyan)">Privacy Policy</a> governs their handling of API requests.</p>
+      <p>Google Fonts are loaded from Google&rsquo;s CDN for typography. No analytics platform, advertising network, tracking pixel, or session recording tool is installed on this site.</p>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 3</div>
+      <h2>Cookies</h2>
+      <p>This site sets <strong>no cookies</strong> of any kind. Your browser will not receive any cookie from apcyber.net.</p>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 4</div>
+      <h2>Advertising</h2>
+      <p>There are <strong>no advertisements</strong> on this site. No ad networks, sponsored content, affiliate links, or paid placements exist anywhere on apcyber.net.</p>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 5</div>
+      <h2>Children&rsquo;s Privacy (COPPA), FERPA &amp; CIPA</h2>
+      <p><strong>COPPA:</strong> Because we collect no personal information from anyone &mdash; including children under 13 &mdash; COPPA&rsquo;s parental consent requirements are not triggered.</p>
+      <p><strong>FERPA:</strong> Because this site collects no student data and maintains no student records, FERPA does not apply to the operation of this site. No education records are created, stored, or maintained here.</p>
+      <p><strong>CIPA:</strong> This site supports school CIPA compliance. It contains no social features, no user-generated public content, no advertising, no chat, and no links to content harmful to minors.</p>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 6</div>
+      <h2>Changes &amp; Contact</h2>
+      <p>If this site ever begins collecting any data, this policy will be updated before that change takes effect. Because there are no user accounts, we have no way to notify users directly &mdash; check this page for the current policy.</p>
+      <div class="contact-block">
+        <p>Questions about this privacy policy can be directed through the site at <a href="https://apcyber.net" style="color:var(--cyan)">apcyber.net</a>.</p>
+      </div>
+    </div>
+
   </div>
-  <div class="game-progress-bar"><div class="game-progress-fill" id="game-progress-fill" style="width:0%"></div></div>
-  <div id="game-area"></div>
-</div>
 
-<!-- ══ SUMMARY ══ -->
-<div id="screen-summary" class="screen">
-  <div class="summary-wrap">
-    <div class="sum-circle" id="sum-circle">
-      <div class="sum-pct" id="sum-pct">--%</div>
-      <div class="sum-frac" id="sum-frac">0/0</div>
+  <!-- TERMS OF SERVICE -->
+  <div class="doc-content" id="doc-terms">
+
+    <div class="doc-badge">Terms of Service</div>
+    <h1 class="doc-h1">Terms of Service</h1>
+    <div class="doc-meta">
+      <strong>Effective Date:</strong> March 21, 2026 &nbsp;&bull;&nbsp;
+      <strong>Operator:</strong> apcyber.net
     </div>
-    <h2 class="sum-h" id="sum-h">Complete!</h2>
-    <p class="sum-sub" id="sum-sub"></p>
-    <div class="sum-stats">
-      <div class="sum-stat"><div class="sum-stat-num" style="color:var(--green)" id="sum-correct">0</div><div class="sum-stat-lbl">Correct</div></div>
-      <div class="sum-stat"><div class="sum-stat-num" style="color:var(--red)" id="sum-wrong">0</div><div class="sum-stat-lbl">Wrong</div></div>
-      <div class="sum-stat"><div class="sum-stat-num" style="color:var(--cyan)" id="sum-streak">0</div><div class="sum-stat-lbl">Best Streak</div></div>
+
+    <div class="zero-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <div>
+        <h3>Free and open educational resource</h3>
+        <p>apcyber.net is provided at no cost for educational use. No accounts, no data collection, no restrictions on access. By using this site you agree to the simple terms below.</p>
+      </div>
     </div>
-    <div class="sum-actions">
-      <button class="sum-btn primary" onclick="replayDeck()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Play Again
-      </button>
-      <button class="sum-btn secondary" onclick="goSetup()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        All Decks
-      </button>
+
+    <div class="section">
+      <div class="section-num">Section 1</div>
+      <h2>Agreement</h2>
+      <p>By accessing apcyber.net you agree to these Terms of Service. If you do not agree, please do not use the site.</p>
     </div>
-    <div class="missed-review" id="missed-review" style="display:none">
-      <div class="mr-label">Review These</div>
-      <div id="missed-list"></div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 2</div>
+      <h2>Permitted Use</h2>
+      <p>This site is provided for lawful educational purposes, including AP Cybersecurity classroom instruction, student exam preparation, and teacher professional learning. It may be used by students, teachers, and administrators at accredited K&ndash;12 schools at no cost with no account required.</p>
     </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 3</div>
+      <h2>Prohibited Conduct</h2>
+      <p>You agree not to:</p>
+      <ul>
+        <li>Use this site for any purpose other than lawful educational activities</li>
+        <li>Scrape or systematically harvest site content for commercial redistribution</li>
+        <li>Use AI-powered features to generate harmful or inappropriate content</li>
+        <li>Enter any student&rsquo;s personally identifiable information into any field on this site</li>
+        <li>Interfere with or disrupt the technical operation of the site</li>
+      </ul>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 4</div>
+      <h2>AI-Powered Features</h2>
+      <p>Several tools use Anthropic&rsquo;s Claude API to generate educational content. AI-generated content may occasionally contain inaccuracies and should be treated as a supplemental learning aid, not a definitive source. Do not enter student names, IDs, or other personal information into AI prompt fields.</p>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 5</div>
+      <h2>Intellectual Property</h2>
+      <p><strong>College Board &amp; AP&reg; Trademark Notice:</strong> AP&reg; and Advanced Placement&reg; are registered trademarks of the College Board. The AP Cybersecurity course name, curriculum framework, learning objectives, and exam format are the intellectual property of the College Board. This site is an <strong>independent, unofficial supplemental educational resource</strong> and is not affiliated with, endorsed by, authorized by, or sponsored by the College Board in any way. No claim is made to any College Board intellectual property. References to the AP Cybersecurity course are for descriptive purposes only, identifying the course this resource is designed to supplement. Teachers and students should consult <a href="https://apcentral.collegeboard.org" target="_blank">AP Central</a> for all official course materials, exam information, and registration.</p>
+      <p>Original site content &mdash; including Socratic Anchor Guides, question banks, and scenario designs &mdash; is the intellectual property of the site operator. Teachers receive a free, non-exclusive license for classroom use. Redistribution or resale for commercial purposes without written permission is prohibited.</p>
+
+      <h2>Commercial Activity &amp; Scope</h2>
+      <p>This site itself does not conduct direct commercial transactions. Supplemental educational materials (Socratic Anchor Guides) are sold exclusively through Teachers Pay Teachers, a third-party marketplace. All commercial transactions are governed by Teachers Pay Teachers&rsquo; terms of service. This site contains no payment processing, no checkout flow, and no direct e-commerce.</p>
+      <p>This resource is intended for use by AP Cybersecurity teachers and students as an independent study supplement. It is not a school-sponsored platform, does not constitute an official course, and does not replace or supersede any official College Board materials or programs.</p>
+
+      <h2>Student Use &amp; Data Protection</h2>
+      <p>This site may be accessed by students, including minors, as a supplemental study tool. We have designed the site with student privacy as a foundational principle:</p>
+      <ul>
+        <li>No accounts, logins, or registration of any kind</li>
+        <li>No collection of names, email addresses, or any personally identifiable information</li>
+        <li>No tracking of individual student activity or performance</li>
+        <li>No storage of assessment results or education records of any kind</li>
+        <li>No cookies beyond session storage used temporarily for AI key management (browser-only, never transmitted to our server)</li>
+        <li>No third-party advertising or behavioral tracking</li>
+      </ul>
+      <p>Because no student data of any kind is collected, stored, or processed, FERPA, COPPA, and CIPA compliance obligations do not apply to this site&rsquo;s operation. AI tools require users to supply their own API keys from third-party providers (Google, OpenAI, or Anthropic); those interactions are governed by each provider&rsquo;s own privacy policies and terms of service.</p>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 6</div>
+      <h2>Disclaimer</h2>
+      <p>This site is provided &ldquo;as is&rdquo; for educational purposes without warranty of any kind. We make no representations that the site will be error-free or perfectly aligned with the AP Cybersecurity curriculum at all times. To the maximum extent permitted by law, we are not liable for any indirect or consequential damages from use of this site.</p>
+    </div>
+    <div class="doc-divider"></div>
+
+    <div class="section">
+      <div class="section-num">Section 7</div>
+      <h2>Governing Law &amp; Contact</h2>
+      <p>These Terms are governed by the laws of the State of Georgia. Disputes shall be resolved in the courts of Forsyth County, Georgia.</p>
+      <div class="contact-block">
+        <p>Contact via <a href="https://apcyber.net" style="color:var(--cyan)">apcyber.net</a>. Governing law: State of Georgia.</p>
+      </div>
+    </div>
+
   </div>
+
 </div>
-
-<!-- Result flash -->
-<div class="result-flash" id="result-flash">
-  <div class="rf-icon" id="rf-icon"></div>
-  <div class="rf-text" id="rf-text"></div>
-</div>
-
-<script>
-// ═══════════════════════════════════════════════════════
-// DECK DATA
-// ═══════════════════════════════════════════════════════
-const DECKS = [
-
-// ── UNIT 1 MATCH DECKS ────────────────────────────────
-{id:'u1-social', unit:'1', title:'Social Engineering Tactics',
- mode:'match', desc:'Match each tactic to what it exploits or how it works.',
- pairs:[
-  {left:'Pretexting',      right:'Building a false scenario using researched details to make contact seem legitimate'},
-  {left:'Urgency',         right:'Creating artificial time pressure to force quick action without critical thinking'},
-  {left:'Authority',       right:'Impersonating someone with power (e.g., IT admin, CEO) to compel compliance'},
-  {left:'Consensus',       right:'Claiming "everyone else is doing it" to pressure the target into conforming'},
-  {left:'Scarcity',        right:'Implying limited availability or opportunity to motivate immediate action'},
-  {left:'Elicitation',     right:'Skillfully drawing out sensitive information through seemingly normal conversation'},
-  {left:'Intimidation',    right:'Using fear of negative consequences to override the target\'s judgment'},
-  {left:'Familiarity',     right:'Pretending to know the target personally to lower their defenses'},
- ]},
-
-{id:'u1-attacks', unit:'1', title:'Attack Type Recognition',
- mode:'match', desc:'Match each attack scenario to the attack it describes.',
- pairs:[
-  {left:'Adversary sets up a fake Wi-Fi hotspot matching the coffee shop\'s real SSID',              right:'Evil Twin Attack'},
-  {left:'500 login attempts from one IP against one account in 3 minutes',                           right:'Online Brute-Force Attack'},
-  {left:'Stolen credentials from Site A are tested against user accounts at Site B',                 right:'Credential Stuffing'},
-  {left:'One common password tested against 2,000 different accounts to avoid lockouts',             right:'Password Spraying'},
-  {left:'Attacker drives through neighborhoods cataloguing wireless networks and signal strength',    right:'War Driving'},
-  {left:'AI-generated audio of a CEO\'s voice used in a phone call to authorize a wire transfer',   right:'Deepfake Voice Attack'},
-  {left:'AI crafts a grammatically perfect, personalized phishing email at scale',                   right:'AI-Enhanced Phishing'},
-  {left:'User\'s traffic flows through the corporate network even when visiting personal sites',     right:'Full-Tunnel VPN'},
- ]},
-
-// ── UNIT 2 MATCH DECKS ────────────────────────────────
-{id:'u2-risk', unit:'2', title:'Risk Assessment Concepts',
- mode:'match', desc:'Match each term to its precise AP framework definition.',
- pairs:[
-  {left:'Qualitative Risk Assessment',  right:'Ranks risks using descriptive labels such as High, Medium, and Low rather than dollar values'},
-  {left:'Quantitative Risk Assessment', right:'Assigns numerical monetary values to risks, calculating expected loss and likelihood to prioritize spending'},
-  {left:'Residual Risk',                right:'The risk remaining after avoidance, transference, and mitigation controls have been applied'},
-  {left:'Risk Transference',            right:'Shifting the financial burden of a risk to another party, such as purchasing cyber insurance'},
-  {left:'Risk Avoidance',               right:'Stopping the activity that creates the risk entirely rather than implementing controls around it'},
-  {left:'Risk Acceptance',              right:'Consciously deciding to tolerate a risk because the cost of mitigation exceeds the projected loss'},
-  {left:'Threat',                       right:'Any circumstance or event — human or natural — with the potential to compromise an asset'},
-  {left:'Vulnerability',                right:'A weakness in a system, policy, or process that a threat can exploit to cause harm'},
- ]},
-
-{id:'u2-controls', unit:'2', title:'Control Type vs. Function',
- mode:'sort', desc:'Sort each security control into its correct classification.',
- categories:[
-  {id:'prev', name:'Preventative', color:'#00d4c8'},
-  {id:'det',  name:'Detective',    color:'#f5a623'},
-  {id:'corr', name:'Corrective',   color:'#00c864'},
- ],
- items:[
-  {text:'Firewall with deny-all rules',         category:'prev'},
-  {text:'Security camera recording footage',    category:'det'},
-  {text:'NIDS generating alerts',               category:'det'},
-  {text:'MFA login requirement',                category:'prev'},
-  {text:'Restoring from encrypted backup',      category:'corr'},
-  {text:'Badge access control on server room',  category:'prev'},
-  {text:'Motion sensor triggering alert',       category:'det'},
-  {text:'Incident response and recovery plan',  category:'corr'},
-  {text:'Security awareness training',          category:'prev'},
-  {text:'Anti-malware quarantine action',       category:'corr'},
-  {text:'SIEM correlation alert',               category:'det'},
-  {text:'Acceptable use policy',                category:'prev'},
- ]},
-
-{id:'u2-physical', unit:'2', title:'Physical Attack Types',
- mode:'sort', desc:'Sort each scenario into the correct physical attack category.',
- categories:[
-  {id:'pig',  name:'Piggybacking',   color:'#e74c3c'},
-  {id:'tail', name:'Tailgating',     color:'#e67e22'},
-  {id:'shldr',name:'Shoulder Surfing',color:'#9b59b6'},
-  {id:'dump', name:'Dumpster Diving', color:'#3498db'},
- ],
- items:[
-  {text:'Adversary follows an employee through a badge door without their knowledge',                            category:'tail'},
-  {text:'Employee holds the door open for someone carrying boxes, thinking they are a vendor',                   category:'pig'},
-  {text:'Adversary uses a small camera to record a user entering their PIN at an ATM',                           category:'shldr'},
-  {text:'Adversary searches trash bins near the office and finds printed network diagrams',                      category:'dump'},
-  {text:'Adversary glances over a worker\'s shoulder at a coffee shop to read their password',                   category:'shldr'},
-  {text:'Adversary recovers shredded documents and reassembles them to find employee names',                     category:'dump'},
-  {text:'Unauthorized person sneaks in behind an employee who badges through a door',                            category:'tail'},
-  {text:'Adversary convinces receptionist to buzz them in by claiming to be from IT support',                    category:'pig'},
- ]},
-
-{id:'u2-cia', unit:'2', title:'CIA Triad — Which Property?',
- mode:'sort', desc:'Sort each scenario by which CIA property is primarily violated.',
- categories:[
-  {id:'conf', name:'Confidentiality', color:'#9b59b6'},
-  {id:'integ', name:'Integrity',      color:'#e67e22'},
-  {id:'avail', name:'Availability',   color:'#e74c3c'},
- ],
- items:[
-  {text:'Ransomware encrypts all files; users cannot open anything',                                     category:'avail'},
-  {text:'Adversary reads unencrypted customer records on a stolen laptop',                               category:'conf'},
-  {text:'Attacker modifies financial transaction amounts in a database',                                 category:'integ'},
-  {text:'DDoS attack takes down a hospital\'s scheduling system for 6 hours',                           category:'avail'},
-  {text:'Malware alters log files to hide evidence of the breach',                                      category:'integ'},
-  {text:'Employee emails a spreadsheet of 50,000 customer SSNs to a personal account',                  category:'conf'},
-  {text:'Power outage shuts down the data center; no UPS is in place',                                  category:'avail'},
-  {text:'Adversary intercepts and reads HTTPS traffic via a misconfigured certificate',                  category:'conf'},
-  {text:'SQL injection returns data the app was never supposed to expose',                               category:'conf'},
-  {text:'Wiper malware destroys all data on domain-joined machines',                                     category:'avail'},
- ]},
-
-// ── UNIT 3 MATCH DECKS ────────────────────────────────
-{id:'u3-attacks', unit:'3', title:'Network Attack Identification',
- mode:'match', desc:'Match each attack description to its correct name.',
- pairs:[
-  {left:'Sends forged ARP packets to corrupt the gateway\'s IP-to-MAC mapping, enabling man-in-the-middle',  right:'ARP Poisoning'},
-  {left:'Floods a switch with thousands of unique fake MAC addresses until it enters broadcast mode',          right:'MAC Flooding'},
-  {left:'Plants a fake DNS record redirecting legitimate domain traffic to a malicious site',                  right:'DNS Poisoning'},
-  {left:'Uses IP spoofing to send ICMP requests to a broadcast address, amplifying traffic toward a victim',   right:'Smurf Attack'},
-  {left:'Rogue wireless AP broadcasts the same SSID as a legitimate network to intercept user traffic',        right:'Evil Twin Attack'},
-  {left:'Plugging an unauthorized device into an open switch port to join the internal LAN',                   right:'Open Switch Port Exploit'},
-  {left:'Wireless frames extend beyond the physical building, allowing external capture attempts',              right:'Signal Bleed Vulnerability'},
-  {left:'Employee at home connects to corporate network while personal browsing uses local ISP simultaneously', right:'Split Tunneling Risk'},
- ]},
-
-{id:'u3-seg', unit:'3', title:'Network Segmentation Concepts',
- mode:'match', desc:'Match each term to its correct definition.',
- pairs:[
-  {left:'VLAN',           right:'Logical separation of devices on the same physical switch infrastructure using switch configuration'},
-  {left:'Subnetting',     right:'Divides a network by IP addressing so a breach on one segment cannot automatically reach another'},
-  {left:'Screened Subnet (DMZ)', right:'A lower-security zone between the internet and internal network hosting public-facing services'},
-  {left:'Port Security',  right:'Limits the number of MAC addresses on a switch port, preventing MAC flooding attacks'},
-  {left:'Stateless Firewall',  right:'Filters packets based only on header fields with no memory of prior packets or connection state'},
-  {left:'Stateful Firewall',   right:'Tracks the state of active connections and can filter based on whether traffic belongs to an established session'},
-  {left:'NGFW',           right:'Combines stateless and stateful filtering with deep packet inspection and application-layer identification'},
-  {left:'ACL',            right:'An ordered list of rules checked sequentially; the first matching rule is executed and no further rules are evaluated'},
- ]},
-
-{id:'u3-detect', unit:'3', title:'Detection Tools — NIDS vs NIPS vs SIEM',
- mode:'sort', desc:'Sort each capability into the tool that provides it.',
- categories:[
-  {id:'nids', name:'NIDS',  color:'#3498db'},
-  {id:'nips', name:'NIPS',  color:'#e74c3c'},
-  {id:'siem', name:'SIEM',  color:'#9b59b6'},
- ],
- items:[
-  {text:'Detects a port scan and generates an alert but takes no blocking action',         category:'nids'},
-  {text:'Automatically blocks a source IP launching a brute-force attack',                  category:'nips'},
-  {text:'Correlates firewall, NIDS, and endpoint logs to detect a multi-stage attack pattern', category:'siem'},
-  {text:'Closes port 22 automatically when SSH brute-force is detected',                   category:'nips'},
-  {text:'Identifies SQL injection in HTTP traffic and raises an analyst alert',             category:'nids'},
-  {text:'Provides a single dashboard showing attack patterns across all log sources',       category:'siem'},
-  {text:'Can reject specific protocols when anomalous behavior is detected',                category:'nips'},
-  {text:'Collects and indexes logs from 50 different network devices for analysis',         category:'siem'},
-  {text:'Monitors network traffic in real time but relies on human response to alerts',    category:'nids'},
- ]},
-
-// ── UNIT 4 MATCH DECKS ────────────────────────────────
-{id:'u4-malware', unit:'4', title:'Malware Type Identification',
- mode:'match', desc:'Match each behavior description to the malware type.',
- pairs:[
-  {left:'Self-replicates across the network from device to device without any user interaction',                           right:'Worm'},
-  {left:'Appears to be a legitimate useful app while secretly opening a remote control channel to an adversary',           right:'Remote Access Trojan (RAT)'},
-  {left:'Encrypts all files on the device and displays a payment demand with a countdown timer',                           right:'Ransomware'},
-  {left:'Lives entirely in RAM using legitimate Windows tools like PowerShell; leaves no files on disk',                   right:'Fileless Malware'},
-  {left:'Embeds in the OS kernel and makes itself and its processes invisible to all system monitoring tools',              right:'Rootkit'},
-  {left:'Secretly records every keystroke including passwords and credit card numbers typed by the user',                  right:'Keylogger'},
-  {left:'Monitors user activity and transmits browsing behavior and personal data to an external server',                  right:'Spyware'},
-  {left:'Activated when the infected file is opened; requires user action to spread to other devices',                     right:'Virus'},
- ]},
-
-{id:'u4-passwords', unit:'4', title:'Password Attack & Defense Concepts',
- mode:'match', desc:'Match each term to its AP framework definition.',
- pairs:[
-  {left:'Salting',             right:'Adding unique random bits to each password before hashing so identical passwords produce different stored hash values'},
-  {left:'Rainbow Table Attack',right:'Using precomputed hash-to-plaintext mappings to instantly reverse unsalted password hashes from a stolen database'},
-  {left:'Credential Stuffing', right:'Testing username/password pairs stolen from one site against other services, exploiting password reuse'},
-  {left:'Offline Password Attack', right:'Running cracking tools directly against a stolen hash database with no rate limiting from the target system'},
-  {left:'Password Spraying',   right:'Testing one common password against many accounts to stay below per-account lockout thresholds'},
-  {left:'False Positive',      right:'A security system incorrectly flags legitimate activity as malicious, wasting analyst time on non-threats'},
-  {left:'False Negative',      right:'A security system fails to detect actual malicious activity, allowing the attack to proceed unnoticed'},
-  {left:'Hash Collision',      right:'Two different inputs producing the same hash output, undermining the function\'s integrity; why MD5/SHA-1 are deprecated'},
- ]},
-
-{id:'u4-auth', unit:'4', title:'Authentication Factors — Which Type?',
- mode:'sort', desc:'Sort each authentication example into its factor category.',
- categories:[
-  {id:'know',  name:'Knowledge (Something You Know)', color:'#00d4c8'},
-  {id:'have',  name:'Possession (Something You Have)', color:'#f5a623'},
-  {id:'are',   name:'Inherence (Something You Are)',   color:'#9b59b6'},
-  {id:'loc',   name:'Location Factor',                  color:'#3498db'},
- ],
- items:[
-  {text:'Password',                                        category:'know'},
-  {text:'Fingerprint scan',                                category:'are'},
-  {text:'Hardware security key (YubiKey)',                  category:'have'},
-  {text:'Retina scan',                                     category:'are'},
-  {text:'One-time code from an authenticator app',         category:'have'},
-  {text:'Security question answer',                        category:'know'},
-  {text:'Voice recognition biometric',                     category:'are'},
-  {text:'Login blocked because IP is outside the US',      category:'loc'},
-  {text:'Smart card with embedded certificate',            category:'have'},
-  {text:'PIN code',                                        category:'know'},
-  {text:'Facial recognition',                              category:'are'},
-  {text:'Login flagged because it originates from Singapore when user always logs in from Chicago', category:'loc'},
- ]},
-
-{id:'u4-ioc', unit:'4', title:'Indicator of Compromise (IoC) Categories',
- mode:'sort', desc:'Sort each IoC into its correct category from the AP framework.',
- categories:[
-  {id:'file',  name:'File-Based IoC',     color:'#e67e22'},
-  {id:'host',  name:'Host-Based IoC',     color:'#e74c3c'},
-  {id:'behav', name:'Behavior-Based IoC', color:'#9b59b6'},
- ],
- items:[
-  {text:'Hash of a discovered file matches a known ransomware signature in threat intelligence',    category:'file'},
-  {text:'New service "svchost32.exe" appears in startup that wasn\'t installed by IT',              category:'host'},
-  {text:'User account logs in at 3 AM on a Sunday for the first time in 6 months',                 category:'behav'},
-  {text:'Windows Defender was disabled without any change ticket being filed',                      category:'host'},
-  {text:'An executable file\'s SHA-256 hash does not match the vendor\'s published checksum',      category:'file'},
-  {text:'Unusual outbound data transfer of 4 GB to an external IP at 2 AM',                        category:'behav'},
-  {text:'An unauthorized application is detected in the installed software list',                   category:'host'},
-  {text:'847 records accessed in one session when normal usage is 5–10 per day',                   category:'behav'},
- ]},
-
-// ── UNIT 5 MATCH DECKS ────────────────────────────────
-{id:'u5-access', unit:'5', title:'Access Control Models',
- mode:'match', desc:'Match each model to its defining characteristic.',
- pairs:[
-  {left:'DAC — Discretionary Access Control',   right:'The resource owner decides who can access their files; access is based on the owner\'s discretion'},
-  {left:'MAC — Mandatory Access Control',        right:'An external administrator assigns clearance levels to subjects and classification labels to objects; users cannot override them'},
-  {left:'RBAC — Role-Based Access Control',      right:'Every user is assigned a role, and roles define which objects they can access; permission follows the role, not the individual'},
-  {left:'RuBAC — Rule-Based Access Control',     right:'Access is determined by a set of context-aware rules such as time of day, transaction amount, or IP location'},
-  {left:'Bell-LaPadula — Simple Security Property', right:'"No read up" — a subject cannot read documents classified above their clearance level'},
-  {left:'Principle of Least Privilege',          right:'Each entity is granted exactly the access needed for their function and nothing more'},
-  {left:'Need-to-Know',                          right:'Even users with sufficient clearance can only access data directly relevant to their current assignment'},
-  {left:'Separation of Duties',                  right:'Critical tasks are divided so no single person can complete a sensitive action alone without oversight'},
- ]},
-
-{id:'u5-crypto', unit:'5', title:'Cryptography Concepts',
- mode:'match', desc:'Match each concept to its AP-precise definition.',
- pairs:[
-  {left:'Symmetric Encryption',   right:'The same key is used for both encryption and decryption; fast and efficient for bulk data (e.g., AES)'},
-  {left:'Asymmetric Encryption',  right:'Uses a mathematically linked key pair — a public key encrypts, only the paired private key decrypts (e.g., RSA)'},
-  {left:'Keyspace',               right:'The total number of possible key values for a given algorithm; larger keyspace means longer average brute-force time'},
-  {left:'Digital Signature',      right:'A sender encrypts a hash of their message with their private key, allowing any recipient to verify authenticity using the public key'},
-  {left:'Block Cipher',           right:'Encrypts fixed-size blocks of data (e.g., AES processes 128-bit blocks) producing one output block per input block'},
-  {left:'Public Key Infrastructure (PKI)', right:'The system of CAs, certificates, and policies that verifies the authenticity of public keys in asymmetric cryptography'},
-  {left:'Key-Length Comparison Rule', right:'Bit-length comparison is only valid between keys for the same algorithm; RSA-2048 is not equivalent to AES-2048 in security strength'},
-  {left:'Deprecated Hash Function', right:'A hash algorithm (e.g., MD5, SHA-1) abandoned because efficient collision-forcing algorithms have been discovered for it'},
- ]},
-
-{id:'u5-vulns', unit:'5', title:'Application Vulnerability Types',
- mode:'sort', desc:'Sort each attack indicator or payload into the vulnerability type it exploits.',
- categories:[
-  {id:'sqli',  name:'SQL Injection',       color:'#e74c3c'},
-  {id:'xss',   name:'Cross-Site Scripting (XSS)', color:'#f5a623'},
-  {id:'dir',   name:'Directory Traversal', color:'#9b59b6'},
-  {id:'buf',   name:'Buffer Overflow',     color:'#3498db'},
- ],
- items:[
-  {text:'Input: \' OR \'1\'=\'1\' --',                                                 category:'sqli'},
-  {text:'URL: /images/../../../etc/shadow',                                              category:'dir'},
-  {text:'Input: <script>document.cookie<\/script> in a comment field',                   category:'xss'},
-  {text:'8,192-character string sent in a field that normally accepts 50 characters',   category:'buf'},
-  {text:'UNION SELECT username, password FROM users--',                                  category:'sqli'},
-  {text:'Stored script executes automatically for every visitor to the product page',    category:'xss'},
-  {text:'A 256-byte hostname overwrites adjacent memory and executes attacker code',     category:'buf'},
-  {text:'GET request uses ../ sequences to navigate outside the web directory',          category:'dir'},
-  {text:'User input passed directly into a database query string without sanitization', category:'sqli'},
-  {text:'Script tag in a URL parameter reflects back and runs in the victim\'s browser', category:'xss'},
- ]},
-
-{id:'u5-detect', unit:'5', title:'Attack Detection from Log Evidence',
- mode:'match', desc:'Match each log entry or indicator to the attack it reveals.',
- pairs:[
-  {left:'Log shows single quotes, UNION SELECT, and double-dash (--) in an HTTP request body', right:'SQL Injection Attempt'},
-  {left:'GET request contains sequences of ../ navigating outside the intended web root',       right:'Directory Traversal Attempt'},
-  {left:'User input field contains <script>...<\/script> tags in a forum post',                  right:'Stored XSS Injection'},
-  {left:'Request body contains a field value far exceeding the normal maximum character length', right:'Buffer Overflow Attempt'},
-  {left:'An authenticated admin accesses 600 records in 10 minutes vs. normal 5 per day',       right:'Insider Threat / Behavioral Anomaly'},
-  {left:'A file named "vip_customers.csv" containing fake data is opened by an intern',         right:'Honeypot Triggered'},
-  {left:'A critical config file\'s SHA-256 hash differs from Monday\'s recorded baseline',     right:'File Integrity Violation'},
-  {left:'3 AM login from Singapore IP for account that always logs in from Chicago at 9 AM',    right:'Compromised Credential Indicator'},
- ]},
-
-// ── SYNTHESIS DECKS ───────────────────────────────────
-{id:'syn-concepts', unit:'2', title:'Key Framework Distinctions',
- mode:'match', desc:'Match each easily-confused term pair to its distinguishing definition.',
- pairs:[
-  {left:'False Positive (detection)',    right:'The security system incorrectly flags benign activity as an attack — wasting analyst time'},
-  {left:'False Negative (detection)',    right:'The security system misses a real attack — the threat proceeds undetected'},
-  {left:'Signature-Based Detection',     right:'Compares traffic or files against a database of known attack patterns; fast but blind to zero-days'},
-  {left:'Anomaly-Based Detection',       right:'Compares activity to a baseline of normal behavior; detects novel attacks but generates more false positives'},
-  {left:'Piggybacking',                  right:'The authorized person knowingly lets the adversary in — social engineering is used'},
-  {left:'Tailgating',                    right:'The adversary slips through behind someone without that person\'s awareness or consent'},
-  {left:'Risk Mitigation',               right:'Reducing the likelihood or impact of a risk through security controls — the risk still exists'},
-  {left:'Risk Avoidance',                right:'Eliminating the risky activity entirely rather than adding controls around it'},
- ]},
-
-{id:'syn-layers', unit:'2', title:'Defense-in-Depth — Which Layer?',
- mode:'sort', desc:'Sort each security control into its correct defense-in-depth layer.',
- categories:[
-  {id:'hum',  name:'Human',       color:'#c39bd3'},
-  {id:'phys', name:'Physical',    color:'#f0b27a'},
-  {id:'net',  name:'Network',     color:'#85c1e9'},
-  {id:'dev',  name:'Device',      color:'#c891ff'},
-  {id:'app',  name:'Application', color:'#f1948a'},
-  {id:'dat',  name:'Data',        color:'#76d7a4'},
- ],
- items:[
-  {text:'Security awareness training',          category:'hum'},
-  {text:'Badge access control vestibule',       category:'phys'},
-  {text:'Perimeter firewall with deny-all ACL', category:'net'},
-  {text:'Host-based firewall on every laptop',  category:'dev'},
-  {text:'Input validation & parameterized queries', category:'app'},
-  {text:'AES-256 encryption at rest',           category:'dat'},
-  {text:'Security cameras at all entrances',    category:'phys'},
-  {text:'Network VLAN segmentation',            category:'net'},
-  {text:'Anti-malware with automatic updates',  category:'dev'},
-  {text:'Role-based access control (RBAC)',     category:'app'},
-  {text:'Encrypted offsite backups',            category:'dat'},
-  {text:'Acceptable use policy',                category:'hum'},
- ]},
-
-];
-
-// ═══════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════
-let activeDeck = null;
-let correct = 0, wrong = 0, streak = 0, bestStreak = 0;
-let missedItems = [];
-let currentCat = 'all';
-
-// match state
-let selectedLeft = null, selectedRight = null;
-let matchedPairs = new Set();
-let matchLeftOrder = [], matchRightOrder = [];
-
-// sort state
-let sortPlacements = {};  // itemText -> categoryId
-let selectedSortChip = null;
-
-// ═══════════════════════════════════════════════════════
-// SETUP SCREEN
-// ═══════════════════════════════════════════════════════
-function filterCat(cat) {
-  currentCat = cat;
-  document.querySelectorAll('.cat-tab').forEach(function(t) {
-    t.classList.toggle('active', t.dataset.cat === cat);
-  });
-  renderDeckGrid();
-}
-
-function renderDeckGrid() {
-  const grid = document.getElementById('deck-grid');
-  grid.innerHTML = '';
-  const filtered = DECKS.filter(function(d) {
-    if (currentCat === 'all') return true;
-    if (currentCat === 'match') return d.mode === 'match';
-    if (currentCat === 'sort') return d.mode === 'sort';
-    return d.unit === currentCat;
-  }).sort(function(a, b) {
-    if (a.unit !== b.unit) return a.unit.localeCompare(b.unit);
-    return a.title.localeCompare(b.title);
-  });
-  filtered.forEach(function(deck) {
-    const card = document.createElement('div');
-    card.className = 'deck-card';
-    card.onclick = function() { startDeck(deck.id); };
-
-    const unit = document.createElement('div');
-    unit.className = 'deck-unit';
-    unit.textContent = 'Unit ' + deck.unit;
-
-    const title = document.createElement('div');
-    title.className = 'deck-title';
-    title.textContent = deck.title;
-
-    const desc = document.createElement('div');
-    desc.className = 'deck-desc';
-    desc.textContent = deck.desc;
-
-    const meta = document.createElement('div');
-    meta.className = 'deck-meta';
-
-    const count = document.createElement('div');
-    count.className = 'deck-count';
-    const n = deck.mode === 'match' ? deck.pairs.length : deck.items.length;
-    count.textContent = n + ' items';
-
-    const modeBadge = document.createElement('div');
-    modeBadge.className = 'mode-badge ' + (deck.mode === 'match' ? 'mode-match' : 'mode-sort');
-    modeBadge.textContent = deck.mode === 'match' ? '\uD83D\uDD17 Match Pairs' : '\uD83D\uDCCB Sort Categories';
-
-    meta.appendChild(count);
-    meta.appendChild(modeBadge);
-    card.appendChild(unit);
-    card.appendChild(title);
-    card.appendChild(desc);
-    card.appendChild(meta);
-    grid.appendChild(card);
-  });
-}
-
-// ═══════════════════════════════════════════════════════
-// GAME INIT
-// ═══════════════════════════════════════════════════════
-function startDeck(id) {
-  activeDeck = DECKS.find(function(d) { return d.id === id; });
-  correct = 0; wrong = 0; streak = 0; bestStreak = 0;
-  missedItems = [];
-  document.getElementById('gh-title').textContent = activeDeck.title;
-  document.getElementById('gh-sub').textContent = activeDeck.desc;
-  showScreen('game');
-  if (activeDeck.mode === 'match') initMatch();
-  else initSort();
-  updateHeader();
-}
-
-function updateHeader() {
-  const total = activeDeck.mode === 'match' ? activeDeck.pairs.length : activeDeck.items.length;
-  document.getElementById('score-display').textContent = correct + ' / ' + total;
-  document.getElementById('progress-pill').textContent = correct + ' matched';
-  document.getElementById('game-progress-fill').style.width = (correct / total * 100) + '%';
-}
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// ═══════════════════════════════════════════════════════
-// MATCH MODE
-// ═══════════════════════════════════════════════════════
-function initMatch() {
-  selectedLeft = null; selectedRight = null;
-  matchedPairs = new Set();
-  matchLeftOrder = shuffle(activeDeck.pairs.map(function(p, i) { return i; }));
-  matchRightOrder = shuffle(activeDeck.pairs.map(function(p, i) { return i; }));
-  renderMatch();
-}
-
-function renderMatch() {
-  const area = document.getElementById('game-area');
-  area.innerHTML = '';
-
-  const wrap = document.createElement('div');
-  wrap.className = 'match-wrap anim';
-
-  const instr = document.createElement('div');
-  instr.className = 'match-instruction';
-  instr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/><\/svg> Select an item from the left, then its match on the right';
-  wrap.appendChild(instr);
-
-  const layout = document.createElement('div');
-  layout.className = 'match-layout';
-
-  // Left column
-  const leftWrap = document.createElement('div');
-  const leftLabel = document.createElement('div');
-  leftLabel.className = 'match-col-label';
-  leftLabel.textContent = 'Terms / Scenarios';
-  const leftItems = document.createElement('div');
-  leftItems.className = 'match-items';
-  matchLeftOrder.forEach(function(pairIdx) {
-    const pair = activeDeck.pairs[pairIdx];
-    const item = document.createElement('div');
-    item.className = 'match-item' + (matchedPairs.has(pairIdx) ? ' matched-correct locked' : '');
-    item.dataset.idx = pairIdx;
-    item.dataset.side = 'left';
-    item.textContent = pair.left;
-    if (matchedPairs.has(pairIdx)) {
-      const badge = document.createElement('div');
-      badge.className = 'match-badge correct';
-      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/><\/svg>';
-      item.appendChild(badge);
-    } else {
-      item.onclick = function() { selectMatchItem(pairIdx, 'left', item); };
-    }
-    leftItems.appendChild(item);
-  });
-  leftWrap.appendChild(leftLabel);
-  leftWrap.appendChild(leftItems);
-
-  // Right column
-  const rightWrap = document.createElement('div');
-  const rightLabel = document.createElement('div');
-  rightLabel.className = 'match-col-label';
-  rightLabel.textContent = 'Definitions / Names';
-  const rightItems = document.createElement('div');
-  rightItems.className = 'match-items';
-  matchRightOrder.forEach(function(pairIdx) {
-    const pair = activeDeck.pairs[pairIdx];
-    const item = document.createElement('div');
-    item.className = 'match-item' + (matchedPairs.has(pairIdx) ? ' matched-correct locked' : '');
-    item.dataset.idx = pairIdx;
-    item.dataset.side = 'right';
-    item.textContent = pair.right;
-    if (matchedPairs.has(pairIdx)) {
-      const badge = document.createElement('div');
-      badge.className = 'match-badge correct';
-      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/><\/svg>';
-      item.appendChild(badge);
-    } else {
-      item.onclick = function() { selectMatchItem(pairIdx, 'right', item); };
-    }
-    rightItems.appendChild(item);
-  });
-  rightWrap.appendChild(rightLabel);
-  rightWrap.appendChild(rightItems);
-
-  layout.appendChild(leftWrap);
-  layout.appendChild(rightWrap);
-  wrap.appendChild(layout);
-  area.appendChild(wrap);
-}
-
-function selectMatchItem(pairIdx, side, el) {
-  if (matchedPairs.has(pairIdx)) return;
-
-  // deselect same side
-  document.querySelectorAll('.match-item.selected').forEach(function(el2) {
-    if (el2.dataset.side === side && el2 !== el) el2.classList.remove('selected');
-  });
-
-  el.classList.toggle('selected');
-
-  if (side === 'left') { selectedLeft = el.classList.contains('selected') ? pairIdx : null; }
-  else                 { selectedRight = el.classList.contains('selected') ? pairIdx : null; }
-
-  if (selectedLeft !== null && selectedRight !== null) {
-    checkMatch(selectedLeft, selectedRight);
-  }
-}
-
-function checkMatch(leftIdx, rightIdx) {
-  const isCorrect = leftIdx === rightIdx;
-  const leftEl = document.querySelector('.match-item[data-side="left"][data-idx="' + leftIdx + '"]');
-  const rightEl = document.querySelector('.match-item[data-side="right"][data-idx="' + rightIdx + '"]');
-
-  if (isCorrect) {
-    correct++;
-    streak++;
-    if (streak > bestStreak) bestStreak = streak;
-    matchedPairs.add(leftIdx);
-    [leftEl, rightEl].forEach(function(el) {
-      if (!el) return;
-      el.classList.remove('selected');
-      el.classList.add('matched-correct', 'locked');
-      el.onclick = null;
-      const badge = document.createElement('div');
-      badge.className = 'match-badge correct';
-      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/><\/svg>';
-      el.appendChild(badge);
-    });
-    flashResult(true, streak >= 3 ? '\uD83D\uDD25 ' + streak + ' in a row!' : 'Correct!');
-    if (matchedPairs.size === activeDeck.pairs.length) {
-      setTimeout(showSummary, 700);
-    }
-  } else {
-    wrong++;
-    streak = 0;
-    missedItems.push({left: activeDeck.pairs[leftIdx].left, right: activeDeck.pairs[leftIdx].right});
-    [leftEl, rightEl].forEach(function(el) {
-      if (!el) return;
-      el.classList.remove('selected');
-      el.classList.add('matched-wrong');
-      setTimeout(function() { el.classList.remove('matched-wrong'); }, 500);
-    });
-    flashResult(false, 'Not a match \u2014 try again');
-  }
-
-  selectedLeft = null; selectedRight = null;
-  updateHeader();
-}
-
-// ═══════════════════════════════════════════════════════
-// SORT MODE
-// ═══════════════════════════════════════════════════════
-function initSort() {
-  sortPlacements = {};
-  selectedSortChip = null;
-  renderSort();
-}
-
-function renderSort() {
-  const area = document.getElementById('game-area');
-  area.innerHTML = '';
-  const wrap = document.createElement('div');
-  wrap.className = 'sort-wrap anim';
-
-  const instr = document.createElement('div');
-  instr.className = 'sort-instruction';
-  instr.textContent = 'Tap an item to select it, then tap a category to place it. Or drag on desktop. Tap a placed chip to return it to the pool.';
-  wrap.appendChild(instr);
-
-  // Pool
-  const pool = document.createElement('div');
-  pool.className = 'sort-items-pool';
-  pool.id = 'sort-pool';
-  const shuffledItems = shuffle(activeDeck.items.map(function(it, i){ return i; }));
-  shuffledItems.forEach(function(idx) {
-    if (sortPlacements[idx] !== undefined) return;
-    const it = activeDeck.items[idx];
-    const chip = buildSortChip(idx, it.text);
-    pool.appendChild(chip);
-  });
-  wrap.appendChild(pool);
-
-  // Buckets
-  const buckets = document.createElement('div');
-  buckets.className = 'sort-buckets';
-  activeDeck.categories.forEach(function(cat) {
-    const bucket = document.createElement('div');
-    bucket.className = 'sort-bucket';
-    bucket.style.borderColor = cat.color + '44';
-    bucket.style.background = hexToRgba(cat.color, 0.04);
-    bucket.id = 'bucket-' + cat.id;
-
-    const hdr = document.createElement('div');
-    hdr.className = 'sort-bucket-header';
-    const dot = document.createElement('div');
-    dot.className = 'bucket-dot';
-    dot.style.background = cat.color;
-    const name = document.createElement('div');
-    name.className = 'bucket-name';
-    name.style.color = cat.color;
-    name.textContent = cat.name;
-    hdr.appendChild(dot);
-    hdr.appendChild(name);
-
-    const body = document.createElement('div');
-    body.className = 'sort-bucket-body';
-    body.id = 'bucket-body-' + cat.id;
-    body.onclick = function() {
-      if (selectedSortChip !== null) placeChip(selectedSortChip, cat.id);
-    };
-
-    // placed chips for this bucket
-    Object.keys(sortPlacements).forEach(function(idx) {
-      if (sortPlacements[idx] === cat.id) {
-        const it = activeDeck.items[idx];
-        body.appendChild(buildPlacedChip(Number(idx), it.text, cat));
-      }
-    });
-
-    bucket.appendChild(hdr);
-    bucket.appendChild(body);
-    buckets.appendChild(bucket);
-  });
-  wrap.appendChild(buckets);
-
-  // Submit row
-  const unplaced = activeDeck.items.length - Object.keys(sortPlacements).length;
-  if (unplaced === 0) {
-    const submitRow = document.createElement('div');
-    submitRow.style.cssText = 'margin-top:1.5rem;text-align:center';
-    const submitBtn = document.createElement('button');
-    submitBtn.style.cssText = 'background:var(--cyan);color:var(--navy);font-family:inherit;font-weight:700;font-size:.95rem;padding:.85rem 2.5rem;border-radius:11px;border:none;cursor:pointer';
-    submitBtn.textContent = 'Check My Answers';
-    submitBtn.onclick = checkSort;
-    submitRow.appendChild(submitBtn);
-    wrap.appendChild(submitRow);
-  }
-
-  area.appendChild(wrap);
-}
-
-function buildSortChip(idx, text) {
-  const chip = document.createElement('div');
-  chip.className = 'sort-chip' + (selectedSortChip === idx ? ' selected' : '');
-  chip.dataset.idx = idx;
-  chip.textContent = text;
-  chip.draggable = true;
-  chip.ondragstart = function(e) { e.dataTransfer.setData('text/plain', String(idx)); selectedSortChip = idx; };
-  chip.onclick = function() {
-    selectedSortChip = selectedSortChip === idx ? null : idx;
-    renderSort();
-  };
-  // drop targets
-  document.querySelectorAll('.sort-bucket').forEach(function(b) {
-    b.ondragover = function(e) { e.preventDefault(); b.classList.add('drag-over'); };
-    b.ondragleave = function() { b.classList.remove('drag-over'); };
-    b.ondrop = function(e) {
-      e.preventDefault();
-      b.classList.remove('drag-over');
-      const i = Number(e.dataTransfer.getData('text/plain'));
-      const catId = b.id.replace('bucket-', '');
-      placeChip(i, catId);
-    };
-  });
-  return chip;
-}
-
-function buildPlacedChip(idx, text, cat) {
-  const chip = document.createElement('div');
-  chip.className = 'placed-chip';
-  chip.style.cssText = 'background:' + hexToRgba(cat.color, 0.12) + ';color:' + cat.color + ';border:1px solid ' + hexToRgba(cat.color, 0.3);
-  const span = document.createElement('span');
-  span.textContent = text;
-  const svg = document.createElement('span');
-  svg.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/><\/svg>';
-  chip.appendChild(span);
-  chip.appendChild(svg);
-  chip.onclick = function() { returnChip(idx); };
-  return chip;
-}
-
-function placeChip(idx, catId) {
-  sortPlacements[idx] = catId;
-  selectedSortChip = null;
-  renderSort();
-}
-
-function returnChip(idx) {
-  delete sortPlacements[idx];
-  selectedSortChip = null;
-  renderSort();
-}
-
-function checkSort() {
-  let c = 0, w = 0;
-  activeDeck.items.forEach(function(item, idx) {
-    if (sortPlacements[idx] === item.category) {
-      c++;
-      streak++;
-      if (streak > bestStreak) bestStreak = streak;
-    } else {
-      w++;
-      streak = 0;
-      const correctCat = activeDeck.categories.find(function(cat) { return cat.id === item.category; });
-      missedItems.push({left: item.text, right: correctCat ? correctCat.name : item.category});
-    }
-  });
-  correct = c; wrong = w;
-  updateHeader();
-  setTimeout(showSummary, 300);
-}
-
-function hexToRgba(hex, alpha) {
-  if (hex.startsWith('var(--')) {
-    const map = {'var(--cyan)':'0,212,200','var(--amber)':'245,166,35','var(--green)':'0,200,100','var(--red)':'255,85,85'};
-    return 'rgba(' + (map[hex] || '255,255,255') + ',' + alpha + ')';
-  }
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-}
-
-// ═══════════════════════════════════════════════════════
-// RESULT FLASH
-// ═══════════════════════════════════════════════════════
-function flashResult(good, msg) {
-  const el = document.getElementById('result-flash');
-  el.style.borderColor = good ? 'rgba(0,200,100,.4)' : 'rgba(255,85,85,.4)';
-  document.getElementById('rf-icon').textContent = good ? '\u2705' : '\u274C';
-  document.getElementById('rf-text').textContent = msg;
-  el.classList.remove('hide');
-  el.classList.add('show');
-  setTimeout(function() { el.classList.add('hide'); setTimeout(function() { el.classList.remove('show','hide'); }, 300); }, 900);
-}
-
-// ═══════════════════════════════════════════════════════
-// SUMMARY
-// ═══════════════════════════════════════════════════════
-function showSummary() {
-  const total = activeDeck.mode === 'match' ? activeDeck.pairs.length : activeDeck.items.length;
-  const pct = Math.round((correct / total) * 100);
-  const color = pct >= 85 ? 'var(--cyan)' : pct >= 65 ? 'var(--amber)' : 'var(--red)';
-
-  const circle = document.getElementById('sum-circle');
-  circle.style.borderColor = color;
-  const pctEl = document.getElementById('sum-pct');
-  pctEl.style.color = color;
-  pctEl.textContent = pct + '%';
-  document.getElementById('sum-frac').textContent = correct + '/' + total;
-  document.getElementById('sum-correct').textContent = correct;
-  document.getElementById('sum-wrong').textContent = wrong;
-  document.getElementById('sum-streak').textContent = bestStreak;
-
-  let h, sub;
-  if (pct >= 90) { h = 'Excellent!'; sub = 'You nailed ' + correct + ' of ' + total + '. This vocabulary is locked in. Try a harder deck or take the Quiz Engine.'; }
-  else if (pct >= 70) { h = 'Strong work.'; sub = 'You got ' + correct + ' of ' + total + '. Review the misses below, then replay for a perfect score.'; }
-  else { h = 'Keep at it.'; sub = 'You got ' + correct + ' of ' + total + '. The missed items are listed below — revisit them in the Socratic guides before replaying.'; }
-  document.getElementById('sum-h').textContent = h;
-  document.getElementById('sum-sub').textContent = sub;
-
-  const missedDiv = document.getElementById('missed-review');
-  const missedList = document.getElementById('missed-list');
-  missedList.innerHTML = '';
-  if (missedItems.length > 0) {
-    missedDiv.style.display = 'block';
-    // deduplicate
-    const seen = new Set();
-    missedItems.forEach(function(m) {
-      const key = m.left;
-      if (seen.has(key)) return;
-      seen.add(key);
-      const item = document.createElement('div');
-      item.className = 'mr-item';
-      const strong = document.createElement('strong');
-      strong.textContent = m.left;
-      const arrow = document.createElement('span');
-      arrow.className = 'mr-arrow';
-      arrow.textContent = ' \u2192 ';
-      const def = document.createElement('span');
-      def.textContent = m.right;
-      item.appendChild(strong);
-      item.appendChild(arrow);
-      item.appendChild(def);
-      missedList.appendChild(item);
-    });
-  } else {
-    missedDiv.style.display = 'none';
-  }
-
-  showScreen('summary');
-}
-
-// ═══════════════════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════════════════
-function resetRound() { startDeck(activeDeck.id); }
-function replayDeck() { startDeck(activeDeck.id); }
-
-function goSetup() {
-  activeDeck = null;
-  showScreen('setup');
-}
-
-function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-  document.getElementById('screen-' + name).classList.add('active');
-  window.scrollTo(0, 0);
-}
-
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
-renderDeckGrid();
-</script>
-<script>
-(function(){
-  if (!firebase.apps.length) {
-}
-  var page = window.location.pathname.split('/').pop() || 'index.html';
-  firebase.auth().onAuthStateChanged(function(user){
-    if (!user){
-      window.location.href='dashboard.html?redirect='+encodeURIComponent(page);
-      return;
-    }
-    document.documentElement.style.visibility='';
-    var slot=document.getElementById('nav-auth-slot');
-    if (!slot) return;
-    firebase.database().ref('teachers/'+user.uid).once('value').then(function(snap){
-      var p=snap.val()||{};
-      var name=p.firstName||user.email.split('@')[0];
-      slot.innerHTML='<a href="dashboard.html" style="color:var(--muted);font-size:.75rem;font-weight:500;text-decoration:none">'+escH(name)+'</a>'
-        +'<span style="color:rgba(255,255,255,.2);margin:0 .3rem;font-size:.75rem">&bull;</span>'
-        +'<a href="#" onclick="firebase.auth().signOut().then(function(){window.location.href=\'login.html\';});return false;" style="color:var(--muted);font-size:.75rem;font-weight:500;text-decoration:none">Sign Out</a>';
-    });
-  });
-  function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-})();
-</script>
 
 <footer style="background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)">
-  <span>&copy; 2026 apcyber.net &mdash; An unofficial supplemental tool. Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
-  <div style="display:flex;gap:1rem">
-    <a href="legal.html" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a>
-    <a href="legal.html?tab=terms" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Terms of Service</a>
-  </div>
+  <span>&copy; 2026 apcyber.net &mdash; Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <a href="legal.html" style="color:var(--muted);text-decoration:none">Privacy &amp; Terms</a>
 </footer>
+
 <script>
-function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
-function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
-</script>
-</body>
-</html>
+function switchDoc(doc, btn) {
+  document.querySelectorAll('.doc-content').forEach(function(d){ d.classList.remove('active'); });
+  document.querySelectorAll('.doc-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.getElementById('doc-' + doc).classList.add('active');
+  if (btn) btn.classList.add('active');
+  window.scrollTo(0, 0);
+}
+(function(){
+  if (new URLSearchParams(window.location.search).get('tab') === 'terms') {
+    document.querySelectorAll('.doc-content').forEach(function(d){ d.classList.remove('active'); });
+    document.querySelectorAll('.doc-tab').forEach(function(t,i){ t.classList.toggle('active', i===1); });
+    document.getElementById('doc-terms').classList.add('active');
+  }
+})();
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.

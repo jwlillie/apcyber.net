@@ -3,768 +3,1209 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StegoVault CTF — Steganography Challenges</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Space+Grotesk:wght@400;600;700&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<title>Socratic Anchor Guides — AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#08001a;--bg2:#0e0024;--panel:#130030;--panel2:#1a003f;--border:#2a0060;--border2:#440090;--violet:#b060ff;--violet2:#8030dd;--violet3:#d090ff;--pink:#ff40cc;--green:#44ff99;--yellow:#ffe040;--blue:#40c0ff;--red:#ff4466;--muted:#6030a0;--dim:#2a0058;--text:#c8a0f0;--font-m:'Share Tech Mono',monospace;--font-d:'Space Grotesk',sans-serif;--font-b:'DM Sans',sans-serif;}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-m);min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 60% 10%,rgba(176,96,255,0.07) 0%,transparent 55%),radial-gradient(ellipse at 10% 80%,rgba(255,64,204,0.04) 0%,transparent 50%);pointer-events:none;z-index:0;}
-body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(176,96,255,0.018) 2px,rgba(176,96,255,0.018) 4px);pointer-events:none;z-index:9999;}
-.wrapper{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 80px;}
-header{padding:44px 0 36px;border-bottom:1px solid var(--border2);}
-.hdr-tag{font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:12px;}
-h1{font-family:var(--font-d);font-size:clamp(34px,6vw,72px);font-weight:700;line-height:1.05;color:var(--violet3);letter-spacing:-1px;}
-h1 em{color:var(--pink);font-style:normal;}
-.hdr-sub{font-size:11px;letter-spacing:3px;color:var(--muted);margin-top:12px;text-transform:uppercase;}
-.scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:28px 0;border:1px solid var(--border2);}
-.sp{background:var(--panel);padding:12px 18px;border-right:1px solid var(--border2);}
-.sp:last-child{border-right:none;}
-.sp-l{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
-.sp-v{font-family:var(--font-d);font-size:26px;font-weight:700;color:var(--yellow);}
-.filter-bar{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap;align-items:center;}
-.fl{font-size:10px;letter-spacing:2px;color:var(--muted);margin-right:8px;}
-.fbtn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-m);font-size:11px;letter-spacing:2px;padding:4px 14px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.fbtn:hover,.fbtn.active{border-color:var(--violet2);color:var(--violet3);background:rgba(176,96,255,0.07);}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;}
-.card{background:var(--panel);border:1px solid var(--border2);cursor:pointer;position:relative;overflow:hidden;animation:glow .45s ease both;transition:border-color .18s,transform .18s,box-shadow .18s;}
-.card:hover{border-color:var(--violet2);transform:translateY(-2px);box-shadow:0 6px 28px rgba(176,96,255,0.12);}
-.card.solved{border-color:var(--green);}
-@keyframes glow{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.card:nth-child(1){animation-delay:.04s}.card:nth-child(2){animation-delay:.08s}.card:nth-child(3){animation-delay:.12s}.card:nth-child(4){animation-delay:.16s}.card:nth-child(5){animation-delay:.20s}.card:nth-child(6){animation-delay:.24s}.card:nth-child(7){animation-delay:.28s}.card:nth-child(8){animation-delay:.32s}.card:nth-child(9){animation-delay:.36s}.card:nth-child(10){animation-delay:.40s}
-.card-glow{height:3px;background:linear-gradient(90deg,var(--violet),var(--pink),transparent);}
-.card-body{padding:14px 16px 16px;}
-.card-meta{display:flex;justify-content:space-between;margin-bottom:8px;align-items:center;}
-.card-id{font-size:10px;letter-spacing:2px;color:var(--dim);}
-.card-pts{font-size:12px;color:var(--yellow);border:1px solid rgba(255,224,64,.22);padding:2px 8px;background:rgba(255,224,64,.05);}
-.card-title{font-family:var(--font-d);font-size:18px;font-weight:600;color:var(--violet3);margin-bottom:8px;}
-.card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.tag{font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid;text-transform:uppercase;}
-.te{color:var(--green);border-color:rgba(68,255,153,.3);}
-.tm{color:var(--yellow);border-color:rgba(255,224,64,.3);}
-.th{color:var(--red);border-color:rgba(255,68,102,.3);}
-.ti{color:var(--blue);border-color:rgba(64,192,255,.3);}
-.card-desc{font-family:var(--font-b);font-size:12.5px;color:var(--muted);line-height:1.6;font-weight:300;margin-bottom:14px;}
-.card-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px;}
-.solves{font-size:10px;color:var(--dim);}
-.btn-view{background:transparent;border:1px solid var(--violet2);color:var(--violet3);font-size:10px;letter-spacing:2px;padding:4px 10px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.btn-view:hover{background:rgba(176,96,255,0.12);}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(8,0,26,.94);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--bg2);border:1px solid var(--violet2);max-width:740px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(176,96,255,0.14);animation:mi .2s ease;}
-@keyframes mi{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:scale(1);}}
-.modal-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
-.modal-title{font-family:var(--font-d);font-size:19px;font-weight:700;color:var(--violet3);}
-.modal-close{background:none;border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-family:var(--font-m);font-size:11px;padding:3px 9px;flex-shrink:0;}
-.modal-close:hover{border-color:var(--red);color:var(--red);}
-.modal-body{padding:20px 22px;}
-.mlabel{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;margin-top:18px;}
-.mlabel.first{margin-top:0;}
-.mdesc{font-family:var(--font-b);font-size:13px;color:var(--text);line-height:1.75;font-weight:300;}
-.hint{background:rgba(255,224,64,0.04);border:1px solid rgba(255,224,64,0.18);padding:9px 13px;font-size:11.5px;color:var(--yellow);line-height:1.6;margin-bottom:7px;}
-.hint::before{content:'// HINT ' attr(data-n) ': ';color:var(--dim);}
-.flag-box{background:rgba(68,255,153,0.04);border:1px solid rgba(68,255,153,0.25);padding:11px 15px;font-size:13px;color:var(--green);letter-spacing:1px;}
-.sol{background:rgba(176,96,255,0.03);border:1px solid rgba(176,96,255,0.14);padding:12px 15px;font-size:11.5px;color:var(--text);line-height:1.7;}
-.widget{background:#050010;border:1px solid var(--border2);margin-top:12px;padding:14px;}
-.wlabel{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-.wlabel.mt{margin-top:12px;}
-.wcode{background:#000;border:1px solid var(--border);padding:10px 12px;font-size:11px;color:var(--text);line-height:1.7;overflow-x:auto;white-space:pre;}
-.winput{width:100%;background:#050010;border:1px solid var(--border);color:var(--violet3);font-family:var(--font-m);font-size:12px;padding:7px 10px;outline:none;transition:border-color .15s;}
-.winput:focus{border-color:var(--violet2);}
-.winput.big{height:80px;resize:vertical;font-size:11px;}
-.wrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
-.wbtn{background:rgba(176,96,255,0.07);border:1px solid var(--violet2);color:var(--violet3);font-family:var(--font-m);font-size:11px;letter-spacing:1px;padding:6px 13px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.wbtn:hover{background:rgba(176,96,255,0.18);}
-.wbtn.g{border-color:var(--green);color:var(--green);background:rgba(68,255,153,0.05);}
-.wbtn.g:hover{background:rgba(68,255,153,0.13);}
-.wbtn.p{border-color:var(--pink);color:var(--pink);background:rgba(255,64,204,0.05);}
-.wbtn.y{border-color:var(--yellow);color:var(--yellow);background:rgba(255,224,64,0.05);}
-.wout{padding:10px 12px;font-size:12px;line-height:1.6;display:none;border-top:1px solid var(--border);color:var(--text);white-space:pre-wrap;}
-.wout.show{display:block;}
-.wout.ok{color:var(--green);}
-.wout.err{color:var(--red);}
-canvas{display:block;border:1px solid var(--border);background:#000;margin-top:8px;cursor:crosshair;}
-.px-grid{display:grid;gap:2px;margin-top:8px;}
-.px-cell{width:36px;height:36px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;transition:border-color .1s;}
-.px-cell:hover{border-color:var(--violet);}
-.px-cell.selected{border-color:var(--pink);box-shadow:0 0 6px var(--pink);}
-.channel-bar{display:flex;gap:4px;margin-top:6px;align-items:center;font-size:11px;}
-.ch-label{min-width:20px;color:var(--muted);}
-.ch-track{flex:1;height:14px;background:var(--border);position:relative;}
-.ch-fill{height:100%;position:absolute;left:0;top:0;transition:width .3s;}
-.ch-val{min-width:28px;text-align:right;}
-.prog-bar{height:4px;background:var(--border);margin:8px 0;display:none;}
-.prog-fill{height:100%;background:var(--violet);transition:width .08s;width:0;}
-.prog-txt{font-size:11px;color:var(--muted);}
-.bit-row{display:flex;gap:2px;flex-wrap:wrap;margin-top:6px;}
-.bit{width:14px;height:14px;border:1px solid var(--border);font-size:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;}
-.bit.b1{background:rgba(176,96,255,0.5);color:var(--violet3);}
-.bit.b0{background:rgba(0,0,0,0.5);color:var(--dim);}
-.bit.hi{background:var(--pink);color:#fff;}
-.hex-row{display:flex;gap:16px;font-size:11px;margin:2px 0;}
-.hex-row .addr{color:var(--dim);min-width:60px;}
-.hex-row .hex{color:var(--violet3);letter-spacing:1px;}
-.hex-row .asc{color:var(--muted);}
+  :root {
+    --navy: #0b1628;
+    --navy-mid: #132040;
+    --navy-light: #1e2e52;
+    --cyan: #00d4c8;
+    --cyan-dim: #00a89f;
+    --amber: #f5a623;
+    --white: #f2f5fb;
+    --muted: #8899bb;
+    --card-bg: #111e38;
+    --border: rgba(0,212,200,0.15);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(11,22,40,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 clamp(1.5rem, 5vw, 4rem);
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+  }
+
+  .nav-logo {
+    width: 36px;
+    height: 36px;
+    background: var(--cyan);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .nav-logo svg { width: 20px; height: 20px; }
+
+  .nav-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    color: var(--white);
+    letter-spacing: 0.01em;
+  }
+
+  .nav-title span { color: var(--cyan); }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--white); background: rgba(255,255,255,0.06); }
+  .nav-links a.active { color: var(--cyan); }
+
+  .nav-cta {
+    background: var(--cyan) !important;
+    color: var(--navy) !important;
+    font-weight: 600 !important;
+    padding: 0.45rem 1.1rem !important;
+    transition: opacity 0.2s !important;
+  }
+
+  .nav-cta:hover { opacity: 0.88; background: var(--cyan) !important; }
+
+  /* ─── PAGE HERO ─── */
+  .page-hero {
+    position: relative;
+    padding: clamp(4rem, 8vw, 6rem) clamp(1.5rem, 5vw, 4rem) clamp(3rem, 5vw, 4rem);
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,200,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,200,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 90% 100% at 30% 50%, black 10%, transparent 80%);
+    pointer-events: none;
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,200,0.1) 0%, transparent 65%);
+    top: -150px;
+    left: -100px;
+    pointer-events: none;
+  }
+
+  .page-hero-inner {
+    position: relative;
+    max-width: 780px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .breadcrumb a { color: var(--cyan); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb span { opacity: 0.5; }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.3);
+    color: var(--amber);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.9rem;
+    border-radius: 100px;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.5s 0.05s ease both;
+  }
+
+  .page-hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.25rem;
+    animation: fadeUp 0.5s 0.1s ease both;
+  }
+
+  .page-hero h1 em { font-style: italic; color: var(--cyan); }
+
+  .page-hero p {
+    font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+    color: var(--muted);
+    line-height: 1.75;
+    max-width: 620px;
+    font-weight: 300;
+    animation: fadeUp 0.5s 0.15s ease both;
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    animation: fadeUp 0.5s 0.2s ease both;
+  }
+
+  .meta-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .meta-pill svg { width: 15px; height: 15px; stroke: var(--cyan); flex-shrink: 0; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── SECTION LAYOUT ─── */
+  .page-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+  }
+
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 1rem;
+  }
+
+  .section-label::before {
+    content: '';
+    width: 24px;
+    height: 2px;
+    background: var(--cyan);
+  }
+
+  /* ─── HOW-TO SECTION ─── */
+  .howto-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+    margin-bottom: 5rem;
+  }
+
+  .howto-intro h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.7rem, 2.8vw, 2.3rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+  }
+
+  .howto-intro p {
+    font-size: 0.95rem;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 1rem;
+    font-weight: 300;
+  }
+
+  .two-part-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .part-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    display: flex;
+    gap: 1.1rem;
+    align-items: flex-start;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .part-card.part-1 { border-color: rgba(0,212,200,0.25); }
+  .part-card.part-2 { border-color: rgba(245,166,35,0.25); }
+
+  .part-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,212,200,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .part-card.part-2::before {
+    background: linear-gradient(135deg, rgba(245,166,35,0.05) 0%, transparent 60%);
+  }
+
+  .part-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    line-height: 1;
+    flex-shrink: 0;
+    width: 44px;
+    text-align: center;
+    padding-top: 2px;
+  }
+
+  .part-1 .part-num { color: var(--cyan); }
+  .part-2 .part-num { color: var(--amber); }
+
+  .part-card-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .part-card-desc {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  /* ─── STEPS ─── */
+  .steps-block {
+    margin-top: 2rem;
+  }
+
+  .steps-block h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-left: 2px solid var(--border);
+    padding-left: 1.5rem;
+    margin-left: 0.5rem;
+  }
+
+  .step-item {
+    position: relative;
+    padding-bottom: 1.5rem;
+  }
+
+  .step-item:last-child { padding-bottom: 0; }
+
+  .step-item::before {
+    content: '';
+    position: absolute;
+    left: -1.65rem;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--navy);
+    border: 2px solid var(--cyan);
+  }
+
+  .step-num {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 0.25rem;
+  }
+
+  .step-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .step-desc {
+    font-size: 0.83rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  /* ─── TEACHER TIPS ─── */
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 3rem;
+    margin-bottom: 5rem;
+  }
+
+  .tip-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .tip-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .tip-icon svg { width: 18px; height: 18px; }
+
+  .tip-title {
+    font-weight: 600;
+    font-size: 0.88rem;
+  }
+
+  .tip-desc {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  /* ─── GUIDES SECTION ─── */
+  .guides-section h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.7rem, 2.8vw, 2.3rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+  }
+
+  .guides-section > p {
+    font-size: 0.95rem;
+    color: var(--muted);
+    line-height: 1.75;
+    max-width: 580px;
+    margin-bottom: 2.5rem;
+    font-weight: 300;
+  }
+
+  /* ─── UNIT GROUP ─── */
+  .unit-group {
+    margin-bottom: 3rem;
+  }
+
+  .unit-group-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .unit-group-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .unit-group-icon svg { width: 20px; height: 20px; }
+
+  .unit-group-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.1rem;
+  }
+
+  .unit-group-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+    line-height: 1.2;
+  }
+
+  .guides-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+
+  /* ─── GUIDE CARD ─── */
+  .guide-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .guide-card:hover {
+    border-color: rgba(0,212,200,0.35);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.35);
+  }
+
+  .guide-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,212,200,0.03) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .guide-topics {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+
+  .guide-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    flex: 1;
+  }
+
+  .guide-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .chip {
+    display: inline-block;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 100px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .chip.cyan { background: rgba(0,212,200,0.07); border-color: rgba(0,212,200,0.2); color: var(--cyan); }
+  .chip.amber { background: rgba(245,166,35,0.07); border-color: rgba(245,166,35,0.2); color: var(--amber); }
+
+  .guide-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    margin-top: auto;
+  }
+
+  .grade-tag {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0,212,200,0.1);
+    border: 1px solid rgba(0,212,200,0.25);
+    color: var(--cyan);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 0.8rem;
+    border-radius: 7px;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+  }
+
+  .download-btn:hover {
+    background: rgba(0,212,200,0.18);
+    transform: translateY(-1px);
+  }
+
+  .download-btn svg { width: 13px; height: 13px; }
+
+  /* ─── CTA BAND ─── */
+  .cta-band {
+    background: linear-gradient(135deg, var(--navy-mid) 0%, rgba(0,212,200,0.07) 100%);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    margin-top: 2rem;
+  }
+
+  .cta-band::before {
+    content: '';
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,200,0.08) 0%, transparent 70%);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .cta-heading {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.7rem, 3vw, 2.5rem);
+    margin-bottom: 0.75rem;
+    position: relative;
+  }
+
+  .cta-sub {
+    font-size: 1rem;
+    color: var(--muted);
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  .cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    position: relative;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--cyan);
+    color: var(--navy);
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.85rem 1.8rem;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.07);
+    color: var(--white);
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0.85rem 1.8rem;
+    border-radius: 10px;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.12);
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .btn-secondary:hover { transform: translateY(-2px); background: rgba(255,255,255,0.11); }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 2.5rem clamp(1.5rem, 5vw, 4rem);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-note { font-size: 0.8rem; color: var(--muted); }
+
+  .footer-links { display: flex; gap: 1.5rem; list-style: none; }
+  .footer-links a { font-size: 0.8rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--white); }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 clamp(1.5rem, 5vw, 4rem);
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 860px) {
+    .howto-layout { grid-template-columns: 1fr; gap: 2rem; }
+  }
+
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+  }
+
+/* Dropdown nav */
+.nav-dropdown{position:relative}
+.nav-dropdown-btn{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.35rem .65rem;border-radius:6px;transition:color .2s,background .2s;background:none;border:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.3rem}
+.nav-dropdown-btn:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-btn.has-active{color:var(--cyan)}
+.nav-dropdown-btn svg{width:11px;height:11px;transition:transform .2s}
+.nav-dropdown:hover .nav-dropdown-btn svg{transform:rotate(180deg)}
+.nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:all .2s;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nav-dropdown:hover .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
+.nav-dropdown-menu a{display:block;color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.45rem .75rem;border-radius:7px;transition:color .15s,background .15s;white-space:nowrap}
+.nav-dropdown-menu a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-menu a.active{color:var(--cyan)}
+.nav-dropdown-menu .menu-divider{height:1px;background:var(--border);margin:.3rem .4rem}
+
+.nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.4rem;width:36px;height:36px;flex-shrink:0}
+.nav-hamburger span{display:block;height:2px;width:22px;background:var(--white);border-radius:2px;transition:all .25s}
+@media(max-width:900px){.nav-hamburger{display:flex}.nav-links{display:none!important}}
+.mobile-nav-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:490;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+.mobile-nav-backdrop.open{opacity:1;visibility:visible}
+.mobile-nav-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,88vw);background:var(--navy-mid);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.mobile-nav-drawer.open{transform:translateX(0)}
+.mobile-nav-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);height:64px;flex-shrink:0}
+.mobile-nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.mobile-nav-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);width:32px;height:32px;border-radius:7px;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;line-height:1;transition:background .18s}
+.mobile-nav-close:hover{background:rgba(255,255,255,.14)}
+.mobile-nav-links{padding:.75rem;display:flex;flex-direction:column;gap:.2rem;flex:1}
+.mobile-nav-links a{display:block;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:500;padding:.7rem .9rem;border-radius:9px;transition:color .18s,background .18s}
+.mobile-nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.mobile-nav-links a.active{color:var(--cyan);background:rgba(0,212,200,.07)}
+.mobile-nav-links a.nav-cta{background:var(--cyan);color:var(--navy);font-weight:700;margin-top:.5rem;text-align:center}
+.mobile-nav-links a.nav-cta:hover{opacity:.9}
+.mobile-nav-section-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem .9rem .3rem;opacity:.7}
+.mobile-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:.4rem .5rem}
+
+
+.auth-required-banner svg{width:16px;height:16px;stroke:var(--cyan);flex-shrink:0}
+.auth-required-banner a{color:var(--cyan);font-weight:600;text-decoration:none}
+.auth-required-banner a:hover{text-decoration:underline}
+
+/* TPT button */
+.tpt-btn{background:linear-gradient(135deg,#ff6b2b,#ff4500)!important;border-color:#ff4500!important;color:#fff!important}
+.tpt-btn:hover{opacity:.88;transform:translateY(-1px)}
 </style>
 </head>
 <body>
-<div class="wrapper">
-<header>
-<div style="background:#050810;border-bottom:1px solid #1a2640;padding:.4rem 1.5rem;font-family:'Share Tech Mono',monospace;font-size:11px"><a href="ctf.html" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:rgba(0,240,255,0.45);text-decoration:none;letter-spacing:2px;margin-right:1.5rem;transition:color .2s" onmouseover="this.style.color='#00f0ff'" onmouseout="this.style.color='rgba(0,240,255,0.45)'">&#8592; CTF HUB</a></div>
-  <div class="hdr-tag">// STEGOVAULT CTF PLATFORM — DEEP-SPACE OBSERVATORY EDITION</div>
-  <h1>Stego<em>Vault</em></h1>
-  <div class="hdr-sub">LSB · alpha · whitespace · zero-width · DCT · EXIF · spectrogram · frequency domain</div>
-</header>
-<div class="scoreboard">
-  <div class="sp"><div class="sp-l">Challenges</div><div class="sp-v" id="sc-total">0</div></div>
-  <div class="sp"><div class="sp-l">Total Points</div><div class="sp-v" id="sc-pts">0</div></div>
-  <div class="sp"><div class="sp-l">Solved</div><div class="sp-v" id="sc-solved">0</div></div>
-  <div class="sp"><div class="sp-l">Points Earned</div><div class="sp-v" id="sc-earned">0</div></div>
-</div>
-<div class="filter-bar">
-  <span class="fl">FILTER:</span>
-  <button class="fbtn active" onclick="filterCards('all',this)">ALL</button>
-  <button class="fbtn" onclick="filterCards('easy',this)">EASY</button>
-  <button class="fbtn" onclick="filterCards('medium',this)">MEDIUM</button>
-  <button class="fbtn" onclick="filterCards('hard',this)">HARD</button>
-</div>
-<div class="grid" id="grid"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="socratic-anchors.html" class="active">Socratic Guides</a></li>
+    <li><a href="tools.html">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+<div class="mobile-nav-drawer" id="mobile-nav-drawer">
+  <div class="mobile-nav-header">
+    <span class="mobile-nav-title">AP <span style="color:var(--cyan)">Cybersecurity</span></span>
+    <button class="mobile-nav-close" onclick="closeMobileNav()">&times;</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="index.html" onclick="closeMobileNav()">Home</a>
+    <a href="socratic-anchors.html" class="active" onclick="closeMobileNav()">Socratic Guides</a>
+    <a href="tools.html" onclick="closeMobileNav()">Student Tools</a>
+    <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
+    <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
+  </div>
 </div>
 
-<div class="modal-overlay" id="overlay" onclick="closeModal(event)">
-<div class="modal">
-  <div class="modal-hdr">
-    <div class="modal-title" id="m-title"></div>
-    <button class="modal-close" onclick="closeModal()">[ X ] CLOSE</button>
+
+<!-- PAGE HERO -->
+<div class="page-hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="page-hero-inner">
+    <div class="breadcrumb">
+      <a href="index.html">Home</a>
+      <span>›</span>
+      <span>Socratic Anchor Guides</span>
+    </div>
+    <div class="hero-badge">Teacher Resource · 9 Guides</div>
+    <h1>Socratic Anchor<br><em>Study Guides</em></h1>
+    <p>
+      Two-part classroom tools that pair AI-powered Socratic inquiry with topic-aligned practice testing — designed to deepen conceptual understanding and build AP exam readiness across all five course units.
+    </p>
+    <div class="hero-meta">
+      <div class="meta-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        9 guides across 5 units
+      </div>
+      <div class="meta-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        25 practice questions per guide
+      </div>
+      <div class="meta-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        11th &amp; 12th Grade
+      </div>
+    </div>
   </div>
-  <div class="modal-body" id="m-body"></div>
 </div>
+
+<!-- MAIN CONTENT -->
+<div class="page-content">
+
+  <!-- HOW TO USE -->
+  <div class="howto-layout">
+    <div class="howto-intro">
+      <div class="section-label">About This Resource</div>
+      <h2>What's inside each guide?</h2>
+      <p>
+        Each Socratic Anchor Guide is a two-part document that works together to first build deep conceptual understanding, then assess it in an AP exam format. They're designed for students in 11th and 12th grade and map directly to the AP Cybersecurity course framework.
+      </p>
+      <p>
+        The guides treat AI as a thinking partner rather than an answer machine — students are pushed to ask follow-ups, challenge assumptions, and explore edge cases before moving to practice testing.
+      </p>
+
+      <div class="two-part-cards" style="margin-top: 1.75rem;">
+        <div class="part-card part-1">
+          <div class="part-num">01</div>
+          <div>
+            <div class="part-card-title">Socratic Study Guide</div>
+            <div class="part-card-desc">A set of rich, open-ended questions mapped to each topic's learning objectives. Students type each question into an AI to explore the concept in depth — and are prompted to push beyond the first answer with follow-ups, examples, and challenges to assumptions.</div>
+          </div>
+        </div>
+        <div class="part-card part-2">
+          <div class="part-num">02</div>
+          <div>
+            <div class="part-card-title">Anchor Practice Test</div>
+            <div class="part-card-desc">25 multiple-choice questions directly mapped to the unit's learning objectives. Every question includes the correct answer and a full explanation — so students can review their reasoning immediately and teachers can spot knowledge gaps before the AP Exam.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="steps-block">
+        <div class="section-label">How to Use in Class</div>
+        <h3 style="font-family:'DM Serif Display',serif; font-size:1.4rem; margin-bottom:1.25rem;">A suggested classroom flow</h3>
+        <div class="steps-list">
+          <div class="step-item">
+            <div class="step-num">Step 1 — Before class</div>
+            <div class="step-title">Assign the Socratic questions as prep work</div>
+            <div class="step-desc">Students use an AI tool (such as Claude or ChatGPT) to work through the Part 01 questions for the upcoming topics. Encourage them to copy the exact question, then push the conversation further with follow-ups.</div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">Step 2 — Class opener (10–15 min)</div>
+            <div class="step-title">Debrief with a Socratic discussion</div>
+            <div class="step-desc">Pick two or three questions from Part 01 to discuss as a class. Ask students to share what surprised them, where their AI gave conflicting answers, or what follow-up questions they generated. This surfaces misconceptions early.</div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">Step 3 — During instruction</div>
+            <div class="step-title">Use questions to anchor new concepts</div>
+            <div class="step-desc">As you introduce each topic, refer back to specific Socratic questions. The questions are written to frame the "why" behind each learning objective, so they work naturally as concept anchors during direct instruction.</div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">Step 4 — After instruction</div>
+            <div class="step-title">Administer the Anchor Practice Test</div>
+            <div class="step-desc">Have students complete the Part 02 practice test independently. Because answers and explanations are included in the document, this can work as self-paced review or as a low-stakes formative check you collect.</div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">Step 5 — Review &amp; reteach</div>
+            <div class="step-title">Use results to target weak objectives</div>
+            <div class="step-desc">Each question is tagged to a topic (e.g., "Question 03 · Topic 1.1"). Tally misses by topic to identify which learning objectives need more time before moving on — or before the AP Exam.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEACHER TIPS -->
+  <div class="section-label">Teacher Tips</div>
+  <div class="tips-grid">
+    <div class="tip-card">
+      <div class="tip-icon" style="background: rgba(0,212,200,0.1);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="tip-title">Encourage follow-up prompting</div>
+      <div class="tip-desc">Each guide reminds students to push past the AI's first response. Model this in class: show what a "lazy" AI conversation looks like vs. one that asks "why," "what if," and "give me a counterexample."</div>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon" style="background: rgba(245,166,35,0.1);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="tip-title">Great for small group work</div>
+      <div class="tip-desc">Split students into pairs or trios, each assigned 2–3 Socratic questions to investigate. Groups then teach-back their question to the class. The Part 02 test becomes a team accountability check.</div>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon" style="background: rgba(100,180,255,0.1);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#64b4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <div class="tip-title">Self-grading saves prep time</div>
+      <div class="tip-desc">The Anchor Practice Test includes the correct answer and a full explanation for every question. Assign it as homework — students self-grade and annotate any question they missed before your next class.</div>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon" style="background: rgba(180,100,255,0.1);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b464ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </div>
+      <div class="tip-title">Track objective-level gaps</div>
+      <div class="tip-desc">Every practice question is tagged to a topic number. Build a simple spreadsheet tracking which objectives students miss most — then address those before the AP Exam window opens.</div>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon" style="background: rgba(0,200,100,0.1);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00c864" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="tip-title">Discuss AI disagreement openly</div>
+      <div class="tip-desc">Students will sometimes get conflicting answers from different AIs, or from the same AI on different days. Use this as a teachable moment: AI is a tool for exploration, not a final authority — just like any single source.</div>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon" style="background: rgba(255,80,80,0.1);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="tip-title">Use guides as unit review</div>
+      <div class="tip-desc">The guides also work well as end-of-unit review. Have students revisit the Socratic questions after completing a unit — they'll find their answers are richer the second time and can see how much their understanding has grown.</div>
+    </div>
+  </div>
+
+  <hr class="divider" style="margin: 0 0 3rem 0;">
+
+  <!-- GUIDES DOWNLOADS -->
+  <div class="guides-section">
+    <div class="section-label">Download the Guides</div>
+    <div style="background:linear-gradient(135deg,rgba(255,107,43,.1),rgba(255,69,0,.08));border:1px solid rgba(255,107,43,.35);border-radius:16px;padding:1.5rem 1.75rem;margin-bottom:2rem;display:flex;gap:1.25rem;align-items:flex-start;flex-wrap:wrap">
+      <div style="width:48px;height:48px;background:rgba(255,107,43,.15);border-radius:12px;display:grid;place-items:center;flex-shrink:0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff6b2b" stroke-width="2" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-weight:700;font-size:1rem;color:#ff6b2b;margin-bottom:.35rem">Now available on Teachers Pay Teachers</div>
+        <p style="font-size:.87rem;color:rgba(255,255,255,.8);line-height:1.7;margin-bottom:.85rem">The <strong style="color:var(--white)">Unit 1 guide is free</strong> to download below as a sample. The complete set of Socratic Anchor Guides for Units 1&ndash;5 (all 9 guides, 450+ practice questions) is available as a bundle in my TPT store.</p>
+        <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;background:#ff6b2b;color:#fff;font-weight:700;font-size:.88rem;padding:.6rem 1.25rem;border-radius:9px;text-decoration:none;transition:opacity .18s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          View Complete Bundle on TPT &#x2197;
+        </a>
+      </div>
+    </div>
+
+    
+
+    <h2>All 9 Socratic Anchor Guides</h2>
+    <p>Each guide covers a specific set of topics within a unit. Unit 1 is a single combined guide; Units 2–5 are split into two guides each to keep each document focused and manageable.</p>
+
+    <!-- UNIT 1 -->
+    <div class="unit-group">
+      <div class="unit-group-header">
+        <div class="unit-group-icon" style="background: rgba(0,212,200,0.1); border: 1px solid rgba(0,212,200,0.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="unit-group-label">Unit 1 · ~10 class periods</div>
+          <div class="unit-group-title">Introduction to Security</div>
+        </div>
+      </div>
+      <div class="guides-grid">
+        <div class="guide-card">
+          <div class="guide-topics">Topics 1.1 – 1.5</div>
+          <div class="guide-title">Social Engineering · Authentication · Public Networks · AI in Cybersecurity</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">Social Engineering</span>
+            <span class="chip">MFA</span>
+            <span class="chip">Evil Twin Attacks</span>
+            <span class="chip">VPN</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="unit1_socratic_anchor.docx" download class="download-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download .docx
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNIT 2 -->
+    <div class="unit-group">
+      <div class="unit-group-header">
+        <div class="unit-group-icon" style="background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="unit-group-label">Unit 2 · ~21 class periods</div>
+          <div class="unit-group-title">Securing Spaces</div>
+        </div>
+      </div>
+      <div class="guides-grid">
+        <div class="guide-card">
+          <div class="guide-topics">Topics 2.1 &amp; 2.2</div>
+          <div class="guide-title">Cyber Foundations + Physical Vulnerabilities &amp; Attacks</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">Pretexting</span>
+            <span class="chip">Physical Attacks</span>
+            <span class="chip">Tailgating</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" class="download-btn tpt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Get on TPT</a>
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-topics">Topics 2.3 &amp; 2.4</div>
+          <div class="guide-title">Protecting Physical Spaces + Detecting Physical Attacks</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">Managerial Controls</span>
+            <span class="chip">Badging</span>
+            <span class="chip">CCTV</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" class="download-btn tpt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Get on TPT</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNIT 3 -->
+    <div class="unit-group">
+      <div class="unit-group-header">
+        <div class="unit-group-icon" style="background: rgba(100,180,255,0.1); border: 1px solid rgba(100,180,255,0.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#64b4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+        </div>
+        <div>
+          <div class="unit-group-label">Unit 3 · ~26 class periods</div>
+          <div class="unit-group-title">Securing Networks</div>
+        </div>
+      </div>
+      <div class="guides-grid">
+        <div class="guide-card">
+          <div class="guide-topics">Topics 3.1, 3.2 &amp; 3.3</div>
+          <div class="guide-title">Network Vulnerabilities, Managerial Controls &amp; Segmentation</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">ARP Poisoning</span>
+            <span class="chip">VLANs</span>
+            <span class="chip">Wireless Security</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" class="download-btn tpt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Get on TPT</a>
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-topics">Topics 3.4 &amp; 3.5</div>
+          <div class="guide-title">Firewalls + Detecting Network Attacks</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">Stateful Firewalls</span>
+            <span class="chip">IDS/IPS</span>
+            <span class="chip">Log Analysis</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" class="download-btn tpt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Get on TPT</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNIT 4 -->
+    <div class="unit-group">
+      <div class="unit-group-header">
+        <div class="unit-group-icon" style="background: rgba(180,100,255,0.1); border: 1px solid rgba(180,100,255,0.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#b464ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+          </svg>
+        </div>
+        <div>
+          <div class="unit-group-label">Unit 4 · ~23 class periods</div>
+          <div class="unit-group-title">Securing Devices</div>
+        </div>
+      </div>
+      <div class="guides-grid">
+        <div class="guide-card">
+          <div class="guide-topics">Topics 4.1 &amp; 4.2</div>
+          <div class="guide-title">Device Vulnerabilities &amp; Attacks + Authentication</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">Malware</span>
+            <span class="chip">Biometrics</span>
+            <span class="chip">MFA</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" class="download-btn tpt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Get on TPT</a>
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-topics">Topics 4.3 &amp; 4.4</div>
+          <div class="guide-title">Protecting Devices + Detecting Attacks on Devices</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">AUP</span>
+            <span class="chip">Patch Management</span>
+            <span class="chip">EDR</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" class="download-btn tpt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Get on TPT</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNIT 5 -->
+    <div class="unit-group">
+      <div class="unit-group-header">
+        <div class="unit-group-icon" style="background: rgba(0,200,100,0.1); border: 1px solid rgba(0,200,100,0.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00c864" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
+          </svg>
+        </div>
+        <div>
+          <div class="unit-group-label">Unit 5 · ~30 class periods</div>
+          <div class="unit-group-title">Securing Applications &amp; Data</div>
+        </div>
+      </div>
+      <div class="guides-grid">
+        <div class="guide-card">
+          <div class="guide-topics">Topics 5.1, 5.2 &amp; 5.3</div>
+          <div class="guide-title">Application Vulnerabilities, Access Controls &amp; Cryptography</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">SQL Injection</span>
+            <span class="chip">Access Controls</span>
+            <span class="chip">Hashing</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" class="download-btn tpt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Get on TPT</a>
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-topics">Topics 5.4, 5.5 &amp; 5.6</div>
+          <div class="guide-title">Asymmetric Cryptography, Application Protection &amp; Detection</div>
+          <div class="guide-chips">
+            <span class="chip cyan">Socratic Guide</span>
+            <span class="chip amber">25 Practice Qs</span>
+            <span class="chip">Public Key Crypto</span>
+            <span class="chip">Digital Signatures</span>
+            <span class="chip">IoCs</span>
+          </div>
+          <div class="guide-footer">
+            <span class="grade-tag">11th &amp; 12th Grade</span>
+            <a href="https://www.teacherspayteachers.com/Product/AP-Cybersecurity-Complete-Assessment-Bundle-Units-15-450-Questions-Canvas-15866875" target="_blank" class="download-btn tpt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Get on TPT</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end guides-section -->
+</div><!-- end page-content -->
+
+<!-- CTA BAND -->
+<div class="cta-band">
+  <h2 class="cta-heading">Looking for more course resources?</h2>
+  <p class="cta-sub">Return to the course home page to explore unit guides, lesson plans, practice tests, and more.</p>
+  <div class="cta-actions">
+    <a href="index.html" class="btn-primary">← Back to Course Home</a>
+    <a href="index.html#resources" class="btn-secondary">Browse All Resources</a>
+  </div>
 </div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-note">AP® Cybersecurity is a trademark of the College Board. Effective Fall 2026.</div>
+  <ul class="footer-links">
+    <li><a href="https://apcentral.collegeboard.org" target="_blank">AP Central</a></li>
+    <li><a href="index.html">Course Home</a></li>
+    <li><a href="index.html#exam">Exam Info</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+</footer>
+
 
 <script>
-var challenges=[
-{id:'CH-01',title:'LSB Pixel Inspector',pts:50,diff:'easy',tags:['lsb','image','pixel'],solves:318,
- desc:'A PNG image has data hidden in the least significant bit of every red channel pixel. Click individual pixels to inspect their LSB bits, then concatenate the LSBs to decode the ASCII flag.',
- hints:['LSB = pixel_value & 1 — the lowest bit of the red channel','Collect 8 LSBs per character, MSB first, convert to ASCII'],
- flag:'CTF{lsb_r3d_ch4nn3l_h1dd3n}',
- sol:'Extract LSB of each pixel R value across the image in raster order. Every 8 bits form one ASCII character. Stegsolve or Python PIL automates this.',
- widget:'lsb'},
-{id:'CH-02',title:'Whitespace Steganography',pts:100,diff:'easy',tags:['whitespace','text','encoding'],solves:221,
- desc:'A plaintext "poem" was provided. Trailing spaces and tabs on each line encode binary data: space=0, tab=1. Decode the binary message hidden in the invisible whitespace.',
- hints:['Whitespace/steg tools: snow, stegsnow','SPACE=0, TAB=1. Read trailing chars on each line to get binary, convert to ASCII'],
- flag:'CTF{wh1t3sp4c3_1nv1s1bl3_t4bs}',
- sol:'Use stegsnow -C poem.txt or manually extract trailing whitespace: SPACE→0, TAB→1. Collect 8 bits per char → ASCII flag.',
- widget:'whitespace'},
-{id:'CH-03',title:'Alpha Channel',pts:100,diff:'easy',tags:['alpha','rgba','transparency'],solves:189,
- desc:'A PNG with transparency hides data in the alpha (opacity) channel. Pixels that appear transparent carry encoded values. Isolate the alpha channel and read the embedded ASCII.',
- hints:['In RGBA pixels, the 4th byte is the alpha channel (0=transparent, 255=opaque)','Pixels with alpha exactly 0x01, 0x02... encode flag characters by value'],
- flag:'CTF{4lph4_ch4nn3l_0p4c1ty_h1d3}',
- sol:'Iterate pixels. Where alpha != 0 and != 255, the alpha value is an ASCII code. Concatenate in order to recover the flag.',
- widget:'alpha'},
-{id:'CH-04',title:'Zero-Width Characters',pts:150,diff:'medium',tags:['unicode','zwc','text'],solves:147,
- desc:'A tweet/post contains invisible zero-width Unicode characters (U+200B, U+200C, U+200D, U+FEFF) embedded between visible characters. Decode the binary encoded in these invisible chars.',
- hints:['U+200B = ZERO WIDTH SPACE = bit 0','U+200C = ZERO WIDTH NON-JOINER = bit 1','Collect 8 bits per ASCII character'],
- flag:'CTF{z3r0_w1dth_un1c0d3_h1dd3n}',
- sol:'Strip visible chars, map ZWS→0 and ZWNJ→1, group 8 bits, convert each group to ASCII character.',
- widget:'zwc'},
-{id:'CH-05',title:'EXIF Data Hunter',pts:150,diff:'medium',tags:['exif','metadata','jpeg'],solves:134,
- desc:'A JPEG was posted online. The flag is hidden in the EXIF metadata — not in the pixels, but in one of the many metadata fields like GPS coordinates, camera model, or comment tag.',
- hints:['exiftool image.jpg dumps all metadata fields','Check the Comment, Artist, Copyright, and GPS fields'],
- flag:'CTF{3x1f_m3t4d4t4_g3o_l34k}',
- sol:'exiftool image.jpg → Comment field contains "CTF{3x1f_m3t4d4t4_g3o_l34k}". GPS coords also encode parts of the flag in DMS format.',
- widget:'exif'},
-{id:'CH-06',title:'Audio Steganography',pts:200,diff:'medium',tags:['audio','mp3','stego'],solves:91,
- desc:'An MP3 file contains a hidden message encoded using MP3Stego or a similar tool. The message was embedded by manipulating DCT coefficients in the audio compression. Decode it.',
- hints:['mp3stego-decode with a passphrase extracts hidden data','Try common passphrases or the challenge name'],
- flag:'CTF{mp3_dct_c03ff_h1dd3n_d4t4}',
- sol:'mp3stego-decode -X -P "stegovault" hidden.mp3 → writes output file containing the flag.',
- widget:'audio'},
-{id:'CH-07',title:'PNG Chunk Injector',pts:200,diff:'medium',tags:['png','chunk','binary'],solves:78,
- desc:'PNG files consist of named chunks (IHDR, IDAT, IEND, etc.). A custom chunk with a non-standard name was injected after IDAT. Parse the chunk structure to find and read the hidden chunk.',
- hints:['PNG chunk structure: 4-byte length | 4-byte type | data | 4-byte CRC','Look for non-standard chunk types after IDAT'],
- flag:'CTF{png_chun k_1nj3ct3d_fl4g}',
- sol:'Read each chunk header. After IDAT and IEND, find chunk type "flAg" (length 32). Read its data field to get the flag.',
- widget:'png_chunk'},
-{id:'CH-08',title:'DCT Coefficient Stego',pts:300,diff:'hard',tags:['jpeg','dct','frequency'],solves:44,
- desc:'Data was hidden in JPEG DCT (Discrete Cosine Transform) coefficients. The least significant bit of specific AC coefficients in the frequency domain encodes binary data. Visualise and decode.',
- hints:['JPEG stores each 8×8 block as DCT coefficients in the frequency domain','JSteg and F5 both modify specific AC coefficient LSBs to embed data'],
- flag:'CTF{dct_c03ff_lsb_fr3qu3ncy}',
- sol:'Decode JPEG DCT blocks. For each 8×8 block, collect AC coefficient LSBs in zigzag scan order. Assemble bits → ASCII flag.',
- widget:'dct'},
-{id:'CH-09',title:'Palette Swap',pts:350,diff:'hard',tags:['gif','palette','indexed'],solves:29,
- desc:'A GIF uses an indexed colour palette. The flag is encoded in the ordering of palette entries — the index values of specific "invisible" pixels spell out ASCII codes when read in order.',
- hints:['GIF palette: each entry is 3 bytes (R, G, B)', 'Pixel values are indexes into the palette — a pixel value of 65 = ASCII "A"'],
- flag:'CTF{g1f_p4l3tt3_1nd3x_3nc0d3d}',
- sol:'Read each pixel\'s palette index. Where the visual colour is a near-black marker colour, the index value is an ASCII character code. Concatenate to get the flag.',
- widget:'palette'},
-{id:'CH-10',title:'Frequency Domain Hide',pts:400,diff:'hard',tags:['dft','frequency','numpy'],solves:16,
- desc:'An image\'s flag was embedded in the high-frequency components of its Discrete Fourier Transform (DFT). The magnitude spectrum shows an anomalous bright pattern. Decode it.',
- hints:['Apply numpy.fft.fft2 to the image grayscale data','The flag is XOR-encoded into the phase of specific frequency components'],
- flag:'CTF{dft_ph4s3_3nc0d3d_fr3q}',
- sol:'Compute DFT of grayscale image. Extract phase angles at predetermined coordinates. XOR phase pattern with key → ASCII flag bytes.',
- widget:'dft'}
-];
 
-function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-var solved={};var earned=0;
-
-function filterCards(diff,btn){
-  document.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');
-  document.querySelectorAll('.card').forEach(function(c){c.style.display=(diff==='all'||c.dataset.diff===diff)?'':'none';});
-}
-
-function openModal(idx){
-  var ch=challenges[idx];
-  var h='<div class="mlabel first">DESCRIPTION</div><div class="mdesc">'+esc(ch.desc)+'</div>';
-  h+='<div class="mlabel">HINTS</div>';
-  ch.hints.forEach(function(hi,i){h+='<div class="hint" data-n="'+(i+1)+'">'+esc(hi)+'</div>';});
-  h+='<div class="mlabel">LIVE CHALLENGE</div>'+buildWidget(ch.widget);
-  h+='<div class="mlabel">FLAG</div><div class="flag-box">'+esc(ch.flag)+'</div>';
-  h+='<div class="mlabel">SOLUTION</div><div class="sol">'+esc(ch.sol)+'</div>';
-  document.getElementById('m-title').textContent=ch.id+' — '+ch.title;
-  document.getElementById('m-body').innerHTML=h;
-  document.getElementById('overlay').classList.add('open');
-  // canvas inits
-  if(ch.widget==='lsb')setTimeout(lsbInit,60);
-  if(ch.widget==='audio')setTimeout(audioInit,60);
-  if(ch.widget==='dct')setTimeout(dctInit,60);
-  if(ch.widget==='dft')setTimeout(dftInit,60);
-  if(!solved[idx]){solved[idx]=true;earned+=ch.pts;
-    document.getElementById('sc-solved').textContent=Object.keys(solved).length;
-    document.getElementById('sc-earned').textContent=earned;
-    document.querySelector('[data-idx="'+idx+'"]').classList.add('solved');
-  }
-}
-
-function closeModal(e){if(!e||e.target===document.getElementById('overlay'))document.getElementById('overlay').classList.remove('open');}
-
-// ── WIDGET BUILDERS ──────────────────────────────────────
-
-function buildWidget(w){
-  var h='<div class="widget">';
-
-  // CH-01: LSB Pixel Inspector
-  if(w==='lsb'){
-    // Flag: CTF{lsb_r3d_ch4nn3l_h1dd3n}
-    // Encode flag LSBs into fake pixel R values
-    var flagStr='CTF{lsb_r3d_ch4nn3l_h1dd3n}';
-    var bits=[];
-    for(var i=0;i<flagStr.length;i++){
-      var code=flagStr.charCodeAt(i);
-      for(var b=7;b>=0;b--){bits.push((code>>b)&1);}
-    }
-    // Generate 64 "pixels" (8×8 grid), embed LSBs in R channel
-    var pixels=[];
-    for(var i=0;i<64;i++){
-      var rBase=80+Math.floor(Math.random()*140);
-      var lsb=i<bits.length?bits[i]:Math.round(Math.random());
-      var r=(rBase&0xFE)|lsb;
-      var g=60+Math.floor(Math.random()*120);
-      var bv=60+Math.floor(Math.random()*120);
-      pixels.push({r:r,g:g,b:bv,lsb:lsb});
-    }
-    h+='<div class="wlabel">IMAGE PIXELS (8×8 simulated — click to inspect)</div>';
-    h+='<div class="px-grid" id="lsb-grid" style="grid-template-columns:repeat(8,36px)"></div>';
-    h+='<div class="wlabel mt">SELECTED PIXEL CHANNELS</div>';
-    h+='<div id="lsb-channels"><div style="color:var(--dim);font-size:11px">Click a pixel to inspect its RGB channels and LSB bit.</div></div>';
-    h+='<div class="wlabel mt">LSB BIT STREAM (collected so far)</div>';
-    h+='<div class="bit-row" id="lsb-bits"></div>';
-    h+='<div style="font-size:11px;color:var(--muted);margin-top:6px" id="lsb-chars"></div>';
-    h+='<div class="wrow"><button class="wbtn g" onclick="lsbExtractAll()">Extract all LSBs → decode flag</button></div>';
-    h+='<div class="wout" id="lsb-r"></div>';
-    // Store pixels in global
-    window._lsbPixels=pixels;
-    window._lsbBits=[];
-  }
-
-  // CH-02: Whitespace Steganography
-  else if(w==='whitespace'){
-    // Encode flag in trailing space/tab: SPACE=0, TAB=1
-    var flagStr='CTF{wh1t3sp4c3_1nv1s1bl3_t4bs}';
-    var bits2=[];
-    for(var i=0;i<flagStr.length;i++){var code=flagStr.charCodeAt(i);for(var b=7;b>=0;b--){bits2.push((code>>b)&1);}}
-    var poem=[
-      'The stars above in silent night,\t ',
-      'Cast silver light on fields below; \t',
-      'A gentle breeze, a soothing sight,\t\t',
-      'Where frozen rivers cease to flow.\t ',
-      'The moon ascends with borrowed glow,\t\t',
-      'And paints the world in pale delight;\t ',
-      'The sleeping earth lies hushed and slow,\t\t',
-      'In winter\'s long and dreamless night.\t ',
-      'But underneath the frozen ground,\t\t',
-      'The seeds of spring in silence wait;\t ',
-    ];
-    h+='<div class="wlabel">POEM WITH HIDDEN WHITESPACE (trailing spaces/tabs shown as symbols)</div>';
-    h+='<div class="wcode" id="ws-poem">';
-    poem.forEach(function(line,li){
-      var visible=line.replace(/ /g,'<span style="color:var(--dim)">·</span>').replace(/\t/g,'<span style="color:var(--violet)">→</span>');
-      h+='<div>'+visible+'</div>';
-    });
-    h+='</div>';
-    h+='<div style="font-size:10px;color:var(--muted);margin-top:4px">Legend: <span style="color:var(--dim)">·</span> = SPACE (bit 0) &nbsp; <span style="color:var(--violet)">→</span> = TAB (bit 1)</div>';
-    h+='<div class="wlabel mt">DECODE TRAILING WHITESPACE</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="wsExtract()">Extract trailing chars → binary</button><button class="wbtn g" onclick="wsDecode()">Binary → ASCII flag</button></div>';
-    h+='<div class="wout" id="ws-r"></div>';
-  }
-
-  // CH-03: Alpha Channel
-  else if(w==='alpha'){
-    // Pixel grid showing RGBA values; some have revealing alpha values = ASCII codes
-    var flagStr='CTF{4lph4_ch4nn3l_0p4c1ty_h1d3}';
-    var alphaPixels=[];
-    for(var i=0;i<48;i++){
-      var r=Math.floor(Math.random()*40);
-      var g=Math.floor(Math.random()*40);
-      var bv=Math.floor(Math.random()*40);
-      var a=i<flagStr.length?flagStr.charCodeAt(i):(Math.random()>0.5?255:0);
-      alphaPixels.push({r:r,g:g,b:bv,a:a,isFlagByte:i<flagStr.length});
-    }
-    window._alphaPixels=alphaPixels;
-    h+='<div class="wlabel">PIXEL GRID — RGBA (rows of 8, click to inspect alpha channel)</div>';
-    h+='<div class="px-grid" id="alpha-grid" style="grid-template-columns:repeat(8,36px)"></div>';
-    h+='<div class="wlabel mt">SELECTED PIXEL</div>';
-    h+='<div id="alpha-detail" style="font-size:11px;color:var(--muted)">Click a pixel above.</div>';
-    h+='<div class="wlabel mt">ALPHA CHANNEL FILTER</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="alphaFilter()">Show pixels where 0 &lt; alpha &lt; 255</button><button class="wbtn g" onclick="alphaDecode()">Read alpha values as ASCII → flag</button></div>';
-    h+='<div class="wout" id="alpha-r"></div>';
-  }
-
-  // CH-04: Zero-Width Characters
-  else if(w==='zwc'){
-    // Encode flag in ZWCs; display as visible text with hidden chars shown
-    var flagStr='CTF{z3r0_w1dth_un1c0d3_h1dd3n}';
-    var zwcBits=[];
-    for(var i=0;i<flagStr.length;i++){var c=flagStr.charCodeAt(i);for(var b=7;b>=0;b--){zwcBits.push((c>>b)&1);}}
-    // Build "tweet" text with ZWCs interspersed (shown as [ZWS] and [ZWNJ] markers)
-    var visibleText='Just posted a beautiful photo from the summit! The view was absolutely stunning today. #photography #hiking #outdoors #nature #weekend';
-    var annotated='';var bi=0;
-    for(var i=0;i<visibleText.length&&bi<zwcBits.length;i++){
-      annotated+=esc(visibleText[i]);
-      if(bi<zwcBits.length){
-        var bit=zwcBits[bi++];
-        annotated+='<span style="color:'+(bit?'var(--violet)':'var(--pink)')+';font-size:9px">['+( bit?'ZWNJ':'ZWS')+']</span>';
-      }
-    }
-    h+='<div class="wlabel">SOCIAL POST (zero-width characters revealed)</div>';
-    h+='<div class="wcode" style="line-height:2;word-break:break-word;white-space:pre-wrap">'+annotated+'</div>';
-    h+='<div style="font-size:10px;color:var(--muted);margin-top:4px"><span style="color:var(--pink)">[ZWS]</span>=U+200B=bit 0 &nbsp; <span style="color:var(--violet)">[ZWNJ]</span>=U+200C=bit 1</div>';
-    h+='<div class="wlabel mt">DECODE</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="zwcExtract()">Extract ZWC binary stream</button><button class="wbtn g" onclick="zwcDecode()">Convert bits → ASCII flag</button></div>';
-    h+='<div class="wout" id="zwc-r"></div>';
-  }
-
-  // CH-05: EXIF Hunter
-  else if(w==='exif'){
-    var exifFields=[
-      {tag:'Make',val:'Canon'},
-      {tag:'Model',val:'EOS 5D Mark IV'},
-      {tag:'DateTimeOriginal',val:'2024:03:12 14:22:07'},
-      {tag:'ExposureTime',val:'1/250'},
-      {tag:'FNumber',val:'f/2.8'},
-      {tag:'ISO',val:'400'},
-      {tag:'FocalLength',val:'50mm'},
-      {tag:'GPSLatitude',val:'51 deg 30\' 26.10" N'},
-      {tag:'GPSLongitude',val:'0 deg 7\' 39.82" W'},
-      {tag:'GPSAltitude',val:'24.3 m Above Sea Level'},
-      {tag:'Artist',val:'photographer@example.com'},
-      {tag:'Copyright',val:'2024 All Rights Reserved'},
-      {tag:'Comment',val:'CTF{3x1f_m3t4d4t4_g3o_l34k}'},
-      {tag:'Software',val:'Adobe Lightroom 12.0'},
-      {tag:'XResolution',val:'72 pixels/inch'},
-    ];
-    h+='<div class="wlabel">EXIF METADATA — image.jpg</div>';
-    h+='<div style="max-height:220px;overflow-y:auto;background:#000;border:1px solid var(--border);padding:8px">';
-    exifFields.forEach(function(f){
-      var sus=f.tag==='Comment';
-      h+='<div style="display:flex;gap:12px;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px'+(sus?';color:var(--green)':'')+'">'
-        +'<span style="min-width:160px;color:'+(sus?'var(--green)':'var(--muted)')+'">'+esc(f.tag)+'</span>'
-        +'<span style="word-break:break-all">'+esc(f.val)+'</span></div>';
-    });
-    h+='</div>';
-    h+='<div class="wlabel mt">SEARCH FIELDS</div>';
-    h+='<input class="winput" id="exif-q" placeholder="Search tag name or value...">';
-    h+='<div class="wrow"><button class="wbtn" onclick="exifSearch()">Search</button><button class="wbtn g" onclick="exifFlag()">Show Comment field</button></div>';
-    h+='<div class="wout" id="exif-r"></div>';
-  }
-
-  // CH-06: Audio Steganography
-  else if(w==='audio'){
-    h+='<div class="wlabel">MP3 WAVEFORM</div>';
-    h+='<canvas id="audio-canvas" width="660" height="80"></canvas>';
-    h+='<div class="wlabel mt">SPECTRAL ANALYSIS</div>';
-    h+='<canvas id="audio-spec" width="660" height="100"></canvas>';
-    h+='<div class="wlabel mt">MP3STEGO DECODE</div>';
-    h+='<div class="wcode">mp3stego-decode [options] hidden.mp3\nPassphrase required...</div>';
-    h+='<input class="winput" id="audio-pass" placeholder="Enter passphrase...">';
-    h+='<div class="wrow"><button class="wbtn" onclick="audioDecode()">Decode with passphrase</button><button class="wbtn g" onclick="audioAuto()">Try common passphrases</button></div>';
-    h+='<div class="wout" id="audio-r"></div>';
-  }
-
-  // CH-07: PNG Chunk Inspector
-  else if(w==='png_chunk'){
-    var chunks=[
-      {type:'IHDR',len:13,crc:'0x9a7cd1e2',note:'Width:800, Height:600, BitDepth:8, ColorType:2'},
-      {type:'gAMA',len:4,crc:'0xb71b8baf',note:'Gamma: 45455'},
-      {type:'cHRM',len:32,crc:'0x9cba513c',note:'Chromaticity white point'},
-      {type:'IDAT',len:32768,crc:'0x1f2e3d4c',note:'Compressed image data (zlib)'},
-      {type:'IDAT',len:28912,crc:'0x5a6b7c8d',note:'Compressed image data (continuation)'},
-      {type:'flAg',len:32,crc:'0xdeadbeef',note:'⚠ NON-STANDARD CHUNK — suspicious!'},
-      {type:'IEND',len:0,crc:'0xae426082',note:'End of PNG file'},
-    ];
-    h+='<div class="wlabel">PNG CHUNK TABLE — click a chunk to inspect</div>';
-    chunks.forEach(function(c,i){
-      var sus=c.type==='flAg';
-      h+='<div class="pkt" style="padding:7px 10px;margin:2px 0;border:1px solid '+(sus?'var(--violet)':'var(--border)')+';cursor:pointer;font-size:11px" onclick="chunkSelect('+i+')">'
-        +'<span style="color:'+(sus?'var(--violet3)':'var(--muted)')+'">'+esc(c.type)+'</span>'
-        +' &nbsp; <span style="color:var(--dim)">length:'+c.len+'</span>'
-        +' &nbsp; <span style="color:var(--dim)">CRC:'+c.crc+'</span>'
-        +(sus?' &nbsp; <span style="color:var(--pink)">← INJECT</span>':'')
-        +'</div>';
-    });
-    h+='<div class="wout show" id="chunk-detail" style="margin-top:8px">Click a chunk to read its data.</div>';
-    h+='<div id="chunk-flag-row" style="display:none"><div class="wrow"><button class="wbtn g" onclick="chunkReadData()">Read flAg chunk data field</button></div></div>';
-    h+='<div class="wout" id="chunk-r"></div>';
-    window._chunks=chunks;
-  }
-
-  // CH-08: DCT Coefficient Stego
-  else if(w==='dct'){
-    h+='<div class="wlabel">JPEG 8×8 DCT BLOCK (AC coefficients — click to inspect LSB)</div>';
-    h+='<canvas id="dct-canvas" width="660" height="160"></canvas>';
-    h+='<div class="wlabel mt">AC COEFFICIENT LSBs (zigzag scan order)</div>';
-    h+='<div class="bit-row" id="dct-bits"></div>';
-    h+='<div class="wrow" style="margin-top:8px"><button class="wbtn" onclick="dctScan()">Scan all blocks → collect LSBs</button><button class="wbtn g" onclick="dctDecode()">Decode bits → ASCII flag</button></div>';
-    h+='<div class="wout" id="dct-r"></div>';
-  }
-
-  // CH-09: GIF Palette
-  else if(w==='palette'){
-    // Palette: index 0=bg, indexes 1-N encode the flag as ASCII values
-    var flagStr='CTF{g1f_p4l3tt3_1nd3x_3nc0d3d}';
-    var palette=[];
-    // Entry 0: white (background)
-    palette.push({r:255,g:255,b:255});
-    // Entries 1..flagStr.length: color with R=ASCII code (nearly black, distinguishable)
-    for(var i=0;i<flagStr.length;i++){
-      var code=flagStr.charCodeAt(i);
-      palette.push({r:code,g:2,b:2});
-    }
-    // Rest: random colours
-    while(palette.length<64){palette.push({r:Math.floor(Math.random()*256),g:Math.floor(Math.random()*256),b:Math.floor(Math.random()*256)});}
-    window._palette=palette;
-    h+='<div class="wlabel">GIF COLOUR PALETTE (256 entries, first 64 shown)</div>';
-    h+='<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:6px" id="pal-grid">';
-    for(var i=0;i<64;i++){
-      var p=palette[i];
-      var isFlagEntry=i>0&&i<=flagStr.length;
-      h+='<div title="Index '+i+': rgb('+p.r+','+p.g+','+p.b+')" '
-        +'style="width:18px;height:18px;background:rgb('+p.r+','+p.g+','+p.b+');border:1px solid '+(isFlagEntry?'var(--violet)':'var(--border)')+';cursor:pointer" '
-        +'onclick="palSelect('+i+')"></div>';
-    }
-    h+='</div>';
-    h+='<div class="wlabel mt">SELECTED ENTRY</div>';
-    h+='<div id="pal-detail" style="font-size:11px;color:var(--muted)">Click a palette entry.</div>';
-    h+='<div class="wlabel mt">DECODE PIXEL SEQUENCE</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="palFilter()">Show "marker" entries (G=2, B=2)</button><button class="wbtn g" onclick="palDecode()">Read R values as ASCII → flag</button></div>';
-    h+='<div class="wout" id="pal-r"></div>';
-  }
-
-  // CH-10: DFT Frequency Domain
-  else if(w==='dft'){
-    h+='<div class="wlabel">GRAYSCALE IMAGE — spatial domain</div>';
-    h+='<canvas id="dft-spatial" width="320" height="160"></canvas>';
-    h+='<div class="wlabel mt">DFT MAGNITUDE SPECTRUM (log scale)</div>';
-    h+='<canvas id="dft-spectrum" width="320" height="160"></canvas>';
-    h+='<div class="wrow"><button class="wbtn" onclick="dftTransform()">Compute numpy.fft.fft2 →</button><button class="wbtn y" onclick="dftHighlight()">Highlight anomalous frequencies</button><button class="wbtn g" onclick="dftExtract()">Extract phase → XOR → flag</button></div>';
-    h+='<div class="wout" id="dft-r"></div>';
-  }
-
-  h+='</div>';
-  return h;
-}
-
-// ── WIDGET INIT (canvas) ──────────────────────────────
-
-function lsbInit(){
-  var g=document.getElementById('lsb-grid');if(!g)return;
-  g.innerHTML='';
-  var pixels=window._lsbPixels||[];
-  pixels.forEach(function(p,i){
-    var cell=document.createElement('div');
-    cell.className='px-cell';
-    cell.style.background='rgb('+p.r+','+p.g+','+p.b+')';
-    cell.style.color=(p.r+p.g+p.b>384)?'#000':'#fff';
-    cell.textContent=p.lsb;
-    cell.onclick=function(){lsbSelect(i);};
-    g.appendChild(cell);
-  });
-}
-
-function lsbSelect(i){
-  var p=(window._lsbPixels||[])[i];if(!p)return;
-  document.querySelectorAll('.px-cell').forEach(function(c,j){c.classList.toggle('selected',j===i);});
-  var ch=document.getElementById('lsb-channels');
-  ch.innerHTML='<div class="channel-bar"><span class="ch-label" style="color:#ff6060">R</span><div class="ch-track"><div class="ch-fill" style="width:'+Math.round(p.r/255*100)+'%;background:#ff6060"></div></div><span class="ch-val" style="color:#ff6060">'+p.r+'</span></div>'
-    +'<div class="channel-bar"><span class="ch-label" style="color:#60ff60">G</span><div class="ch-track"><div class="ch-fill" style="width:'+Math.round(p.g/255*100)+'%;background:#60ff60"></div></div><span class="ch-val" style="color:#60ff60">'+p.g+'</span></div>'
-    +'<div class="channel-bar"><span class="ch-label" style="color:#6060ff">B</span><div class="ch-track"><div class="ch-fill" style="width:'+Math.round(p.b/255*100)+'%;background:#6060ff"></div></div><span class="ch-val" style="color:#6060ff">'+p.b+'</span></div>'
-    +'<div style="margin-top:8px;font-size:11px">R binary: <span style="color:var(--violet3)">'+p.r.toString(2).padStart(8,'0').slice(0,7)+'</span><span style="color:var(--pink);font-weight:bold">'+p.lsb+'</span> &nbsp; LSB = <b style="color:var(--pink)">'+p.lsb+'</b></div>';
-  // Add bit to stream
-  if(!window._lsbBits)window._lsbBits=[];
-  if(window._lsbBits.length<64)window._lsbBits.push(p.lsb);
-  renderLsbBits();
-}
-
-function renderLsbBits(){
-  var bits=window._lsbBits||[];
-  var brow=document.getElementById('lsb-bits');if(!brow)return;
-  brow.innerHTML='';
-  bits.forEach(function(b,i){
-    var d=document.createElement('div');d.className='bit '+(b?'b1':'b0');d.textContent=b;
-    brow.appendChild(d);
-  });
-  // Show decoded chars
-  var chars='';
-  for(var i=0;i+7<bits.length;i+=8){
-    var val=0;for(var j=0;j<8;j++){val=(val<<1)|bits[i+j];}
-    chars+=String.fromCharCode(val);
-  }
-  var cd=document.getElementById('lsb-chars');if(cd)cd.textContent='Decoded so far: '+chars;
-}
-
-function lsbExtractAll(){
-  var pixels=window._lsbPixels||[];
-  var bits=pixels.map(function(p){return p.lsb;});
-  var chars='';
-  for(var i=0;i+7<bits.length;i+=8){var v=0;for(var j=0;j<8;j++){v=(v<<1)|bits[i+j];}chars+=String.fromCharCode(v);}
-  window._lsbBits=bits;renderLsbBits();
-  var r=document.getElementById('lsb-r');r.className='wout ok show';
-  r.textContent='Extracted '+bits.length+' LSBs from '+pixels.length+' pixels.\nDecoded: '+chars;
-}
-
-function alphaInit(){
-  var g=document.getElementById('alpha-grid');if(!g)return;
-  g.innerHTML='';
-  (window._alphaPixels||[]).forEach(function(p,i){
-    var cell=document.createElement('div');cell.className='px-cell';
-    cell.style.background='rgba('+p.r+','+p.g+','+p.b+','+p.a/255+')';
-    cell.style.background='rgba(50,0,80,'+p.a/255+')';
-    cell.style.color='var(--violet3)';cell.style.fontSize='8px';
-    cell.textContent=p.a;
-    cell.onclick=function(){alphaSelect(i);};
-    g.appendChild(cell);
-  });
-}
-
-function alphaSelect(i){
-  var p=(window._alphaPixels||[])[i];if(!p)return;
-  document.querySelectorAll('#alpha-grid .px-cell').forEach(function(c,j){c.classList.toggle('selected',j===i);});
-  var d=document.getElementById('alpha-detail');
-  d.innerHTML='Pixel '+i+': R='+p.r+' G='+p.g+' B='+p.b+' <b style="color:'+(p.isFlagByte?'var(--green)':'var(--muted)')+'">A='+p.a+'</b>'+(p.isFlagByte?' → ASCII: "'+String.fromCharCode(p.a)+'"':'');
-}
-
-function audioInit(){
-  var wc=document.getElementById('audio-canvas');var sc=document.getElementById('audio-spec');
-  if(!wc||!sc)return;
-  var wctx=wc.getContext('2d');var sctx=sc.getContext('2d');
-  wctx.fillStyle='#000';wctx.fillRect(0,0,660,80);
-  wctx.strokeStyle='var(--violet)';wctx.lineWidth=1;wctx.beginPath();
-  for(var x=0;x<660;x++){var y=40+Math.sin(x*0.08)*12+Math.sin(x*0.2)*6+(Math.random()-0.5)*5;if(x===0)wctx.moveTo(x,y);else wctx.lineTo(x,y);}
-  wctx.stroke();
-  sctx.fillStyle='#000';sctx.fillRect(0,0,660,100);
-  for(var x=0;x<660;x++){for(var y=0;y<100;y++){
-    var freq=100-y;var ent=Math.random()*0.2+(freq<30?0.4:0);
-    var g=Math.floor(96*ent);sctx.fillStyle='rgb('+Math.floor(176*ent)+','+g+','+Math.floor(255*ent)+')';
-    sctx.fillRect(x,y,1,1);
-  }}
-}
-
-function dctInit(){
-  var c=document.getElementById('dct-canvas');if(!c)return;
-  var ctx=c.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,660,160);
-  // Draw 8x8 DCT grid with coefficient values
-  var coeffs=[];
-  for(var i=0;i<64;i++){coeffs.push(Math.floor(Math.random()*200)-100);}
-  // Embed flag LSBs in AC coefficients
-  var flag='CTF{dct_c03ff_lsb_fr3qu3ncy}';var bits3=[];
-  for(var i=0;i<flag.length;i++){var c2=flag.charCodeAt(i);for(var b=7;b>=0;b--){bits3.push((c2>>b)&1);}}
-  for(var i=1;i<64&&i-1<bits3.length;i++){coeffs[i]=(coeffs[i]&0xFE)|bits3[i-1];}
-  window._dctCoeffs=coeffs;window._dctBits=bits3;
-  for(var y=0;y<8;y++){for(var x=0;x<8;x++){
-    var idx=y*8+x;var val=coeffs[idx];
-    var norm=(val+100)/200;
-    var r=Math.floor(norm*176);var g=Math.floor(norm*96);var bv=Math.floor(norm*255);
-    ctx.fillStyle='rgb('+r+','+g+','+bv+')';
-    ctx.fillRect(x*82+1,y*19+1,80,17);
-    ctx.fillStyle=(Math.abs(val)>60?'#fff':'#ccc');ctx.font='9px monospace';
-    ctx.fillText((idx===0?'DC:':'AC:')+val,x*82+4,y*19+12);
-  }}
-}
-
-function dftInit(){
-  var sp=document.getElementById('dft-spatial');var sf=document.getElementById('dft-spectrum');
-  if(!sp||!sf)return;
-  var sctx=sp.getContext('2d');var fctx=sf.getContext('2d');
-  // Spatial: gradient noise image
-  for(var y=0;y<160;y++){for(var x=0;x<320;x++){
-    var v=Math.floor(60+Math.sin(x*0.05)*40+Math.sin(y*0.05)*40+(Math.random()-0.5)*20);
-    sctx.fillStyle='rgb('+v+','+v+','+v+')';sctx.fillRect(x,y,1,1);
-  }}
-  // Spectrum: centre-bright DFT magnitude
-  for(var y=0;y<160;y++){for(var x=0;x<320;x++){
-    var dx=x-160;var dy=y-80;var dist=Math.sqrt(dx*dx+dy*dy)+0.01;
-    var mag=Math.min(255,Math.floor(3000/dist));
-    // anomalous bright dots encoding the flag
-    if((x===80&&y===40)||(x===240&&y===120)||(x===160&&y===40)){mag=255;}
-    fctx.fillStyle='rgb('+Math.floor(mag*0.69)+','+Math.floor(mag*0.38)+','+mag+')';
-    fctx.fillRect(x,y,1,1);
-  }}
-}
-
-// ── WIDGET HANDLERS ──────────────────────────────────
-
-// CH-01 alpha init (deferred)
-function openAlphaGrid(){setTimeout(function(){alphaInit();},60);}
-
-// CH-02 Whitespace
-function wsExtract(){
-  var r=document.getElementById('ws-r');
-  var poem=['The stars above in silent night,\t ','Cast silver light on fields below; \t','A gentle breeze, a soothing sight,\t\t','Where frozen rivers cease to flow.\t ','The moon ascends with borrowed glow,\t\t','And paints the world in pale delight;\t ','The sleeping earth lies hushed and slow,\t\t','In winter\'s long and dreamless night.\t ','But underneath the frozen ground,\t\t','The seeds of spring in silence wait;\t '];
-  var binary='';
-  poem.forEach(function(line){
-    var trail=line.replace(/[^\s].*$/,'');// get trailing whitespace
-    // actually get trailing spaces/tabs after last non-whitespace
-    var match=line.match(/[\t ]+$/);if(match){match[0].split('').forEach(function(c){binary+=c==='\t'?'1':'0';});}
-  });
-  r.className='wout show';r.textContent='Trailing whitespace per line:\nLine 1: \\t \\t → bits: 10\nLine 2: \\t → bit: 1\nLine 3: \\t\\t → bits: 11\n...\n\nBinary stream: 01000011 01010100 01000110 ...\n(SPACE=0, TAB=1 extracted from line endings)';
-}
-function wsDecode(){var r=document.getElementById('ws-r');r.className='wout ok show';r.textContent='Binary stream decoded:\n01000011 → C\n01010100 → T\n01000110 → F\n01111011 → {\n...\n\nDecoded flag: CTF{wh1t3sp4c3_1nv1s1bl3_t4bs}';}
-
-// CH-03 Alpha
-function alphaFilter(){
-  setTimeout(function(){alphaInit();},60);
-  var pixels=window._alphaPixels||[];
-  var r=document.getElementById('alpha-r');
-  var found=pixels.filter(function(p){return p.a>0&&p.a<255;});
-  r.className='wout show';r.textContent='Pixels with 0 < alpha < 255: '+found.length+'\nThese carry encoded values:\n'+found.slice(0,8).map(function(p,i){return 'px['+i+']: alpha='+p.a+' → ASCII "'+String.fromCharCode(p.a)+'"';}).join('\n')+'\n...';
-}
-function alphaDecode(){
-  var pixels=window._alphaPixels||[];
-  var flag=pixels.filter(function(p){return p.isFlagByte;}).map(function(p){return String.fromCharCode(p.a);}).join('');
-  var r=document.getElementById('alpha-r');r.className='wout ok show';r.textContent='Alpha values as ASCII:\n'+flag;}
-
-// CH-04 ZWC
-function zwcExtract(){var r=document.getElementById('zwc-r');r.className='wout show';r.textContent='Stripping visible characters...\nFound 248 zero-width characters:\n[ZWS][ZWNJ][ZWNJ][ZWS][ZWS][ZWS][ZWNJ][ZWNJ]...\n\nMapping: ZWS→0, ZWNJ→1\nBinary: 01000011 01010100 01000110 01111011...';}
-function zwcDecode(){var r=document.getElementById('zwc-r');r.className='wout ok show';r.textContent='Binary → ASCII conversion:\n01000011 → C\n01010100 → T\n01000110 → F\n01111011 → {\n...\n\nDecoded: CTF{z3r0_w1dth_un1c0d3_h1dd3n}';}
-
-// CH-05 EXIF
-function exifSearch(){
-  var q=document.getElementById('exif-q').value.toLowerCase();var r=document.getElementById('exif-r');
-  var fields=[{tag:'Comment',val:'CTF{3x1f_m3t4d4t4_g3o_l34k}'},{tag:'Make',val:'Canon'},{tag:'GPSLatitude',val:'51 deg 30\' 26.10" N'}];
-  var found=fields.filter(function(f){return f.tag.toLowerCase().indexOf(q)>=0||f.val.toLowerCase().indexOf(q)>=0;});
-  if(!q){r.className='wout err show';r.textContent='Enter a search term.';return;}
-  r.className=(found.some(function(f){return f.tag==='Comment';})?'wout ok show':'wout show');
-  r.textContent=found.length?found.map(function(f){return f.tag+': '+f.val;}).join('\n'):'No matching fields for "'+q+'"';
-}
-function exifFlag(){var r=document.getElementById('exif-r');r.className='wout ok show';r.textContent='exiftool image.jpg | grep Comment\nComment: CTF{3x1f_m3t4d4t4_g3o_l34k}';}
-
-// CH-06 Audio
-function audioDecode(){
-  var pass=document.getElementById('audio-pass').value;var r=document.getElementById('audio-r');
-  if(pass==='stegovault'||pass==='StegoVault'||pass==='STEGOVAULT'){
-    r.className='wout ok show';r.textContent='mp3stego-decode -X -P "'+pass+'" hidden.mp3\nDecoding DCT coefficients...\nOutput file: _hidden.mp3.txt\nContent: CTF{mp3_dct_c03ff_h1dd3n_d4t4}';}
-  else if(pass){r.className='wout err show';r.textContent='mp3stego-decode -X -P "'+pass+'" hidden.mp3\nError: incorrect passphrase or no hidden data found.';}
-  else{r.className='wout err show';r.textContent='Enter a passphrase.';}
-}
-function audioAuto(){
-  var r=document.getElementById('audio-r');r.className='wout show';
-  var passes=['secret','password','ctf2024','stego','hidden','flag','stegovault'];
-  var i=0;r.textContent='Trying passphrases...\n';
-  var t=setInterval(function(){
-    r.textContent+='Trying "'+passes[i]+'"... '+(passes[i]==='stegovault'?'SUCCESS!\n':'failed\n');
-    if(passes[i]==='stegovault'){clearInterval(t);r.className='wout ok show';r.textContent+='\nDecoded: CTF{mp3_dct_c03ff_h1dd3n_d4t4}';}
-    i++;if(i>=passes.length)clearInterval(t);
-  },300);
-}
-
-// CH-07 PNG Chunk
-function chunkSelect(i){
-  var chunks=window._chunks||[];var c=chunks[i];if(!c)return;
-  var d=document.getElementById('chunk-detail');
-  d.className='wout show';
-  d.textContent='Chunk type: '+c.type+'\nLength: '+c.len+' bytes\nCRC: '+c.crc+'\nNote: '+c.note;
-  if(c.type==='flAg'){document.getElementById('chunk-flag-row').style.display='block';}
-}
-function chunkReadData(){var r=document.getElementById('chunk-r');r.className='wout ok show';r.textContent='flAg chunk data (32 bytes):\n43 54 46 7B 70 6E 67 5F 63 68 75 6E 6B 5F 31 6E 6A 33 63 74 33 64 5F 66 6C 34 67 7D\nASCII: CTF{png_chun k_1nj3ct3d_fl4g}';}
-
-// CH-08 DCT
-function dctScan(){
-  var coeffs=window._dctCoeffs||[];
-  var bits=coeffs.slice(1).map(function(c){return c&1;});// AC coefficients
-  var brow=document.getElementById('dct-bits');brow.innerHTML='';
-  bits.slice(0,64).forEach(function(b){var d=document.createElement('div');d.className='bit '+(b?'b1':'b0');d.textContent=b;brow.appendChild(d);});
-  var r=document.getElementById('dct-r');r.className='wout show';r.textContent='Scanned '+coeffs.length+' DCT coefficients\nCollected '+bits.length+' AC LSBs\nFirst 8: '+bits.slice(0,8).join('')+' → '+String.fromCharCode(parseInt(bits.slice(0,8).join(''),2));
-}
-function dctDecode(){
-  var bits=window._dctBits||[];var chars='';
-  for(var i=0;i+7<bits.length;i+=8){var v=0;for(var j=0;j<8;j++){v=(v<<1)|bits[i+j];}chars+=String.fromCharCode(v);}
-  var r=document.getElementById('dct-r');r.className='wout ok show';r.textContent='Decoded AC LSBs → ASCII:\n'+chars;
-}
-
-// CH-09 Palette
-function palSelect(i){
-  var p=(window._palette||[])[i];if(!p)return;
-  var d=document.getElementById('pal-detail');
-  var isFlag=i>0&&i<=challenges[8].flag.length;
-  d.innerHTML='Entry #'+i+': rgb('+p.r+','+p.g+','+p.b+')'+(isFlag?' → R='+p.r+' → ASCII "'+String.fromCharCode(p.r)+'"':'');
-}
-function palFilter(){
-  var palette=window._palette||[];
-  var flagEntries=palette.filter(function(p,i){return i>0&&p.g===2&&p.b===2;});
-  var r=document.getElementById('pal-r');
-  r.className='wout show';r.textContent='Entries where G=2, B=2 (marker colour):\n'+flagEntries.slice(0,8).map(function(p,i){return 'Entry '+(i+1)+': R='+p.r+' → "'+String.fromCharCode(p.r)+'"';}).join('\n')+'\n...';
-}
-function palDecode(){
-  var flagStr='CTF{g1f_p4l3tt3_1nd3x_3nc0d3d}';
-  var r=document.getElementById('pal-r');r.className='wout ok show';r.textContent='Reading R channel of marker palette entries:\n'+flagStr;
-}
-
-// CH-10 DFT
-function dftTransform(){var r=document.getElementById('dft-r');r.className='wout show';r.textContent='numpy.fft.fft2(image_gray)\nComputed 320×160 complex spectrum.\nMagnitude: displayed in log scale.\nPhase: 320×160 array of angles in [-π, π]';}
-function dftHighlight(){
-  var sf=document.getElementById('dft-spectrum');if(!sf)return;
-  var fctx=sf.getContext('2d');
-  // Draw highlight circles at anomalous frequency coordinates
-  fctx.strokeStyle='#ff40cc';fctx.lineWidth=2;
-  [[80,40],[240,120],[160,40],[80,120],[240,40]].forEach(function(pt){
-    fctx.beginPath();fctx.arc(pt[0],pt[1],8,0,Math.PI*2);fctx.stroke();
-  });
-  var r=document.getElementById('dft-r');r.className='wout show';r.textContent='Anomalous frequency coordinates detected:\n(80,40) (240,120) (160,40) (80,120) (240,40)\nPhase values deviate from expected noise floor.\nReady to extract.';}
-function dftExtract(){var r=document.getElementById('dft-r');r.className='wout ok show';r.textContent='Extracting phase angles at 8 coordinate pairs per byte...\nXOR phase bits with key sequence...\nDecoded: CTF{dft_ph4s3_3nc0d3d_fr3q}';}
-
-// ── INIT ──────────────────────────────────────────────
-
-window.addEventListener('DOMContentLoaded',function(){
-  var total=0;challenges.forEach(function(c){total+=c.pts;});
-  document.getElementById('sc-total').textContent=challenges.length;
-  document.getElementById('sc-pts').textContent=total;
-  var g=document.getElementById('grid');
-  challenges.forEach(function(ch,idx){
-    var dTag=ch.diff==='easy'?'<span class="tag te">EASY</span>':ch.diff==='medium'?'<span class="tag tm">MEDIUM</span>':'<span class="tag th">HARD</span>';
-    var tTags=ch.tags.map(function(t){return '<span class="tag ti">'+esc(t)+'</span>';}).join('');
-    var c=document.createElement('div');c.className='card';c.dataset.diff=ch.diff;c.dataset.idx=idx;
-    c.innerHTML='<div class="card-glow"></div><div class="card-body">'
-      +'<div class="card-meta"><span class="card-id">'+esc(ch.id)+'</span><span class="card-pts">'+ch.pts+' pts</span></div>'
-      +'<div class="card-title">'+esc(ch.title)+'</div>'
-      +'<div class="card-tags">'+dTag+tTags+'</div>'
-      +'<div class="card-desc">'+esc(ch.desc.substring(0,100))+'...</div>'
-      +'<div class="card-footer"><span class="solves">'+ch.solves+' solves</span><button class="btn-view">OPEN &gt;&gt;</button></div></div>';
-    c.addEventListener('click',function(){openModal(idx);});
-    g.appendChild(c);
-  });
-});
 </script>
 
-<div style="text-align:center;padding:1rem;font-size:.7rem;color:#3a4a66;font-family:'Share Tech Mono',monospace">AP® is a trademark of the College Board. This site is not affiliated with the College Board.</div>
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
 </body>
 </html>

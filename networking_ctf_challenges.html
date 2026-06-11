@@ -3,800 +3,1190 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NetProbe CTF — Networking Challenges</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=IBM+Plex+Sans:wght@300;400;600;700&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<title>Vocab &amp; Concept Matcher &mdash; AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#020c08;--bg2:#040f0b;--panel:#071510;--panel2:#0a1c14;
-  --border:#0f3020;--border2:#1a5035;
-  --green:#00ff88;--green2:#00cc66;--green3:#80ffcc;
-  --amber:#ffaa00;--red:#ff3344;--blue:#33aaff;--cyan:#00ddcc;
-  --purple:#cc66ff;--white:#d0ffe8;
-  --muted:#1a5030;--dim:#0a2818;--text:#80c8a0;
-  --font-m:'Share Tech Mono',monospace;
-  --font-d:'IBM Plex Sans',sans-serif;
-  --font-b:'DM Sans',sans-serif;
+  --navy:#0b1628;--navy-mid:#132040;--navy-light:#1e2e52;
+  --cyan:#00d4c8;--cyan-dim:#00a89f;--amber:#f5a623;
+  --green:#00c864;--red:#ff5555;--white:#f2f5fb;
+  --muted:#8899bb;--card-bg:#111e38;--border:rgba(0,212,200,.15);
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-m);min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;
-  background:radial-gradient(ellipse at 20% 50%,rgba(0,255,136,0.04) 0%,transparent 55%),
-             radial-gradient(ellipse at 80% 20%,rgba(0,221,204,0.03) 0%,transparent 50%);
-  pointer-events:none;z-index:0;}
-body::after{content:'';position:fixed;inset:0;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,0.012) 2px,rgba(0,255,136,0.012) 4px);
-  pointer-events:none;z-index:9999;}
-.wrapper{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 80px;}
-header{padding:44px 0 36px;border-bottom:1px solid var(--border2);}
-.hdr-tag{font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:12px;}
-h1{font-family:var(--font-d);font-size:clamp(32px,6vw,68px);font-weight:700;line-height:1;color:var(--green3);letter-spacing:-1px;}
-h1 span{color:var(--amber);}
-.hdr-sub{font-size:11px;letter-spacing:3px;color:var(--muted);margin-top:12px;text-transform:uppercase;}
-.scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:28px 0;border:1px solid var(--border2);}
-.sp{background:var(--panel);padding:12px 18px;border-right:1px solid var(--border2);}
-.sp:last-child{border-right:none;}
-.sp-l{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
-.sp-v{font-family:var(--font-d);font-size:26px;font-weight:700;color:var(--amber);}
-.filter-bar{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap;align-items:center;}
-.fl{font-size:10px;letter-spacing:2px;color:var(--muted);margin-right:8px;}
-.fbtn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-m);font-size:11px;letter-spacing:2px;padding:4px 14px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.fbtn:hover,.fbtn.active{border-color:var(--green2);color:var(--green3);background:rgba(0,255,136,0.05);}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;}
-.card{background:var(--panel);border:1px solid var(--border2);cursor:pointer;position:relative;overflow:hidden;animation:ri .4s ease both;transition:border-color .18s,transform .18s,box-shadow .18s;}
-.card:hover{border-color:var(--green2);transform:translateY(-2px);box-shadow:0 6px 28px rgba(0,255,136,0.07);}
-.card.solved{border-color:var(--cyan);}
-@keyframes ri{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.card:nth-child(1){animation-delay:.04s}.card:nth-child(2){animation-delay:.08s}.card:nth-child(3){animation-delay:.12s}.card:nth-child(4){animation-delay:.16s}.card:nth-child(5){animation-delay:.20s}.card:nth-child(6){animation-delay:.24s}.card:nth-child(7){animation-delay:.28s}.card:nth-child(8){animation-delay:.32s}.card:nth-child(9){animation-delay:.36s}.card:nth-child(10){animation-delay:.40s}
-.card-stripe{height:3px;background:linear-gradient(90deg,var(--green),var(--cyan),transparent);}
-.card-body{padding:14px 16px 16px;}
-.card-meta{display:flex;justify-content:space-between;margin-bottom:8px;align-items:center;}
-.card-id{font-size:10px;letter-spacing:2px;color:var(--dim);}
-.card-pts{font-size:12px;color:var(--amber);border:1px solid rgba(255,170,0,.22);padding:2px 8px;background:rgba(255,170,0,.04);}
-.card-title{font-family:var(--font-d);font-size:18px;font-weight:600;color:var(--green3);margin-bottom:8px;}
-.card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.tag{font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid;text-transform:uppercase;}
-.te{color:var(--green);border-color:rgba(0,255,136,.3);}
-.tm{color:var(--amber);border-color:rgba(255,170,0,.3);}
-.th{color:var(--red);border-color:rgba(255,51,68,.3);}
-.ti{color:var(--blue);border-color:rgba(51,170,255,.3);}
-.card-desc{font-family:var(--font-b);font-size:12.5px;color:var(--muted);line-height:1.6;font-weight:300;margin-bottom:14px;}
-.card-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px;}
-.solves{font-size:10px;color:var(--dim);}
-.btn-view{background:transparent;border:1px solid var(--green2);color:var(--green3);font-size:10px;letter-spacing:2px;padding:4px 10px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.btn-view:hover{background:rgba(0,255,136,0.1);}
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(2,12,8,.95);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--bg2);border:1px solid var(--green2);max-width:740px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(0,255,136,0.08);animation:mi .2s ease;}
-@keyframes mi{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:scale(1);}}
-.modal-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
-.modal-title{font-family:var(--font-d);font-size:19px;font-weight:700;color:var(--green3);}
-.modal-close{background:none;border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-family:var(--font-m);font-size:11px;padding:3px 9px;flex-shrink:0;}
-.modal-close:hover{border-color:var(--red);color:var(--red);}
-.modal-body{padding:20px 22px;}
-.mlabel{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;margin-top:18px;}
-.mlabel.first{margin-top:0;}
-.mdesc{font-family:var(--font-b);font-size:13px;color:var(--text);line-height:1.75;font-weight:300;}
-.hint{background:rgba(255,170,0,0.04);border:1px solid rgba(255,170,0,0.18);padding:9px 13px;font-size:11.5px;color:var(--amber);line-height:1.6;margin-bottom:7px;}
-.hint::before{content:'// HINT ' attr(data-n) ': ';color:var(--dim);}
-.flag-box{background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.25);padding:11px 15px;font-size:13px;color:var(--green);letter-spacing:1px;}
-.sol{background:rgba(0,255,136,0.02);border:1px solid rgba(0,255,136,0.1);padding:12px 15px;font-size:11.5px;color:var(--text);line-height:1.7;}
-/* WIDGET */
-.widget{background:#010806;border:1px solid var(--border2);margin-top:12px;padding:14px;}
-.wlabel{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-.wlabel.mt{margin-top:12px;}
-.wcode{background:#000;border:1px solid var(--border);padding:10px 12px;font-size:11px;color:var(--text);line-height:1.7;overflow-x:auto;white-space:pre;}
-.winput{width:100%;background:#010806;border:1px solid var(--border);color:var(--green3);font-family:var(--font-m);font-size:12px;padding:7px 10px;outline:none;transition:border-color .15s;}
-.winput:focus{border-color:var(--green2);}
-.wrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
-.wbtn{background:rgba(0,255,136,0.06);border:1px solid var(--green2);color:var(--green3);font-family:var(--font-m);font-size:11px;letter-spacing:1px;padding:6px 13px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.wbtn:hover{background:rgba(0,255,136,0.15);}
-.wbtn.a{border-color:var(--amber);color:var(--amber);background:rgba(255,170,0,0.05);}
-.wbtn.a:hover{background:rgba(255,170,0,0.13);}
-.wbtn.r{border-color:var(--red);color:var(--red);background:rgba(255,51,68,0.05);}
-.wbtn.b{border-color:var(--blue);color:var(--blue);background:rgba(51,170,255,0.05);}
-.wbtn.c{border-color:var(--cyan);color:var(--cyan);background:rgba(0,221,204,0.05);}
-.wout{padding:10px 12px;font-size:12px;line-height:1.7;display:none;border-top:1px solid var(--border);color:var(--text);white-space:pre-wrap;}
-.wout.show{display:block;}
-.wout.ok{color:var(--green);}
-.wout.err{color:var(--red);}
-/* PACKET ROW */
-.pkt{padding:6px 10px;margin:2px 0;border:1px solid var(--border);font-size:11px;cursor:pointer;transition:background .12s;display:flex;gap:8px;align-items:center;}
-.pkt:hover,.pkt.sel{background:var(--panel2);}
-.pkt.sel{border-color:var(--green2);}
-.pkt .pno{color:var(--dim);min-width:24px;}
-.pkt .ptime{color:var(--muted);min-width:60px;}
-.pkt .psrc{color:var(--green3);min-width:110px;}
-.pkt .pdst{color:var(--blue);min-width:110px;}
-.pkt .pproto{min-width:50px;}
-.pkt .pinfo{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.proto-tcp{color:var(--blue);}
-.proto-udp{color:var(--cyan);}
-.proto-icmp{color:var(--amber);}
-.proto-dns{color:var(--purple);}
-.proto-http{color:var(--green);}
-.proto-arp{color:var(--red);}
-.proto-ftp{color:var(--amber);}
-/* TCP STATE DIAGRAM */
-.tcp-state{display:flex;gap:0;margin:8px 0;}
-.tcp-box{flex:1;padding:8px 4px;text-align:center;font-size:10px;border:1px solid var(--border);background:var(--panel);transition:all .3s;}
-.tcp-box.active{background:rgba(0,255,136,0.1);border-color:var(--green2);color:var(--green3);}
-.tcp-box.done{background:rgba(0,221,204,0.08);border-color:var(--cyan);color:var(--cyan);}
-.tcp-arrow{width:20px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;}
-/* ARP TABLE */
-.arp-row{display:flex;gap:0;border-bottom:1px solid var(--border);font-size:11px;}
-.arp-row.hdr{background:var(--panel2);font-size:10px;letter-spacing:1px;color:var(--muted);}
-.arp-cell{padding:6px 10px;flex:1;border-right:1px solid var(--border);}
-.arp-cell:last-child{border-right:none;}
-.arp-row.suspect{background:rgba(255,51,68,0.06);border-color:rgba(255,51,68,.3);}
-/* PROGRESS */
-.prog-bar{height:4px;background:var(--border);margin:8px 0;display:none;}
-.prog-fill{height:100%;background:var(--green);transition:width .08s;width:0;}
-.prog-txt{font-size:11px;color:var(--muted);}
-/* BIT STREAM */
-.bit-stream{display:flex;flex-wrap:wrap;gap:1px;margin-top:6px;}
-.bit{width:12px;height:12px;border:1px solid var(--border);font-size:8px;display:flex;align-items:center;justify-content:center;}
-.bit.b1{background:rgba(0,255,136,0.4);color:var(--green3);}
-.bit.b0{background:rgba(0,0,0,0.5);color:var(--dim);}
-canvas{display:block;border:1px solid var(--border);background:#000;margin-top:8px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 clamp(1rem,3vw,2rem);height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;flex-shrink:0}
+.nav-logo{width:36px;height:36px;background:var(--cyan);border-radius:8px;display:grid;place-items:center}
+.nav-logo svg{width:20px;height:20px}
+.nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.nav-title span{color:var(--cyan)}
+.nav-links{display:flex;align-items:center;gap:.2rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.78rem;font-weight:500;padding:.3rem .6rem;border-radius:6px;transition:color .2s,background .2s}
+.nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-links a.active{color:var(--cyan)}
+.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:600!important}
+@media(max-width:700px){.nav-links{display:none}}
+
+.screen{display:none}.screen.active{display:block}
+
+/* ── SETUP ──────────────────────────────── */
+.setup-wrap{max-width:980px;margin:0 auto;padding:clamp(2.5rem,5vw,4rem) clamp(1.5rem,4vw,2rem)}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,212,200,.1);border:1px solid rgba(0,212,200,.3);color:var(--cyan);font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.35rem .9rem;border-radius:100px;margin-bottom:1.5rem}
+.badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--cyan);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.page-h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:.75rem}
+.page-h1 em{font-style:italic;color:var(--cyan)}
+.page-sub{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.75;margin-bottom:2.5rem;font-weight:300}
+
+/* category tabs */
+.cat-tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.25rem}
+.cat-tab{padding:.35rem .9rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--muted);transition:all .18s}
+.cat-tab:hover{border-color:rgba(0,212,200,.3);color:var(--white)}
+.cat-tab.active{background:rgba(0,212,200,.12);border-color:var(--cyan);color:var(--cyan)}
+
+/* deck grid */
+.deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;margin-bottom:2rem}
+.deck-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.3rem;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;position:relative}
+.deck-card:hover{transform:translateY(-3px);border-color:rgba(0,212,200,.4);box-shadow:0 12px 36px rgba(0,0,0,.4)}
+.deck-unit{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:.3rem}
+.deck-title{font-family:'DM Serif Display',serif;font-size:1.1rem;margin-bottom:.3rem}
+.deck-desc{font-size:.78rem;color:var(--muted);line-height:1.55;margin-bottom:.85rem}
+.deck-meta{display:flex;align-items:center;justify-content:space-between;font-size:.75rem}
+.deck-count{background:rgba(0,212,200,.08);color:var(--cyan);border:1px solid rgba(0,212,200,.2);border-radius:100px;padding:.18rem .65rem;font-weight:600}
+.deck-mode{color:var(--muted);display:flex;align-items:center;gap:.3rem}
+.deck-mode svg{width:12px;height:12px}
+
+/* mode icons */
+.mode-badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:700;padding:.18rem .6rem;border-radius:100px;letter-spacing:.03em}
+.mode-match{background:rgba(0,212,200,.08);color:var(--cyan);border:1px solid rgba(0,212,200,.2)}
+.mode-sort{background:rgba(245,166,35,.08);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.mode-map{background:rgba(155,89,182,.1);color:#c39bd3;border:1px solid rgba(155,89,182,.25)}
+
+/* ── GAME SCREEN ────────────────────────── */
+.game-header{background:var(--navy-mid);border-bottom:1px solid var(--border);padding:.8rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:64px;z-index:100}
+.gh-left h2{font-family:'DM Serif Display',serif;font-size:1.1rem;line-height:1.2}
+.gh-left .gh-sub{font-size:.75rem;color:var(--muted)}
+.gh-right{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap}
+.score-pill{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.4rem .9rem;font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
+.score-pill svg{width:14px;height:14px;stroke:var(--cyan)}
+.progress-pill{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.4rem .9rem;font-size:.82rem;color:var(--muted)}
+.btn-sm{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);font-family:inherit;font-size:.8rem;font-weight:500;padding:.38rem .8rem;border-radius:8px;cursor:pointer;transition:background .18s}
+.btn-sm:hover{background:rgba(255,255,255,.12)}
+
+.game-progress-bar{height:3px;background:rgba(255,255,255,.07)}
+.game-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--cyan-dim));transition:width .4s ease}
+
+/* ── MATCH MODE ─────────────────────────── */
+.match-wrap{max-width:1000px;margin:0 auto;padding:1.5rem clamp(1rem,3vw,2rem)}
+.match-instruction{text-align:center;font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.match-instruction svg{width:15px;height:15px;stroke:var(--cyan)}
+.match-layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:640px){.match-layout{grid-template-columns:1fr}}
+
+.match-col-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
+.match-col-label::before{content:'';width:16px;height:2px;background:var(--muted)}
+.match-items{display:flex;flex-direction:column;gap:.5rem}
+
+.match-item{background:var(--card-bg);border:2px solid rgba(255,255,255,.08);border-radius:11px;padding:.85rem 1rem;cursor:pointer;transition:all .2s;font-size:.85rem;line-height:1.55;user-select:none;position:relative}
+.match-item:hover:not(.matched):not(.locked){border-color:rgba(0,212,200,.35);background:rgba(0,212,200,.06)}
+.match-item.selected{border-color:var(--cyan);background:rgba(0,212,200,.12);box-shadow:0 0 0 3px rgba(0,212,200,.15)}
+.match-item.matched-correct{border-color:rgba(0,200,100,.5);background:rgba(0,200,100,.08);cursor:default;animation:matchPop .3s ease}
+.match-item.matched-wrong{border-color:rgba(255,85,85,.5);background:rgba(255,85,85,.08);animation:shake .4s ease}
+.match-item.locked{opacity:.5;cursor:default}
+.match-badge{position:absolute;top:.5rem;right:.6rem;width:20px;height:20px;border-radius:50%;display:grid;place-items:center}
+.match-badge svg{width:12px;height:12px}
+.match-badge.correct{background:rgba(0,200,100,.2)}.match-badge.correct svg{stroke:var(--green)}
+.match-badge.wrong{background:rgba(255,85,85,.2)}.match-badge.wrong svg{stroke:var(--red)}
+
+@keyframes matchPop{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+/* ── SORT MODE ──────────────────────────── */
+.sort-wrap{max-width:980px;margin:0 auto;padding:1.5rem clamp(1rem,3vw,2rem)}
+.sort-instruction{text-align:center;font-size:.85rem;color:var(--muted);margin-bottom:1.5rem}
+.sort-items-pool{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center;margin-bottom:2rem;min-height:56px;padding:.6rem;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);border-radius:12px}
+.sort-chip{background:var(--card-bg);border:2px solid rgba(255,255,255,.1);border-radius:10px;padding:.6rem .9rem;cursor:pointer;font-size:.83rem;font-weight:500;transition:all .18s;user-select:none}
+.sort-chip:hover{border-color:rgba(0,212,200,.4);background:rgba(0,212,200,.08)}
+.sort-chip.selected{border-color:var(--cyan);background:rgba(0,212,200,.12)}
+.sort-chip.placed{opacity:.3;cursor:default}
+.sort-chip.placed:hover{border-color:rgba(255,255,255,.1);background:var(--card-bg)}
+
+.sort-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+.sort-bucket{border-radius:14px;border:2px solid rgba(255,255,255,.08);min-height:100px;transition:all .2s;overflow:hidden}
+.sort-bucket.drag-over{border-color:rgba(0,212,200,.4);box-shadow:0 0 0 3px rgba(0,212,200,.1)}
+.sort-bucket-header{padding:.7rem 1rem;display:flex;align-items:center;gap:.6rem;border-bottom:1px solid rgba(255,255,255,.06)}
+.bucket-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.bucket-name{font-weight:700;font-size:.85rem}
+.sort-bucket-body{padding:.6rem;display:flex;flex-wrap:wrap;gap:.4rem;min-height:52px}
+.sort-bucket-body:empty::after{content:'Drop here';font-size:.75rem;color:rgba(255,255,255,.18);font-style:italic;align-self:center;width:100%;text-align:center;padding:.4rem}
+.placed-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.77rem;padding:.3rem .65rem;border-radius:8px;cursor:pointer;transition:all .15s;line-height:1.35;font-weight:500}
+.placed-chip:hover{opacity:.75}
+.placed-chip svg{width:9px;height:9px;flex-shrink:0;opacity:.6}
+
+/* ── ROUND RESULT FLASH ─────────────────── */
+.result-flash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:var(--card-bg);border:2px solid;border-radius:16px;padding:1.25rem 2rem;text-align:center;z-index:500;pointer-events:none;transition:transform .2s,opacity .2s}
+.result-flash.show{transform:translate(-50%,-50%) scale(1)}
+.result-flash.hide{opacity:0}
+.rf-icon{font-size:2rem;margin-bottom:.35rem}
+.rf-text{font-family:'DM Serif Display',serif;font-size:1.2rem}
+
+/* ── SUMMARY ────────────────────────────── */
+.summary-wrap{max-width:620px;margin:0 auto;padding:clamp(3rem,6vw,5rem) clamp(1.5rem,4vw,2rem);text-align:center}
+.sum-circle{width:130px;height:130px;border-radius:50%;border:4px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 1.5rem;box-shadow:0 0 50px rgba(0,212,200,.15)}
+.sum-pct{font-family:'DM Serif Display',serif;font-size:2.2rem;line-height:1}
+.sum-frac{font-size:.78rem;color:var(--muted);font-weight:500}
+.sum-h{font-family:'DM Serif Display',serif;font-size:clamp(1.6rem,3.5vw,2.2rem);margin-bottom:.5rem}
+.sum-sub{color:var(--muted);font-size:.92rem;line-height:1.7;margin-bottom:2rem;max-width:420px;margin-left:auto;margin-right:auto}
+.sum-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}
+.sum-stat{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1rem}
+.sum-stat-num{font-family:'DM Serif Display',serif;font-size:1.8rem;line-height:1;margin-bottom:.2rem}
+.sum-stat-lbl{font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.sum-actions{display:flex;flex-wrap:wrap;gap:.85rem;justify-content:center}
+.sum-btn{flex:1;min-width:150px;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.9rem 1.5rem;border-radius:11px;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:transform .18s,opacity .18s;border:none}
+.sum-btn:hover{transform:translateY(-2px);opacity:.9}
+.sum-btn.primary{background:var(--cyan);color:var(--navy)}
+.sum-btn.secondary{background:rgba(255,255,255,.07);color:var(--white);border:1px solid rgba(255,255,255,.12)}
+.sum-btn svg{width:16px;height:16px}
+
+/* missed review */
+.missed-review{margin-top:2rem;text-align:left}
+.mr-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+.mr-label::before{content:'';width:20px;height:2px;background:var(--red)}
+.mr-item{background:var(--card-bg);border:1px solid rgba(255,85,85,.2);border-radius:10px;padding:.8rem 1rem;margin-bottom:.5rem;font-size:.83rem;line-height:1.6}
+.mr-item strong{color:var(--white)}
+.mr-item .mr-arrow{color:var(--cyan);margin:0 .35rem}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .3s ease both}
+
+/* Dropdown nav */
+.nav-dropdown{position:relative}
+.nav-dropdown-btn{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.35rem .65rem;border-radius:6px;transition:color .2s,background .2s;background:none;border:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.3rem}
+.nav-dropdown-btn:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-btn.has-active{color:var(--cyan)}
+.nav-dropdown-btn svg{width:11px;height:11px;transition:transform .2s}
+.nav-dropdown:hover .nav-dropdown-btn svg{transform:rotate(180deg)}
+.nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:all .2s;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nav-dropdown:hover .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
+.nav-dropdown-menu a{display:block;color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.45rem .75rem;border-radius:7px;transition:color .15s,background .15s;white-space:nowrap}
+.nav-dropdown-menu a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-menu a.active{color:var(--cyan)}
+.nav-dropdown-menu .menu-divider{height:1px;background:var(--border);margin:.3rem .4rem}
+
+.nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.4rem;width:36px;height:36px;flex-shrink:0}
+.nav-hamburger span{display:block;height:2px;width:22px;background:var(--white);border-radius:2px;transition:all .25s}
+@media(max-width:900px){.nav-hamburger{display:flex}.nav-links{display:none!important}}
+.mobile-nav-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:490;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+.mobile-nav-backdrop.open{opacity:1;visibility:visible}
+.mobile-nav-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,88vw);background:var(--navy-mid);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.mobile-nav-drawer.open{transform:translateX(0)}
+.mobile-nav-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);height:64px;flex-shrink:0}
+.mobile-nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.mobile-nav-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);width:32px;height:32px;border-radius:7px;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;line-height:1;transition:background .18s}
+.mobile-nav-close:hover{background:rgba(255,255,255,.14)}
+.mobile-nav-links{padding:.75rem;display:flex;flex-direction:column;gap:.2rem;flex:1}
+.mobile-nav-links a{display:block;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:500;padding:.7rem .9rem;border-radius:9px;transition:color .18s,background .18s}
+.mobile-nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.mobile-nav-links a.active{color:var(--cyan);background:rgba(0,212,200,.07)}
+.mobile-nav-links a.nav-cta{background:var(--cyan);color:var(--navy);font-weight:700;margin-top:.5rem;text-align:center}
+.mobile-nav-links a.nav-cta:hover{opacity:.9}
+.mobile-nav-section-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem .9rem .3rem;opacity:.7}
+.mobile-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:.4rem .5rem}
 </style>
 </head>
 <body>
-<div class="wrapper">
-<header>
-<div style="background:#050810;border-bottom:1px solid #1a2640;padding:.4rem 1.5rem;font-family:'Share Tech Mono',monospace;font-size:11px"><a href="ctf.html" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:rgba(0,240,255,0.45);text-decoration:none;letter-spacing:2px;margin-right:1.5rem;transition:color .2s" onmouseover="this.style.color='#00f0ff'" onmouseout="this.style.color='rgba(0,240,255,0.45)'">&#8592; CTF HUB</a></div>
-  <div class="hdr-tag">// NETPROBE CTF PLATFORM — 1980s NOC PHOSPHOR-GREEN EDITION</div>
-  <h1>Net<span>Probe</span></h1>
-  <div class="hdr-sub">PCAP · DNS · ARP · TCP · ICMP · FTP · BGP · 802.11 · VLAN · SNMP</div>
-</header>
-<div class="scoreboard">
-  <div class="sp"><div class="sp-l">Challenges</div><div class="sp-v" id="sc-total">0</div></div>
-  <div class="sp"><div class="sp-l">Total Points</div><div class="sp-v" id="sc-pts">0</div></div>
-  <div class="sp"><div class="sp-l">Solved</div><div class="sp-v" id="sc-solved">0</div></div>
-  <div class="sp"><div class="sp-l">Points Earned</div><div class="sp-v" id="sc-earned">0</div></div>
-</div>
-<div class="filter-bar">
-  <span class="fl">FILTER:</span>
-  <button class="fbtn active" onclick="filterCards('all',this)">ALL</button>
-  <button class="fbtn" onclick="filterCards('easy',this)">EASY</button>
-  <button class="fbtn" onclick="filterCards('medium',this)">MEDIUM</button>
-  <button class="fbtn" onclick="filterCards('hard',this)">HARD</button>
-</div>
-<div class="grid" id="grid"></div>
+
+<nav>
+  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="tools.html" class="active">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+<div class="mobile-nav-drawer" id="mobile-nav-drawer">
+  <div class="mobile-nav-header">
+    <span class="mobile-nav-title">AP <span style="color:var(--cyan)">Cybersecurity</span></span>
+    <button class="mobile-nav-close" onclick="closeMobileNav()">&times;</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="index.html" onclick="closeMobileNav()">Home</a>
+    <a href="socratic-anchors.html" onclick="closeMobileNav()">Socratic Guides</a>
+    <a href="tools.html" class="active" onclick="closeMobileNav()">Student Tools</a>
+    <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
+    <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
+  </div>
 </div>
 
-<div class="modal-overlay" id="overlay" onclick="closeModal(event)">
-<div class="modal">
-  <div class="modal-hdr">
-    <div class="modal-title" id="m-title"></div>
-    <button class="modal-close" onclick="closeModal()">[ X ] CLOSE</button>
+
+<!-- ══ SETUP ══ -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-wrap">
+    <div class="badge">All 5 Units &middot; 3 Game Modes</div>
+    <h1 class="page-h1">Vocab &amp; Concept<br><em>Matcher</em></h1>
+    <p class="page-sub">Connect terms to definitions, sort attacks into categories, and map controls to the threats they address. Three game modes covering the dense vocabulary every AP Cybersecurity student needs to own.</p>
+
+    <div class="cat-tabs" id="cat-tabs">
+      <button class="cat-tab active" data-cat="all" onclick="filterCat('all')">All Decks</button>
+      <button class="cat-tab" data-cat="1" onclick="filterCat('1')">Unit 1</button>
+      <button class="cat-tab" data-cat="2" onclick="filterCat('2')">Unit 2</button>
+      <button class="cat-tab" data-cat="3" onclick="filterCat('3')">Unit 3</button>
+      <button class="cat-tab" data-cat="4" onclick="filterCat('4')">Unit 4</button>
+      <button class="cat-tab" data-cat="5" onclick="filterCat('5')">Unit 5</button>
+      <button class="cat-tab" data-cat="match" onclick="filterCat('match')">&#x1F517; Match</button>
+      <button class="cat-tab" data-cat="sort" onclick="filterCat('sort')">&#x1F4CB; Sort</button>
+    </div>
+
+    <div class="deck-grid" id="deck-grid"></div>
   </div>
-  <div class="modal-body" id="m-body"></div>
 </div>
+
+<!-- ══ GAME ══ -->
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <div class="gh-left">
+      <h2 id="gh-title"></h2>
+      <div class="gh-sub" id="gh-sub"></div>
+    </div>
+    <div class="gh-right">
+      <div class="score-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+        <span id="score-display">0 / 0</span>
+      </div>
+      <div class="progress-pill" id="progress-pill">Round 1</div>
+      <button class="btn-sm" onclick="resetRound()">Restart</button>
+      <button class="btn-sm" onclick="goSetup()">&#x2190; Decks</button>
+    </div>
+  </div>
+  <div class="game-progress-bar"><div class="game-progress-fill" id="game-progress-fill" style="width:0%"></div></div>
+  <div id="game-area"></div>
+</div>
+
+<!-- ══ SUMMARY ══ -->
+<div id="screen-summary" class="screen">
+  <div class="summary-wrap">
+    <div class="sum-circle" id="sum-circle">
+      <div class="sum-pct" id="sum-pct">--%</div>
+      <div class="sum-frac" id="sum-frac">0/0</div>
+    </div>
+    <h2 class="sum-h" id="sum-h">Complete!</h2>
+    <p class="sum-sub" id="sum-sub"></p>
+    <div class="sum-stats">
+      <div class="sum-stat"><div class="sum-stat-num" style="color:var(--green)" id="sum-correct">0</div><div class="sum-stat-lbl">Correct</div></div>
+      <div class="sum-stat"><div class="sum-stat-num" style="color:var(--red)" id="sum-wrong">0</div><div class="sum-stat-lbl">Wrong</div></div>
+      <div class="sum-stat"><div class="sum-stat-num" style="color:var(--cyan)" id="sum-streak">0</div><div class="sum-stat-lbl">Best Streak</div></div>
+    </div>
+    <div class="sum-actions">
+      <button class="sum-btn primary" onclick="replayDeck()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Play Again
+      </button>
+      <button class="sum-btn secondary" onclick="goSetup()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        All Decks
+      </button>
+    </div>
+    <div class="missed-review" id="missed-review" style="display:none">
+      <div class="mr-label">Review These</div>
+      <div id="missed-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Result flash -->
+<div class="result-flash" id="result-flash">
+  <div class="rf-icon" id="rf-icon"></div>
+  <div class="rf-text" id="rf-text"></div>
 </div>
 
 <script>
-var challenges=[
-{id:'CH-01',title:'PCAP Analysis',pts:50,diff:'easy',tags:['pcap','wireshark','tcp'],solves:328,
- desc:'A network capture was taken on a compromised segment. Browse the packet list, apply display filters, and follow a suspicious TCP stream to recover the plaintext flag transmitted over the wire.',
- hints:['Filter: tcp.stream eq 0 isolates the first conversation','Right-click a TCP packet → Follow → TCP Stream shows the full payload'],
- flag:'CTF{pcap_tcp_str34m_r3c0v3r3d}',
- sol:'Wireshark → filter tcp.stream eq 3 → Follow TCP Stream. The client sends "GET /flag HTTP/1.0" and the server replies with the flag in the response body.',
- widget:'pcap'},
-{id:'CH-02',title:'DNS Query Decoder',pts:100,diff:'easy',tags:['dns','udp','query'],solves:251,
- desc:'A PCAP shows suspicious DNS traffic. The attacker is tunnelling data by encoding it in DNS query hostnames. Decode the base32-encoded subdomains to recover the exfiltrated flag.',
- hints:['DNS tunnelling encodes data in subdomain labels before the zone apex','Each query label is a chunk of base32-encoded data — concatenate them in order'],
- flag:'CTF{dns_tunn3l_b4s332_3xf1l}',
- sol:'Extract subdomain labels from queries to tunnel.evil.com. Base32-decode the concatenated labels to recover the flag.',
- widget:'dns_tunnel'},
-{id:'CH-03',title:'ARP Poisoning',pts:100,diff:'easy',tags:['arp','mitm','mac'],solves:213,
- desc:'The ARP table shows an anomaly — two different IP addresses map to the same MAC address, a classic sign of ARP cache poisoning. Identify the attacker\'s MAC and the victim IP being hijacked.',
- hints:['A legitimate router entry and a spoofed entry share the same MAC','The duplicate MAC is sending unsolicited ARP replies (Opcode 2 with no prior request)'],
- flag:'CTF{4rp_p01s0n_m4c_sp00f_d3t3ct}',
- sol:'ARP table: 192.168.1.1 and 192.168.1.100 both resolve to de:ad:be:ef:00:01. This is the attacker\'s MAC poisoning the gateway entry.',
- widget:'arp'},
-{id:'CH-04',title:'TCP Handshake',pts:150,diff:'medium',tags:['tcp','handshake','flags'],solves:187,
- desc:'Step through a captured TCP three-way handshake packet by packet. Identify the SYN, SYN-ACK, and ACK flags, note the initial sequence numbers, and extract the flag hidden in the ISN values.',
- hints:['ISN (Initial Sequence Number) is set in the SYN packet','The two ISNs encoded as 8 hex digits each — read them as ASCII'],
- flag:'CTF{tcp_1sn_c0v3rt_ch4nn3l}',
- sol:'Client ISN: 0x43544600 = "CTF\\x00", Server ISN: 0x7b74637 decoded → combined ISNs spell the flag in hex-encoded ASCII.',
- widget:'tcp'},
-{id:'CH-05',title:'ICMP Covert Channel',pts:150,diff:'medium',tags:['icmp','ping','covert'],solves:159,
- desc:'A flood of ICMP echo requests was captured. Each ping payload contains one byte of hidden data in a non-standard offset. Collect and decode the payloads in sequence to reveal the flag.',
- hints:['Standard ping payload starts at byte 8 of the ICMP data','This covert channel uses byte offset 16 of each payload — not the standard region'],
- flag:'CTF{1cmp_p4yl04d_c0v3rt_ch4nn3l}',
- sol:'Extract byte at offset 16 from each ICMP echo request payload in sequence. Converting the byte sequence to ASCII spells the flag.',
- widget:'icmp'},
-{id:'CH-06',title:'FTP Credential Recovery',pts:200,diff:'medium',tags:['ftp','cleartext','credentials'],solves:131,
- desc:'FTP transmits credentials in plaintext. A capture of an FTP session shows the USER and PASS commands. Extract the credentials, then decode the file transferred during the session.',
- hints:['FTP control channel uses TCP port 21 — filter ftp','The RETR command shows the filename; the data channel carries the file content'],
- flag:'CTF{ftp_cl34rt3xt_cr3d3nt14ls}',
- sol:'Filter ftp → USER admin, PASS s3cr3t_ftp → RETR flag.txt → Follow data stream on port 20 → flag in file content.',
- widget:'ftp'},
-{id:'CH-07',title:'BGP Hijack Detection',pts:250,diff:'medium',tags:['bgp','routing','as'],solves:87,
- desc:'A BGP route update was captured that announces a more-specific prefix, redirecting traffic away from the legitimate AS. Identify the hijacking AS number and the hijacked prefix to recover the flag.',
- hints:['BGP UPDATE messages contain NLRI (prefix) and AS_PATH attributes','A more-specific /24 can hijack traffic destined for a /16 — look for suspicious new routes'],
- flag:'CTF{bgp_h1j4ck_4s_pr3f1x_4n4lys1s}',
- sol:'Legitimate: AS64512 announces 203.0.113.0/24. Hijack UPDATE: AS65001 announces 203.0.113.128/25 — more specific prefix wins, traffic redirected.',
- widget:'bgp'},
-{id:'CH-08',title:'802.11 Deauth Attack',pts:300,diff:'hard',tags:['wifi','802.11','deauth'],solves:62,
- desc:'A wireless capture shows deauthentication frames being sent to disconnect clients from an AP. Identify the spoofed source MAC, the targeted BSSID, count the deauth frames, and find the flag in the beacon frame vendor IE.',
- hints:['802.11 deauth frames have type/subtype 0x0C','Deauth reason code 7 = "Class 3 frame received from nonassociated STA" — common in attacks'],
- flag:'CTF{802_11_d34uth_b3ac0n_1nj3ct}',
- sol:'Filter: wlan.fc.type_subtype == 0x0C. Source MAC de:ad:00:00:00:01 sent 847 deauths to BSSID aa:bb:cc:dd:ee:ff. Beacon vendor IE (OUI 00:50:f2) contains the flag.',
- widget:'wifi'},
-{id:'CH-09',title:'VLAN Hopping',pts:350,diff:'hard',tags:['vlan','8021q','switch'],solves:39,
- desc:'An attacker used double-tagging to hop from VLAN 10 to VLAN 99 (the management VLAN). The capture shows 802.1Q double-tagged frames. Parse the inner and outer tags to find the flag in the management traffic.',
- hints:['802.1Q tag is 4 bytes: TPID (0x8100) + TCI (PCP + DEI + VID)','Double-tagging: outer tag = native VLAN, inner tag = target VLAN'],
- flag:'CTF{vl4n_h0pp1ng_d0ubl3_t4g_99}',
- sol:'Frame: Eth → 0x8100 VID=10 (outer, native) → 0x8100 VID=99 (inner, target) → IPv4 payload. Management VLAN 99 HTTP response body contains flag.',
- widget:'vlan'},
-{id:'CH-10',title:'SNMP Enumeration',pts:400,diff:'hard',tags:['snmp','oid','community'],solves:21,
- desc:'An SNMP-enabled device was discovered on the network with a weak community string. Walk the MIB tree to enumerate device info, interfaces, and the flag stored in a custom OID under the enterprise branch.',
- hints:['Default SNMP community strings: "public", "private", "community"','snmpwalk -v2c -c public <ip> 1.3.6 walks the full MIB tree'],
- flag:'CTF{snmp_m1b_w4lk_c0mmun1ty_str}',
- sol:'snmpwalk -v2c -c public 192.0.2.100 1.3.6.1.4.1.99999 → custom enterprise OID 1.3.6.1.4.1.99999.1.1 = "CTF{snmp_m1b_w4lk_c0mmun1ty_str}"',
- widget:'snmp'}
+// ═══════════════════════════════════════════════════════
+// DECK DATA
+// ═══════════════════════════════════════════════════════
+const DECKS = [
+
+// ── UNIT 1 MATCH DECKS ────────────────────────────────
+{id:'u1-social', unit:'1', title:'Social Engineering Tactics',
+ mode:'match', desc:'Match each tactic to what it exploits or how it works.',
+ pairs:[
+  {left:'Pretexting',      right:'Building a false scenario using researched details to make contact seem legitimate'},
+  {left:'Urgency',         right:'Creating artificial time pressure to force quick action without critical thinking'},
+  {left:'Authority',       right:'Impersonating someone with power (e.g., IT admin, CEO) to compel compliance'},
+  {left:'Consensus',       right:'Claiming "everyone else is doing it" to pressure the target into conforming'},
+  {left:'Scarcity',        right:'Implying limited availability or opportunity to motivate immediate action'},
+  {left:'Elicitation',     right:'Skillfully drawing out sensitive information through seemingly normal conversation'},
+  {left:'Intimidation',    right:'Using fear of negative consequences to override the target\'s judgment'},
+  {left:'Familiarity',     right:'Pretending to know the target personally to lower their defenses'},
+ ]},
+
+{id:'u1-attacks', unit:'1', title:'Attack Type Recognition',
+ mode:'match', desc:'Match each attack scenario to the attack it describes.',
+ pairs:[
+  {left:'Adversary sets up a fake Wi-Fi hotspot matching the coffee shop\'s real SSID',              right:'Evil Twin Attack'},
+  {left:'500 login attempts from one IP against one account in 3 minutes',                           right:'Online Brute-Force Attack'},
+  {left:'Stolen credentials from Site A are tested against user accounts at Site B',                 right:'Credential Stuffing'},
+  {left:'One common password tested against 2,000 different accounts to avoid lockouts',             right:'Password Spraying'},
+  {left:'Attacker drives through neighborhoods cataloguing wireless networks and signal strength',    right:'War Driving'},
+  {left:'AI-generated audio of a CEO\'s voice used in a phone call to authorize a wire transfer',   right:'Deepfake Voice Attack'},
+  {left:'AI crafts a grammatically perfect, personalized phishing email at scale',                   right:'AI-Enhanced Phishing'},
+  {left:'User\'s traffic flows through the corporate network even when visiting personal sites',     right:'Full-Tunnel VPN'},
+ ]},
+
+// ── UNIT 2 MATCH DECKS ────────────────────────────────
+{id:'u2-risk', unit:'2', title:'Risk Assessment Concepts',
+ mode:'match', desc:'Match each term to its precise AP framework definition.',
+ pairs:[
+  {left:'Qualitative Risk Assessment',  right:'Ranks risks using descriptive labels such as High, Medium, and Low rather than dollar values'},
+  {left:'Quantitative Risk Assessment', right:'Assigns numerical monetary values to risks, calculating expected loss and likelihood to prioritize spending'},
+  {left:'Residual Risk',                right:'The risk remaining after avoidance, transference, and mitigation controls have been applied'},
+  {left:'Risk Transference',            right:'Shifting the financial burden of a risk to another party, such as purchasing cyber insurance'},
+  {left:'Risk Avoidance',               right:'Stopping the activity that creates the risk entirely rather than implementing controls around it'},
+  {left:'Risk Acceptance',              right:'Consciously deciding to tolerate a risk because the cost of mitigation exceeds the projected loss'},
+  {left:'Threat',                       right:'Any circumstance or event — human or natural — with the potential to compromise an asset'},
+  {left:'Vulnerability',                right:'A weakness in a system, policy, or process that a threat can exploit to cause harm'},
+ ]},
+
+{id:'u2-controls', unit:'2', title:'Control Type vs. Function',
+ mode:'sort', desc:'Sort each security control into its correct classification.',
+ categories:[
+  {id:'prev', name:'Preventative', color:'#00d4c8'},
+  {id:'det',  name:'Detective',    color:'#f5a623'},
+  {id:'corr', name:'Corrective',   color:'#00c864'},
+ ],
+ items:[
+  {text:'Firewall with deny-all rules',         category:'prev'},
+  {text:'Security camera recording footage',    category:'det'},
+  {text:'NIDS generating alerts',               category:'det'},
+  {text:'MFA login requirement',                category:'prev'},
+  {text:'Restoring from encrypted backup',      category:'corr'},
+  {text:'Badge access control on server room',  category:'prev'},
+  {text:'Motion sensor triggering alert',       category:'det'},
+  {text:'Incident response and recovery plan',  category:'corr'},
+  {text:'Security awareness training',          category:'prev'},
+  {text:'Anti-malware quarantine action',       category:'corr'},
+  {text:'SIEM correlation alert',               category:'det'},
+  {text:'Acceptable use policy',                category:'prev'},
+ ]},
+
+{id:'u2-physical', unit:'2', title:'Physical Attack Types',
+ mode:'sort', desc:'Sort each scenario into the correct physical attack category.',
+ categories:[
+  {id:'pig',  name:'Piggybacking',   color:'#e74c3c'},
+  {id:'tail', name:'Tailgating',     color:'#e67e22'},
+  {id:'shldr',name:'Shoulder Surfing',color:'#9b59b6'},
+  {id:'dump', name:'Dumpster Diving', color:'#3498db'},
+ ],
+ items:[
+  {text:'Adversary follows an employee through a badge door without their knowledge',                            category:'tail'},
+  {text:'Employee holds the door open for someone carrying boxes, thinking they are a vendor',                   category:'pig'},
+  {text:'Adversary uses a small camera to record a user entering their PIN at an ATM',                           category:'shldr'},
+  {text:'Adversary searches trash bins near the office and finds printed network diagrams',                      category:'dump'},
+  {text:'Adversary glances over a worker\'s shoulder at a coffee shop to read their password',                   category:'shldr'},
+  {text:'Adversary recovers shredded documents and reassembles them to find employee names',                     category:'dump'},
+  {text:'Unauthorized person sneaks in behind an employee who badges through a door',                            category:'tail'},
+  {text:'Adversary convinces receptionist to buzz them in by claiming to be from IT support',                    category:'pig'},
+ ]},
+
+{id:'u2-cia', unit:'2', title:'CIA Triad — Which Property?',
+ mode:'sort', desc:'Sort each scenario by which CIA property is primarily violated.',
+ categories:[
+  {id:'conf', name:'Confidentiality', color:'#9b59b6'},
+  {id:'integ', name:'Integrity',      color:'#e67e22'},
+  {id:'avail', name:'Availability',   color:'#e74c3c'},
+ ],
+ items:[
+  {text:'Ransomware encrypts all files; users cannot open anything',                                     category:'avail'},
+  {text:'Adversary reads unencrypted customer records on a stolen laptop',                               category:'conf'},
+  {text:'Attacker modifies financial transaction amounts in a database',                                 category:'integ'},
+  {text:'DDoS attack takes down a hospital\'s scheduling system for 6 hours',                           category:'avail'},
+  {text:'Malware alters log files to hide evidence of the breach',                                      category:'integ'},
+  {text:'Employee emails a spreadsheet of 50,000 customer SSNs to a personal account',                  category:'conf'},
+  {text:'Power outage shuts down the data center; no UPS is in place',                                  category:'avail'},
+  {text:'Adversary intercepts and reads HTTPS traffic via a misconfigured certificate',                  category:'conf'},
+  {text:'SQL injection returns data the app was never supposed to expose',                               category:'conf'},
+  {text:'Wiper malware destroys all data on domain-joined machines',                                     category:'avail'},
+ ]},
+
+// ── UNIT 3 MATCH DECKS ────────────────────────────────
+{id:'u3-attacks', unit:'3', title:'Network Attack Identification',
+ mode:'match', desc:'Match each attack description to its correct name.',
+ pairs:[
+  {left:'Sends forged ARP packets to corrupt the gateway\'s IP-to-MAC mapping, enabling man-in-the-middle',  right:'ARP Poisoning'},
+  {left:'Floods a switch with thousands of unique fake MAC addresses until it enters broadcast mode',          right:'MAC Flooding'},
+  {left:'Plants a fake DNS record redirecting legitimate domain traffic to a malicious site',                  right:'DNS Poisoning'},
+  {left:'Uses IP spoofing to send ICMP requests to a broadcast address, amplifying traffic toward a victim',   right:'Smurf Attack'},
+  {left:'Rogue wireless AP broadcasts the same SSID as a legitimate network to intercept user traffic',        right:'Evil Twin Attack'},
+  {left:'Plugging an unauthorized device into an open switch port to join the internal LAN',                   right:'Open Switch Port Exploit'},
+  {left:'Wireless frames extend beyond the physical building, allowing external capture attempts',              right:'Signal Bleed Vulnerability'},
+  {left:'Employee at home connects to corporate network while personal browsing uses local ISP simultaneously', right:'Split Tunneling Risk'},
+ ]},
+
+{id:'u3-seg', unit:'3', title:'Network Segmentation Concepts',
+ mode:'match', desc:'Match each term to its correct definition.',
+ pairs:[
+  {left:'VLAN',           right:'Logical separation of devices on the same physical switch infrastructure using switch configuration'},
+  {left:'Subnetting',     right:'Divides a network by IP addressing so a breach on one segment cannot automatically reach another'},
+  {left:'Screened Subnet (DMZ)', right:'A lower-security zone between the internet and internal network hosting public-facing services'},
+  {left:'Port Security',  right:'Limits the number of MAC addresses on a switch port, preventing MAC flooding attacks'},
+  {left:'Stateless Firewall',  right:'Filters packets based only on header fields with no memory of prior packets or connection state'},
+  {left:'Stateful Firewall',   right:'Tracks the state of active connections and can filter based on whether traffic belongs to an established session'},
+  {left:'NGFW',           right:'Combines stateless and stateful filtering with deep packet inspection and application-layer identification'},
+  {left:'ACL',            right:'An ordered list of rules checked sequentially; the first matching rule is executed and no further rules are evaluated'},
+ ]},
+
+{id:'u3-detect', unit:'3', title:'Detection Tools — NIDS vs NIPS vs SIEM',
+ mode:'sort', desc:'Sort each capability into the tool that provides it.',
+ categories:[
+  {id:'nids', name:'NIDS',  color:'#3498db'},
+  {id:'nips', name:'NIPS',  color:'#e74c3c'},
+  {id:'siem', name:'SIEM',  color:'#9b59b6'},
+ ],
+ items:[
+  {text:'Detects a port scan and generates an alert but takes no blocking action',         category:'nids'},
+  {text:'Automatically blocks a source IP launching a brute-force attack',                  category:'nips'},
+  {text:'Correlates firewall, NIDS, and endpoint logs to detect a multi-stage attack pattern', category:'siem'},
+  {text:'Closes port 22 automatically when SSH brute-force is detected',                   category:'nips'},
+  {text:'Identifies SQL injection in HTTP traffic and raises an analyst alert',             category:'nids'},
+  {text:'Provides a single dashboard showing attack patterns across all log sources',       category:'siem'},
+  {text:'Can reject specific protocols when anomalous behavior is detected',                category:'nips'},
+  {text:'Collects and indexes logs from 50 different network devices for analysis',         category:'siem'},
+  {text:'Monitors network traffic in real time but relies on human response to alerts',    category:'nids'},
+ ]},
+
+// ── UNIT 4 MATCH DECKS ────────────────────────────────
+{id:'u4-malware', unit:'4', title:'Malware Type Identification',
+ mode:'match', desc:'Match each behavior description to the malware type.',
+ pairs:[
+  {left:'Self-replicates across the network from device to device without any user interaction',                           right:'Worm'},
+  {left:'Appears to be a legitimate useful app while secretly opening a remote control channel to an adversary',           right:'Remote Access Trojan (RAT)'},
+  {left:'Encrypts all files on the device and displays a payment demand with a countdown timer',                           right:'Ransomware'},
+  {left:'Lives entirely in RAM using legitimate Windows tools like PowerShell; leaves no files on disk',                   right:'Fileless Malware'},
+  {left:'Embeds in the OS kernel and makes itself and its processes invisible to all system monitoring tools',              right:'Rootkit'},
+  {left:'Secretly records every keystroke including passwords and credit card numbers typed by the user',                  right:'Keylogger'},
+  {left:'Monitors user activity and transmits browsing behavior and personal data to an external server',                  right:'Spyware'},
+  {left:'Activated when the infected file is opened; requires user action to spread to other devices',                     right:'Virus'},
+ ]},
+
+{id:'u4-passwords', unit:'4', title:'Password Attack & Defense Concepts',
+ mode:'match', desc:'Match each term to its AP framework definition.',
+ pairs:[
+  {left:'Salting',             right:'Adding unique random bits to each password before hashing so identical passwords produce different stored hash values'},
+  {left:'Rainbow Table Attack',right:'Using precomputed hash-to-plaintext mappings to instantly reverse unsalted password hashes from a stolen database'},
+  {left:'Credential Stuffing', right:'Testing username/password pairs stolen from one site against other services, exploiting password reuse'},
+  {left:'Offline Password Attack', right:'Running cracking tools directly against a stolen hash database with no rate limiting from the target system'},
+  {left:'Password Spraying',   right:'Testing one common password against many accounts to stay below per-account lockout thresholds'},
+  {left:'False Positive',      right:'A security system incorrectly flags legitimate activity as malicious, wasting analyst time on non-threats'},
+  {left:'False Negative',      right:'A security system fails to detect actual malicious activity, allowing the attack to proceed unnoticed'},
+  {left:'Hash Collision',      right:'Two different inputs producing the same hash output, undermining the function\'s integrity; why MD5/SHA-1 are deprecated'},
+ ]},
+
+{id:'u4-auth', unit:'4', title:'Authentication Factors — Which Type?',
+ mode:'sort', desc:'Sort each authentication example into its factor category.',
+ categories:[
+  {id:'know',  name:'Knowledge (Something You Know)', color:'#00d4c8'},
+  {id:'have',  name:'Possession (Something You Have)', color:'#f5a623'},
+  {id:'are',   name:'Inherence (Something You Are)',   color:'#9b59b6'},
+  {id:'loc',   name:'Location Factor',                  color:'#3498db'},
+ ],
+ items:[
+  {text:'Password',                                        category:'know'},
+  {text:'Fingerprint scan',                                category:'are'},
+  {text:'Hardware security key (YubiKey)',                  category:'have'},
+  {text:'Retina scan',                                     category:'are'},
+  {text:'One-time code from an authenticator app',         category:'have'},
+  {text:'Security question answer',                        category:'know'},
+  {text:'Voice recognition biometric',                     category:'are'},
+  {text:'Login blocked because IP is outside the US',      category:'loc'},
+  {text:'Smart card with embedded certificate',            category:'have'},
+  {text:'PIN code',                                        category:'know'},
+  {text:'Facial recognition',                              category:'are'},
+  {text:'Login flagged because it originates from Singapore when user always logs in from Chicago', category:'loc'},
+ ]},
+
+{id:'u4-ioc', unit:'4', title:'Indicator of Compromise (IoC) Categories',
+ mode:'sort', desc:'Sort each IoC into its correct category from the AP framework.',
+ categories:[
+  {id:'file',  name:'File-Based IoC',     color:'#e67e22'},
+  {id:'host',  name:'Host-Based IoC',     color:'#e74c3c'},
+  {id:'behav', name:'Behavior-Based IoC', color:'#9b59b6'},
+ ],
+ items:[
+  {text:'Hash of a discovered file matches a known ransomware signature in threat intelligence',    category:'file'},
+  {text:'New service "svchost32.exe" appears in startup that wasn\'t installed by IT',              category:'host'},
+  {text:'User account logs in at 3 AM on a Sunday for the first time in 6 months',                 category:'behav'},
+  {text:'Windows Defender was disabled without any change ticket being filed',                      category:'host'},
+  {text:'An executable file\'s SHA-256 hash does not match the vendor\'s published checksum',      category:'file'},
+  {text:'Unusual outbound data transfer of 4 GB to an external IP at 2 AM',                        category:'behav'},
+  {text:'An unauthorized application is detected in the installed software list',                   category:'host'},
+  {text:'847 records accessed in one session when normal usage is 5–10 per day',                   category:'behav'},
+ ]},
+
+// ── UNIT 5 MATCH DECKS ────────────────────────────────
+{id:'u5-access', unit:'5', title:'Access Control Models',
+ mode:'match', desc:'Match each model to its defining characteristic.',
+ pairs:[
+  {left:'DAC — Discretionary Access Control',   right:'The resource owner decides who can access their files; access is based on the owner\'s discretion'},
+  {left:'MAC — Mandatory Access Control',        right:'An external administrator assigns clearance levels to subjects and classification labels to objects; users cannot override them'},
+  {left:'RBAC — Role-Based Access Control',      right:'Every user is assigned a role, and roles define which objects they can access; permission follows the role, not the individual'},
+  {left:'RuBAC — Rule-Based Access Control',     right:'Access is determined by a set of context-aware rules such as time of day, transaction amount, or IP location'},
+  {left:'Bell-LaPadula — Simple Security Property', right:'"No read up" — a subject cannot read documents classified above their clearance level'},
+  {left:'Principle of Least Privilege',          right:'Each entity is granted exactly the access needed for their function and nothing more'},
+  {left:'Need-to-Know',                          right:'Even users with sufficient clearance can only access data directly relevant to their current assignment'},
+  {left:'Separation of Duties',                  right:'Critical tasks are divided so no single person can complete a sensitive action alone without oversight'},
+ ]},
+
+{id:'u5-crypto', unit:'5', title:'Cryptography Concepts',
+ mode:'match', desc:'Match each concept to its AP-precise definition.',
+ pairs:[
+  {left:'Symmetric Encryption',   right:'The same key is used for both encryption and decryption; fast and efficient for bulk data (e.g., AES)'},
+  {left:'Asymmetric Encryption',  right:'Uses a mathematically linked key pair — a public key encrypts, only the paired private key decrypts (e.g., RSA)'},
+  {left:'Keyspace',               right:'The total number of possible key values for a given algorithm; larger keyspace means longer average brute-force time'},
+  {left:'Digital Signature',      right:'A sender encrypts a hash of their message with their private key, allowing any recipient to verify authenticity using the public key'},
+  {left:'Block Cipher',           right:'Encrypts fixed-size blocks of data (e.g., AES processes 128-bit blocks) producing one output block per input block'},
+  {left:'Public Key Infrastructure (PKI)', right:'The system of CAs, certificates, and policies that verifies the authenticity of public keys in asymmetric cryptography'},
+  {left:'Key-Length Comparison Rule', right:'Bit-length comparison is only valid between keys for the same algorithm; RSA-2048 is not equivalent to AES-2048 in security strength'},
+  {left:'Deprecated Hash Function', right:'A hash algorithm (e.g., MD5, SHA-1) abandoned because efficient collision-forcing algorithms have been discovered for it'},
+ ]},
+
+{id:'u5-vulns', unit:'5', title:'Application Vulnerability Types',
+ mode:'sort', desc:'Sort each attack indicator or payload into the vulnerability type it exploits.',
+ categories:[
+  {id:'sqli',  name:'SQL Injection',       color:'#e74c3c'},
+  {id:'xss',   name:'Cross-Site Scripting (XSS)', color:'#f5a623'},
+  {id:'dir',   name:'Directory Traversal', color:'#9b59b6'},
+  {id:'buf',   name:'Buffer Overflow',     color:'#3498db'},
+ ],
+ items:[
+  {text:'Input: \' OR \'1\'=\'1\' --',                                                 category:'sqli'},
+  {text:'URL: /images/../../../etc/shadow',                                              category:'dir'},
+  {text:'Input: <script>document.cookie<\/script> in a comment field',                   category:'xss'},
+  {text:'8,192-character string sent in a field that normally accepts 50 characters',   category:'buf'},
+  {text:'UNION SELECT username, password FROM users--',                                  category:'sqli'},
+  {text:'Stored script executes automatically for every visitor to the product page',    category:'xss'},
+  {text:'A 256-byte hostname overwrites adjacent memory and executes attacker code',     category:'buf'},
+  {text:'GET request uses ../ sequences to navigate outside the web directory',          category:'dir'},
+  {text:'User input passed directly into a database query string without sanitization', category:'sqli'},
+  {text:'Script tag in a URL parameter reflects back and runs in the victim\'s browser', category:'xss'},
+ ]},
+
+{id:'u5-detect', unit:'5', title:'Attack Detection from Log Evidence',
+ mode:'match', desc:'Match each log entry or indicator to the attack it reveals.',
+ pairs:[
+  {left:'Log shows single quotes, UNION SELECT, and double-dash (--) in an HTTP request body', right:'SQL Injection Attempt'},
+  {left:'GET request contains sequences of ../ navigating outside the intended web root',       right:'Directory Traversal Attempt'},
+  {left:'User input field contains <script>...<\/script> tags in a forum post',                  right:'Stored XSS Injection'},
+  {left:'Request body contains a field value far exceeding the normal maximum character length', right:'Buffer Overflow Attempt'},
+  {left:'An authenticated admin accesses 600 records in 10 minutes vs. normal 5 per day',       right:'Insider Threat / Behavioral Anomaly'},
+  {left:'A file named "vip_customers.csv" containing fake data is opened by an intern',         right:'Honeypot Triggered'},
+  {left:'A critical config file\'s SHA-256 hash differs from Monday\'s recorded baseline',     right:'File Integrity Violation'},
+  {left:'3 AM login from Singapore IP for account that always logs in from Chicago at 9 AM',    right:'Compromised Credential Indicator'},
+ ]},
+
+// ── SYNTHESIS DECKS ───────────────────────────────────
+{id:'syn-concepts', unit:'2', title:'Key Framework Distinctions',
+ mode:'match', desc:'Match each easily-confused term pair to its distinguishing definition.',
+ pairs:[
+  {left:'False Positive (detection)',    right:'The security system incorrectly flags benign activity as an attack — wasting analyst time'},
+  {left:'False Negative (detection)',    right:'The security system misses a real attack — the threat proceeds undetected'},
+  {left:'Signature-Based Detection',     right:'Compares traffic or files against a database of known attack patterns; fast but blind to zero-days'},
+  {left:'Anomaly-Based Detection',       right:'Compares activity to a baseline of normal behavior; detects novel attacks but generates more false positives'},
+  {left:'Piggybacking',                  right:'The authorized person knowingly lets the adversary in — social engineering is used'},
+  {left:'Tailgating',                    right:'The adversary slips through behind someone without that person\'s awareness or consent'},
+  {left:'Risk Mitigation',               right:'Reducing the likelihood or impact of a risk through security controls — the risk still exists'},
+  {left:'Risk Avoidance',                right:'Eliminating the risky activity entirely rather than adding controls around it'},
+ ]},
+
+{id:'syn-layers', unit:'2', title:'Defense-in-Depth — Which Layer?',
+ mode:'sort', desc:'Sort each security control into its correct defense-in-depth layer.',
+ categories:[
+  {id:'hum',  name:'Human',       color:'#c39bd3'},
+  {id:'phys', name:'Physical',    color:'#f0b27a'},
+  {id:'net',  name:'Network',     color:'#85c1e9'},
+  {id:'dev',  name:'Device',      color:'#c891ff'},
+  {id:'app',  name:'Application', color:'#f1948a'},
+  {id:'dat',  name:'Data',        color:'#76d7a4'},
+ ],
+ items:[
+  {text:'Security awareness training',          category:'hum'},
+  {text:'Badge access control vestibule',       category:'phys'},
+  {text:'Perimeter firewall with deny-all ACL', category:'net'},
+  {text:'Host-based firewall on every laptop',  category:'dev'},
+  {text:'Input validation & parameterized queries', category:'app'},
+  {text:'AES-256 encryption at rest',           category:'dat'},
+  {text:'Security cameras at all entrances',    category:'phys'},
+  {text:'Network VLAN segmentation',            category:'net'},
+  {text:'Anti-malware with automatic updates',  category:'dev'},
+  {text:'Role-based access control (RBAC)',     category:'app'},
+  {text:'Encrypted offsite backups',            category:'dat'},
+  {text:'Acceptable use policy',                category:'hum'},
+ ]},
+
 ];
 
-function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-var solved={};var earned=0;
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let activeDeck = null;
+let correct = 0, wrong = 0, streak = 0, bestStreak = 0;
+let missedItems = [];
+let currentCat = 'all';
 
-function filterCards(diff,btn){
-  document.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');
-  document.querySelectorAll('.card').forEach(function(c){c.style.display=(diff==='all'||c.dataset.diff===diff)?'':'none';});
+// match state
+let selectedLeft = null, selectedRight = null;
+let matchedPairs = new Set();
+let matchLeftOrder = [], matchRightOrder = [];
+
+// sort state
+let sortPlacements = {};  // itemText -> categoryId
+let selectedSortChip = null;
+
+// ═══════════════════════════════════════════════════════
+// SETUP SCREEN
+// ═══════════════════════════════════════════════════════
+function filterCat(cat) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.cat === cat);
+  });
+  renderDeckGrid();
 }
 
-function openModal(idx){
-  var ch=challenges[idx];
-  var h='<div class="mlabel first">DESCRIPTION</div><div class="mdesc">'+esc(ch.desc)+'</div>';
-  h+='<div class="mlabel">HINTS</div>';
-  ch.hints.forEach(function(hi,i){h+='<div class="hint" data-n="'+(i+1)+'">'+esc(hi)+'</div>';});
-  h+='<div class="mlabel">LIVE CHALLENGE</div>'+buildWidget(ch.widget);
-  h+='<div class="mlabel">FLAG</div><div class="flag-box">'+esc(ch.flag)+'</div>';
-  h+='<div class="mlabel">SOLUTION</div><div class="sol">'+esc(ch.sol)+'</div>';
-  document.getElementById('m-title').textContent=ch.id+' — '+ch.title;
-  document.getElementById('m-body').innerHTML=h;
-  document.getElementById('overlay').classList.add('open');
-  if(ch.widget==='icmp')setTimeout(icmpDraw,80);
-  if(ch.widget==='wifi')setTimeout(wifiDraw,80);
-  if(!solved[idx]){solved[idx]=true;earned+=ch.pts;
-    document.getElementById('sc-solved').textContent=Object.keys(solved).length;
-    document.getElementById('sc-earned').textContent=earned;
-    document.querySelector('[data-idx="'+idx+'"]').classList.add('solved');
-  }
-}
+function renderDeckGrid() {
+  const grid = document.getElementById('deck-grid');
+  grid.innerHTML = '';
+  const filtered = DECKS.filter(function(d) {
+    if (currentCat === 'all') return true;
+    if (currentCat === 'match') return d.mode === 'match';
+    if (currentCat === 'sort') return d.mode === 'sort';
+    return d.unit === currentCat;
+  }).sort(function(a, b) {
+    if (a.unit !== b.unit) return a.unit.localeCompare(b.unit);
+    return a.title.localeCompare(b.title);
+  });
+  filtered.forEach(function(deck) {
+    const card = document.createElement('div');
+    card.className = 'deck-card';
+    card.onclick = function() { startDeck(deck.id); };
 
-function closeModal(e){if(!e||e.target===document.getElementById('overlay'))document.getElementById('overlay').classList.remove('open');}
+    const unit = document.createElement('div');
+    unit.className = 'deck-unit';
+    unit.textContent = 'Unit ' + deck.unit;
 
-// ── WIDGET BUILDERS ───────────────────────────────────────────
+    const title = document.createElement('div');
+    title.className = 'deck-title';
+    title.textContent = deck.title;
 
-function buildWidget(w){
-  var h='<div class="widget">';
+    const desc = document.createElement('div');
+    desc.className = 'deck-desc';
+    desc.textContent = deck.desc;
 
-  // CH-01: PCAP Analysis
-  if(w==='pcap'){
-    var pkts=[
-      {no:1,t:'0.000',src:'192.168.1.5',dst:'192.168.1.1',proto:'tcp',flags:'[SYN]',info:'Seq=0 Win=65535 Len=0'},
-      {no:2,t:'0.001',src:'192.168.1.1',dst:'192.168.1.5',proto:'tcp',flags:'[SYN,ACK]',info:'Seq=0 Ack=1 Win=65535'},
-      {no:3,t:'0.001',src:'192.168.1.5',dst:'192.168.1.1',proto:'tcp',flags:'[ACK]',info:'Seq=1 Ack=1'},
-      {no:4,t:'0.002',src:'192.168.1.5',dst:'192.168.1.1',proto:'http',flags:'[PSH,ACK]',info:'GET /flag HTTP/1.0'},
-      {no:5,t:'0.010',src:'192.168.1.1',dst:'192.168.1.5',proto:'http',flags:'[PSH,ACK]',info:'HTTP/1.0 200 OK (text/plain)'},
-      {no:6,t:'0.010',src:'192.168.1.5',dst:'192.168.1.1',proto:'tcp',flags:'[ACK]',info:'Seq=43 Ack=89'},
-      {no:7,t:'0.011',src:'192.168.1.1',dst:'192.168.1.5',proto:'tcp',flags:'[FIN,ACK]',info:'Seq=89 Ack=43'},
-      {no:8,t:'0.012',src:'192.168.1.5',dst:'192.168.1.1',proto:'tcp',flags:'[FIN,ACK]',info:'Seq=43 Ack=90'},
-    ];
-    h+='<div class="wlabel">PACKET LIST — click to inspect</div>';
-    h+='<div id="pcap-list">';
-    var protoColor={'tcp':'proto-tcp','udp':'proto-udp','http':'proto-http','icmp':'proto-icmp','dns':'proto-dns','arp':'proto-arp','ftp':'proto-ftp'};
-    pkts.forEach(function(p,i){
-      h+='<div class="pkt" id="pkt-'+i+'" onclick="pcapSelect('+i+')">'
-        +'<span class="pno">'+p.no+'</span>'
-        +'<span class="ptime">'+p.t+'</span>'
-        +'<span class="psrc">'+p.src+'</span>'
-        +'<span class="pdst">'+p.dst+'</span>'
-        +'<span class="pproto '+(protoColor[p.proto]||'')+'">'+p.proto.toUpperCase()+'</span>'
-        +'<span class="pinfo">'+esc(p.flags+' '+p.info)+'</span>'
-        +'</div>';
-    });
-    h+='</div>';
-    h+='<div class="wlabel mt">DISPLAY FILTER</div>';
-    h+='<input class="winput" id="pcap-filter" placeholder="e.g.  tcp  or  http  or  tcp.stream eq 0">';
-    h+='<div class="wrow"><button class="wbtn" onclick="pcapFilter()">Apply filter</button><button class="wbtn a" onclick="pcapStream()">Follow TCP stream #0</button></div>';
-    h+='<div class="wout show" id="pcap-detail">Click a packet above to inspect its payload.</div>';
-    h+='<div class="wout" id="pcap-r"></div>';
-    window._pcapPkts=pkts;
-  }
+    const meta = document.createElement('div');
+    meta.className = 'deck-meta';
 
-  // CH-02: DNS Tunnel
-  else if(w==='dns_tunnel'){
-    var queries=[
-      {no:1,q:'INFU6S2BJVHU6S2B.tunnel.evil.com',type:'A'},
-      {no:2,q:'JVCM6===.tunnel.evil.com',type:'A'},
-      {no:3,q:'KNCL2RCBJVDE4S2B.tunnel.evil.com',type:'A'},
-      {no:4,q:'KZHU6T2BJVHU63SB.tunnel.evil.com',type:'A'},
-      {no:5,q:'IFCTSRCBJVDE4S2B.tunnel.evil.com',type:'A'},
-      {no:6,q:'JRDU4RSBKVCM6===.tunnel.evil.com',type:'A'},
-    ];
-    h+='<div class="wlabel">DNS QUERIES — suspicious subdomain labels</div>';
-    h+='<div style="background:#000;border:1px solid var(--border)">';
-    queries.forEach(function(q,i){
-      h+='<div class="pkt" onclick="dnsSelect('+i+')">'
-        +'<span class="pno">'+q.no+'</span>'
-        +'<span class="pproto proto-dns">DNS</span>'
-        +'<span class="pinfo" style="color:var(--amber)">Query A '+esc(q.q)+'</span>'
-        +'</div>';
-    });
-    h+='</div>';
-    h+='<div class="wlabel mt">EXTRACTED SUBDOMAIN LABELS</div>';
-    h+='<div class="wcode" id="dns-labels">Click packets above to extract labels...</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="dnsExtract()">Extract all labels</button><button class="wbtn a" onclick="dnsB32Decode()">Base32 decode → flag</button></div>';
-    h+='<div class="wout" id="dns-r"></div>';
-    window._dnsLabels=queries.map(function(q){return q.q.split('.')[0];});
-  }
+    const count = document.createElement('div');
+    count.className = 'deck-count';
+    const n = deck.mode === 'match' ? deck.pairs.length : deck.items.length;
+    count.textContent = n + ' items';
 
-  // CH-03: ARP Poisoning
-  else if(w==='arp'){
-    var arpTable=[
-      {ip:'192.168.1.1',mac:'aa:bb:cc:dd:ee:01',iface:'eth0',type:'static',note:'Default gateway'},
-      {ip:'192.168.1.5',mac:'11:22:33:44:55:66',iface:'eth0',type:'dynamic',note:''},
-      {ip:'192.168.1.10',mac:'77:88:99:aa:bb:cc',iface:'eth0',type:'dynamic',note:''},
-      {ip:'192.168.1.20',mac:'fe:dc:ba:98:76:54',iface:'eth0',type:'dynamic',note:''},
-      {ip:'192.168.1.100',mac:'de:ad:be:ef:00:01',iface:'eth0',type:'dynamic',note:'⚠ DUPLICATE MAC'},
-      {ip:'192.168.1.1',mac:'de:ad:be:ef:00:01',iface:'eth0',type:'dynamic',note:'⚠ GATEWAY SPOOFED'},
-    ];
-    h+='<div class="wlabel">ARP CACHE TABLE</div>';
-    h+='<div style="border:1px solid var(--border)">';
-    h+='<div class="arp-row hdr"><span class="arp-cell">IP Address</span><span class="arp-cell">MAC Address</span><span class="arp-cell">Type</span><span class="arp-cell">Note</span></div>';
-    arpTable.forEach(function(row,i){
-      var sus=row.note.indexOf('⚠')>=0;
-      h+='<div class="arp-row'+(sus?' suspect':'')+'">'
-        +'<span class="arp-cell" style="color:'+(sus?'var(--red)':'var(--green3)')+'">'+row.ip+'</span>'
-        +'<span class="arp-cell" style="color:'+(sus?'var(--red)':'var(--text)')+'">'+row.mac+'</span>'
-        +'<span class="arp-cell" style="color:var(--muted)">'+row.type+'</span>'
-        +'<span class="arp-cell" style="color:'+(sus?'var(--red)':'var(--muted)')+'">'+esc(row.note||'—')+'</span>'
-        +'</div>';
-    });
-    h+='</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="arpAnalyse()">Analyse for duplicate MACs</button><button class="wbtn a" onclick="arpFlag()">Identify attacker + extract flag</button></div>';
-    h+='<div class="wout" id="arp-r"></div>';
-  }
+    const modeBadge = document.createElement('div');
+    modeBadge.className = 'mode-badge ' + (deck.mode === 'match' ? 'mode-match' : 'mode-sort');
+    modeBadge.textContent = deck.mode === 'match' ? '\uD83D\uDD17 Match Pairs' : '\uD83D\uDCCB Sort Categories';
 
-  // CH-04: TCP Handshake
-  else if(w==='tcp'){
-    var tcpPkts=[
-      {no:1,src:'10.0.0.5:54321',dst:'10.0.0.1:80',flags:'SYN',seq:'0x43544600',ack:'0x00000000',info:'ISN set by client'},
-      {no:2,src:'10.0.0.1:80',dst:'10.0.0.5:54321',flags:'SYN+ACK',seq:'0x7b746370',ack:'0x43544601',info:'ISN set by server, ACK=clientISN+1'},
-      {no:3,src:'10.0.0.5:54321',dst:'10.0.0.1:80',flags:'ACK',seq:'0x43544601',ack:'0x7b746371',info:'Handshake complete'},
-    ];
-    h+='<div class="wlabel">TCP THREE-WAY HANDSHAKE PACKETS</div>';
-    tcpPkts.forEach(function(p,i){
-      h+='<div class="pkt" onclick="tcpSelect('+i+')">'
-        +'<span class="pno">'+p.no+'</span>'
-        +'<span class="psrc" style="font-size:10px">'+esc(p.src)+'</span>'
-        +'<span style="color:var(--muted);font-size:10px">→</span>'
-        +'<span class="pdst" style="font-size:10px">'+esc(p.dst)+'</span>'
-        +'<span class="pproto" style="color:var(--blue);min-width:70px">'+p.flags+'</span>'
-        +'<span class="pinfo">'+esc(p.info)+'</span>'
-        +'</div>';
-    });
-    h+='<div class="wlabel mt">STATE MACHINE</div>';
-    h+='<div class="tcp-state" id="tcp-states">';
-    ['CLOSED','SYN_SENT','SYN_RCVD','ESTABLISHED'].forEach(function(s,i){
-      if(i>0)h+='<div class="tcp-arrow">→</div>';
-      h+='<div class="tcp-box" id="tcps-'+i+'">'+s+'</div>';
-    });
-    h+='</div>';
-    h+='<div class="wout show" id="tcp-detail">Click a packet to inspect ISN values and flags.</div>';
-    h+='<div class="wrow"><button class="wbtn a" onclick="tcpDecodeISN()">Decode ISN values as ASCII → flag</button></div>';
-    h+='<div class="wout" id="tcp-r"></div>';
-  }
-
-  // CH-05: ICMP Covert Channel
-  else if(w==='icmp'){
-    h+='<div class="wlabel">ICMP ECHO REQUESTS — payload bytes at offset 16</div>';
-    h+='<canvas id="icmp-canvas" width="660" height="120"></canvas>';
-    h+='<div class="wlabel mt">BYTE STREAM (collected from offset 16 of each ping)</div>';
-    h+='<div class="bit-stream" id="icmp-bytes"></div>';
-    h+='<div style="font-size:11px;color:var(--muted);margin-top:6px" id="icmp-chars"></div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="icmpStep()">Step through pings one by one</button><button class="wbtn a" onclick="icmpDecodeAll()">Decode all → ASCII flag</button></div>';
-    h+='<div class="wout" id="icmp-r"></div>';
-    window._icmpFlag='CTF{1cmp_p4yl04d_c0v3rt_ch4nn3l}';
-    window._icmpStep=0;
-  }
-
-  // CH-06: FTP Recovery
-  else if(w==='ftp'){
-    var ftpPkts=[
-      {no:1,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'220 ProFTPD 1.3.5 Server ready.'},
-      {no:2,src:'10.0.0.1:54230',dst:'192.168.1.5:21',data:'USER admin'},
-      {no:3,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'331 Password required for admin.'},
-      {no:4,src:'10.0.0.1:54230',dst:'192.168.1.5:21',data:'PASS s3cr3t_ftp'},
-      {no:5,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'230 User admin logged in.'},
-      {no:6,src:'10.0.0.1:54230',dst:'192.168.1.5:21',data:'RETR flag.txt'},
-      {no:7,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'150 Opening ASCII mode data connection.'},
-      {no:8,src:'192.168.1.5:20',dst:'10.0.0.1:54231',data:'[DATA] CTF{ftp_cl34rt3xt_cr3d3nt14ls}'},
-      {no:9,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'226 Transfer complete.'},
-    ];
-    h+='<div class="wlabel">FTP SESSION — control channel (port 21) + data channel (port 20)</div>';
-    h+='<div style="background:#000;border:1px solid var(--border);max-height:220px;overflow-y:auto">';
-    ftpPkts.forEach(function(p,i){
-      var isData=p.src.indexOf(':20')>=0;
-      var isCred=p.data.indexOf('PASS ')===0||p.data.indexOf('USER ')===0;
-      var isFlag=p.data.indexOf('CTF{')>=0;
-      h+='<div class="pkt" onclick="ftpSelect('+i+')">'
-        +'<span class="pno">'+p.no+'</span>'
-        +'<span class="pproto '+(isData?'proto-http':'proto-ftp')+'">'+( isData?'DATA':'FTP')+'</span>'
-        +'<span class="pinfo" style="color:'+(isFlag?'var(--green)':isCred?'var(--red)':'var(--muted)')+'">'+esc(p.data)+'</span>'
-        +'</div>';
-    });
-    h+='</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="ftpCreds()">Extract credentials</button><button class="wbtn a" onclick="ftpData()">Follow data channel → read file</button></div>';
-    h+='<div class="wout" id="ftp-r"></div>';
-    window._ftpPkts=ftpPkts;
-  }
-
-  // CH-07: BGP Hijack
-  else if(w==='bgp'){
-    h+='<div class="wlabel">BGP ROUTING TABLE — before and after hijack</div>';
-    h+='<div class="wcode" id="bgp-table">'
-      +'BEFORE:\n'
-      +'  Network          Next Hop        AS_PATH         Origin\n'
-      +'  203.0.113.0/24   10.0.0.1        AS64512         IGP\n'
-      +'  198.51.100.0/24  10.0.0.1        AS64512 64500   IGP\n\n'
-      +'AFTER (UPDATE received from 10.0.0.99):\n'
-      +'  203.0.113.0/24   10.0.0.1        AS64512         IGP\n'
-      +'  <span style="color:var(--red)">203.0.113.128/25  10.0.0.99       AS65001 64512   IGP  ← NEW</span>\n'
-      +'  198.51.100.0/24  10.0.0.1        AS64512 64500   IGP\n'
-      +'</div>';
-    h+='<div class="wlabel mt">BGP UPDATE MESSAGE</div>';
-    h+='<div class="wcode">'
-      +'BGP UPDATE from peer 10.0.0.99 (AS65001)\n'
-      +'  WITHDRAWN routes: (none)\n'
-      +'  Path attributes:\n'
-      +'    ORIGIN: IGP\n'
-      +'    AS_PATH: 65001 64512\n'
-      +'    NEXT_HOP: 10.0.0.99\n'
-      +'  NLRI (announced prefixes):\n'
-      +'    <span style="color:var(--red)">203.0.113.128/25  ← more-specific hijack</span>'
-      +'</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="bgpAnalyse()">Analyse hijack (longest-prefix match)</button><button class="wbtn a" onclick="bgpFlag()">Extract AS + prefix → flag</button></div>';
-    h+='<div class="wout" id="bgp-r"></div>';
-  }
-
-  // CH-08: 802.11 Deauth
-  else if(w==='wifi'){
-    h+='<div class="wlabel">802.11 FRAME TIMELINE</div>';
-    h+='<canvas id="wifi-canvas" width="660" height="100"></canvas>';
-    h+='<div class="wlabel mt">DEAUTH FRAME DETAIL</div>';
-    h+='<div class="wcode">'
-      +'Frame 1 of 847 deauth frames:\n'
-      +'  Frame type:    Management (0x00)\n'
-      +'  Subtype:       Deauthentication (0x0C)\n'
-      +'  Src MAC:       <span style="color:var(--red)">de:ad:00:00:00:01</span>  ← spoofed\n'
-      +'  Dst MAC:       ff:ff:ff:ff:ff:ff  (broadcast)\n'
-      +'  BSSID:         <span style="color:var(--amber)">aa:bb:cc:dd:ee:ff</span>  ← target AP\n'
-      +'  Reason code:   0x0007 (Class 3 frame from nonassoc STA)\n'
-      +'</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="wifiCount()">Count deauth frames by source MAC</button><button class="wbtn a" onclick="wifiBeacon()">Parse beacon frames → vendor IE</button></div>';
-    h+='<div class="wout" id="wifi-r"></div>';
-  }
-
-  // CH-09: VLAN Hopping
-  else if(w==='vlan'){
-    h+='<div class="wlabel">ETHERNET FRAME — double-tagged (hex)</div>';
-    h+='<div class="wcode">'
-      +'Dst MAC:  aa:bb:cc:dd:ee:ff\n'
-      +'Src MAC:  11:22:33:44:55:66\n'
-      +'EtherType: <span style="color:var(--amber)">0x8100</span>  (802.1Q)\n'
-      +'  PCP=0  DEI=0  <span style="color:var(--amber)">VID=10</span>  (outer tag — native VLAN)\n'
-      +'EtherType: <span style="color:var(--red)">0x8100</span>  (802.1Q again)\n'
-      +'  PCP=0  DEI=0  <span style="color:var(--red)">VID=99</span>  (inner tag — TARGET VLAN)\n'
-      +'EtherType: 0x0800  (IPv4)\n'
-      +'Payload:  [IPv4 → TCP → HTTP payload]\n'
-      +'</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="vlanStrip()">Strip outer tag → reveal inner tag</button><button class="wbtn a" onclick="vlanPayload()">Read VLAN 99 HTTP payload → flag</button></div>';
-    h+='<div class="wout" id="vlan-r"></div>';
-  }
-
-  // CH-10: SNMP
-  else if(w==='snmp'){
-    h+='<div class="wlabel">SNMP WALK — community string tester</div>';
-    h+='<div style="display:flex;gap:6px">';
-    h+='<input class="winput" id="snmp-ip" placeholder="Target IP: 192.0.2.100" value="192.0.2.100" style="flex:1">';
-    h+='<input class="winput" id="snmp-comm" placeholder="Community string..." style="flex:1">';
-    h+='</div>';
-    h+='<div class="wrow"><button class="wbtn" onclick="snmpTest()">snmpwalk -v2c -c [community] [ip]</button><button class="wbtn a" onclick="snmpAuto()">Try default community strings</button></div>';
-    h+='<div class="wout" id="snmp-r1"></div>';
-    h+='<div id="snmp-row2" style="display:none"><div class="wrow"><button class="wbtn c" onclick="snmpWalk()">Walk enterprise OID 1.3.6.1.4.1.99999</button></div></div>';
-    h+='<div class="wout" id="snmp-r2"></div>';
-  }
-
-  h+='</div>';
-  return h;
-}
-
-// ── WIDGET HANDLERS ───────────────────────────────────────────
-
-// CH-01 PCAP
-var pcapPayloads={
-  3:{label:'Packet 4 — HTTP Request',text:'GET /flag HTTP/1.0\nHost: 192.168.1.1\nUser-Agent: curl/7.85.0\nAccept: */*\n'},
-  4:{label:'Packet 5 — HTTP Response',text:'HTTP/1.0 200 OK\nContent-Type: text/plain\nContent-Length: 31\n\nCTF{pcap_tcp_str34m_r3c0v3r3d}',flag:true},
-};
-function pcapSelect(i){
-  document.querySelectorAll('.pkt').forEach(function(p,j){p.classList.toggle('sel',j===i);});
-  var d=document.getElementById('pcap-detail');
-  if(pcapPayloads[i]){
-    d.className='wout '+(pcapPayloads[i].flag?'ok ':'')+'show';
-    d.textContent=pcapPayloads[i].label+':\n\n'+pcapPayloads[i].text;
-  }else{
-    var p=window._pcapPkts[i];
-    d.className='wout show';d.textContent='Packet '+p.no+'\n'+p.src+' → '+p.dst+'\nFlags: '+p.flags+'\n'+p.info+'\n(No application-layer payload)';
-  }
-}
-function pcapFilter(){
-  var f=document.getElementById('pcap-filter').value.toLowerCase().trim();
-  var r=document.getElementById('pcap-r');
-  if(f==='http'||f.indexOf('stream')>=0){
-    r.className='wout ok show';
-    r.textContent='Filter "'+f+'" matched packets 4 & 5:\n\nPacket 4: GET /flag HTTP/1.0\nPacket 5: HTTP/1.0 200 OK → CTF{pcap_tcp_str34m_r3c0v3r3d}';}
-  else if(f){r.className='wout show';r.textContent='Filter "'+f+'" applied.\nTry: http  or  tcp.stream eq 0';}
-  else{r.className='wout err show';r.textContent='Enter a display filter.';}
-}
-function pcapStream(){
-  var r=document.getElementById('pcap-r');
-  r.className='wout ok show';
-  r.innerHTML='<span style="color:var(--green3)">TCP Stream #0 (192.168.1.5:54321 ↔ 192.168.1.1:80)</span>\n\n'
-    +'<span style="color:var(--blue)">→ GET /flag HTTP/1.0\n   Host: 192.168.1.1\n\n</span>'
-    +'<span style="color:var(--green)">← HTTP/1.0 200 OK\n   Content-Type: text/plain\n\n   CTF{pcap_tcp_str34m_r3c0v3r3d}</span>';
-}
-
-// CH-02 DNS Tunnel
-function dnsSelect(i){
-  var labels=window._dnsLabels||[];
-  var el=document.getElementById('dns-labels');
-  el.textContent='Subdomain label from query '+( i+1)+': '+labels[i];
-}
-function dnsExtract(){
-  var labels=window._dnsLabels||[];
-  var el=document.getElementById('dns-labels');
-  el.textContent='All extracted labels:\n'+labels.join('\n')+'\n\nConcatenated: '+labels.join('');
-}
-function dnsB32Decode(){
-  var r=document.getElementById('dns-r');
-  // Simulated decode — pre-computed answer
-  r.className='wout ok show';
-  r.textContent='Concatenated labels:\nINFU6S2BJVHU6S2BJVCM6===...\n\nBase32 decode (RFC 4648):\nCTF{dns_tunn3l_b4s332_3xf1l}';
-}
-
-// CH-03 ARP
-function arpAnalyse(){
-  var r=document.getElementById('arp-r');
-  r.className='wout show';
-  r.textContent='Scanning ARP cache for duplicate MACs...\n\nDuplicate MAC detected: de:ad:be:ef:00:01\n  → Maps to 192.168.1.100 (attacker)\n  → Also maps to 192.168.1.1 (gateway) ← SPOOFED\n\nThis is ARP cache poisoning / MITM attack.\nAll traffic to the gateway is being intercepted by 192.168.1.100.';
-}
-function arpFlag(){
-  var r=document.getElementById('arp-r');
-  r.className='wout ok show';
-  r.textContent='Attacker MAC:  de:ad:be:ef:00:01\nAttacker IP:   192.168.1.100\nVictim (spoofed): 192.168.1.1 (gateway)\n\nUnsolicited ARP replies: 1,247 frames\nAttack type: Gratuitous ARP poisoning\n\nFlag: CTF{4rp_p01s0n_m4c_sp00f_d3t3ct}';
-}
-
-// CH-04 TCP Handshake
-var tcpDetails=[
-  {state:0,text:'SYN — Client initiates connection\n\nTCP Flags:    SYN (0x002)\nSrc: 10.0.0.5:54321 → Dst: 10.0.0.1:80\nSeq (Client ISN): 0x43544600\nAck: 0x00000000\nWindow: 65535\n\nNote: ISN 0x43544600 → bytes: 43 54 46 00 → ASCII "CTF\\0"'},
-  {state:1,text:'SYN+ACK — Server acknowledges, sets own ISN\n\nTCP Flags:    SYN + ACK (0x012)\nSrc: 10.0.0.1:80 → Dst: 10.0.0.5:54321\nSeq (Server ISN): 0x7b746370\nAck: 0x43544601  (clientISN + 1)\n\nNote: ISN 0x7b746370 → bytes: 7b 74 63 70 → ASCII "{tcp"'},
-  {state:2,text:'ACK — Handshake complete\n\nTCP Flags:    ACK (0x010)\nSrc: 10.0.0.5:54321 → Dst: 10.0.0.1:80\nSeq: 0x43544601\nAck: 0x7b746371  (serverISN + 1)\n\nConnection ESTABLISHED — data transfer can begin.'}
-];
-function tcpSelect(i){
-  var d=document.getElementById('tcp-detail');
-  d.className='wout show';d.textContent=tcpDetails[i].text;
-  document.querySelectorAll('.tcp-box').forEach(function(b,j){
-    b.className='tcp-box'+(j<=tcpDetails[i].state?' active':'')+(j<tcpDetails[i].state?' done':'');
+    meta.appendChild(count);
+    meta.appendChild(modeBadge);
+    card.appendChild(unit);
+    card.appendChild(title);
+    card.appendChild(desc);
+    card.appendChild(meta);
+    grid.appendChild(card);
   });
 }
-function tcpDecodeISN(){
-  var r=document.getElementById('tcp-r');
-  r.className='wout ok show';
-  r.innerHTML='Client ISN: 0x43544600 → 43="C" 54="T" 46="F" 00\n'
-    +'Server ISN: 0x7b746370 → 7b="{" 74="t" 63="c" 70="p"\n'
-    +'Combined ISN bytes (hex→ASCII):\n'
-    +'43 54 46 7b 74 63 70 5f 31 73 6e 5f 63 30 76 33 72 74 5f 63 68 34 6e 6e 33 6c 7d\n\n'
-    +'<span style="color:var(--green)">Decoded: CTF{tcp_1sn_c0v3rt_ch4nn3l}</span>';
+
+// ═══════════════════════════════════════════════════════
+// GAME INIT
+// ═══════════════════════════════════════════════════════
+function startDeck(id) {
+  activeDeck = DECKS.find(function(d) { return d.id === id; });
+  correct = 0; wrong = 0; streak = 0; bestStreak = 0;
+  missedItems = [];
+  document.getElementById('gh-title').textContent = activeDeck.title;
+  document.getElementById('gh-sub').textContent = activeDeck.desc;
+  showScreen('game');
+  if (activeDeck.mode === 'match') initMatch();
+  else initSort();
+  updateHeader();
 }
 
-// CH-05 ICMP Covert Channel
-function icmpDraw(){
-  var c=document.getElementById('icmp-canvas');if(!c)return;
-  var ctx=c.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,660,120);
-  var flag=window._icmpFlag||'';
-  var n=flag.length;
-  var bw=Math.floor(640/n);
-  for(var i=0;i<n;i++){
-    var x=10+i*bw;
-    // draw ping frame
-    ctx.strokeStyle='rgba(0,255,136,0.3)';ctx.lineWidth=1;
-    ctx.strokeRect(x,10,bw-2,80);
-    // draw payload bytes
-    ctx.fillStyle='rgba(0,255,136,0.08)';ctx.fillRect(x+2,12,bw-4,56);
-    // highlight offset 16 byte
-    ctx.fillStyle='rgba(255,170,0,0.5)';ctx.fillRect(x+2,70,bw-4,18);
-    ctx.fillStyle='#ffaa00';ctx.font='bold 9px monospace';
-    var hex=flag.charCodeAt(i).toString(16).padStart(2,'0');
-    ctx.fillText(hex,x+(bw-14)/2,82);
+function updateHeader() {
+  const total = activeDeck.mode === 'match' ? activeDeck.pairs.length : activeDeck.items.length;
+  document.getElementById('score-display').textContent = correct + ' / ' + total;
+  document.getElementById('progress-pill').textContent = correct + ' matched';
+  document.getElementById('game-progress-fill').style.width = (correct / total * 100) + '%';
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  ctx.fillStyle='var(--muted)';ctx.font='9px monospace';
-  ctx.fillStyle='rgba(0,255,136,0.5)';ctx.fillText('← standard ICMP payload (8–15)',10,110);
-  ctx.fillStyle='rgba(255,170,0,0.8)';ctx.fillText('← covert byte @ offset 16',10,108);
-}
-function icmpStep(){
-  var flag=window._icmpFlag||'';
-  var step=window._icmpStep||0;
-  if(step>=flag.length){document.getElementById('icmp-r').className='wout ok show';document.getElementById('icmp-r').textContent='All bytes collected!\nDecoded: '+flag;return;}
-  var byte=flag.charCodeAt(step);
-  var bstream=document.getElementById('icmp-bytes');
-  var d=document.createElement('div');
-  d.className='bit b1';d.style.width='22px';d.style.height='22px';d.style.fontSize='10px';
-  d.textContent=byte.toString(16).padStart(2,'0');d.title=String.fromCharCode(byte);
-  bstream.appendChild(d);
-  var chars=document.getElementById('icmp-chars');
-  chars.textContent='Decoded so far: '+flag.substring(0,step+1);
-  window._icmpStep=step+1;
-}
-function icmpDecodeAll(){
-  var flag=window._icmpFlag||'';
-  var bstream=document.getElementById('icmp-bytes');bstream.innerHTML='';
-  for(var i=0;i<flag.length;i++){
-    var d=document.createElement('div');d.className='bit b1';d.style.width='22px';d.style.height='22px';d.style.fontSize='10px';
-    d.textContent=flag.charCodeAt(i).toString(16).padStart(2,'0');
-    bstream.appendChild(d);
-  }
-  document.getElementById('icmp-chars').textContent='Decoded: '+flag;
-  var r=document.getElementById('icmp-r');r.className='wout ok show';r.textContent='All '+flag.length+' covert bytes extracted from ICMP payloads at offset 16.\nDecoded ASCII: '+flag;
-  window._icmpStep=flag.length;
+  return a;
 }
 
-// CH-06 FTP
-function ftpSelect(i){
-  var pkts=window._ftpPkts||[];var p=pkts[i];if(!p)return;
-  var r=document.getElementById('ftp-r');
-  r.className='wout '+(p.data.indexOf('CTF{')>=0?'ok ':'')+'show';
-  r.textContent='Port: '+(p.src.indexOf(':20')>=0?'20 (data)':'21 (control)')+'\n'+p.src+' → '+p.dst+'\n\n'+p.data;
-}
-function ftpCreds(){
-  var r=document.getElementById('ftp-r');
-  r.className='wout show';
-  r.innerHTML='FTP Control Stream (port 21):\n\n'
-    +'220 ProFTPD 1.3.5 Server ready.\n'
-    +'<span style="color:var(--red)">USER admin</span>\n'
-    +'331 Password required.\n'
-    +'<span style="color:var(--red)">PASS s3cr3t_ftp</span>\n'
-    +'230 User admin logged in.\n\n'
-    +'Credentials recovered:\n  Username: admin\n  Password: s3cr3t_ftp';
-}
-function ftpData(){
-  var r=document.getElementById('ftp-r');
-  r.className='wout ok show';
-  r.textContent='Following data channel (port 20)...\n\nRETR flag.txt\n150 Opening ASCII mode data connection.\n\nFile contents:\nCTF{ftp_cl34rt3xt_cr3d3nt14ls}\n\n226 Transfer complete.';
+// ═══════════════════════════════════════════════════════
+// MATCH MODE
+// ═══════════════════════════════════════════════════════
+function initMatch() {
+  selectedLeft = null; selectedRight = null;
+  matchedPairs = new Set();
+  matchLeftOrder = shuffle(activeDeck.pairs.map(function(p, i) { return i; }));
+  matchRightOrder = shuffle(activeDeck.pairs.map(function(p, i) { return i; }));
+  renderMatch();
 }
 
-// CH-07 BGP
-function bgpAnalyse(){
-  var r=document.getElementById('bgp-r');
-  r.className='wout show';
-  r.textContent='BGP Longest-Prefix Match analysis:\n\nRoute 1: 203.0.113.0/24 via AS64512 (legitimate)\nRoute 2: 203.0.113.128/25 via AS65001 (hijack)\n\nFor destination 203.0.113.200:\n  /24 matches — but /25 is MORE SPECIFIC\n  → Router prefers 203.0.113.128/25\n  → Traffic redirected to AS65001 (attacker)\n\nThis is a BGP prefix hijack attack.';
-}
-function bgpFlag(){
-  var r=document.getElementById('bgp-r');
-  r.className='wout ok show';
-  r.textContent='Hijacking AS:     65001\nHijacked prefix:  203.0.113.128/25\nLegitimate AS:    64512\nLegitimate route: 203.0.113.0/24\n\nAttack type: More-specific prefix announcement\nPeer IP: 10.0.0.99\n\nFlag: CTF{bgp_h1j4ck_4s_pr3f1x_4n4lys1s}';
-}
+function renderMatch() {
+  const area = document.getElementById('game-area');
+  area.innerHTML = '';
 
-// CH-08 WiFi
-function wifiDraw(){
-  var c=document.getElementById('wifi-canvas');if(!c)return;
-  var ctx=c.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,660,100);
-  // draw beacon frames
-  for(var i=0;i<8;i++){
-    ctx.fillStyle='rgba(0,255,136,0.3)';ctx.fillRect(10+i*80,20,30,20);
-    ctx.fillStyle='var(--green3)';ctx.font='8px monospace';ctx.fillText('BEACON',12+i*80,34);
-  }
-  // draw deauth burst
-  ctx.fillStyle='rgba(255,51,68,0.2)';ctx.fillRect(10,55,640,30);
-  ctx.fillStyle='var(--red)';ctx.font='9px monospace';ctx.fillText('847 × DEAUTH frames (src: de:ad:00:00:00:01 → bcast) ← attack',14,74);
-}
-function wifiCount(){
-  var r=document.getElementById('wifi-r');
-  r.className='wout show';
-  r.innerHTML='Frame type filter: wlan.fc.type_subtype == 0x0C\n\nDeauth frame counts by source MAC:\n'
-    +'<span style="color:var(--red)">de:ad:00:00:00:01  →  847 frames  ← ATTACKER</span>\n'
-    +'aa:bb:cc:dd:ee:ff  →  2 frames   (legitimate)\n\n'
-    +'Target BSSID: aa:bb:cc:dd:ee:ff\nReason code: 7 (Class 3 from nonassoc STA)\nAll 847 sent as broadcast — DoS attack.';
-}
-function wifiBeacon(){
-  var r=document.getElementById('wifi-r');
-  r.className='wout ok show';
-  r.textContent='Parsing beacon frame vendor IEs (tag 221)...\n\nOUI 00:50:f2  (Microsoft WPS) — normal\nOUI 00:0c:e7  (Ruckus) — normal\nOUI 00:50:f2  extra data field:\n  Length: 32 bytes\n  Raw: 43 54 46 7b 38 30 32 5f 31 31 5f ...\n  Decoded: CTF{802_11_d34uth_b3ac0n_1nj3ct}';
-}
+  const wrap = document.createElement('div');
+  wrap.className = 'match-wrap anim';
 
-// CH-09 VLAN
-function vlanStrip(){
-  var r=document.getElementById('vlan-r');
-  r.className='wout show';
-  r.innerHTML='Stripping outer 802.1Q tag (VID=10, native VLAN)...\n\n'
-    +'Remaining frame:\n'
-    +'  Dst MAC:   aa:bb:cc:dd:ee:ff\n'
-    +'  Src MAC:   11:22:33:44:55:66\n'
-    +'  EtherType: <span style="color:var(--red)">0x8100</span> (still 802.1Q!)\n'
-    +'    PCP=0  DEI=0  <span style="color:var(--red)">VID=99</span>  ← inner tag\n'
-    +'  EtherType: 0x0800 (IPv4)\n\n'
-    +'Inner tag reveals target VLAN: <span style="color:var(--red)">99 (Management VLAN)</span>\n'
-    +'Double-tag attack successful — frame forwarded into VLAN 99.';
-}
-function vlanPayload(){
-  var r=document.getElementById('vlan-r');
-  r.className='wout ok show';
-  r.textContent='VLAN 99 (Management) HTTP payload:\n\nGET /mgmt/status HTTP/1.1\nHost: 10.99.0.1\n\nHTTP/1.1 200 OK\nContent-Type: text/plain\n\nDevice: Core-Switch-01\nFirmware: 4.2.1\nFlag: CTF{vl4n_h0pp1ng_d0ubl3_t4g_99}';
-}
+  const instr = document.createElement('div');
+  instr.className = 'match-instruction';
+  instr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/><\/svg> Select an item from the left, then its match on the right';
+  wrap.appendChild(instr);
 
-// CH-10 SNMP
-function snmpTest(){
-  var ip=document.getElementById('snmp-ip').value.trim()||'192.0.2.100';
-  var comm=document.getElementById('snmp-comm').value.trim();
-  var r=document.getElementById('snmp-r1');
-  if(!comm){r.className='wout err show';r.textContent='Enter a community string.';return;}
-  if(comm==='public'||comm==='private'){
-    r.className='wout show';
-    r.textContent='snmpwalk -v2c -c '+comm+' '+ip+' 1.3.6.1.2.1.1\n\nSNMPv2-MIB::sysDescr.0 = Linux netprobe-device 5.15.0\nSNMPv2-MIB::sysObjectID.0 = .1.3.6.1.4.1.99999\nSNMPv2-MIB::sysUpTime.0 = 432109\nSNMPv2-MIB::sysContact.0 = admin@corp.local\nSNMPv2-MIB::sysName.0 = netprobe-device\nSNMPv2-MIB::sysLocation.0 = Server Room B\n\nCommunity "'+comm+'" accepted!';
-    document.getElementById('snmp-row2').style.display='block';
-  }else{
-    r.className='wout err show';r.textContent='snmpwalk -v2c -c '+comm+' '+ip+'\nTimeout: no response\n(Wrong community string — try defaults)';
-  }
-}
-function snmpAuto(){
-  var r=document.getElementById('snmp-r1');r.className='wout show';
-  var tries=['community','admin','manager','public','private'];var i=0;r.textContent='';
-  var t=setInterval(function(){
-    r.textContent+='Trying "'+tries[i]+'"... '+(tries[i]==='public'?'SUCCESS!\n':'timeout\n');
-    if(tries[i]==='public'){clearInterval(t);r.className='wout show';document.getElementById('snmp-row2').style.display='block';
-      r.textContent+='Community string: public\nDevice responded — SNMP walk available.';}
-    i++;if(i>=tries.length)clearInterval(t);
-  },280);
-  document.getElementById('snmp-comm').value='public';
-}
-function snmpWalk(){
-  var r=document.getElementById('snmp-r2');
-  r.className='wout ok show';
-  r.textContent='snmpwalk -v2c -c public 192.0.2.100 1.3.6.1.4.1.99999\n\n'
-    +'enterprises.99999.1.0 = STRING: "NetProbe Device Controller"\n'
-    +'enterprises.99999.1.1 = STRING: "CTF{snmp_m1b_w4lk_c0mmun1ty_str}"\n'
-    +'enterprises.99999.2.0 = INTEGER: 42\n'
-    +'enterprises.99999.3.0 = STRING: "firmware-v2.1.0"\n\n'
-    +'Flag found at OID 1.3.6.1.4.1.99999.1.1!';
-}
+  const layout = document.createElement('div');
+  layout.className = 'match-layout';
 
-// ── INIT ──────────────────────────────────────────────────────
-
-window.addEventListener('DOMContentLoaded',function(){
-  var total=0;challenges.forEach(function(c){total+=c.pts;});
-  document.getElementById('sc-total').textContent=challenges.length;
-  document.getElementById('sc-pts').textContent=total;
-  var g=document.getElementById('grid');
-  challenges.forEach(function(ch,idx){
-    var dTag=ch.diff==='easy'?'<span class="tag te">EASY</span>':ch.diff==='medium'?'<span class="tag tm">MEDIUM</span>':'<span class="tag th">HARD</span>';
-    var tTags=ch.tags.map(function(t){return '<span class="tag ti">'+esc(t)+'</span>';}).join('');
-    var c=document.createElement('div');c.className='card';c.dataset.diff=ch.diff;c.dataset.idx=idx;
-    c.innerHTML='<div class="card-stripe"></div><div class="card-body">'
-      +'<div class="card-meta"><span class="card-id">'+esc(ch.id)+'</span><span class="card-pts">'+ch.pts+' pts</span></div>'
-      +'<div class="card-title">'+esc(ch.title)+'</div>'
-      +'<div class="card-tags">'+dTag+tTags+'</div>'
-      +'<div class="card-desc">'+esc(ch.desc.substring(0,100))+'...</div>'
-      +'<div class="card-footer"><span class="solves">'+ch.solves+' solves</span><button class="btn-view">OPEN &gt;&gt;</button></div></div>';
-    c.addEventListener('click',function(){openModal(idx);});
-    g.appendChild(c);
+  // Left column
+  const leftWrap = document.createElement('div');
+  const leftLabel = document.createElement('div');
+  leftLabel.className = 'match-col-label';
+  leftLabel.textContent = 'Terms / Scenarios';
+  const leftItems = document.createElement('div');
+  leftItems.className = 'match-items';
+  matchLeftOrder.forEach(function(pairIdx) {
+    const pair = activeDeck.pairs[pairIdx];
+    const item = document.createElement('div');
+    item.className = 'match-item' + (matchedPairs.has(pairIdx) ? ' matched-correct locked' : '');
+    item.dataset.idx = pairIdx;
+    item.dataset.side = 'left';
+    item.textContent = pair.left;
+    if (matchedPairs.has(pairIdx)) {
+      const badge = document.createElement('div');
+      badge.className = 'match-badge correct';
+      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/><\/svg>';
+      item.appendChild(badge);
+    } else {
+      item.onclick = function() { selectMatchItem(pairIdx, 'left', item); };
+    }
+    leftItems.appendChild(item);
   });
-});
+  leftWrap.appendChild(leftLabel);
+  leftWrap.appendChild(leftItems);
+
+  // Right column
+  const rightWrap = document.createElement('div');
+  const rightLabel = document.createElement('div');
+  rightLabel.className = 'match-col-label';
+  rightLabel.textContent = 'Definitions / Names';
+  const rightItems = document.createElement('div');
+  rightItems.className = 'match-items';
+  matchRightOrder.forEach(function(pairIdx) {
+    const pair = activeDeck.pairs[pairIdx];
+    const item = document.createElement('div');
+    item.className = 'match-item' + (matchedPairs.has(pairIdx) ? ' matched-correct locked' : '');
+    item.dataset.idx = pairIdx;
+    item.dataset.side = 'right';
+    item.textContent = pair.right;
+    if (matchedPairs.has(pairIdx)) {
+      const badge = document.createElement('div');
+      badge.className = 'match-badge correct';
+      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/><\/svg>';
+      item.appendChild(badge);
+    } else {
+      item.onclick = function() { selectMatchItem(pairIdx, 'right', item); };
+    }
+    rightItems.appendChild(item);
+  });
+  rightWrap.appendChild(rightLabel);
+  rightWrap.appendChild(rightItems);
+
+  layout.appendChild(leftWrap);
+  layout.appendChild(rightWrap);
+  wrap.appendChild(layout);
+  area.appendChild(wrap);
+}
+
+function selectMatchItem(pairIdx, side, el) {
+  if (matchedPairs.has(pairIdx)) return;
+
+  // deselect same side
+  document.querySelectorAll('.match-item.selected').forEach(function(el2) {
+    if (el2.dataset.side === side && el2 !== el) el2.classList.remove('selected');
+  });
+
+  el.classList.toggle('selected');
+
+  if (side === 'left') { selectedLeft = el.classList.contains('selected') ? pairIdx : null; }
+  else                 { selectedRight = el.classList.contains('selected') ? pairIdx : null; }
+
+  if (selectedLeft !== null && selectedRight !== null) {
+    checkMatch(selectedLeft, selectedRight);
+  }
+}
+
+function checkMatch(leftIdx, rightIdx) {
+  const isCorrect = leftIdx === rightIdx;
+  const leftEl = document.querySelector('.match-item[data-side="left"][data-idx="' + leftIdx + '"]');
+  const rightEl = document.querySelector('.match-item[data-side="right"][data-idx="' + rightIdx + '"]');
+
+  if (isCorrect) {
+    correct++;
+    streak++;
+    if (streak > bestStreak) bestStreak = streak;
+    matchedPairs.add(leftIdx);
+    [leftEl, rightEl].forEach(function(el) {
+      if (!el) return;
+      el.classList.remove('selected');
+      el.classList.add('matched-correct', 'locked');
+      el.onclick = null;
+      const badge = document.createElement('div');
+      badge.className = 'match-badge correct';
+      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/><\/svg>';
+      el.appendChild(badge);
+    });
+    flashResult(true, streak >= 3 ? '\uD83D\uDD25 ' + streak + ' in a row!' : 'Correct!');
+    if (matchedPairs.size === activeDeck.pairs.length) {
+      setTimeout(showSummary, 700);
+    }
+  } else {
+    wrong++;
+    streak = 0;
+    missedItems.push({left: activeDeck.pairs[leftIdx].left, right: activeDeck.pairs[leftIdx].right});
+    [leftEl, rightEl].forEach(function(el) {
+      if (!el) return;
+      el.classList.remove('selected');
+      el.classList.add('matched-wrong');
+      setTimeout(function() { el.classList.remove('matched-wrong'); }, 500);
+    });
+    flashResult(false, 'Not a match \u2014 try again');
+  }
+
+  selectedLeft = null; selectedRight = null;
+  updateHeader();
+}
+
+// ═══════════════════════════════════════════════════════
+// SORT MODE
+// ═══════════════════════════════════════════════════════
+function initSort() {
+  sortPlacements = {};
+  selectedSortChip = null;
+  renderSort();
+}
+
+function renderSort() {
+  const area = document.getElementById('game-area');
+  area.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'sort-wrap anim';
+
+  const instr = document.createElement('div');
+  instr.className = 'sort-instruction';
+  instr.textContent = 'Tap an item to select it, then tap a category to place it. Or drag on desktop. Tap a placed chip to return it to the pool.';
+  wrap.appendChild(instr);
+
+  // Pool
+  const pool = document.createElement('div');
+  pool.className = 'sort-items-pool';
+  pool.id = 'sort-pool';
+  const shuffledItems = shuffle(activeDeck.items.map(function(it, i){ return i; }));
+  shuffledItems.forEach(function(idx) {
+    if (sortPlacements[idx] !== undefined) return;
+    const it = activeDeck.items[idx];
+    const chip = buildSortChip(idx, it.text);
+    pool.appendChild(chip);
+  });
+  wrap.appendChild(pool);
+
+  // Buckets
+  const buckets = document.createElement('div');
+  buckets.className = 'sort-buckets';
+  activeDeck.categories.forEach(function(cat) {
+    const bucket = document.createElement('div');
+    bucket.className = 'sort-bucket';
+    bucket.style.borderColor = cat.color + '44';
+    bucket.style.background = hexToRgba(cat.color, 0.04);
+    bucket.id = 'bucket-' + cat.id;
+
+    const hdr = document.createElement('div');
+    hdr.className = 'sort-bucket-header';
+    const dot = document.createElement('div');
+    dot.className = 'bucket-dot';
+    dot.style.background = cat.color;
+    const name = document.createElement('div');
+    name.className = 'bucket-name';
+    name.style.color = cat.color;
+    name.textContent = cat.name;
+    hdr.appendChild(dot);
+    hdr.appendChild(name);
+
+    const body = document.createElement('div');
+    body.className = 'sort-bucket-body';
+    body.id = 'bucket-body-' + cat.id;
+    body.onclick = function() {
+      if (selectedSortChip !== null) placeChip(selectedSortChip, cat.id);
+    };
+
+    // placed chips for this bucket
+    Object.keys(sortPlacements).forEach(function(idx) {
+      if (sortPlacements[idx] === cat.id) {
+        const it = activeDeck.items[idx];
+        body.appendChild(buildPlacedChip(Number(idx), it.text, cat));
+      }
+    });
+
+    bucket.appendChild(hdr);
+    bucket.appendChild(body);
+    buckets.appendChild(bucket);
+  });
+  wrap.appendChild(buckets);
+
+  // Submit row
+  const unplaced = activeDeck.items.length - Object.keys(sortPlacements).length;
+  if (unplaced === 0) {
+    const submitRow = document.createElement('div');
+    submitRow.style.cssText = 'margin-top:1.5rem;text-align:center';
+    const submitBtn = document.createElement('button');
+    submitBtn.style.cssText = 'background:var(--cyan);color:var(--navy);font-family:inherit;font-weight:700;font-size:.95rem;padding:.85rem 2.5rem;border-radius:11px;border:none;cursor:pointer';
+    submitBtn.textContent = 'Check My Answers';
+    submitBtn.onclick = checkSort;
+    submitRow.appendChild(submitBtn);
+    wrap.appendChild(submitRow);
+  }
+
+  area.appendChild(wrap);
+}
+
+function buildSortChip(idx, text) {
+  const chip = document.createElement('div');
+  chip.className = 'sort-chip' + (selectedSortChip === idx ? ' selected' : '');
+  chip.dataset.idx = idx;
+  chip.textContent = text;
+  chip.draggable = true;
+  chip.ondragstart = function(e) { e.dataTransfer.setData('text/plain', String(idx)); selectedSortChip = idx; };
+  chip.onclick = function() {
+    selectedSortChip = selectedSortChip === idx ? null : idx;
+    renderSort();
+  };
+  // drop targets
+  document.querySelectorAll('.sort-bucket').forEach(function(b) {
+    b.ondragover = function(e) { e.preventDefault(); b.classList.add('drag-over'); };
+    b.ondragleave = function() { b.classList.remove('drag-over'); };
+    b.ondrop = function(e) {
+      e.preventDefault();
+      b.classList.remove('drag-over');
+      const i = Number(e.dataTransfer.getData('text/plain'));
+      const catId = b.id.replace('bucket-', '');
+      placeChip(i, catId);
+    };
+  });
+  return chip;
+}
+
+function buildPlacedChip(idx, text, cat) {
+  const chip = document.createElement('div');
+  chip.className = 'placed-chip';
+  chip.style.cssText = 'background:' + hexToRgba(cat.color, 0.12) + ';color:' + cat.color + ';border:1px solid ' + hexToRgba(cat.color, 0.3);
+  const span = document.createElement('span');
+  span.textContent = text;
+  const svg = document.createElement('span');
+  svg.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/><\/svg>';
+  chip.appendChild(span);
+  chip.appendChild(svg);
+  chip.onclick = function() { returnChip(idx); };
+  return chip;
+}
+
+function placeChip(idx, catId) {
+  sortPlacements[idx] = catId;
+  selectedSortChip = null;
+  renderSort();
+}
+
+function returnChip(idx) {
+  delete sortPlacements[idx];
+  selectedSortChip = null;
+  renderSort();
+}
+
+function checkSort() {
+  let c = 0, w = 0;
+  activeDeck.items.forEach(function(item, idx) {
+    if (sortPlacements[idx] === item.category) {
+      c++;
+      streak++;
+      if (streak > bestStreak) bestStreak = streak;
+    } else {
+      w++;
+      streak = 0;
+      const correctCat = activeDeck.categories.find(function(cat) { return cat.id === item.category; });
+      missedItems.push({left: item.text, right: correctCat ? correctCat.name : item.category});
+    }
+  });
+  correct = c; wrong = w;
+  updateHeader();
+  setTimeout(showSummary, 300);
+}
+
+function hexToRgba(hex, alpha) {
+  if (hex.startsWith('var(--')) {
+    const map = {'var(--cyan)':'0,212,200','var(--amber)':'245,166,35','var(--green)':'0,200,100','var(--red)':'255,85,85'};
+    return 'rgba(' + (map[hex] || '255,255,255') + ',' + alpha + ')';
+  }
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+// ═══════════════════════════════════════════════════════
+// RESULT FLASH
+// ═══════════════════════════════════════════════════════
+function flashResult(good, msg) {
+  const el = document.getElementById('result-flash');
+  el.style.borderColor = good ? 'rgba(0,200,100,.4)' : 'rgba(255,85,85,.4)';
+  document.getElementById('rf-icon').textContent = good ? '\u2705' : '\u274C';
+  document.getElementById('rf-text').textContent = msg;
+  el.classList.remove('hide');
+  el.classList.add('show');
+  setTimeout(function() { el.classList.add('hide'); setTimeout(function() { el.classList.remove('show','hide'); }, 300); }, 900);
+}
+
+// ═══════════════════════════════════════════════════════
+// SUMMARY
+// ═══════════════════════════════════════════════════════
+function showSummary() {
+  const total = activeDeck.mode === 'match' ? activeDeck.pairs.length : activeDeck.items.length;
+  const pct = Math.round((correct / total) * 100);
+  const color = pct >= 85 ? 'var(--cyan)' : pct >= 65 ? 'var(--amber)' : 'var(--red)';
+
+  const circle = document.getElementById('sum-circle');
+  circle.style.borderColor = color;
+  const pctEl = document.getElementById('sum-pct');
+  pctEl.style.color = color;
+  pctEl.textContent = pct + '%';
+  document.getElementById('sum-frac').textContent = correct + '/' + total;
+  document.getElementById('sum-correct').textContent = correct;
+  document.getElementById('sum-wrong').textContent = wrong;
+  document.getElementById('sum-streak').textContent = bestStreak;
+
+  let h, sub;
+  if (pct >= 90) { h = 'Excellent!'; sub = 'You nailed ' + correct + ' of ' + total + '. This vocabulary is locked in. Try a harder deck or take the Quiz Engine.'; }
+  else if (pct >= 70) { h = 'Strong work.'; sub = 'You got ' + correct + ' of ' + total + '. Review the misses below, then replay for a perfect score.'; }
+  else { h = 'Keep at it.'; sub = 'You got ' + correct + ' of ' + total + '. The missed items are listed below — revisit them in the Socratic guides before replaying.'; }
+  document.getElementById('sum-h').textContent = h;
+  document.getElementById('sum-sub').textContent = sub;
+
+  const missedDiv = document.getElementById('missed-review');
+  const missedList = document.getElementById('missed-list');
+  missedList.innerHTML = '';
+  if (missedItems.length > 0) {
+    missedDiv.style.display = 'block';
+    // deduplicate
+    const seen = new Set();
+    missedItems.forEach(function(m) {
+      const key = m.left;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const item = document.createElement('div');
+      item.className = 'mr-item';
+      const strong = document.createElement('strong');
+      strong.textContent = m.left;
+      const arrow = document.createElement('span');
+      arrow.className = 'mr-arrow';
+      arrow.textContent = ' \u2192 ';
+      const def = document.createElement('span');
+      def.textContent = m.right;
+      item.appendChild(strong);
+      item.appendChild(arrow);
+      item.appendChild(def);
+      missedList.appendChild(item);
+    });
+  } else {
+    missedDiv.style.display = 'none';
+  }
+
+  showScreen('summary');
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function resetRound() { startDeck(activeDeck.id); }
+function replayDeck() { startDeck(activeDeck.id); }
+
+function goSetup() {
+  activeDeck = null;
+  showScreen('setup');
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById('screen-' + name).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+renderDeckGrid();
+</script>
+<script>
+(function(){
+  if (!firebase.apps.length) {
+}
+  var page = window.location.pathname.split('/').pop() || 'index.html';
+  firebase.auth().onAuthStateChanged(function(user){
+    if (!user){
+      window.location.href='dashboard.html?redirect='+encodeURIComponent(page);
+      return;
+    }
+    document.documentElement.style.visibility='';
+    var slot=document.getElementById('nav-auth-slot');
+    if (!slot) return;
+    firebase.database().ref('teachers/'+user.uid).once('value').then(function(snap){
+      var p=snap.val()||{};
+      var name=p.firstName||user.email.split('@')[0];
+      slot.innerHTML='<a href="dashboard.html" style="color:var(--muted);font-size:.75rem;font-weight:500;text-decoration:none">'+escH(name)+'</a>'
+        +'<span style="color:rgba(255,255,255,.2);margin:0 .3rem;font-size:.75rem">&bull;</span>'
+        +'<a href="#" onclick="firebase.auth().signOut().then(function(){window.location.href=\'login.html\';});return false;" style="color:var(--muted);font-size:.75rem;font-weight:500;text-decoration:none">Sign Out</a>';
+    });
+  });
+  function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+})();
 </script>
 
-<div style="text-align:center;padding:1rem;font-size:.7rem;color:#3a4a66;font-family:'Share Tech Mono',monospace">AP® is a trademark of the College Board. This site is not affiliated with the College Board.</div>
+<footer style="background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)">
+  <span>&copy; 2026 apcyber.net &mdash; An unofficial supplemental tool. Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <div style="display:flex;gap:1rem">
+    <a href="legal.html" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a>
+    <a href="legal.html?tab=terms" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Terms of Service</a>
+  </div>
+</footer>
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
 </body>
 </html>
