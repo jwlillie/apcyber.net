@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to Get Your AI API Key &mdash; AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0b1628;--navy-mid:#132040;--navy-light:#1e2e52;
+  --cyan:#00d4c8;--cyan-dim:#00a89f;--amber:#f5a623;
+  --green:#00c864;--white:#f2f5fb;--muted:#8899bb;
+  --card-bg:#111e38;--border:rgba(0,212,200,.15);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.6;overflow-x:hidden}
+
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:100;background:rgba(11,22,40,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 clamp(1.5rem,5vw,4rem);height:64px;display:flex;align-items:center;justify-content:space-between;gap:1.5rem}
+.nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;flex-shrink:0}
+.nav-logo{width:36px;height:36px;background:var(--cyan);border-radius:8px;display:grid;place-items:center}
+.nav-logo svg{width:20px;height:20px}
+.nav-title{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--white)}
+.nav-title span{color:var(--cyan)}
+.nav-links{display:flex;align-items:center;gap:.25rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.85rem;font-weight:500;padding:.35rem .75rem;border-radius:8px;transition:color .18s,background .18s}
+.nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:700!important}
+@media(max-width:760px){.nav-links{display:none}}
+
+/* ── HERO STRIP ── */
+.page-hero{padding:clamp(3rem,7vw,5rem) clamp(1.5rem,5vw,4rem) clamp(2rem,5vw,3.5rem);max-width:860px;margin:0 auto}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,200,100,.1);border:1px solid rgba(0,200,100,.3);color:var(--green);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .9rem;border-radius:100px;margin-bottom:1.25rem}
+.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.page-h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:.75rem}
+.page-h1 em{font-style:italic;color:var(--cyan)}
+.page-sub{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.75;font-weight:300}
+
+/* ── PROVIDER TABS ── */
+.provider-tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem;padding:0 clamp(1.5rem,5vw,4rem);max-width:860px;margin-left:auto;margin-right:auto}
+.tab-btn{display:flex;align-items:center;gap:.6rem;padding:.6rem 1.2rem;border-radius:10px;border:1px solid var(--border);background:var(--card-bg);color:var(--muted);font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s}
+.tab-btn:hover{color:var(--white);border-color:rgba(255,255,255,.2)}
+.tab-btn.active{color:var(--navy);border-color:transparent}
+.tab-btn.active.gemini{background:#4285f4}
+.tab-btn.active.openai{background:#10a37f}
+.tab-btn.active.anthropic{background:#d97706}
+.tab-icon{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;flex-shrink:0}
+
+/* ── PROVIDER PANELS ── */
+.provider-panel{display:none;max-width:860px;margin:0 auto;padding:0 clamp(1.5rem,5vw,4rem) 3rem}
+.provider-panel.active{display:block}
+
+/* ── RECOMMENDATION BADGE ── */
+.rec-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,200,100,.1);border:1px solid rgba(0,200,100,.25);color:var(--green);font-size:.75rem;font-weight:700;padding:.25rem .75rem;border-radius:100px;margin-bottom:1rem}
+
+/* ── PROVIDER HEADER ── */
+.provider-header{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.provider-title{font-family:'DM Serif Display',serif;font-size:1.6rem;margin-bottom:.5rem}
+.provider-desc{font-size:.92rem;color:var(--muted);line-height:1.7;margin-bottom:1rem}
+.provider-meta{display:flex;flex-wrap:wrap;gap:.75rem}
+.meta-pill{display:flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.3rem .75rem;border-radius:8px}
+.meta-pill.free{background:rgba(0,200,100,.1);border:1px solid rgba(0,200,100,.25);color:var(--green)}
+.meta-pill.paid{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.25);color:var(--amber)}
+.meta-pill.info{background:rgba(0,212,200,.08);border:1px solid rgba(0,212,200,.2);color:var(--cyan)}
+
+/* ── STEPS ── */
+.steps{display:flex;flex-direction:column;gap:1rem}
+.step{display:grid;grid-template-columns:40px 1fr;gap:1rem;background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem;transition:border-color .2s}
+.step:hover{border-color:rgba(0,212,200,.3)}
+.step-num{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:'DM Serif Display',serif;font-size:1.1rem;font-weight:700;flex-shrink:0}
+.step-body{}
+.step-title{font-weight:700;font-size:.95rem;margin-bottom:.35rem;color:var(--white)}
+.step-desc{font-size:.87rem;color:var(--muted);line-height:1.7}
+.step-desc a{color:var(--cyan);text-decoration:none}
+.step-desc a:hover{text-decoration:underline}
+.step-action{display:inline-flex;align-items:center;gap:.4rem;margin-top:.65rem;background:var(--cyan);color:var(--navy);font-family:inherit;font-size:.82rem;font-weight:700;padding:.45rem 1rem;border-radius:8px;text-decoration:none;transition:opacity .18s}
+.step-action:hover{opacity:.85}
+.step-action.secondary{background:rgba(0,212,200,.12);color:var(--cyan);border:1px solid rgba(0,212,200,.3)}
+
+/* ── CALLOUT BOXES ── */
+.callout{display:flex;gap:.75rem;padding:1rem 1.1rem;border-radius:11px;font-size:.85rem;line-height:1.7;margin-top:1.25rem}
+.callout.tip{background:rgba(0,212,200,.07);border:1px solid rgba(0,212,200,.2)}
+.callout.warn{background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2)}
+.callout.free{background:rgba(0,200,100,.07);border:1px solid rgba(0,200,100,.2)}
+.callout-icon{font-size:1.1rem;flex-shrink:0;margin-top:.1rem}
+.callout-text{color:var(--muted)}
+.callout-text strong{color:var(--white)}
+
+/* ── KEY FORMAT BOX ── */
+.key-format{font-family:'Courier New',monospace;background:#0b1628;border:1px solid var(--border);border-radius:8px;padding:.5rem .9rem;font-size:.82rem;color:var(--amber);margin-top:.5rem;display:inline-block}
+
+/* ── ENTER KEY SECTION ── */
+.enter-key-section{background:linear-gradient(135deg,rgba(0,212,200,.06) 0,rgba(0,200,100,.04) 100%);border:1px solid rgba(0,212,200,.2);border-radius:16px;padding:1.5rem;margin-top:1.75rem}
+.enter-key-title{font-weight:700;font-size:1rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.6rem}
+.enter-key-steps{display:flex;flex-direction:column;gap:.5rem}
+.ek-step{display:flex;align-items:flex-start;gap:.6rem;font-size:.87rem;color:var(--muted);line-height:1.6}
+.ek-num{width:20px;height:20px;border-radius:50%;background:rgba(0,212,200,.15);color:var(--cyan);font-size:.7rem;font-weight:700;display:grid;place-items:center;flex-shrink:0;margin-top:.1rem}
+
+/* ── COMPARISON TABLE ── */
+.compare-section{max-width:860px;margin:0 auto;padding:0 clamp(1.5rem,5vw,4rem) 3rem}
+.section-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1.25rem;display:flex;align-items:center;gap:.6rem}
+.section-label::before{content:'';display:inline-block;width:18px;height:2px;background:var(--muted)}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem}
+@media(max-width:640px){.compare-grid{grid-template-columns:1fr}}
+.compare-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem}
+.compare-name{font-weight:700;font-size:.95rem;margin-bottom:.6rem}
+.compare-row{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.compare-row:last-child{border:none}
+.compare-label{color:var(--muted)}
+.compare-val{font-weight:600}
+.compare-val.green{color:var(--green)}
+.compare-val.amber{color:var(--amber)}
+.compare-val.cyan{color:var(--cyan)}
+
+/* ── FAQ ── */
+.faq-section{max-width:860px;margin:0 auto;padding:0 clamp(1.5rem,5vw,4rem) 4rem}
+.faq-item{border-bottom:1px solid var(--border);padding:1rem 0}
+.faq-q{font-weight:600;font-size:.92rem;color:var(--white);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:1rem}
+.faq-q:hover{color:var(--cyan)}
+.faq-arrow{font-size:.8rem;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.faq-item.open .faq-arrow{transform:rotate(180deg)}
+.faq-a{display:none;font-size:.87rem;color:var(--muted);line-height:1.75;padding-top:.6rem}
+.faq-item.open .faq-a{display:block}
+
+footer{background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <span class="nav-title">AP <span>Cybersecurity</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="tools.html">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="page-hero">
+  <div class="hero-badge">Setup Guide</div>
+  <h1 class="page-h1">Get Your <em>Free</em> AI Key</h1>
+  <p class="page-sub">Three AI tools on this site require your own API key — the Socratic Tutor, Flashcard Generator, and Cross-Unit Synthesis Quiz. Your key is stored only in your browser and never sent to our server. Follow the steps below to get set up in under 5 minutes.</p>
+</div>
+
+<!-- PROVIDER TABS -->
+<div class="provider-tabs">
+  <button class="tab-btn active gemini" onclick="showProvider('gemini', this)">
+    <div class="tab-icon" style="background:#4285f4">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    Google Gemini
+  </button>
+  <button class="tab-btn openai" onclick="showProvider('openai', this)">
+    <div class="tab-icon" style="background:#10a37f">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8" stroke="#10a37f" stroke-width="2"/></svg>
+    </div>
+    OpenAI (ChatGPT)
+  </button>
+  <button class="tab-btn anthropic" onclick="showProvider('anthropic', this)">
+    <div class="tab-icon" style="background:#d97706">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2l9 20H3L12 2z"/></svg>
+    </div>
+    Anthropic (Claude)
+  </button>
+</div>
+
+<!-- ═══ GEMINI PANEL ═══ -->
+<div class="provider-panel active" id="panel-gemini">
+  <div class="provider-header">
+    <div class="rec-badge">&#10003; Recommended for Students</div>
+    <div class="provider-title">Google Gemini</div>
+    <p class="provider-desc">Gemini is Google's AI — and the easiest option here. The free tier gives you 15 requests per minute with no credit card required. This is the best starting point for most students.</p>
+    <div class="provider-meta">
+      <div class="meta-pill free">&#10003; Free tier available</div>
+      <div class="meta-pill info">15 requests / minute</div>
+      <div class="meta-pill free">No credit card needed</div>
+      <div class="meta-pill info">Key format: AIza...</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="background:rgba(66,133,244,.15);color:#4285f4">1</div>
+      <div class="step-body">
+        <div class="step-title">Go to Google AI Studio</div>
+        <div class="step-desc">Open <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a> in your browser. This is Google's free platform for accessing Gemini. Sign in with any Google account — a school Gmail works fine.</div>
+        <a href="https://aistudio.google.com" target="_blank" class="step-action">Open AI Studio &#x2197;</a>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(66,133,244,.15);color:#4285f4">2</div>
+      <div class="step-body">
+        <div class="step-title">Click "Get API key"</div>
+        <div class="step-desc">In the left sidebar, look for the <strong>Get API key</strong> button (it has a key icon). Click it. You'll be taken to the API key management page.</div>
+        <div class="callout tip" style="margin-top:.75rem">
+          <div class="callout-icon">&#128161;</div>
+          <div class="callout-text">If you see a welcome screen first, just click through it. The key option is always in the left sidebar.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(66,133,244,.15);color:#4285f4">3</div>
+      <div class="step-body">
+        <div class="step-title">Create API key</div>
+        <div class="step-desc">Click the blue <strong>Create API key</strong> button. A dialog will ask you to select a Google Cloud project. If you don't have one, click <strong>Create API key in new project</strong> — Google creates one for you automatically, no setup needed.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(66,133,244,.15);color:#4285f4">4</div>
+      <div class="step-body">
+        <div class="step-title">Copy your key</div>
+        <div class="step-desc">Your new key will appear — it looks like this:
+          <div class="key-format">AIzaSyAbc123XYZ...</div>
+          Click the copy icon next to it. <strong>Keep this key private</strong> — don't post it in a document or share it publicly.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(66,133,244,.15);color:#4285f4">5</div>
+      <div class="step-body">
+        <div class="step-title">Paste it into the tool</div>
+        <div class="step-desc">Return to the AP Cybersecurity tool you want to use. Find the <strong>AI Provider &amp; Key</strong> section at the top of the setup screen, make sure <em>Google Gemini</em> is selected, paste your key, and click <strong>Save Key</strong>.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="enter-key-section">
+    <div class="enter-key-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Where to enter your key on each tool
+    </div>
+    <div class="enter-key-steps">
+      <div class="ek-step"><div class="ek-num">1</div>Open the tool (Socratic Tutor, Flashcard Generator, or Synthesis Quiz)</div>
+      <div class="ek-step"><div class="ek-num">2</div>At the top of the setup screen, find the <strong style="color:#f2f5fb">AI Provider &amp; Key Required</strong> section</div>
+      <div class="ek-step"><div class="ek-num">3</div>Select <strong style="color:#f2f5fb">Google Gemini (Free)</strong> from the dropdown</div>
+      <div class="ek-step"><div class="ek-num">4</div>Paste your key into the password field and click <strong style="color:#f2f5fb">Save Key</strong></div>
+      <div class="ek-step"><div class="ek-num">5</div>The key is saved for your browser session — you'll need to re-enter it if you close the tab</div>
+    </div>
+  </div>
+
+  <div class="callout free" style="margin-top:1.25rem">
+    <div class="callout-icon">&#9733;</div>
+    <div class="callout-text"><strong>Free tier limits:</strong> 15 requests per minute, 1 million tokens per minute, and 1,500 requests per day. For AP class use, this is more than enough. If you hit the limit, wait 60 seconds and try again.</div>
+  </div>
+</div>
+
+<!-- ═══ OPENAI PANEL ═══ -->
+<div class="provider-panel" id="panel-openai">
+  <div class="provider-header">
+    <div class="provider-title">OpenAI (ChatGPT)</div>
+    <p class="provider-desc">OpenAI makes ChatGPT. Their API uses GPT-4o Mini for this site — a fast, capable model. OpenAI requires a small credit purchase to use the API, but costs are very low: roughly $0.002 per quiz session.</p>
+    <div class="provider-meta">
+      <div class="meta-pill paid">Requires $5 minimum credit</div>
+      <div class="meta-pill info">~$0.002 per session</div>
+      <div class="meta-pill info">Key format: sk-...</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-icon">&#9888;</div>
+    <div class="callout-text"><strong>Note for students:</strong> OpenAI requires a credit card to purchase API credits. If you don't have one, use the free Gemini option instead — it works just as well for this site.</div>
+  </div>
+
+  <div class="steps" style="margin-top:1.25rem">
+    <div class="step">
+      <div class="step-num" style="background:rgba(16,163,127,.15);color:#10a37f">1</div>
+      <div class="step-body">
+        <div class="step-title">Create an OpenAI account</div>
+        <div class="step-desc">Go to <a href="https://platform.openai.com" target="_blank">platform.openai.com</a> and sign up. This is separate from ChatGPT — it's the API platform for developers. Use any email address to register.</div>
+        <a href="https://platform.openai.com" target="_blank" class="step-action" style="background:#10a37f">Open OpenAI Platform &#x2197;</a>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(16,163,127,.15);color:#10a37f">2</div>
+      <div class="step-body">
+        <div class="step-title">Add billing credits</div>
+        <div class="step-desc">Click <strong>Settings</strong> in the top-right → <strong>Billing</strong> → <strong>Add payment method</strong>. Add a credit card and purchase $5 in credits. This is the minimum amount and will last for hundreds of quiz sessions.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(16,163,127,.15);color:#10a37f">3</div>
+      <div class="step-body">
+        <div class="step-title">Create an API key</div>
+        <div class="step-desc">Click <strong>API Keys</strong> in the left sidebar → <strong>Create new secret key</strong>. Give it a name like "AP Cyber" and click Create. Your key looks like:
+          <div class="key-format">sk-proj-abc123...</div>
+          Copy it immediately — OpenAI only shows it once.</div>
+        <div class="callout warn" style="margin-top:.75rem">
+          <div class="callout-icon">&#9888;</div>
+          <div class="callout-text"><strong>Copy it now.</strong> Once you close the dialog, the key is hidden forever. If you lose it, you'll need to create a new one.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(16,163,127,.15);color:#10a37f">4</div>
+      <div class="step-body">
+        <div class="step-title">Paste it into the tool</div>
+        <div class="step-desc">On the AP Cybersecurity tool, select <strong>OpenAI GPT-4o Mini</strong> from the provider dropdown, paste your key, and click <strong>Save Key</strong>.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ANTHROPIC PANEL ═══ -->
+<div class="provider-panel" id="panel-anthropic">
+  <div class="provider-header">
+    <div class="provider-title">Anthropic (Claude)</div>
+    <p class="provider-desc">Anthropic makes Claude — the AI behind this website. Their API uses Claude Haiku, a fast and affordable model. Like OpenAI, Anthropic requires a small credit purchase to start.</p>
+    <div class="provider-meta">
+      <div class="meta-pill paid">Requires $5 minimum credit</div>
+      <div class="meta-pill info">~$0.001 per session</div>
+      <div class="meta-pill info">Key format: sk-ant-...</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-icon">&#9888;</div>
+    <div class="callout-text"><strong>Note for students:</strong> Anthropic requires a credit card for API access. If you don't have one, use the free Gemini option instead.</div>
+  </div>
+
+  <div class="steps" style="margin-top:1.25rem">
+    <div class="step">
+      <div class="step-num" style="background:rgba(217,119,6,.15);color:#d97706">1</div>
+      <div class="step-body">
+        <div class="step-title">Create an Anthropic account</div>
+        <div class="step-desc">Go to <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> and sign up. This is Anthropic's developer console — separate from Claude.ai.</div>
+        <a href="https://console.anthropic.com" target="_blank" class="step-action" style="background:#d97706">Open Anthropic Console &#x2197;</a>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(217,119,6,.15);color:#d97706">2</div>
+      <div class="step-body">
+        <div class="step-title">Add billing credits</div>
+        <div class="step-desc">Click <strong>Settings</strong> → <strong>Billing</strong> → <strong>Add credit</strong>. The minimum purchase is $5. Claude Haiku is very affordable, so $5 will last a long time for classroom use.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(217,119,6,.15);color:#d97706">3</div>
+      <div class="step-body">
+        <div class="step-title">Create an API key</div>
+        <div class="step-desc">Go to <strong>Settings → API Keys → Create Key</strong>. Name it something like "AP Cyber", click Create, and copy your key immediately — it looks like:
+          <div class="key-format">sk-ant-api03-abc123...</div>
+          Like OpenAI, Anthropic only shows the key once.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(217,119,6,.15);color:#d97706">4</div>
+      <div class="step-body">
+        <div class="step-title">Paste it into the tool</div>
+        <div class="step-desc">On the AP Cybersecurity tool, select <strong>Anthropic Claude Haiku</strong> from the provider dropdown, paste your key, and click <strong>Save Key</strong>.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARISON TABLE -->
+<div class="compare-section">
+  <div class="section-label">Quick Comparison</div>
+  <div class="compare-grid">
+    <div class="compare-card">
+      <div class="compare-name" style="color:#4285f4">Google Gemini</div>
+      <div class="compare-row"><span class="compare-label">Cost</span><span class="compare-val green">Free</span></div>
+      <div class="compare-row"><span class="compare-label">Credit card</span><span class="compare-val green">Not required</span></div>
+      <div class="compare-row"><span class="compare-label">Setup time</span><span class="compare-val cyan">~2 min</span></div>
+      <div class="compare-row"><span class="compare-label">Rate limit</span><span class="compare-val">15 req/min</span></div>
+      <div class="compare-row"><span class="compare-label">Best for</span><span class="compare-val green">Students</span></div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-name" style="color:#10a37f">OpenAI</div>
+      <div class="compare-row"><span class="compare-label">Cost</span><span class="compare-val amber">~$0.002/session</span></div>
+      <div class="compare-row"><span class="compare-label">Credit card</span><span class="compare-val amber">Required</span></div>
+      <div class="compare-row"><span class="compare-label">Setup time</span><span class="compare-val cyan">~5 min</span></div>
+      <div class="compare-row"><span class="compare-label">Rate limit</span><span class="compare-val">Higher</span></div>
+      <div class="compare-row"><span class="compare-label">Best for</span><span class="compare-val">Power users</span></div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-name" style="color:#d97706">Anthropic</div>
+      <div class="compare-row"><span class="compare-label">Cost</span><span class="compare-val amber">~$0.001/session</span></div>
+      <div class="compare-row"><span class="compare-label">Credit card</span><span class="compare-val amber">Required</span></div>
+      <div class="compare-row"><span class="compare-label">Setup time</span><span class="compare-val cyan">~5 min</span></div>
+      <div class="compare-row"><span class="compare-label">Rate limit</span><span class="compare-val">Higher</span></div>
+      <div class="compare-row"><span class="compare-label">Best for</span><span class="compare-val">Claude fans</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="faq-section">
+  <div class="section-label">Frequently Asked Questions</div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Is my API key safe? Can anyone see it? <span class="faq-arrow">&#9660;</span></div>
+    <div class="faq-a">Your key is stored in your browser's <code>sessionStorage</code> — it exists only in your browser tab and is never transmitted to apcyber.net's server. When you use an AI tool, your browser sends the request directly to the AI provider (Google, OpenAI, or Anthropic) using your key. The key disappears when you close the tab. That said, treat it like a password: don't paste it into a public document, Discord, or email.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Why do I have to enter my own key? Why doesn't the site just have one? <span class="faq-arrow">&#9660;</span></div>
+    <div class="faq-a">This is an intentional decision to keep the site free and sustainable. A shared key would cost money with every student request, could be abused, and would require billing and rate limiting infrastructure. Using your own key means your usage is charged to your account only, the site has no operating costs, and your activity is private.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Do I need to re-enter my key every time? <span class="faq-arrow">&#9660;</span></div>
+    <div class="faq-a">Yes, once per browser session. <code>sessionStorage</code> clears when you close the tab or browser. If you're using this regularly, you may want to keep your key saved securely in a password manager so you can paste it quickly. We chose sessionStorage over longer-term storage specifically so the key doesn't persist on shared or school computers.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">I'm a teacher — can I get one key for the whole class? <span class="faq-arrow">&#9660;</span></div>
+    <div class="faq-a">Technically yes — you could share one Gemini key with students since it's free. However, be aware that a shared key could hit rate limits if many students use it simultaneously. The free Gemini tier allows 15 requests per minute total across all users of the same key. For larger classes, having each student get their own free key is the better approach.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Which AI tools on this site need a key? <span class="faq-arrow">&#9660;</span></div>
+    <div class="faq-a">Three tools require an API key: the <strong>Socratic AI Tutor</strong>, the <strong>Flashcard Deck Generator</strong>, and the <strong>Cross-Unit Synthesis Quiz</strong>. All other tools — the Quiz Engine, AP Exam Simulator, Attack Chain Mapper, Spot the Attack, Defense-in-Depth Builder, and Vocab Matcher — are fully static and require no key at all.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">I entered my key and I'm getting an error. What do I do? <span class="faq-arrow">&#9660;</span></div>
+    <div class="faq-a">Check these common issues: (1) Make sure you selected the right provider — a Gemini key won't work if OpenAI is selected. (2) Copy the key again from the provider's website to ensure no extra spaces. (3) For Gemini, make sure the API is enabled in your Google Cloud project — AI Studio usually handles this automatically but sometimes requires confirmation. (4) For OpenAI/Anthropic, make sure you have a positive credit balance.</div>
+  </div>
+</div>
+
+<footer>
+  <span>&copy; 2026 apcyber.net &mdash; Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <div style="display:flex;gap:1rem">
+    <a href="legal.html" style="color:var(--muted);text-decoration:none">Privacy Policy</a>
+    <a href="legal.html?tab=terms" style="color:var(--muted);text-decoration:none">Terms of Service</a>
+  </div>
+</footer>
+
+<script>
+function showProvider(name, btn) {
+  document.querySelectorAll('.provider-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleFaq(el) {
+  var item = el.parentElement;
+  item.classList.toggle('open');
+}
+</script>
+</body>
+</html>

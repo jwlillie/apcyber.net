@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Tools &mdash; AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+
+  :root {
+    --navy: #0b1628;
+    --navy-mid: #132040;
+    --navy-light: #1e2e52;
+    --cyan: #00d4c8;
+    --cyan-dim: #00a89f;
+    --amber: #f5a623;
+    --white: #f2f5fb;
+    --muted: #8899bb;
+    --card-bg: #111e38;
+    --border: rgba(0,212,200,0.15);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(11,22,40,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 clamp(1.5rem, 5vw, 4rem);
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+  }
+
+  .nav-logo {
+    width: 36px;
+    height: 36px;
+    background: var(--cyan);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .nav-logo svg { width: 20px; height: 20px; }
+
+  .nav-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    color: var(--white);
+    letter-spacing: 0.01em;
+  }
+
+  .nav-title span { color: var(--cyan); }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--white); background: rgba(255,255,255,0.06); }
+
+  .nav-cta {
+    background: var(--cyan) !important;
+    color: var(--navy) !important;
+    font-weight: 600 !important;
+    padding: 0.45rem 1.1rem !important;
+    transition: opacity 0.2s !important;
+  }
+
+  .nav-cta:hover { opacity: 0.88; background: var(--cyan) !important; }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    min-height: 92vh;
+    display: flex;
+    align-items: center;
+    padding: clamp(4rem, 10vh, 7rem) clamp(1.5rem, 5vw, 4rem);
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,200,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,200,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 80% 70% at 60% 40%, black 10%, transparent 80%);
+    pointer-events: none;
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 700px;
+    height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,200,0.12) 0%, transparent 65%);
+    top: -100px;
+    right: -150px;
+    pointer-events: none;
+  }
+
+  .hero-glow-2 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,166,35,0.07) 0%, transparent 65%);
+    bottom: 0;
+    left: 10%;
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative;
+    max-width: 700px;
+    z-index: 1;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0,212,200,0.1);
+    border: 1px solid rgba(0,212,200,0.3);
+    color: var(--cyan);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.9rem;
+    border-radius: 100px;
+    margin-bottom: 1.8rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .hero-badge::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--cyan);
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .hero-heading {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.6rem, 6vw, 4.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .hero-heading em {
+    font-style: italic;
+    color: var(--cyan);
+  }
+
+  .hero-sub {
+    font-size: clamp(1rem, 1.5vw, 1.15rem);
+    color: var(--muted);
+    max-width: 540px;
+    line-height: 1.75;
+    margin-bottom: 2.5rem;
+    font-weight: 300;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--cyan);
+    color: var(--navy);
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.85rem 1.8rem;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.07);
+    color: var(--white);
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0.85rem 1.8rem;
+    border-radius: 10px;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.12);
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .btn-secondary:hover { transform: translateY(-2px); background: rgba(255,255,255,0.11); }
+
+  .hero-stats {
+    position: absolute;
+    right: clamp(1.5rem, 5vw, 6rem);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    animation: fadeLeft 0.8s 0.4s ease both;
+  }
+
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.2rem 1.5rem;
+    min-width: 180px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,212,200,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .stat-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.2rem;
+    color: var(--cyan);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeLeft {
+    from { opacity: 0; transform: translateX(30px) translateY(-50%); }
+    to { opacity: 1; transform: translateX(0) translateY(-50%); }
+  }
+
+  /* ─── SECTIONS ─── */
+  section {
+    padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 5vw, 4rem);
+  }
+
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 1rem;
+  }
+
+  .section-label::before {
+    content: '';
+    width: 24px;
+    height: 2px;
+    background: var(--cyan);
+  }
+
+  .section-heading {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.2rem;
+    max-width: 600px;
+  }
+
+  .section-sub {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 520px;
+    line-height: 1.75;
+    margin-bottom: 3rem;
+    font-weight: 300;
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 clamp(1.5rem, 5vw, 4rem);
+  }
+
+  /* ─── UNITS SECTION ─── */
+  .units-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .unit-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.8rem;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .unit-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0,212,200,0.4);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,212,200,0.1);
+  }
+
+  .unit-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,212,200,0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .unit-num {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .unit-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .unit-icon svg { width: 24px; height: 24px; }
+
+  .unit-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    line-height: 1.25;
+    margin-bottom: 0.25rem;
+  }
+
+  .unit-desc {
+    font-size: 0.875rem;
+    color: var(--muted);
+    line-height: 1.65;
+    flex: 1;
+  }
+
+  .unit-periods {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--cyan);
+    background: rgba(0,212,200,0.08);
+    padding: 0.3rem 0.7rem;
+    border-radius: 100px;
+    margin-top: auto;
+    align-self: flex-start;
+  }
+
+  /* ─── SKILLS SECTION ─── */
+  .skills-section {
+    background: var(--navy-mid);
+  }
+
+  .skills-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  .skills-visual {
+    position: relative;
+  }
+
+  .skill-orb {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+
+  .skill-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(0,212,200,0.15);
+    animation: rotate 20s linear infinite;
+  }
+
+  .skill-ring:nth-child(2) {
+    inset: 12%;
+    animation-duration: 14s;
+    animation-direction: reverse;
+    border-color: rgba(245,166,35,0.12);
+  }
+
+  .skill-ring:nth-child(3) { inset: 24%; animation-duration: 9s; }
+
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .skill-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--cyan);
+    top: -5px;
+    left: 50%;
+    margin-left: -5px;
+    box-shadow: 0 0 10px var(--cyan);
+  }
+
+  .skill-center {
+    position: absolute;
+    inset: 34%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,200,0.15) 0%, transparent 70%);
+    display: grid;
+    place-items: center;
+    text-align: center;
+    flex-direction: column;
+  }
+
+  .skill-center-label {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    line-height: 1.3;
+    color: var(--cyan);
+  }
+
+  .skill-tags {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .skill-tag {
+    position: absolute;
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--white);
+  }
+
+  .skill-tag[data-pos="top"] { top: 5%; left: 50%; transform: translateX(-50%); }
+  .skill-tag[data-pos="right"] { right: -2%; top: 30%; }
+  .skill-tag[data-pos="bot-r"] { right: 3%; bottom: 15%; }
+  .skill-tag[data-pos="bot-l"] { left: -2%; bottom: 20%; }
+  .skill-tag[data-pos="left"] { left: 0%; top: 28%; }
+
+  .skills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .skill-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .skill-item-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(0,212,200,0.1);
+    border: 1px solid rgba(0,212,200,0.2);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .skill-item-icon svg { width: 18px; height: 18px; stroke: var(--cyan); }
+
+  .skill-item-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .skill-item-desc {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ─── EXAM SECTION ─── */
+  .exam-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .exam-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .exam-card.featured {
+    border-color: rgba(0,212,200,0.35);
+    background: linear-gradient(135deg, rgba(0,212,200,0.05) 0%, var(--card-bg) 50%);
+  }
+
+  .exam-card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .exam-card-sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+
+  .score-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .score-table th {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .score-table td {
+    font-size: 0.875rem;
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .score-5 { background: rgba(0,212,200,0.15); color: var(--cyan); }
+  .score-4 { background: rgba(0,212,200,0.1); color: var(--cyan-dim); }
+  .score-3 { background: rgba(245,166,35,0.12); color: var(--amber); }
+  .score-2 { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .score-1 { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+  .section-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .section-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .section-pct {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--cyan);
+    min-width: 55px;
+  }
+
+  .section-info-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .section-info-sub {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .section-bar {
+    margin-top: 0.5rem;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  .section-bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--cyan), var(--cyan-dim));
+  }
+
+  /* ─── RESOURCES ─── */
+  .resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .resource-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .resource-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(0,212,200,0.3);
+  }
+
+  .resource-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+  }
+
+  .resource-icon svg { width: 22px; height: 22px; }
+
+  .resource-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .resource-desc {
+    font-size: 0.83rem;
+    color: var(--muted);
+    line-height: 1.6;
+    flex: 1;
+  }
+
+  .resource-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--cyan);
+    margin-top: 0.25rem;
+  }
+
+  /* ─── CTA BAND ─── */
+  .cta-band {
+    background: linear-gradient(135deg, var(--navy-mid) 0%, rgba(0,212,200,0.07) 100%);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-band::before {
+    content: '';
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,200,0.08) 0%, transparent 70%);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .cta-heading {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.7rem, 3vw, 2.5rem);
+    margin-bottom: 0.75rem;
+    position: relative;
+  }
+
+  .cta-sub {
+    font-size: 1rem;
+    color: var(--muted);
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  .cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    position: relative;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 2.5rem clamp(1.5rem, 5vw, 4rem);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-note {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--white); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .hero-stats { display: none; }
+    .skills-layout { grid-template-columns: 1fr; }
+    .exam-grid { grid-template-columns: 1fr; }
+    .skill-orb { max-width: 300px; }
+  }
+
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+  }
+
+/* Dropdown nav */
+.nav-dropdown{position:relative}
+.nav-dropdown-btn{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.35rem .65rem;border-radius:6px;transition:color .2s,background .2s;background:none;border:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.3rem}
+.nav-dropdown-btn:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-btn.has-active{color:var(--cyan)}
+.nav-dropdown-btn svg{width:11px;height:11px;transition:transform .2s}
+.nav-dropdown:hover .nav-dropdown-btn svg{transform:rotate(180deg)}
+.nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:all .2s;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nav-dropdown:hover .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
+.nav-dropdown-menu a{display:block;color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.45rem .75rem;border-radius:7px;transition:color .15s,background .15s;white-space:nowrap}
+.nav-dropdown-menu a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-menu a.active{color:var(--cyan)}
+.nav-dropdown-menu .menu-divider{height:1px;background:var(--border);margin:.3rem .4rem}
+
+.nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.4rem;width:36px;height:36px;flex-shrink:0}
+.nav-hamburger span{display:block;height:2px;width:22px;background:var(--white);border-radius:2px;transition:all .25s}
+@media(max-width:900px){.nav-hamburger{display:flex}.nav-links{display:none!important}}
+.mobile-nav-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:490;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+.mobile-nav-backdrop.open{opacity:1;visibility:visible}
+.mobile-nav-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,88vw);background:var(--navy-mid);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.mobile-nav-drawer.open{transform:translateX(0)}
+.mobile-nav-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);height:64px;flex-shrink:0}
+.mobile-nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.mobile-nav-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);width:32px;height:32px;border-radius:7px;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;line-height:1;transition:background .18s}
+.mobile-nav-close:hover{background:rgba(255,255,255,.14)}
+.mobile-nav-links{padding:.75rem;display:flex;flex-direction:column;gap:.2rem;flex:1}
+.mobile-nav-links a{display:block;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:500;padding:.7rem .9rem;border-radius:9px;transition:color .18s,background .18s}
+.mobile-nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.mobile-nav-links a.active{color:var(--cyan);background:rgba(0,212,200,.07)}
+.mobile-nav-links a.nav-cta{background:var(--cyan);color:var(--navy);font-weight:700;margin-top:.5rem;text-align:center}
+.mobile-nav-links a.nav-cta:hover{opacity:.9}
+.mobile-nav-section-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem .9rem .3rem;opacity:.7}
+.mobile-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:.4rem .5rem}
+
+/* Tools page specific */
+.tools-hero{max-width:860px;margin:0 auto;padding:clamp(2.5rem,5vw,4rem) clamp(1.5rem,4vw,2rem) 1.5rem}
+.tools-hero h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,4vw,3rem);line-height:1.1;margin-bottom:.6rem}
+.tools-hero p{font-size:1rem;color:var(--muted);line-height:1.75;font-weight:300;max-width:600px}
+.tools-section{max-width:1100px;margin:0 auto;padding:0 clamp(1.5rem,4vw,2rem) 4rem}
+.tools-section-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);display:flex;align-items:center;gap:.5rem;margin:2.5rem 0 1.25rem}
+.tools-section-label::before{content:'';width:20px;height:2px;background:var(--cyan)}
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem}
+.tool-card{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:1.5rem;text-decoration:none;color:var(--white);transition:all .22s;display:flex;gap:1.1rem;align-items:flex-start}
+.tool-card:hover{border-color:rgba(0,212,200,.35);transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.tool-icon{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;flex-shrink:0}
+.tool-icon svg{width:22px;height:22px}
+.tool-body{}
+.tool-name{font-weight:700;font-size:1rem;margin-bottom:.3rem}
+.tool-desc{font-size:.83rem;color:var(--muted);line-height:1.6}
+.tool-tag{display:inline-block;font-size:.67rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.15rem .5rem;border-radius:4px;margin-top:.5rem}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="tools.html" class="active">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+
+
+<div class="tools-hero">
+  <h1>Student <em>Tools</em></h1>
+  <p>Everything you need to prepare for the AP Cybersecurity exam &mdash; practice quizzes, interactive scenarios, flashcards, an AI tutor, and more. All free, no account required.</p>
+</div>
+
+<div class="tools-section">
+
+  <div class="tools-section-label">Practice &amp; Assessment</div>
+  <div class="tools-grid">
+
+    <a href="quiz.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(0,212,200,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Quiz Engine</div>
+        <div class="tool-desc">Randomized multiple-choice questions by unit with instant feedback and detailed explanations after every answer.</div>
+        <span class="tool-tag" style="background:rgba(0,212,200,.1);color:var(--cyan)">5&ndash;25 questions &bull; 5 units</span>
+      </div>
+    </a>
+
+    <a href="exam.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(245,166,35,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">AP Exam Simulator</div>
+        <div class="tool-desc">Full 60-question timed mock exam across all 5 units, proportional to the real AP exam. Score report with unit and topic breakdowns.</div>
+        <span class="tool-tag" style="background:rgba(245,166,35,.1);color:var(--amber)">60 questions &bull; 90 minutes</span>
+      </div>
+    </a>
+
+    <a href="synthesis.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(100,180,255,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#64b4ff" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Synthesis Quiz</div>
+        <div class="tool-desc">AI-generated questions that connect concepts across multiple units &mdash; attack chains, control gaps, and detection strategies.</div>
+        <span class="tool-tag" style="background:rgba(100,180,255,.1);color:#64b4ff">Cross-unit &bull; AI-powered</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="tools-section-label">Interactive Scenarios</div>
+  <div class="tools-grid">
+
+    <a href="mapper.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(180,100,255,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b464ff" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Attack Chain Mapper</div>
+        <div class="tool-desc">Drag-and-drop real cyberattack events into the correct phases of the attack chain. Claude scores your placement.</div>
+        <span class="tool-tag" style="background:rgba(180,100,255,.1);color:#b464ff">4 scenarios &bull; 6 phases</span>
+      </div>
+    </a>
+
+    <a href="spot.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(255,85,85,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ff5555" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Spot the Attack</div>
+        <div class="tool-desc">AI generates realistic email, log, and incident scenarios. Identify the attack technique, adversary type, and best countermeasure.</div>
+        <span class="tool-tag" style="background:rgba(255,85,85,.1);color:var(--red)">3 difficulty levels &bull; AI-powered</span>
+      </div>
+    </a>
+
+    <a href="defense.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(0,200,100,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00c864" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Defense-in-Depth Builder</div>
+        <div class="tool-desc">Choose security controls for 4 real-world org scenarios under budget constraints. Claude evaluates coverage per threat vector.</div>
+        <span class="tool-tag" style="background:rgba(0,200,100,.1);color:var(--green)">4 scenarios &bull; 26 controls</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="tools-section-label">Study &amp; Review</div>
+  <div class="tools-grid">
+
+    <a href="flashcards.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(245,166,35,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Flashcard Generator</div>
+        <div class="tool-desc">AI generates term/definition and scenario recognition cards for any of 24 AP topics. Flip, mark missed, retake missed only.</div>
+        <span class="tool-tag" style="background:rgba(245,166,35,.1);color:var(--amber)">24 topics &bull; AI-powered</span>
+      </div>
+    </a>
+
+    <a href="matcher.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(0,212,200,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Vocab &amp; Concept Matcher</div>
+        <div class="tool-desc">16 decks sorted by unit. Match pairs mode and sort-by-category mode covering all 5 units of AP Cybersecurity vocabulary.</div>
+        <span class="tool-tag" style="background:rgba(0,212,200,.1);color:var(--cyan)">16 decks &bull; All units</span>
+      </div>
+    </a>
+
+
+  </div>
+
+  <div class="tools-section-label">Course Resources</div>
+  <div class="tools-grid">
+
+    <a href="socratic-anchors.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(0,212,200,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00d4c8" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Socratic Anchor Guides</div>
+        <div class="tool-desc">9 downloadable .docx guides covering all 5 units. Each guide includes key concepts, Socratic discussion questions, and 25 practice items.</div>
+        <span class="tool-tag" style="background:rgba(0,212,200,.1);color:var(--cyan)">9 guides &bull; Units 1&ndash;5 &bull; Free download</span>
+      </div>
+    </a>
+
+    <a href="tutor.html" class="tool-card">
+      <div class="tool-icon" style="background:rgba(180,100,255,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b464ff" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Socratic AI Tutor</div>
+        <div class="tool-desc">Full-screen AI tutor locked to any of 24 AP topics. Uses Socratic questioning to deepen understanding, with AP framework citations.</div>
+        <span class="tool-tag" style="background:rgba(180,100,255,.1);color:#b464ff">24 topics &bull; Socratic method</span>
+      </div>
+    </a>
+
+    <a href="https://apcentral.collegeboard.org/media/pdf/ap-cybersecurity-course-and-exam-description.pdf" target="_blank" class="tool-card">
+      <div class="tool-icon" style="background:rgba(255,85,85,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ff5555" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="tool-body">
+        <div class="tool-name">Course &amp; Exam Description</div>
+        <div class="tool-desc">The official College Board CED PDF. The authoritative source for learning objectives, skills, and exam format for AP Cybersecurity.</div>
+        <span class="tool-tag" style="background:rgba(255,85,85,.1);color:var(--red)">Official College Board &bull; PDF</span>
+      </div>
+    </a>
+
+  <!-- CTF CHALLENGES SECTION -->
+  <div class="tools-section-label" style="margin-top:2rem">&#128681; CTF Challenge Labs</div>
+  <div class="tools-grid">
+
+    <a href="ctf.html" class="tool-card" style="border-color:rgba(0,240,255,.25)">
+      <div class="tool-icon" style="background:rgba(0,240,255,.08)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2" stroke-linecap="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="#00f0ff"/>
+        </svg>
+      </div>
+      <div class="tool-info">
+        <div class="tool-name">CTF Challenge Labs</div>
+        <div class="tool-desc">65 hands-on Capture the Flag challenges across 6 categories — Web, Networking, Crypto, Forensics, OSINT, and Steganography. All mapped to AP framework units.</div>
+        <div class="tool-tags">
+          <span class="tool-tag">65 Challenges</span>
+          <span class="tool-tag">6 Categories</span>
+          <span class="tool-tag">Units 1&ndash;5</span>
+          <span class="tool-tag">No Login</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  </div>
+
+</div>
+
+<footer style="background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)">
+  <span>&copy; 2026 apcyber.net &mdash; Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <div style="display:flex;gap:1rem">
+    <a href="legal.html" style="color:var(--muted);text-decoration:none">Privacy &amp; Terms</a>
+  </div>
+</footer>
+
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
+</body>
+</html>

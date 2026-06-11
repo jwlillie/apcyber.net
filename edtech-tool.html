@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EdTech Privacy Tool</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f3f0; }
+    #root { min-height: 100vh; }
+    #loading-screen {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #0f766e, #1c3557);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; color: white; z-index: 99999;
+      transition: opacity .5s;
+    }
+    #loading-screen h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    #ls-msg  { font-size: 14px; opacity: .85; margin-bottom: 14px; }
+    #ls-bar-wrap {
+      width: 280px; height: 6px; background: rgba(255,255,255,.2);
+      border-radius: 99px; overflow: hidden; margin-bottom: 8px;
+    }
+    #ls-bar { height: 100%; width: 0%; background: #5eead4;
+              border-radius: 99px; transition: width .25s ease; }
+    #ls-sub  { font-size: 11px; opacity: .5; min-height: 16px; }
+    .spinner { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.25);
+      border-top-color: white; border-radius: 50%;
+      animation: spin .8s linear infinite; margin-bottom: 18px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <h1>🛡️ EdTech Privacy Tool</h1>
+  <p id="ls-msg">Starting up…</p>
+  <div id="ls-bar-wrap"><div id="ls-bar"></div></div>
+  <p id="ls-sub"></p>
+</div>
+
+<div id="root"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     Step 1 — IndexedDB storage polyfill
+     Maps window.storage (Claude.ai API) to IndexedDB (50 MB+ limit).
+     localStorage has a 5 MB cap which the 6.7 MB analyses JSON exceeds.
+════════════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  var DB_NAME    = 'etpt-storage';
+  var DB_VERSION = 1;
+  var _db        = null;
+
+  function openDB() {
+    if (_db) return Promise.resolve(_db);
+    return new Promise(function (rv, rj) {
+      var r = indexedDB.open(DB_NAME, DB_VERSION);
+      r.onupgradeneeded = function (e) {
+        var d = e.target.result;
+        if (!d.objectStoreNames.contains('user'))   d.createObjectStore('user');
+        if (!d.objectStoreNames.contains('shared')) d.createObjectStore('shared');
+      };
+      r.onsuccess = function (e) { _db = e.target.result; rv(_db); };
+      r.onerror   = function (e) { rj(e.target.error); };
+    });
+  }
+  function idbOp(store, mode, fn) {
+    return openDB().then(function (db) {
+      return new Promise(function (rv, rj) {
+        var req = fn(db.transaction(store, mode).objectStore(store));
+        req.onsuccess = function () { rv(req.result); };
+        req.onerror   = function () { rj(req.error); };
+      });
+    });
+  }
+
+  // Expose helpers globally so the boot script can use them too
+  window._idb = {
+    get:     function (s, k)    { return idbOp(s, 'readonly',  function (o) { return o.get(k); }); },
+    set:     function (s, k, v) { return idbOp(s, 'readwrite', function (o) { return o.put(v, k); }); },
+    del:     function (s, k)    { return idbOp(s, 'readwrite', function (o) { return o.delete(k); }); },
+    listKeys: function (s, pfx) {
+      return idbOp(s, 'readonly', function (o) { return o.getAllKeys(); }).then(function (keys) {
+        return pfx ? keys.filter(function (k) { return k.startsWith(pfx); }) : keys;
+      });
+    }
+  };
+
+  window.storage = {
+    get: async function (key, shared) {
+      var val = await window._idb.get(shared ? 'shared' : 'user', key);
+      if (val === undefined) throw new Error('Key not found: ' + key);
+      return { key: key, value: (typeof val === 'string') ? val : JSON.stringify(val), shared: !!shared };
+    },
+    set: async function (key, value, shared) {
+      var v = (typeof value === 'string') ? value : JSON.stringify(value);
+      await window._idb.set(shared ? 'shared' : 'user', key, v);
+      return { key: key, value: value, shared: !!shared };
+    },
+    delete: async function (key, shared) {
+      await window._idb.del(shared ? 'shared' : 'user', key);
+      return { key: key, deleted: true, shared: !!shared };
+    },
+    list: async function (prefix, shared) {
+      var keys = await window._idb.listKeys(shared ? 'shared' : 'user', prefix || '');
+      return { keys: keys, prefix: prefix, shared: !!shared };
+    }
+  };
+
+  window.__etpt_getExtraResources = function () {
+    try { return JSON.parse(localStorage.getItem('etpt-approved-suggestions') || '[]'); }
+    catch (e) { return []; }
+  };
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     Step 2 — Load React + Babel synchronously (blocking).
+     These must be available before the boot script runs.
+════════════════════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     Step 3 — Boot sequence.
+     Order guaranteed: preload data → transform JSX → mount React.
+     No timing issues. No MutationObserver race conditions.
+════════════════════════════════════════════════════════════════════════ -->
+<script>
+// Wrapped in an IIFE so none of these variables leak into the global scope
+// and conflict with the same-named constants inside EdTechPrivacyTool.jsx
+(function () {
+// ── DATA_VERSION: bump this string whenever you redeploy analyses-data.json
+//    Teachers' browsers auto-re-download on the next visit.
+var DATA_VERSION = '2026-06-10';
+var ANALYSES_URL = '/analyses-data.json';
+var ANALYSES_KEY = 'edtech-analyses-v3';
+var CHUNK_SIZE   = 400;
+
+function setMsg(t) { var e = document.getElementById('ls-msg'); if (e) e.textContent = t; }
+function setSub(t) { var e = document.getElementById('ls-sub'); if (e) e.textContent = t; }
+function setBar(p) { var e = document.getElementById('ls-bar'); if (e) e.style.width  = p + '%'; }
+
+// ── Fetch analyses-data.json and store in IndexedDB ──────────────────────
+async function preloadAnalyses() {
+  // Already current? Skip download.
+  try {
+    var v = await window._idb.get('user', 'etpt-data-version');
+    if (v === DATA_VERSION) {
+      setSub('Analysis data cached ✓');
+      setBar(45);
+      return;
+    }
+  } catch (e) { /* not stored yet */ }
+
+  setMsg('Downloading analysis data…');
+  setSub('~6.7 MB — one-time download, cached for future visits');
+  setBar(5);
+
+  var analyses;
+  try {
+    var resp = await fetch(ANALYSES_URL);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+    // Stream with live progress bar if server sends Content-Length
+    var cl = resp.headers.get('content-length');
+    if (cl && resp.body) {
+      var total = parseInt(cl, 10), received = 0;
+      var reader = resp.body.getReader(), parts = [];
+      while (true) {
+        var chunk = await reader.read();
+        if (chunk.done) break;
+        parts.push(chunk.value);
+        received += chunk.value.length;
+        setBar(5 + Math.round(received / total * 40));
+      }
+      analyses = JSON.parse(await new Blob(parts).text());
+    } else {
+      setBar(25);
+      analyses = await resp.json();
+    }
+  } catch (err) {
+    setSub('⚠️ Could not load analysis data: ' + err.message + ' — tool still works without it.');
+    setBar(45);
+    return;
+  }
+
+  // Store in IndexedDB using the exact same chunked format as the tool
+  setMsg('Saving analysis data…');
+  var entries   = Object.entries(analyses);
+  var numChunks = Math.max(1, Math.ceil(entries.length / CHUNK_SIZE));
+
+  for (var i = 0; i < numChunks; i++) {
+    var slice = entries.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+    var obj   = {};
+    slice.forEach(function (p) { obj[p[0]] = p[1]; });
+    await window._idb.set('shared', ANALYSES_KEY + '-chunk-' + i, JSON.stringify(obj));
+    setBar(45 + Math.round((i + 1) / numChunks * 20));
+    setSub('Storing chunk ' + (i + 1) + ' of ' + numChunks + '…');
+  }
+  // Manifest — plain number string, exactly how loadAnalysesChunked reads it
+  await window._idb.set('shared', ANALYSES_KEY + '-chunks', String(numChunks));
+  await window._idb.set('user', 'etpt-data-version', DATA_VERSION);
+
+  setSub(entries.length.toLocaleString() + ' analyses stored ✓');
+  setBar(65);
+}
+
+// ── Fetch, patch, transform, and execute the JSX ─────────────────────────
+async function loadApp() {
+  setMsg('Loading application…');
+  setBar(70);
+
+  var resp = await fetch('EdTechPrivacyTool.jsx');
+  if (!resp.ok) throw new Error('Could not load EdTechPrivacyTool.jsx — HTTP ' + resp.status);
+  var source = await resp.text();
+  setBar(80);
+
+  // 1. Replace ES module import with global React destructure
+  source = source.replace(
+    'import { useState, useEffect, useCallback, useRef } from "react";',
+    'const { useState, useEffect, useCallback, useRef } = React;'
+  );
+
+  // 2. Strip 'export default' — causes SyntaxError in non-module scripts
+  source = source.replace(
+    'export default function App()',
+    'function App()'
+  );
+
+  // 3. Append the ReactDOM mount call — Claude.ai handles this automatically
+  //    but on a standalone site we have to do it ourselves
+  source += '\nReactDOM.createRoot(document.getElementById(\'root\')).render(React.createElement(App));';
+
+  setMsg('Compiling…');
+  setBar(88);
+
+  // Transform JSX → plain JS using the already-loaded Babel standalone
+  var result = Babel.transform(source, {
+    presets: ['react'],
+    filename: 'EdTechPrivacyTool.jsx'
+  });
+
+  setBar(94);
+  setMsg('Starting…');
+
+  // Execute via Blob URL (avoids eval, works in strict CSP)
+  var blob    = new Blob([result.code], { type: 'text/javascript' });
+  var blobUrl = URL.createObjectURL(blob);
+  await new Promise(function (resolve, reject) {
+    var s    = document.createElement('script');
+    s.src    = blobUrl;
+    s.onload = resolve;
+    s.onerror = function () { reject(new Error('Script execution failed')); };
+    document.head.appendChild(s);
+  });
+  URL.revokeObjectURL(blobUrl);
+}
+
+// ── Hide loading screen once React populates #root ────────────────────────
+function watchForMount() {
+  var root     = document.getElementById('root');
+  var observer = new MutationObserver(function () {
+    if (root.children.length > 0) {
+      var screen = document.getElementById('loading-screen');
+      if (screen) { screen.style.opacity = '0'; setTimeout(function () { screen.remove(); }, 500); }
+      observer.disconnect();
+    }
+  });
+  observer.observe(root, { childList: true });
+  // Fallback: hide after 15 s regardless
+  setTimeout(function () {
+    var screen = document.getElementById('loading-screen');
+    if (screen) { screen.style.opacity = '0'; setTimeout(function () { screen.remove(); }, 500); }
+  }, 15000);
+}
+
+// ── Run ───────────────────────────────────────────────────────────────────
+(async function boot() {
+  try {
+    watchForMount();
+    await preloadAnalyses();
+    await loadApp();
+    setBar(100);
+  } catch (err) {
+    setMsg('⚠️ Error: ' + err.message);
+    setSub('Please refresh the page or contact support.');
+    console.error('Boot error:', err);
+  }
+})();
+
+})(); // end IIFE
+</script>
+
+</body>
+</html>
