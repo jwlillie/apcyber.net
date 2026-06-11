@@ -1,5 +1,14 @@
 const { getStore } = require("@netlify/blobs");
 
+// Manually configure Blobs (auto-config not available on this deploy type)
+function suggestionsStore() {
+  return getStore({
+    name: "suggestions",
+    siteID: process.env.BLOBS_SITE_ID,
+    token: process.env.BLOBS_TOKEN,
+  });
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
   let id, action;
@@ -9,7 +18,7 @@ exports.handler = async (event) => {
   } catch { return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request' }) }; }
 
   try {
-    const store = getStore('suggestions');
+    const store = suggestionsStore();
     const raw = await store.get(id);
     if (!raw) return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) };
     const record = JSON.parse(raw);

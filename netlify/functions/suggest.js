@@ -3,6 +3,15 @@
 
 const { getStore } = require("@netlify/blobs");
 
+// Manually configure Blobs (auto-config not available on this deploy type)
+function suggestionsStore() {
+  return getStore({
+    name: "suggestions",
+    siteID: process.env.BLOBS_SITE_ID,
+    token: process.env.BLOBS_TOKEN,
+  });
+}
+
 const SYSTEM_PROMPT = `You are an expert in K-12 educational technology privacy compliance (COPPA, FERPA, SOPIPA, CIPA).
 Analyze EdTech platforms based on their privacy policies and terms of service.
 Return ONLY valid JSON — no markdown, no explanation outside the JSON object.`;
@@ -167,7 +176,7 @@ exports.handler = async (event) => {
   // Store in Netlify Blobs
   const id = `suggestion_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   try {
-    const store = getStore('suggestions');
+    const store = suggestionsStore();
     await store.set(id, JSON.stringify({
       id, name, url, note: note || '',
       submittedAt: new Date().toISOString(),

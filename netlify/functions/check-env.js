@@ -1,6 +1,15 @@
 // Diagnostic — visit /.netlify/functions/check-env
 const { getStore } = require("@netlify/blobs");
 
+// Manually configure Blobs (auto-config not available on this deploy type)
+function suggestionsStore() {
+  return getStore({
+    name: "suggestions",
+    siteID: process.env.BLOBS_SITE_ID,
+    token: process.env.BLOBS_TOKEN,
+  });
+}
+
 exports.handler = async () => {
   const result = {
     ANTHROPIC_API_KEY_set: !!process.env.ANTHROPIC_API_KEY,
@@ -10,7 +19,7 @@ exports.handler = async () => {
 
   // Test Blobs read/write
   try {
-    const store = getStore("suggestions");
+    const store = suggestionsStore();
     const testKey = "diagnostic_test";
     await store.set(testKey, JSON.stringify({ test: true, at: new Date().toISOString() }));
     const back = await store.get(testKey);

@@ -1,8 +1,17 @@
 const { getStore } = require("@netlify/blobs");
 
+// Manually configure Blobs (auto-config not available on this deploy type)
+function suggestionsStore() {
+  return getStore({
+    name: "suggestions",
+    siteID: process.env.BLOBS_SITE_ID,
+    token: process.env.BLOBS_TOKEN,
+  });
+}
+
 exports.handler = async () => {
   try {
-    const store = getStore('suggestions');
+    const store = suggestionsStore();
     const { blobs } = await store.list();
     const suggestions = (await Promise.all(
       blobs.map(async b => { try { return JSON.parse(await store.get(b.key)); } catch { return null; } })
