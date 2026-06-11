@@ -1,42 +1,13 @@
 // Diagnostic — visit /.netlify/functions/check-env
-const { getStore } = require("@netlify/blobs");
-
-// Manually configure Blobs (auto-config not available on this deploy type)
-function suggestionsStore() {
-  return getStore({
-    name: "suggestions",
-    siteID: process.env.BLOBS_SITE_ID,
-    token: process.env.BLOBS_TOKEN,
-  });
-}
-
-exports.handler = async () => {
-  const result = {
+exports.handler = async () => ({
+  statusCode: 200,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    VERSION: "v23-email",
     ANTHROPIC_API_KEY_set: !!process.env.ANTHROPIC_API_KEY,
+    RESEND_API_KEY_set: !!process.env.RESEND_API_KEY,
+    ADMIN_EMAIL_set: !!process.env.ADMIN_EMAIL,
+    ADMIN_EMAIL_value: process.env.ADMIN_EMAIL || "(not set)",
     NODE_VERSION: process.version,
-    blobs_test: "not run",
-  };
-
-  // Test Blobs read/write
-  try {
-    const store = suggestionsStore();
-    const testKey = "diagnostic_test";
-    await store.set(testKey, JSON.stringify({ test: true, at: new Date().toISOString() }));
-    const back = await store.get(testKey);
-    const { blobs } = await store.list();
-    result.blobs_test = "WORKS";
-    result.blobs_write_read = back ? "ok" : "failed";
-    result.blobs_total_keys = blobs.length;
-    result.blobs_keys = blobs.map(b => b.key);
-    await store.delete(testKey);
-  } catch (err) {
-    result.blobs_test = "FAILED";
-    result.blobs_error = err.message;
-  }
-
-  return {
-    statusCode: 200,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(result, null, 2),
-  };
-};
+  }, null, 2),
+});

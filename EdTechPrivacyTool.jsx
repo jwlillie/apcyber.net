@@ -2504,12 +2504,9 @@ document.getElementById('sigDate').addEventListener('input', updateStatus);
   };
 
   const loadSuggestions = async () => {
-    try {
-      const res = await fetch("/.netlify/functions/suggestions");
-      const data = await res.json();
-      setPendingSuggestions(data.suggestions || []);
-      setSuggestionsLoaded(true);
-    } catch {}
+    // Suggestions are now emailed to the admin directly — no in-app review queue.
+    setPendingSuggestions([]);
+    setSuggestionsLoaded(true);
   };
 
   const approveSuggestion = async (s) => {
@@ -5015,7 +5012,7 @@ document.getElementById('sigDate').addEventListener('input', updateStatus);
       )}
 
       {/* ── Admin Suggestions Panel (injected into admin view via portal-style overlay) ── */}
-      {adminMode && view === "admin" && (
+      {false && adminMode && view === "admin" && (
         <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 8000 }}>
           <button onClick={() => { loadSuggestions(); setShowSuggestionsPanel(true); }}
             style={{ padding: "11px 20px", borderRadius: 30, background: pendingSuggestions.length > 0 ? "#7c3aed" : "#6b7280", color: "white", border: "none", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,0.2)" }}>
