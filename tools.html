@@ -893,7 +893,7 @@
 <nav>
   <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
   <ul class="nav-links">
-    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="index.html">Home</a></li>
     <li><a href="socratic-anchors.html">Socratic Guides</a></li>
     <li><a href="tools.html" class="active">Student Tools</a></li>
     <li><a href="legal.html">Legal</a></li>
@@ -905,6 +905,19 @@
   </button>
 </nav>
 <div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+<div class="mobile-nav-drawer" id="mobile-nav-drawer">
+  <div class="mobile-nav-header">
+    <span class="mobile-nav-title">AP <span style="color:var(--cyan)">Cybersecurity</span></span>
+    <button class="mobile-nav-close" onclick="closeMobileNav()">&times;</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="index.html" onclick="closeMobileNav()">Home</a>
+    <a href="socratic-anchors.html" onclick="closeMobileNav()">Socratic Guides</a>
+    <a href="tools.html" class="active" onclick="closeMobileNav()">Student Tools</a>
+    <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
+    <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
+  </div>
+</div>
 
 
 <div class="tools-hero">

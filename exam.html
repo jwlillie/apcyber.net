@@ -773,5 +773,10 @@ function goIntro() { clearInterval(timerInterval); showScreen('intro'); }
     <a href="legal.html?tab=terms" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Terms of Service</a>
   </div>
 </footer>
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
 </body>
 </html>
