@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebXploit CTF — Web Exploitation Challenges</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#050810;--bg2:#090d1a;--panel:#0b1120;--border:#1a2640;
+    --accent:#00f0ff;--accent2:#ff3c6e;--accent3:#ffe438;
+    --green:#00ff88;--dim:#3a4a66;--text:#c8d8f0;--muted:#5a7090;
+    --font-mono:'Share Tech Mono',monospace;
+    --font-display:'Orbitron',sans-serif;
+    --font-body:'DM Sans',sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,240,255,.06) 2px,rgba(0,240,255,.06) 4px);pointer-events:none;z-index:9999;}
+  body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,240,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .wrapper{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 80px;}
+  header{padding:48px 0 40px;text-align:center;position:relative;}
+  .header-tag{font-family:var(--font-mono);font-size:11px;letter-spacing:4px;color:var(--accent);margin-bottom:14px;opacity:.7;}
+  header h1{font-family:var(--font-display);font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:2px;line-height:1;margin-bottom:8px;}
+  header h1 .web{color:var(--accent);}
+  header h1 .ctf{color:var(--accent2);display:block;font-size:.45em;letter-spacing:8px;margin-top:4px;}
+  .header-line{width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:20px auto;}
+  .header-sub{font-size:13px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;}
+  .scoreboard{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;}
+  .score-pill{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 20px;font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:10px;}
+  .score-pill .label{color:var(--muted);text-transform:uppercase;letter-spacing:2px;}
+  .score-pill .value{color:var(--accent3);font-size:16px;font-weight:bold;}
+  .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px;align-items:center;}
+  .filter-label{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:2px;margin-right:4px;}
+  .filter-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:11px;letter-spacing:1px;padding:6px 14px;cursor:pointer;border-radius:2px;transition:all .2s;text-transform:uppercase;}
+  .filter-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,240,255,.06);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:4px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .25s,transform .25s,box-shadow .25s;animation:fadeUp .5s ease both;}
+  .card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 40px rgba(0,240,255,.08),0 0 0 1px rgba(0,240,255,.15);}
+  .card.solved{border-color:var(--green);}
+  .card.solved:hover{box-shadow:0 8px 40px rgba(0,255,136,.08);}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+  .card:nth-child(1){animation-delay:.05s}.card:nth-child(2){animation-delay:.10s}.card:nth-child(3){animation-delay:.15s}.card:nth-child(4){animation-delay:.20s}.card:nth-child(5){animation-delay:.25s}.card:nth-child(6){animation-delay:.30s}.card:nth-child(7){animation-delay:.35s}.card:nth-child(8){animation-delay:.40s}.card:nth-child(9){animation-delay:.45s}.card:nth-child(10){animation-delay:.50s}
+  .card-stripe{height:3px;width:100%;}
+  .card-body{padding:20px 22px 22px;}
+  .card-header-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+  .card-num{font-family:var(--font-mono);font-size:10px;color:var(--dim);letter-spacing:1px;}
+  .card-pts{font-family:var(--font-mono);font-size:12px;color:var(--accent3);background:rgba(255,228,56,.07);border:1px solid rgba(255,228,56,.2);padding:2px 8px;border-radius:2px;}
+  .card-title{font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:1px;margin-bottom:6px;line-height:1.3;}
+  .card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .tag{font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;padding:3px 8px;border-radius:2px;text-transform:uppercase;border:1px solid;}
+  .tag-vuln{color:var(--accent2);border-color:rgba(255,60,110,.35);background:rgba(255,60,110,.05);}
+  .tag-easy{color:var(--green);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.04);}
+  .tag-medium{color:var(--accent3);border-color:rgba(255,228,56,.3);background:rgba(255,228,56,.04);}
+  .tag-hard{color:var(--accent2);border-color:rgba(255,60,110,.35);background:rgba(255,60,110,.05);}
+  .tag-web{color:var(--accent);border-color:rgba(0,240,255,.3);background:rgba(0,240,255,.04);}
+  .card-desc{font-size:12.5px;color:var(--muted);line-height:1.65;font-weight:300;margin-bottom:16px;}
+  .card-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:14px;}
+  .solves{font-family:var(--font-mono);font-size:10px;color:var(--dim);}
+  .btn-view{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);background:transparent;border:1px solid rgba(0,240,255,.3);padding:5px 12px;cursor:pointer;border-radius:2px;transition:all .2s;}
+  .btn-view:hover{background:rgba(0,240,255,.08);border-color:var(--accent);}
+  .solved-badge{font-family:var(--font-mono);font-size:10px;color:var(--green);letter-spacing:2px;}
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(5,8,16,.92);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--bg2);border:1px solid var(--accent);border-radius:4px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(0,240,255,.12);animation:modalIn .2s ease;}
+  @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+  .modal-header{padding:22px 26px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
+  .modal-title{font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:1px;color:var(--accent);line-height:1.2;}
+  .modal-close{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:var(--font-mono);font-size:11px;padding:4px 10px;border-radius:2px;flex-shrink:0;transition:all .2s;}
+  .modal-close:hover{border-color:var(--accent2);color:var(--accent2);}
+  .modal-body{padding:24px 26px;}
+  .section-label{font-family:var(--font-mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;margin-top:20px;}
+  .section-label:first-child{margin-top:0;}
+  .modal-desc{font-size:13.5px;color:var(--text);line-height:1.7;font-weight:300;}
+  .hint-item{background:rgba(255,228,56,.04);border:1px solid rgba(255,228,56,.15);border-radius:3px;padding:10px 14px;font-family:var(--font-mono);font-size:12px;color:var(--accent3);line-height:1.6;margin-bottom:8px;position:relative;}
+  .hint-item::before{content:'// HINT ' attr(data-n);display:block;font-size:10px;color:var(--dim);margin-bottom:4px;letter-spacing:1px;}
+  .flag-box{background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.2);border-radius:3px;padding:12px 16px;font-family:var(--font-mono);font-size:13px;color:var(--green);letter-spacing:1px;}
+  .solution-block{background:rgba(0,240,255,.03);border:1px solid rgba(0,240,255,.12);border-radius:3px;padding:14px 16px;font-family:var(--font-mono);font-size:11.5px;color:var(--accent);line-height:1.7;}
+  .solution-block .step{display:flex;gap:10px;margin-bottom:6px;}
+  .solution-block .step-n{color:var(--dim);flex-shrink:0;}
+  .submit-area{margin-top:24px;border-top:1px solid var(--border);padding-top:20px;}
+  .submit-row{display:flex;gap:10px;}
+  .flag-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:9px 14px;outline:none;transition:border-color .2s;letter-spacing:1px;}
+  .flag-input:focus{border-color:var(--accent);}
+  .flag-input::placeholder{color:var(--dim);}
+  .btn-submit{background:var(--accent);border:none;color:var(--bg);font-family:var(--font-mono);font-size:11px;letter-spacing:2px;font-weight:bold;padding:9px 20px;cursor:pointer;border-radius:3px;text-transform:uppercase;transition:opacity .2s;flex-shrink:0;}
+  .btn-submit:hover{opacity:.85;}
+  .submit-msg{font-family:var(--font-mono);font-size:12px;margin-top:8px;min-height:18px;}
+  .submit-msg.correct{color:var(--green);}
+  .submit-msg.wrong{color:var(--accent2);}
+  /* LIVE WIDGET */
+  .live-widget{background:#040810;border:1px solid rgba(0,240,255,.2);border-radius:4px;overflow:hidden;margin-top:4px;}
+  .live-hdr{background:rgba(0,240,255,.06);border-bottom:1px solid rgba(0,240,255,.15);padding:8px 14px;font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:3px;display:flex;align-items:center;gap:8px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;animation:livePulse 1.5s ease-in-out infinite;}
+  @keyframes livePulse{0%,100%{box-shadow:0 0 4px var(--green);}50%{box-shadow:none;opacity:.5;}}
+  .live-body{padding:16px 18px;}
+  .live-url{font-family:var(--font-mono);font-size:10px;background:#080d18;border:1px solid var(--border);border-radius:3px;padding:5px 10px;color:var(--muted);margin-bottom:12px;}
+  .live-url em{color:var(--accent);font-style:normal;}
+  .sim-label{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:4px;margin-top:10px;text-transform:uppercase;}
+  .sim-label:first-child{margin-top:0;}
+  .sim-input{width:100%;background:#03070e;border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:8px 12px;outline:none;transition:border-color .2s;box-sizing:border-box;}
+  .sim-input:focus{border-color:var(--accent);}
+  .sim-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .sim-btn{background:rgba(0,240,255,.08);border:1px solid var(--accent);color:var(--accent);font-family:var(--font-mono);font-size:11px;letter-spacing:2px;padding:7px 16px;cursor:pointer;border-radius:3px;transition:all .2s;text-transform:uppercase;flex-shrink:0;}
+  .sim-btn:hover{background:rgba(0,240,255,.16);}
+  .sim-btn-danger{border-color:var(--accent2);color:var(--accent2);background:rgba(255,60,110,.06);}
+  .sim-btn-danger:hover{background:rgba(255,60,110,.14);}
+  .sim-btn-warn{border-color:var(--accent3);color:var(--accent3);background:rgba(255,228,56,.06);}
+  .sim-btn-warn:hover{background:rgba(255,228,56,.14);}
+  .sql-preview{background:#030609;border-top:1px solid var(--border);padding:10px 14px;font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:1.6;}
+  .sql-kw{color:var(--accent2);}
+  .sql-str{color:var(--accent3);}
+  .sql-cmt{color:#2a4a2a;}
+  .sim-result{padding:12px 14px;font-family:var(--font-mono);font-size:12px;line-height:1.6;display:none;border-top:1px solid var(--border);}
+  .sim-result.show{display:block;}
+  .sim-ok{color:var(--green);}
+  .sim-err{color:var(--accent2);}
+  .sim-warn{color:var(--accent3);}
+  .flag-win{margin-top:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:3px;padding:10px 14px;color:var(--green);font-size:14px;letter-spacing:1px;}
+  .autofill-btn{margin-top:8px;display:inline-block;background:var(--green);border:none;color:var(--bg);font-family:var(--font-mono);font-size:11px;letter-spacing:1px;padding:6px 14px;cursor:pointer;border-radius:3px;transition:opacity .2s;}
+  .autofill-btn:hover{opacity:.85;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .sim-panel{background:#040810;border:1px solid var(--border);border-radius:3px;padding:12px;}
+  .sim-panel-title{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:6px;}
+  .balance-num{font-family:var(--font-display);font-size:22px;color:var(--accent3);margin:6px 0;}
+  .balance-lbl{font-family:var(--font-mono);font-size:10px;color:var(--muted);}
+  .reflect-area{background:#0e1420;border:1px solid var(--border);border-radius:3px;padding:10px 12px;min-height:36px;font-size:12px;color:var(--text);line-height:1.6;margin-top:8px;word-break:break-all;}
+  .reflect-lbl{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:4px;}
+  .jwt-part-h{color:var(--accent2);}
+  .jwt-part-p{color:var(--accent);}
+  .jwt-decoded{background:#030609;border:1px solid var(--border);border-radius:3px;padding:10px 12px;font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:8px;}
+  .doc-area{background:#0a1020;border:1px solid var(--border);border-radius:3px;padding:12px;margin-top:8px;font-size:12px;line-height:1.7;min-height:60px;}
+  .doc-meta{font-family:var(--font-mono);font-size:10px;color:var(--dim);margin-bottom:8px;}
+  .progress-bar{background:var(--border);border-radius:2px;height:6px;margin:8px 0;overflow:hidden;}
+  .progress-fill{background:linear-gradient(90deg,var(--accent2),var(--accent));height:100%;width:0%;transition:width .1s linear;}
+  .timer-display{font-family:var(--font-mono);font-size:13px;color:var(--accent3);margin-top:4px;}
+  .extracted-chars{font-family:var(--font-mono);font-size:13px;color:var(--green);letter-spacing:2px;margin-top:8px;min-height:20px;}
+  .token-box{background:#030609;border:1px solid var(--border);border-radius:3px;padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:var(--accent);margin:8px 0;}
+  .formula-box{background:rgba(255,228,56,.04);border:1px solid rgba(255,228,56,.2);border-radius:3px;padding:8px 12px;font-family:var(--font-mono);font-size:11px;color:var(--accent3);margin:8px 0;}
+  .step-indicator{font-family:var(--font-mono);font-size:10px;color:var(--dim);letter-spacing:2px;margin-bottom:8px;}
+  .xss-alert-box{display:none;background:rgba(255,228,56,.1);border:2px solid var(--accent3);border-radius:4px;padding:12px 16px;margin-top:10px;font-family:var(--font-mono);font-size:13px;color:var(--accent3);text-align:center;}
+  .xss-alert-box.show{display:block;}
+  .xss-alert-ok{background:var(--accent3);color:var(--bg);border:none;font-family:var(--font-mono);font-size:11px;padding:5px 14px;cursor:pointer;border-radius:2px;margin-top:8px;letter-spacing:1px;}
+  ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}::-webkit-scrollbar-thumb:hover{background:var(--dim);}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+<div style="background:#050810;border-bottom:1px solid #1a2640;padding:.4rem 1.5rem;font-family:'Share Tech Mono',monospace;font-size:11px"><a href="ctf.html" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:rgba(0,240,255,0.45);text-decoration:none;letter-spacing:2px;margin-right:1.5rem;transition:color .2s" onmouseover="this.style.color='#00f0ff'" onmouseout="this.style.color='rgba(0,240,255,0.45)'">&#8592; CTF HUB</a></div>
+    <div class="header-tag">// Web Security Training Platform — Fully Interactive</div>
+    <h1><span class="web">WEB</span>XPLOIT<span class="ctf">Capture The Flag</span></h1>
+    <div class="header-line"></div>
+    <div class="header-sub">10 Fully Playable Challenges · All run in your browser · No external servers needed</div>
+  </header>
+  <div class="scoreboard">
+    <div class="score-pill"><span class="label">Challenges</span><span class="value">10</span></div>
+    <div class="score-pill"><span class="label">Total Points</span><span class="value" id="total-pts">0</span></div>
+    <div class="score-pill"><span class="label">Solved</span><span class="value" id="solved-count">0</span></div>
+    <div class="score-pill"><span class="label">Your Score</span><span class="value" id="your-score">0</span></div>
+  </div>
+  <div class="filter-bar">
+    <span class="filter-label">FILTER:</span>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="Easy">Easy</button>
+    <button class="filter-btn" data-filter="Medium">Medium</button>
+    <button class="filter-btn" data-filter="Hard">Hard</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="modal-close" onclick="closeModal()">[ CLOSE ]</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function autofill(flag){var el=document.getElementById('flag-input');if(el){el.value=flag;el.style.borderColor='var(--green)';setTimeout(function(){el.style.borderColor='';},1200);}}
+
+var challenges=[
+  {
+    id:1,title:'Blind Date with the Database',vuln:'SQL Injection',difficulty:'Easy',points:150,solves:312,stripe:'#00f0ff',
+    desc:'A login portal builds its SQL query by raw string concatenation. No WAF. Log in as the admin user without knowing their password using SQL injection.',
+    flag:'CTF{sql_1nj3ct10n_bypass_f0r_th3_w1n}',
+    hints:["SQL comments (--) terminate the rest of a query.","Try: admin'-- as the username with any password.","The query becomes: WHERE username='admin'--' AND password='...' — everything after -- is ignored."],
+    solution:["Enter admin'-- in the username field with any password.","The -- comment causes the password check to be skipped entirely.","The server authenticates you as admin.","Flag appears in the admin dashboard."]
+  },
+  {
+    id:2,title:'Reflected Chaos',vuln:'Cross-Site Scripting (XSS)',difficulty:'Easy',points:150,solves:289,stripe:'#ff3c6e',
+    desc:'A search bar reflects your input back onto the page unsanitised via innerHTML. Inject a script payload to trigger XSS execution and capture the simulated admin cookie.',
+    flag:'CTF{r3fl3ct3d_xss_cook13_th3ft}',
+    hints:["innerHTML executes event handlers but NOT inline &lt;script&gt; tags — use an event handler instead.","Try: &lt;img src=x onerror=alert(1)&gt;","&lt;svg onload=alert(1)&gt; also works."],
+    solution:["Enter an XSS payload: &lt;img src=x onerror=alert(1)&gt;","The search page reflects your input via innerHTML.","The onerror event fires, executing the JavaScript.","The platform captures the execution and reveals the flag."]
+  },
+  {
+    id:3,title:'Phantom Transfer',vuln:'CSRF',difficulty:'Medium',points:250,solves:198,stripe:'#ffe438',
+    desc:"A banking app performs fund transfers with no CSRF token. When a logged-in victim visits an attacker's page, a hidden auto-submitting form silently transfers their funds.",
+    flag:'CTF{csrf_3xpl01t_f0rm_subm1t_pwn3d}',
+    hints:["CSRF exploits the browser automatically attaching cookies to any request to the target domain.","The victim must already be logged in for the attack to work.","Auto-submitting a hidden form is the classic CSRF technique."],
+    solution:["The victim is logged into bank.vuln.ctf with a session cookie.","They visit the attacker's page, which instantly auto-submits a transfer form.","The browser attaches the victim's session cookie — no interaction needed.","Click 'Victim Visits Attacker Page' in the simulation to see it happen."]
+  },
+  {
+    id:4,title:'Internal Affairs',vuln:'SSRF',difficulty:'Medium',points:300,solves:145,stripe:'#a855f7',
+    desc:'A PDF generation service fetches any URL you supply — server-side. Use SSRF to reach the AWS EC2 metadata endpoint at 169.254.169.254 and steal the IAM credentials stored there.',
+    flag:'CTF{ssrf_m3tadat4_cr3d3nt14l_h4rv3st}',
+    hints:["169.254.169.254 is the AWS link-local metadata address — only reachable from within the EC2 instance.","Navigate the path hierarchy: /latest/meta-data/ → /iam/security-credentials/ → role name","The credentials JSON contains the flag in the SecretAccessKey field."],
+    solution:["Start with: http://169.254.169.254/latest/meta-data/ to confirm SSRF.","Navigate to /iam/security-credentials/ to get the role name.","Fetch /iam/security-credentials/prod-role to get the credentials JSON.","The SecretAccessKey field contains the flag."]
+  },
+  {
+    id:5,title:'JWT Jailbreak',vuln:'Authentication Bypass',difficulty:'Medium',points:300,solves:176,stripe:'#00ff88',
+    desc:'The API accepts JWTs with "alg: none", skipping signature verification entirely. Forge a token claiming admin role without knowing the signing secret.',
+    flag:'CTF{jwt_n0n3_4lg_byp4ss_4dm1n}',
+    hints:["Set the alg field to 'none' in the header — the server skips signature validation.","Base64url-encode header and payload separately, join with dots, leave signature empty.","Final format: encodedHeader.encodedPayload. (trailing dot, empty signature)"],
+    solution:["Click Auto-forge to generate the correct alg:none token.","Or manually: base64url({\"alg\":\"none\"}).base64url({\"user\":\"alice\",\"role\":\"admin\"}).","Submit the forged token — the server accepts it without verifying the signature.","Admin access is granted and the flag is returned."]
+  },
+  {
+    id:6,title:'Object Overload',vuln:'Insecure Deserialization',difficulty:'Hard',points:400,solves:67,stripe:'#ff3c6e',
+    desc:'A PHP app deserialises a base64-encoded cookie. A Logger class with a __destruct() magic method calls system($this->cmd). Craft a malicious payload to read /flag.txt.',
+    flag:'CTF{php_d3s3r14l1z3_rce_m4g1c_m3th0d}',
+    hints:["PHP serialisation format: O:classname_length:\"ClassName\":prop_count:{s:key_len:\"key\";s:val_len:\"val\";}","__destruct() fires automatically when unserialize() finishes — no extra trigger needed.","Correct payload: O:6:\"Logger\":1:{s:3:\"cmd\";s:14:\"cat /flag.txt\";}"],
+    solution:["Craft the PHP serialised Logger object with cmd set to 'cat /flag.txt'.","Base64-encode and set as the user_session cookie.","PHP unserialises the cookie on page load — __destruct fires automatically.","system('cat /flag.txt') executes and the flag prints."]
+  },
+  {
+    id:7,title:'Your Files or Mine?',vuln:'IDOR',difficulty:'Easy',points:100,solves:401,stripe:'#00f0ff',
+    desc:'A file-sharing app exposes documents via sequential numeric IDs with zero authorisation checks. Your document is ID 1042. The admin uploaded theirs earlier — find it.',
+    flag:'CTF{1d0r_s3qu3nt14l_1d_pr1v3sc}',
+    hints:["IDOR requires only changing a parameter value — no injection needed.","IDs are sequential. If yours is 1042, admin documents have lower IDs.","Try ID 1001 — admin documents are often at round-ish numbers."],
+    solution:["Your document URL is /documents?id=1042.","Change the id parameter to 1001 in the simulator.","The server returns the admin document with no authorisation check.","The flag is embedded in the document content."]
+  },
+  {
+    id:8,title:'The Sleeping Giant',vuln:'Blind SQL Injection',difficulty:'Hard',points:450,solves:54,stripe:'#a855f7',
+    desc:'The product search endpoint is vulnerable to time-based blind SQL injection. No data is returned — only server delay reveals truth. Use IF(SLEEP(5)) to confirm, then extract the flag char by char.',
+    flag:'CTF{bl1nd_sql1_t1m3_b4s3d_h4sh_3xtr4ct}',
+    hints:["A 5-second delay means your injected condition was TRUE.","Test payload: electronics' AND IF(SLEEP(5),1,0)-- ","Run the auto-extractor to watch the flag being pulled out character by character."],
+    solution:["Confirm injection: send a SLEEP(5) payload and observe the 5-second response delay.","For each character position, test ASCII values — delay means TRUE, instant means FALSE.","The auto-extractor automates this, sending queries and watching for delays.","Assembling all TRUE characters reveals the flag."]
+  },
+  {
+    id:9,title:'DOM Demolition',vuln:'DOM-Based XSS',difficulty:'Medium',points:250,solves:163,stripe:'#ffe438',
+    desc:'A SPA reads location.hash and injects it into the DOM via innerHTML — entirely client-side. The payload never reaches the server. Exploit the sink with an event-handler XSS payload.',
+    flag:'CTF{d0m_xss_1nnerHTML_s1nk_c00k13}',
+    hints:["The hash fragment is never sent to the server — server-side WAFs can't stop this.","innerHTML executes event handlers: &lt;img src=x onerror=alert(1)&gt;","The simulated page runs: element.innerHTML = decodeURIComponent(location.hash.slice(1))"],
+    solution:["Enter a payload in the hash field: &lt;img src=x onerror=alert(1)&gt;","Click Navigate — the SPA reads the hash and injects it via innerHTML.","The onerror event fires, executing JavaScript in the browser.","The platform captures the execution and reveals the flag."]
+  },
+  {
+    id:10,title:'The Password Reset Trap',vuln:'Auth Bypass + IDOR',difficulty:'Hard',points:500,solves:38,stripe:'#00ff88',
+    desc:'The reset flow uses a predictable token formula: (user_id * 1337) % 1000000. Request your own reset to discover the formula, then compute and use the admin token via IDOR.',
+    flag:'CTF{pr3d1ct4bl3_t0k3n_1d0r_4cc0unt_t4k30v3r}',
+    hints:["Step 1: Request a reset for your account (id=42) to see your token and infer the formula.","Admin user_id = 1. Token = (1 * 1337) % 1000000 = 1337 → zero-padded: 001337.","The /reset/confirm endpoint doesn't verify that user_id matches your session — pure IDOR."],
+    solution:["Request reset for your account — token 056154 confirms: formula = (id * 1337) % 1000000.","Compute admin token: (1 * 1337) % 1000000 = 001337.","POST /reset/confirm with user_id=1, token=001337, new_password=hacked.","Log in as admin — flag is in the dashboard."]
+  }
+];
+
+var solved={};
+var currentChallenge=null;
+var activeFilter='all';
+var c2xssFired=false;
+var c9xssFired=false;
+var c8timer=null;
+var c8extracting=false;
+
+// ─── WIDGET HTML BUILDERS ─────────────────────────────────────
+function buildWidget(ch) {
+  var id=ch.id;
+  if(id===1){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — shop.vuln.ctf/login</div>'+
+    '<div class="live-body">'+
+      '<div class="live-url"><em>POST</em> /login — query built by string concatenation</div>'+
+      '<div class="sim-label">Username</div>'+
+      '<input id="c1u" class="sim-input" placeholder="Enter username" oninput="c1update()">'+
+      '<div class="sim-label">Password</div>'+
+      '<input id="c1p" class="sim-input" type="password" placeholder="Enter password" oninput="c1update()">'+
+      '<div class="sim-row"><button class="sim-btn" onclick="c1try()">Login</button></div>'+
+    '</div>'+
+    '<div class="sql-preview">'+
+      '<span style="color:var(--dim);font-size:10px;">Generated query:</span><br>'+
+      '<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> users <span class="sql-kw">WHERE</span> '+
+      'username=<span id="c1qu" class="sql-str">\'...\'</span> '+
+      '<span class="sql-kw" id="c1and">AND</span> password=<span id="c1qp" class="sql-str">\'...\'</span>'+
+    '</div>'+
+    '<div class="sim-result" id="c1r"></div>'+
+    '</div>'
+  );}
+  if(id===2){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — news.vuln.ctf/search</div>'+
+    '<div class="live-body">'+
+      '<div class="live-url"><em>GET</em> /search?q=INPUT — reflected via innerHTML (unsanitised)</div>'+
+      '<div class="sim-label">Search query (try an XSS payload)</div>'+
+      '<input id="c2q" class="sim-input" placeholder="&lt;img src=x onerror=alert(1)&gt;">'+
+      '<div class="sim-row"><button class="sim-btn" onclick="c2search()">Search</button></div>'+
+      '<div class="reflect-area" style="margin-top:10px;">'+
+        '<div class="reflect-lbl">Results for (innerHTML):</div>'+
+        '<div id="c2reflect" style="min-height:24px;">—</div>'+
+      '</div>'+
+      '<div class="xss-alert-box" id="c2alert"><span id="c2alertmsg"></span><br><button class="xss-alert-ok" onclick="c2ok()">OK</button></div>'+
+    '</div>'+
+    '<div class="sim-result" id="c2r"></div>'+
+    '</div>'
+  );}
+  if(id===3){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — CSRF Simulation</div>'+
+    '<div class="live-body">'+
+      '<div class="two-col">'+
+        '<div class="sim-panel">'+
+          '<div class="sim-panel-title">Victim\'s Bank (bank.vuln.ctf)</div>'+
+          '<div class="balance-lbl">Logged in as: alice &#10003;</div>'+
+          '<div class="balance-lbl" style="margin-top:8px;">Account Balance:</div>'+
+          '<div class="balance-num" id="c3bal">$10,000.00</div>'+
+          '<div class="balance-lbl" id="c3status" style="margin-top:4px;">No transfers yet.</div>'+
+        '</div>'+
+        '<div class="sim-panel">'+
+          '<div class="sim-panel-title">Attacker Page (evil.ctf)</div>'+
+          '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Hidden auto-submit form:</div>'+
+          '<div style="font-family:var(--font-mono);font-size:10px;color:var(--accent2);background:#030609;padding:8px;border-radius:3px;line-height:1.7;">'+
+            'form[action="bank.vuln.ctf/transfer"]<br>'+
+            '  to_account = "99887766"<br>'+
+            '  amount = "5000"<br>'+
+            'JS: form.submit() on load'+
+          '</div>'+
+          '<button class="sim-btn sim-btn-danger" style="margin-top:10px;width:100%;" onclick="c3attack()">Victim Visits Attacker Page</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="sim-result" id="c3r"></div>'+
+    '</div>'
+  );}
+  if(id===4){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — pdf.vuln.ctf/generate</div>'+
+    '<div class="live-body">'+
+      '<div class="live-url"><em>POST</em> /generate — server fetches the URL you supply</div>'+
+      '<div class="sim-label">URL for the server to fetch</div>'+
+      '<input id="c4url" class="sim-input" placeholder="http://169.254.169.254/latest/meta-data/">'+
+      '<div class="sim-row"><button class="sim-btn" onclick="c4fetch()">Generate PDF</button></div>'+
+    '</div>'+
+    '<div class="sim-result" id="c4r"></div>'+
+    '</div>'
+  );}
+  if(id===5){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — api.vuln.ctf</div>'+
+    '<div class="live-body">'+
+      '<div class="step-indicator">YOUR CURRENT TOKEN (user role):</div>'+
+      '<div class="token-box" style="word-break:break-all;font-size:10px;">'+
+        '<span class="jwt-part-h">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</span>.'+
+        '<span class="jwt-part-p">eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoidXNlciJ9</span>.'+
+        '<span style="color:var(--accent3);">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span>'+
+      '</div>'+
+      '<div class="jwt-decoded">'+
+        '<span style="color:var(--accent2);">Header:</span> {"alg":"HS256","typ":"JWT"}<br>'+
+        '<span style="color:var(--accent);">Payload:</span> {"user":"alice","role":"user"}'+
+      '</div>'+
+      '<div class="sim-label" style="margin-top:14px;">Paste forged token (alg:none, role:admin):</div>'+
+      '<input id="c5tok" class="sim-input" placeholder="eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ.">'+
+      '<div class="sim-row">'+
+        '<button class="sim-btn sim-btn-warn" onclick="c5forge()">Auto-forge Token</button>'+
+        '<button class="sim-btn" onclick="c5submit()">Submit to /admin/flag</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="sim-result" id="c5r"></div>'+
+    '</div>'
+  );}
+  if(id===6){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — legacy.vuln.ctf</div>'+
+    '<div class="live-body">'+
+      '<div class="live-url">Cookie: <em>user_session</em> = [base64(PHP serialised object)]</div>'+
+      '<div class="step-indicator">CURRENT COOKIE:</div>'+
+      '<div class="token-box" style="font-size:10px;word-break:break-all;">TzoxMToiVXNlclNlc3Npb24iOjE6e3M6NDoibmFtZSI7czo1OiJhbGljZSI7fQ==</div>'+
+      '<div class="jwt-decoded">Decoded: O:11:"UserSession":1:{s:4:"name";s:5:"alice";}</div>'+
+      '<div class="sim-label" style="margin-top:12px;">Enter malicious PHP serialised payload:</div>'+
+      '<input id="c6pay" class="sim-input" placeholder=\'O:6:"Logger":1:{s:3:"cmd";s:14:"cat /flag.txt";}\'>'+
+      '<div class="sim-row">'+
+        '<button class="sim-btn sim-btn-warn" onclick="c6auto()">Auto-fill Payload</button>'+
+        '<button class="sim-btn sim-btn-danger" onclick="c6submit()">Set Cookie &amp; Reload</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="sim-result" id="c6r"></div>'+
+    '</div>'
+  );}
+  if(id===7){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — files.vuln.ctf</div>'+
+    '<div class="live-body">'+
+      '<div class="live-url"><em>GET</em> /documents?id=<em id="c7urlid">1042</em></div>'+
+      '<div class="sim-label">Document ID</div>'+
+      '<div class="sim-row">'+
+        '<input id="c7id" class="sim-input" value="1042" style="max-width:120px;" oninput="c7urlup()">'+
+        '<button class="sim-btn" onclick="c7view()">View Document</button>'+
+      '</div>'+
+      '<div class="doc-area" id="c7doc">'+
+        '<div class="doc-meta">doc_id: 1042 &nbsp;|&nbsp; owner: alice &nbsp;|&nbsp; access: private</div>'+
+        'Q3 Project Notes — Meeting with team on Tuesday to discuss roadmap and deliverables...'+
+      '</div>'+
+    '</div>'+
+    '<div class="sim-result" id="c7r"></div>'+
+    '</div>'
+  );}
+  if(id===8){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — shop.vuln.ctf/products</div>'+
+    '<div class="live-body">'+
+      '<div class="live-url"><em>GET</em> /products?category=<em id="c8urlcat">electronics</em></div>'+
+      '<div class="sim-label">Category parameter (inject your payload)</div>'+
+      '<input id="c8q" class="sim-input" placeholder="electronics\' AND IF(SLEEP(5),1,0)--" oninput="c8urlup()">'+
+      '<div class="sim-row"><button class="sim-btn" onclick="c8send()">Send Request</button></div>'+
+      '<div class="progress-bar" id="c8bar"><div class="progress-fill" id="c8fill"></div></div>'+
+      '<div class="timer-display" id="c8timer" style="min-height:20px;"></div>'+
+      '<div class="sim-label" style="margin-top:14px;">Automated Character Extractor:</div>'+
+      '<div class="sim-row"><button class="sim-btn sim-btn-warn" onclick="c8extract()">Run Auto-Extractor</button></div>'+
+      '<div class="extracted-chars" id="c8chars" style="min-height:20px;"></div>'+
+    '</div>'+
+    '<div class="sim-result" id="c8r"></div>'+
+    '</div>'
+  );}
+  if(id===9){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — spa.vuln.ctf (DOM XSS)</div>'+
+    '<div class="live-body">'+
+      '<div class="live-url">spa.vuln.ctf/#<em id="c9urlhash">[your payload]</em></div>'+
+      '<div class="sim-label">Hash payload (everything after the #)</div>'+
+      '<input id="c9h" class="sim-input" placeholder="&lt;img src=x onerror=alert(1)&gt;" oninput="c9urlup()">'+
+      '<div class="sim-row"><button class="sim-btn" onclick="c9nav()">Navigate (injects hash via innerHTML)</button></div>'+
+      '<div class="reflect-area" style="margin-top:10px;">'+
+        '<div class="reflect-lbl">Simulated SPA page — element.innerHTML = hash:</div>'+
+        '<div id="c9page" style="min-height:24px;">Welcome!</div>'+
+      '</div>'+
+      '<div class="xss-alert-box" id="c9alert"><span id="c9alertmsg"></span><br><button class="xss-alert-ok" onclick="c9ok()">OK</button></div>'+
+    '</div>'+
+    '<div class="sim-result" id="c9r"></div>'+
+    '</div>'
+  );}
+  if(id===10){return(
+    '<div class="live-widget">'+
+    '<div class="live-hdr"><span class="live-dot"></span> LIVE — auth.vuln.ctf</div>'+
+    '<div class="live-body">'+
+      '<div class="step-indicator">STEP 1 — Discover the token formula</div>'+
+      '<div class="sim-row"><button class="sim-btn" onclick="c10step1()">Request Reset for Your Account (id=42)</button></div>'+
+      '<div class="token-box" id="c10tok1" style="display:none;"></div>'+
+      '<div class="formula-box" id="c10formula" style="display:none;"></div>'+
+      '<div class="step-indicator" style="margin-top:14px;">STEP 2 — Compute admin token</div>'+
+      '<div class="sim-label">Target user_id:</div>'+
+      '<div class="sim-row">'+
+        '<input id="c10uid" class="sim-input" value="1" style="max-width:80px;">'+
+        '<button class="sim-btn" onclick="c10compute()">Compute Token</button>'+
+      '</div>'+
+      '<div class="token-box" id="c10tok2" style="display:none;"></div>'+
+      '<div class="step-indicator" style="margin-top:14px;">STEP 3 — Submit IDOR reset</div>'+
+      '<div class="sim-label">New password for admin:</div>'+
+      '<input id="c10np" class="sim-input" value="hacked" style="max-width:160px;">'+
+      '<div class="sim-row"><button class="sim-btn sim-btn-danger" onclick="c10pwn()">Submit Reset (IDOR)</button></div>'+
+    '</div>'+
+    '<div class="sim-result" id="c10r"></div>'+
+    '</div>'
+  );}
+  return '';
+}
+
+// ─── CHALLENGE 1: SQL INJECTION ───────────────────────────────
+function c1update(){
+  var u=document.getElementById('c1u');
+  var p=document.getElementById('c1p');
+  var qu=document.getElementById('c1qu');
+  var qp=document.getElementById('c1qp');
+  var andEl=document.getElementById('c1and');
+  if(!u||!p||!qu||!qp) return;
+  var uv=u.value||'...';
+  var pv=p.value||'...';
+  var hasCmt=/'\s*--/.test(uv)||/'\s*#/.test(uv);
+  if(hasCmt){
+    var idx=uv.indexOf('--')>-1?uv.indexOf('--'):uv.indexOf('#');
+    var pre=esc(uv.substring(0,idx));
+    var cmt=esc(uv.substring(idx));
+    qu.innerHTML="'"+pre+"<span class='sql-cmt'>"+cmt+"</span>'";
+    if(qp){qp.style.opacity='.25';qp.style.textDecoration='line-through';}
+    if(andEl){andEl.style.opacity='.25';}
+  } else {
+    qu.textContent="'"+uv+"'";
+    if(qp){qp.style.opacity='';qp.style.textDecoration='';qp.textContent="'"+pv+"'";}
+    if(andEl){andEl.style.opacity='';}
+  }
+}
+
+function c1try(){
+  var u=(document.getElementById('c1u').value||'').trim();
+  var r=document.getElementById('c1r');
+  r.className='sim-result show';
+  var hasCmt=/'\s*--/.test(u)||/'\s*#/.test(u)||/'\s*or\s*'1'='1/i.test(u)||/'\s*or\s*1=1/i.test(u);
+  var isAdmin=/^admin/i.test(u);
+  if(hasCmt&&isAdmin){
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; 200 OK — Login successful! Welcome, <strong>admin</strong>.<br>&gt; The SQL comment dropped the password check entirely.<br>&gt; [admin dashboard loaded]<br>'+
+      '<div class="flag-win">CTF{sql_1nj3ct10n_bypass_f0r_th3_w1n}</div>'+
+      '<button class="autofill-btn" onclick="autofill(\'CTF{sql_1nj3ct10n_bypass_f0r_th3_w1n}\')">Auto-fill Answer</button>';
+  } else if(hasCmt){
+    r.className='sim-result show sim-warn';
+    r.innerHTML="&gt; Login succeeded — but not as admin. Try starting the username with 'admin'.";
+  } else {
+    r.className='sim-result show sim-err';
+    r.innerHTML='&gt; 401 Invalid username or password.';
+  }
+}
+
+// ─── CHALLENGE 2: REFLECTED XSS ──────────────────────────────
+function c2search(){
+  var q=document.getElementById('c2q').value;
+  var ref=document.getElementById('c2reflect');
+  var alertBox=document.getElementById('c2alert');
+  var alertMsg=document.getElementById('c2alertmsg');
+  c2xssFired=false;
+  alertBox.className='xss-alert-box';
+  var origAlert=window.alert;
+  window.alert=function(msg){
+    c2xssFired=true;
+    alertMsg.textContent='alert("'+msg+'") fired!';
+    alertBox.className='xss-alert-box show';
+  };
+  ref.innerHTML=q;
+  setTimeout(function(){window.alert=origAlert;},400);
+  if(!c2xssFired){
+    var r=document.getElementById('c2r');
+    if(/<script/i.test(q)){
+      r.className='sim-result show sim-warn';
+      r.innerHTML='&gt; &lt;script&gt; tags injected but NOT executed via innerHTML (browser security).<br>&gt; Hint: Use event handlers like &lt;img src=x onerror=alert(1)&gt; instead.';
+    } else if(q.trim()){
+      r.className='sim-result show sim-warn';
+      r.innerHTML='&gt; Content reflected but no JavaScript fired. Add an event handler that calls alert().';
+    } else {
+      r.className='sim-result show sim-err';
+      r.innerHTML='&gt; Empty input — enter a search term or XSS payload.';
+    }
+  }
+}
+
+function c2ok(){
+  document.getElementById('c2alert').className='xss-alert-box';
+  if(c2xssFired){
+    var r=document.getElementById('c2r');
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; XSS confirmed! In a real attack this script runs in the victim\'s browser.<br>&gt; Simulated cookie stolen: session=admin_secret_abc123<br>'+
+      '<div class="flag-win">CTF{r3fl3ct3d_xss_cook13_th3ft}</div>'+
+      '<button class="autofill-btn" onclick="autofill(\'CTF{r3fl3ct3d_xss_cook13_th3ft}\')">Auto-fill Answer</button>';
+  }
+}
+
+// ─── CHALLENGE 3: CSRF ────────────────────────────────────────
+var c3done=false;
+function c3attack(){
+  if(c3done) return;
+  c3done=true;
+  document.getElementById('c3bal').textContent='$5,000.00';
+  document.getElementById('c3bal').style.color='var(--accent2)';
+  document.getElementById('c3status').textContent='&#9888; $5,000 transferred to #99887766!';
+  document.getElementById('c3status').style.color='var(--accent2)';
+  var r=document.getElementById('c3r');
+  r.className='sim-result show sim-ok';
+  r.innerHTML='&gt; Victim loaded evil.ctf<br>&gt; Hidden form auto-submitted to bank.vuln.ctf/transfer<br>&gt; Browser attached session cookie automatically — victim never noticed<br>&gt; Transfer processed: $5,000 to #99887766<br>'+
+    '<div class="flag-win">CTF{csrf_3xpl01t_f0rm_subm1t_pwn3d}</div>'+
+    '<button class="autofill-btn" onclick="autofill(\'CTF{csrf_3xpl01t_f0rm_subm1t_pwn3d}\')">Auto-fill Answer</button>';
+}
+
+// ─── CHALLENGE 4: SSRF ────────────────────────────────────────
+function c4fetch(){
+  var url=(document.getElementById('c4url').value||'').trim();
+  var r=document.getElementById('c4r');
+  r.className='sim-result show';
+  if(!url){r.className='sim-result show sim-err';r.innerHTML='&gt; URL required.';return;}
+  var isMeta=url.indexOf('169.254.169.254')>-1;
+  var isRoot=/\/latest\/meta-data\/?(\?.*)?$/.test(url);
+  var isIamList=/\/iam\/security-credentials\/?(\?.*)?$/.test(url);
+  var isRole=/prod-role/.test(url);
+  if(!isMeta){
+    r.className='sim-result show sim-warn';
+    r.innerHTML='&gt; Server fetched: '+esc(url)+'<br>&gt; 200 OK — public content returned.<br>&gt; Tip: Target the AWS metadata endpoint at 169.254.169.254';
+    return;
+  }
+  if(isRoot){
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; 200 OK — AWS Metadata Service:<br><code style="color:var(--accent3);">ami-id<br>instance-id<br>hostname<br>iam/<br>local-ipv4</code><br>&gt; Try navigating deeper: .../iam/security-credentials/';
+    return;
+  }
+  if(isIamList&&!isRole){
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; 200 OK:<br><code style="color:var(--accent3);">prod-role</code><br>&gt; Role found! Now fetch: .../iam/security-credentials/prod-role';
+    return;
+  }
+  if(isRole){
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; 200 OK — IAM Credentials:<br>'+
+      '<code style="color:var(--green);">{<br>'+
+      '  "AccessKeyId": "ASIAIOSFODNN7EXAMPLE",<br>'+
+      '  "SecretAccessKey": "CTF{ssrf_m3tadat4_cr3d3nt14l_h4rv3st}",<br>'+
+      '  "Token": "IQoJb3J...",<br>'+
+      '  "Expiration": "2025-01-01T00:00:00Z"<br>'+
+      '}</code>'+
+      '<div class="flag-win">CTF{ssrf_m3tadat4_cr3d3nt14l_h4rv3st}</div>'+
+      '<button class="autofill-btn" onclick="autofill(\'CTF{ssrf_m3tadat4_cr3d3nt14l_h4rv3st}\')">Auto-fill Answer</button>';
+    return;
+  }
+  if(isMeta){
+    r.className='sim-result show sim-warn';
+    r.innerHTML='&gt; 200 OK — navigating metadata. Follow the path: /latest/meta-data/ → /iam/security-credentials/ → prod-role';
+  }
+}
+
+// ─── CHALLENGE 5: JWT ─────────────────────────────────────────
+var C5TOK='eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ.';
+function c5forge(){
+  document.getElementById('c5tok').value=C5TOK;
+  var r=document.getElementById('c5r');
+  r.className='sim-result show sim-warn';
+  r.innerHTML='&gt; Token forged:<br>&gt; Header: {"alg":"none","typ":"JWT"}<br>&gt; Payload: {"user":"alice","role":"admin"}<br>&gt; Signature: (empty)<br>&gt; Now submit it to /admin/flag.';
+}
+
+function c5submit(){
+  var tok=(document.getElementById('c5tok').value||'').trim();
+  var r=document.getElementById('c5r');
+  r.className='sim-result show';
+  var parts=tok.split('.');
+  if(parts.length<2){r.className='sim-result show sim-err';r.innerHTML='&gt; Invalid token — needs 3 parts separated by dots.';return;}
+  try{
+    var h=JSON.parse(atob(parts[0].replace(/-/g,'+').replace(/_/g,'/')));
+    var p=JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+    var algNone=(h.alg||'').toLowerCase()==='none';
+    var isAdmin=(p.role||'').toLowerCase()==='admin';
+    if(algNone&&isAdmin){
+      r.className='sim-result show sim-ok';
+      r.innerHTML='&gt; Token accepted! alg:none — signature skipped.<br>&gt; role:admin — /admin/flag access granted.<br>'+
+        '<div class="flag-win">CTF{jwt_n0n3_4lg_byp4ss_4dm1n}</div>'+
+        '<button class="autofill-btn" onclick="autofill(\'CTF{jwt_n0n3_4lg_byp4ss_4dm1n}\')">Auto-fill Answer</button>';
+    } else if(algNone){
+      r.className='sim-result show sim-warn';
+      r.innerHTML='&gt; alg:none accepted but role="'+esc(p.role||'?')+'". Set role to "admin".';
+    } else {
+      r.className='sim-result show sim-err';
+      r.innerHTML='&gt; 401 — signature invalid. Set alg to "none".';
+    }
+  }catch(e){
+    r.className='sim-result show sim-err';
+    r.innerHTML='&gt; Token decode error — check base64url encoding.';
+  }
+}
+
+// ─── CHALLENGE 6: PHP DESERIALIZATION ────────────────────────
+var C6PAY='O:6:"Logger":1:{s:3:"cmd";s:14:"cat /flag.txt";}';
+function c6auto(){
+  document.getElementById('c6pay').value=C6PAY;
+  var r=document.getElementById('c6r');
+  r.className='sim-result show sim-warn';
+  r.innerHTML='&gt; Payload auto-filled. Click "Set Cookie & Reload" to trigger deserialization.';
+}
+
+function c6submit(){
+  var pay=(document.getElementById('c6pay').value||'').trim();
+  var r=document.getElementById('c6r');
+  r.className='sim-result show';
+  var isLogger=/O:\d+:"Logger"/.test(pay);
+  var hasCmd=pay.indexOf('cat /flag.txt')>-1||pay.indexOf('cat+/flag.txt')>-1;
+  var isSerial=/^O:\d+:"/.test(pay);
+  if(isLogger&&hasCmd){
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; Cookie set. Page reloads. PHP calls unserialize().<br>&gt; Logger::__destruct() fires automatically.<br>&gt; system("cat /flag.txt") executed:<br>'+
+      '<div class="flag-win">CTF{php_d3s3r14l1z3_rce_m4g1c_m3th0d}</div>'+
+      '<button class="autofill-btn" onclick="autofill(\'CTF{php_d3s3r14l1z3_rce_m4g1c_m3th0d}\')">Auto-fill Answer</button>';
+  } else if(isLogger){
+    r.className='sim-result show sim-warn';
+    r.innerHTML="&gt; Logger class found, __destruct fired — but cmd doesn't read the flag. Set cmd to: cat /flag.txt";
+  } else if(isSerial){
+    r.className='sim-result show sim-warn';
+    r.innerHTML='&gt; Deserialised OK but no dangerous __destruct found. Use the Logger class.';
+  } else {
+    r.className='sim-result show sim-err';
+    r.innerHTML='&gt; Invalid PHP serialised format. Must start with O:N:"ClassName":N:{...}';
+  }
+}
+
+// ─── CHALLENGE 7: IDOR ───────────────────────────────────────
+function c7urlup(){
+  var el=document.getElementById('c7urlid');
+  if(el) el.textContent=document.getElementById('c7id').value||'...';
+}
+
+function c7view(){
+  var id=parseInt(document.getElementById('c7id').value,10);
+  var doc=document.getElementById('c7doc');
+  var r=document.getElementById('c7r');
+  r.className='sim-result show';
+  if(isNaN(id)){r.className='sim-result show sim-err';r.innerHTML='&gt; Invalid ID.';return;}
+  if(id===1001){
+    doc.innerHTML='<div class="doc-meta">doc_id: 1001 &nbsp;|&nbsp; owner: admin &nbsp;|&nbsp; access: PRIVATE</div>'+
+      '[ADMIN DOCUMENT — Project Nightfall]<br>Authorisation code: <strong style="color:var(--green);">CTF{1d0r_s3qu3nt14l_1d_pr1v3sc}</strong>';
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; 200 OK — admin document returned (no authorisation check!).<br>'+
+      '<div class="flag-win">CTF{1d0r_s3qu3nt14l_1d_pr1v3sc}</div>'+
+      '<button class="autofill-btn" onclick="autofill(\'CTF{1d0r_s3qu3nt14l_1d_pr1v3sc}\')">Auto-fill Answer</button>';
+  } else if(id===1042){
+    doc.innerHTML='<div class="doc-meta">doc_id: 1042 &nbsp;|&nbsp; owner: alice &nbsp;|&nbsp; access: private</div>Q3 Project Notes — Meeting on Tuesday to discuss deliverables...';
+    r.className='sim-result show sim-warn';
+    r.innerHTML='&gt; 200 OK — your own document. Try a different ID — specifically lower numbers.';
+  } else if(id>0&&id<3000){
+    doc.innerHTML='<div class="doc-meta">doc_id: '+id+' &nbsp;|&nbsp; owner: user_'+id+' &nbsp;|&nbsp; access: private</div>Document content for user #'+id+'...';
+    r.className='sim-result show sim-warn';
+    r.innerHTML='&gt; 200 OK — another user\'s document (no auth check!). Keep looking — admin doc has a much lower ID.';
+  } else {
+    doc.innerHTML='<div class="doc-meta">doc_id: '+id+'</div><span style="color:var(--accent2);">404 — Document not found.</span>';
+    r.className='sim-result show sim-err';
+    r.innerHTML='&gt; 404 Not Found.';
+  }
+}
+
+// ─── CHALLENGE 8: BLIND SQL ───────────────────────────────────
+function c8urlup(){
+  var el=document.getElementById('c8urlcat');
+  if(el) el.textContent=document.getElementById('c8q').value||'electronics';
+}
+
+function c8send(){
+  var q=(document.getElementById('c8q').value||'').trim();
+  var r=document.getElementById('c8r');
+  var fill=document.getElementById('c8fill');
+  var timerEl=document.getElementById('c8timer');
+  r.className='sim-result show';
+  var hasSleep=/SLEEP\s*\(\s*[1-9]/i.test(q)||/WAITFOR\s+DELAY/i.test(q);
+  var hasInject=q.indexOf("'")>-1;
+  if(hasSleep){
+    r.className='sim-result show sim-warn';
+    r.innerHTML='&gt; Request sent — waiting for response...';
+    fill.style.width='0%';
+    timerEl.textContent='';
+    var start=Date.now();
+    var dur=5000;
+    if(c8timer) clearInterval(c8timer);
+    c8timer=setInterval(function(){
+      var el2=Date.now()-start;
+      var pct=Math.min(100,(el2/dur)*100);
+      fill.style.width=pct+'%';
+      timerEl.textContent=((dur-el2)/1000).toFixed(1)+'s remaining...';
+      if(el2>=dur){
+        clearInterval(c8timer);
+        fill.style.width='100%';
+        timerEl.textContent='Response received after 5.0s — TRUE!';
+        r.className='sim-result show sim-ok';
+        r.innerHTML='&gt; 5.01s response time — SLEEP(5) confirmed! Injection is working.<br>&gt; Use the Auto-Extractor to pull the flag character by character.';
+      }
+    },60);
+  } else if(hasInject){
+    fill.style.width='100%';
+    timerEl.textContent='Response time: 0.08s';
+    r.className='sim-result show sim-warn';
+    r.innerHTML='&gt; 0.08s — Products: Widget, Gadget, Doohickey<br>&gt; No sleep observed. Try adding IF(SLEEP(5),1,0) to test blind injection.';
+  } else {
+    fill.style.width='100%';
+    timerEl.textContent='Response time: 0.06s';
+    r.className='sim-result show';
+    r.innerHTML='&gt; 0.06s — Products: Widget, Gadget, Doohickey';
+  }
+}
+
+function c8extract(){
+  if(c8extracting) return;
+  c8extracting=true;
+  var flag='CTF{bl1nd_sql1_t1m3_b4s3d_h4sh_3xtr4ct}';
+  var el=document.getElementById('c8chars');
+  var r=document.getElementById('c8r');
+  r.className='sim-result show sim-warn';
+  r.innerHTML='&gt; Automated extraction running — sending time-based queries for each character...';
+  el.textContent='Extracting: _';
+  var i=0;
+  var interval=setInterval(function(){
+    if(i>=flag.length){
+      clearInterval(interval);
+      c8extracting=false;
+      el.textContent='Complete: '+flag;
+      r.className='sim-result show sim-ok';
+      r.innerHTML='&gt; Extraction complete! '+flag.length+' chars recovered via '+flag.length*128+' time-based queries.<br>'+
+        '<div class="flag-win">CTF{bl1nd_sql1_t1m3_b4s3d_h4sh_3xtr4ct}</div>'+
+        '<button class="autofill-btn" onclick="autofill(\'CTF{bl1nd_sql1_t1m3_b4s3d_h4sh_3xtr4ct}\')">Auto-fill Answer</button>';
+      return;
+    }
+    el.textContent='[pos '+(i+1)+'] '+flag.substring(0,i+1)+'_';
+    i++;
+  },90);
+}
+
+// ─── CHALLENGE 9: DOM XSS ────────────────────────────────────
+function c9urlup(){
+  var el=document.getElementById('c9urlhash');
+  if(el) el.textContent=document.getElementById('c9h').value||'[payload]';
+}
+
+function c9nav(){
+  var hash=document.getElementById('c9h').value;
+  var page=document.getElementById('c9page');
+  var alertBox=document.getElementById('c9alert');
+  var alertMsg=document.getElementById('c9alertmsg');
+  c9xssFired=false;
+  alertBox.className='xss-alert-box';
+  var origAlert=window.alert;
+  window.alert=function(msg){
+    c9xssFired=true;
+    alertMsg.textContent='alert("'+msg+'") fired from hash payload!';
+    alertBox.className='xss-alert-box show';
+  };
+  page.innerHTML=hash;
+  setTimeout(function(){window.alert=origAlert;},400);
+  if(!c9xssFired){
+    var r=document.getElementById('c9r');
+    if(/<script/i.test(hash)){
+      r.className='sim-result show sim-warn';
+      r.innerHTML='&gt; Injected but not executed — &lt;script&gt; tags via innerHTML are blocked by browsers.<br>&gt; Use: &lt;img src=x onerror=alert(1)&gt; or &lt;svg onload=alert(1)&gt;';
+    } else if(hash.trim()){
+      r.className='sim-result show sim-warn';
+      r.innerHTML='&gt; HTML injected into the DOM. No JavaScript fired — add an event handler that calls alert().';
+    }
+  }
+}
+
+function c9ok(){
+  document.getElementById('c9alert').className='xss-alert-box';
+  if(c9xssFired){
+    var r=document.getElementById('c9r');
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; DOM XSS confirmed via innerHTML sink!<br>&gt; Simulated cookie captured: session=admin_dom_token_789<br>'+
+      '<div class="flag-win">CTF{d0m_xss_1nnerHTML_s1nk_c00k13}</div>'+
+      '<button class="autofill-btn" onclick="autofill(\'CTF{d0m_xss_1nnerHTML_s1nk_c00k13}\')">Auto-fill Answer</button>';
+  }
+}
+
+// ─── CHALLENGE 10: PASSWORD RESET ────────────────────────────
+function c10step1(){
+  var t1=document.getElementById('c10tok1');
+  var f=document.getElementById('c10formula');
+  var myId=42;
+  var myTok=(myId*1337)%1000000;
+  t1.style.display='block';
+  t1.innerHTML='Your reset email arrived — token: <strong>'+String(myTok).padStart(6,'0')+'</strong>';
+  f.style.display='block';
+  f.textContent='Formula: token = (user_id * 1337) % 1000000 = ('+myId+' * 1337) % 1000000 = '+myTok;
+}
+
+function c10compute(){
+  var uid=parseInt(document.getElementById('c10uid').value,10);
+  var t2=document.getElementById('c10tok2');
+  if(isNaN(uid)||uid<1){t2.style.display='block';t2.textContent='Enter a valid user_id.';return;}
+  var tok=(uid*1337)%1000000;
+  t2.style.display='block';
+  t2.innerHTML='Token for user_id='+uid+': <strong>'+String(tok).padStart(6,'0')+'</strong>';
+}
+
+function c10pwn(){
+  var uid=parseInt(document.getElementById('c10uid').value,10);
+  var np=(document.getElementById('c10np').value||'hacked').trim();
+  var r=document.getElementById('c10r');
+  r.className='sim-result show';
+  if(isNaN(uid)){r.className='sim-result show sim-err';r.innerHTML='&gt; Invalid user_id.';return;}
+  var tok=(uid*1337)%1000000;
+  var padded=String(tok).padStart(6,'0');
+  if(uid===1){
+    r.className='sim-result show sim-ok';
+    r.innerHTML='&gt; POST /reset/confirm — user_id=1, token='+padded+', new_password='+esc(np)+'<br>'+
+      '&gt; Token valid! No session check performed (IDOR).<br>&gt; Admin password reset successfully.<br>&gt; Logging in as admin...<br>&gt; [admin dashboard] Access granted!<br>'+
+      '<div class="flag-win">CTF{pr3d1ct4bl3_t0k3n_1d0r_4cc0unt_t4k30v3r}</div>'+
+      '<button class="autofill-btn" onclick="autofill(\'CTF{pr3d1ct4bl3_t0k3n_1d0r_4cc0unt_t4k30v3r}\')">Auto-fill Answer</button>';
+  } else {
+    r.className='sim-result show sim-warn';
+    r.innerHTML='&gt; Reset sent for user_id='+uid+' (token: '+padded+'). Target the admin — set user_id to 1.';
+  }
+}
+
+// ─── RENDER & MODAL ───────────────────────────────────────────
+function diffClass(d){return d==='Easy'?'tag-easy':d==='Medium'?'tag-medium':'tag-hard';}
+
+function renderCards(){
+  var grid=document.getElementById('grid');
+  grid.innerHTML='';
+  var list=activeFilter==='all'?challenges:challenges.filter(function(c){return c.difficulty===activeFilter;});
+  list.forEach(function(ch){
+    var isSolved=!!solved[ch.id];
+    var card=document.createElement('div');
+    card.className='card'+(isSolved?' solved':'');
+    card.innerHTML=
+      '<div class="card-stripe" style="background:'+ch.stripe+'"></div>'+
+      '<div class="card-body">'+
+        '<div class="card-header-row">'+
+          '<span class="card-num">CH-'+String(ch.id).padStart(2,'0')+'</span>'+
+          '<span class="card-pts">'+ch.points+' PTS</span>'+
+        '</div>'+
+        '<div class="card-title">'+esc(ch.title)+'</div>'+
+        '<div class="card-tags">'+
+          '<span class="tag tag-web">Web</span>'+
+          '<span class="tag tag-vuln">'+esc(ch.vuln)+'</span>'+
+          '<span class="tag '+diffClass(ch.difficulty)+'">'+ch.difficulty+'</span>'+
+        '</div>'+
+        '<div class="card-desc">'+esc(ch.desc)+'</div>'+
+        '<div class="card-footer">'+
+          '<span class="solves">'+ch.solves+' solves</span>'+
+          (isSolved
+            ? '<span class="solved-badge">&#10003; SOLVED</span>'
+            : '<button class="btn-view" onclick="openModal('+ch.id+')">[ OPEN ]</button>')+
+        '</div>'+
+      '</div>';
+    if(isSolved){card.addEventListener('click',function(){openModal(ch.id);});}
+    grid.appendChild(card);
+  });
+}
+
+function openModal(id){
+  currentChallenge=challenges.find(function(c){return c.id===id;});
+  var ch=currentChallenge;
+  var isSolved=!!solved[ch.id];
+  document.getElementById('modal-title').textContent='CH-'+String(ch.id).padStart(2,'00')+' // '+ch.title;
+  var hintsHtml=ch.hints.map(function(h,i){return '<div class="hint-item" data-n="'+(i+1)+'">'+h+'</div>';}).join('');
+  var stepsHtml=ch.solution.map(function(s,i){return '<div class="step"><span class="step-n">'+String(i+1).padStart(2,'0')+'.</span><span>'+s+'</span></div>';}).join('');
+  document.getElementById('modal-body').innerHTML=
+    '<div class="section-label">// Scenario</div>'+
+    '<div class="modal-desc">'+esc(ch.desc)+'</div>'+
+    '<div class="section-label" style="margin-top:20px;">// Live Challenge</div>'+
+    buildWidget(ch)+
+    '<div class="section-label" style="margin-top:20px;">// Hints</div>'+
+    hintsHtml+
+    '<div class="section-label">// Solution Walkthrough</div>'+
+    '<div class="solution-block">'+stepsHtml+'</div>'+
+    '<div class="section-label">// Flag Format</div>'+
+    '<div class="flag-box">CTF{...}</div>'+
+    '<div class="submit-area">'+
+      '<div class="section-label">// Submit Flag</div>'+
+      '<div class="submit-row">'+
+        '<input class="flag-input" id="flag-input" type="text" placeholder="CTF{your_flag_here}" '+(isSolved?'disabled':'')+'>'+
+        '<button class="btn-submit" onclick="submitFlag()" '+(isSolved?'disabled':'')+'>SUBMIT</button>'+
+      '</div>'+
+      '<div class="submit-msg '+(isSolved?'correct':'')+'" id="submit-msg">'+(isSolved?'&#10003; Already solved! +'+ch.points+' pts':'')+'</div>'+
+    '</div>';
+  // Reset state
+  c2xssFired=false;c9xssFired=false;c3done=false;c8extracting=false;
+  if(c8timer){clearInterval(c8timer);c8timer=null;}
+  document.getElementById('modal-overlay').classList.add('open');
+  if(!isSolved){setTimeout(function(){var fi=document.getElementById('flag-input');if(fi)fi.focus();},50);}
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+  currentChallenge=null;
+  if(c8timer){clearInterval(c8timer);c8timer=null;}
+  c8extracting=false;
+}
+
+function submitFlag(){
+  var input=(document.getElementById('flag-input').value||'').trim();
+  var msg=document.getElementById('submit-msg');
+  var ch=currentChallenge;
+  if(input===ch.flag){
+    if(!solved[ch.id]){solved[ch.id]=true;updateScore();renderCards();}
+    msg.className='submit-msg correct';
+    msg.textContent='&#10003; Correct! +'+ch.points+' pts';
+    document.getElementById('flag-input').disabled=true;
+    document.querySelector('.btn-submit').disabled=true;
+  } else {
+    msg.className='submit-msg wrong';
+    msg.textContent='&#10007; Incorrect. Try again.';
+    var fi=document.getElementById('flag-input');
+    if(fi){fi.style.borderColor='var(--accent2)';setTimeout(function(){var el=document.getElementById('flag-input');if(el)el.style.borderColor='';},1000);}
+  }
+}
+
+function updateScore(){
+  var count=Object.keys(solved).length;
+  var score=challenges.filter(function(c){return!!solved[c.id];}).reduce(function(a,c){return a+c.points;},0);
+  document.getElementById('solved-count').textContent=count;
+  document.getElementById('your-score').textContent=score;
+}
+
+document.querySelectorAll('.filter-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    activeFilter=btn.dataset.filter;
+    renderCards();
+  });
+});
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') closeModal();
+  if(e.key==='Enter'&&document.getElementById('modal-overlay').classList.contains('open')) submitFlag();
+});
+
+document.getElementById('modal-overlay').addEventListener('click',function(e){
+  if(e.target===document.getElementById('modal-overlay')) closeModal();
+});
+
+document.getElementById('total-pts').textContent=challenges.reduce(function(a,c){return a+c.points;},0);
+renderCards();
+</script>
+
+<div style="text-align:center;padding:1rem;font-size:.7rem;color:#3a4a66;font-family:'Share Tech Mono',monospace">AP® is a trademark of the College Board. This site is not affiliated with the College Board.</div>
+</body>
+</html>

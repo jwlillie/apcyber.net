@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTF Challenges &mdash; AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0b1628;--navy-mid:#132040;--navy-light:#1e2e52;
+  --cyan:#00d4c8;--amber:#f5a623;--green:#00c864;
+  --white:#f2f5fb;--muted:#8899bb;--card-bg:#111e38;
+  --border:rgba(0,212,200,.15);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:100;background:rgba(11,22,40,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 clamp(1.5rem,5vw,4rem);height:64px;display:flex;align-items:center;justify-content:space-between;gap:1.5rem}
+.nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;flex-shrink:0}
+.nav-logo{width:36px;height:36px;background:var(--cyan);border-radius:8px;display:grid;place-items:center}
+.nav-logo svg{width:20px;height:20px}
+.nav-title{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--white)}
+.nav-title span{color:var(--cyan)}
+.nav-links{display:flex;align-items:center;gap:.25rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.85rem;font-weight:500;padding:.35rem .75rem;border-radius:8px;transition:color .18s,background .18s}
+.nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-links a.active{color:var(--cyan)}
+.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:700!important}
+@media(max-width:760px){.nav-links{display:none}}
+
+/* ── HERO ── */
+.hero{padding:clamp(3rem,7vw,5rem) clamp(1.5rem,5vw,4rem) clamp(2rem,5vw,3rem);max-width:900px;margin:0 auto;text-align:center}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,212,200,.08);border:1px solid rgba(0,212,200,.25);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:.3rem 1rem;border-radius:6px;margin-bottom:1.5rem}
+.hero-badge::before{content:'>';margin-right:.25rem;opacity:.5}
+.page-h1{font-family:'DM Serif Display',serif;font-size:clamp(2.2rem,5vw,3.4rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:.75rem}
+.page-h1 em{font-style:italic;color:var(--cyan)}
+.page-sub{font-size:1rem;color:var(--muted);max-width:560px;margin:0 auto 1.25rem;line-height:1.75;font-weight:300}
+.hero-meta{display:flex;align-items:center;justify-content:center;gap:1.25rem;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
+.hero-meta span{display:flex;align-items:center;gap:.35rem}
+.hero-meta span::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+
+/* ── AP MAPPING BANNER ── */
+.ap-banner{max-width:900px;margin:0 auto clamp(2rem,4vw,3rem);padding:0 clamp(1.5rem,5vw,4rem)}
+.ap-box{background:rgba(0,212,200,.05);border:1px solid rgba(0,212,200,.15);border-radius:12px;padding:1rem 1.25rem;font-size:.84rem;color:var(--muted);line-height:1.7}
+.ap-box strong{color:var(--white)}
+
+/* ── CTF GRID ── */
+.ctf-grid-wrap{max-width:900px;margin:0 auto;padding:0 clamp(1.5rem,5vw,4rem) clamp(3rem,6vw,5rem)}
+.section-label{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1.25rem;display:flex;align-items:center;gap:.6rem}
+.section-label::before{content:'';display:inline-block;width:18px;height:2px;background:var(--muted)}
+.ctf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+
+/* ── CTF CARD ── */
+.ctf-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.4rem 1.2rem;text-decoration:none;color:var(--white);display:flex;flex-direction:column;gap:.6rem;transition:transform .2s,border-color .2s,box-shadow .2s;position:relative;overflow:hidden}
+.ctf-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,212,200,.03) 0,transparent 60%);pointer-events:none}
+.ctf-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.card-accent{height:3px;border-radius:2px;margin-bottom:.4rem}
+.card-category{font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6}
+.card-title{font-family:'DM Serif Display',serif;font-size:1.35rem;line-height:1.2}
+.card-unit{font-size:.76rem;color:var(--muted);line-height:1.5;margin-top:.1rem}
+.card-meta{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.05)}
+.card-count{font-family:'Share Tech Mono',monospace;font-size:.75rem;opacity:.5}
+.card-cta{font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:.3rem;opacity:.7;transition:opacity .18s}
+.ctf-card:hover .card-cta{opacity:1}
+
+/* ── WHAT IS CTF ── */
+.info-section{max-width:900px;margin:0 auto;padding:0 clamp(1.5rem,5vw,4rem) clamp(3rem,6vw,5rem)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:600px){.info-grid{grid-template-columns:1fr}}
+.info-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+.info-card-title{font-weight:700;font-size:.9rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.info-card-title svg{width:16px;height:16px;stroke:var(--cyan);flex-shrink:0}
+.info-card p{font-size:.84rem;color:var(--muted);line-height:1.7}
+
+footer{background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="tools.html" class="active">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+<div class="mobile-nav-drawer" id="mobile-nav-drawer">
+  <div class="mobile-nav-header">
+    <span class="mobile-nav-title">AP <span style="color:var(--cyan)">Cybersecurity</span></span>
+    <button class="mobile-nav-close" onclick="closeMobileNav()">&times;</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="index.html" onclick="closeMobileNav()">Home</a>
+    <a href="socratic-anchors.html" onclick="closeMobileNav()">Socratic Guides</a>
+    <a href="tools.html" class="active" onclick="closeMobileNav()">Student Tools</a>
+    <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
+    <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Capture the Flag</div>
+  <h1 class="page-h1">CTF <em>Challenge Labs</em></h1>
+  <p class="page-sub">Hands-on hacking challenges aligned to the AP Cybersecurity curriculum. Solve real-world scenarios, capture flags, and build the skills you need for the exam — and beyond.</p>
+  <div class="hero-meta">
+    <span>6 challenge categories</span>
+    <span>60 total challenges</span>
+    <span>Easy → Hard difficulty</span>
+    <span>No account required</span>
+  </div>
+</div>
+
+<!-- AP MAPPING -->
+<div class="ap-banner">
+  <div class="ap-box">
+    <strong>AP Cybersecurity alignment:</strong> Each category maps to specific AP framework units. Challenges reinforce concepts from the Course and Exam Description using realistic attack scenarios, PCAP analysis, cryptography puzzles, and digital forensics investigations. These are supplemental practice activities — not official College Board materials.
+  </div>
+</div>
+
+<!-- CTF GRID -->
+<div class="ctf-grid-wrap">
+  <div class="section-label">Choose a category</div>
+  <div class="ctf-grid">
+
+    <a href="web_ctf_challenges.html" class="ctf-card" style="border-color:rgba(0,240,255,.2)">
+      <div class="card-accent" style="background:linear-gradient(90deg,#00f0ff,#0080ff)"></div>
+      <div class="card-category">Web Security</div>
+      <div class="card-title">WebXploit</div>
+      <div class="card-unit">Unit 5 &mdash; Application Vulnerabilities &bull; SQL injection, XSS, JWT attacks, IDOR, SSRF</div>
+      <div class="card-meta">
+        <span class="card-count">10 CHALLENGES</span>
+        <span class="card-cta">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      </div>
+    </a>
+
+    <a href="networking_ctf_challenges.html" class="ctf-card" style="border-color:rgba(255,140,0,.2)">
+      <div class="card-accent" style="background:linear-gradient(90deg,#ff8c00,#ff5500)"></div>
+      <div class="card-category">Networking</div>
+      <div class="card-title">NETLAB</div>
+      <div class="card-unit">Unit 3 &mdash; Network Security &bull; PCAP analysis, ARP poisoning, DNS exfil, firewall evasion</div>
+      <div class="card-meta">
+        <span class="card-count">10 CHALLENGES</span>
+        <span class="card-cta">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      </div>
+    </a>
+
+    <a href="crypto_ctf_challenges.html" class="ctf-card" style="border-color:rgba(168,85,247,.25)">
+      <div class="card-accent" style="background:linear-gradient(90deg,#a855f7,#6366f1)"></div>
+      <div class="card-category">Cryptography</div>
+      <div class="card-title">CRYPTA</div>
+      <div class="card-unit">Unit 5 &mdash; Symmetric &amp; Asymmetric Crypto &bull; Caesar, XOR, RSA, hashing, padding oracles</div>
+      <div class="card-meta">
+        <span class="card-count">10 CHALLENGES</span>
+        <span class="card-cta">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      </div>
+    </a>
+
+    <a href="forensics_ctf_challenges.html" class="ctf-card" style="border-color:rgba(0,255,136,.18)">
+      <div class="card-accent" style="background:linear-gradient(90deg,#00ff88,#00c864)"></div>
+      <div class="card-category">Digital Forensics</div>
+      <div class="card-title">EVIDENCE</div>
+      <div class="card-unit">Units 2&ndash;4 &mdash; Detection &amp; Analysis &bull; Log analysis, memory forensics, file carving, IoCs</div>
+      <div class="card-meta">
+        <span class="card-count">10 CHALLENGES</span>
+        <span class="card-cta">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      </div>
+    </a>
+
+    <a href="osint_ctf_challenges.html" class="ctf-card" style="border-color:rgba(255,60,110,.2)">
+      <div class="card-accent" style="background:linear-gradient(90deg,#ff3c6e,#ff0044)"></div>
+      <div class="card-category">OSINT</div>
+      <div class="card-title">DOSSIER</div>
+      <div class="card-unit">Unit 1 &mdash; Reconnaissance &bull; Open-source intelligence, social engineering, footprinting</div>
+      <div class="card-meta">
+        <span class="card-count">10 CHALLENGES</span>
+        <span class="card-cta">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      </div>
+    </a>
+
+    <a href="stego_ctf_challenges.html" class="ctf-card" style="border-color:rgba(255,228,56,.18)">
+      <div class="card-accent" style="background:linear-gradient(90deg,#ffe438,#ffaa00)"></div>
+      <div class="card-category">Steganography</div>
+      <div class="card-title">SIGIL</div>
+      <div class="card-unit">Unit 5 &mdash; Data Concealment &bull; Hidden messages in images, audio, and binary files</div>
+      <div class="card-meta">
+        <span class="card-count">10 CHALLENGES</span>
+        <span class="card-cta">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<!-- WHAT IS CTF -->
+<div class="info-section">
+  <div class="section-label">What is a CTF?</div>
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        How it works
+      </div>
+      <p>Capture the Flag (CTF) competitions present real-world security scenarios where you must find a hidden "flag" — a secret string like <code style="font-size:.78rem;color:var(--cyan)">CTF{s3cr3t_h3re}</code> — by exploiting a vulnerability, cracking a cipher, or analyzing data.</p>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        AP Cybersecurity connection
+      </div>
+      <p>Each challenge is grounded in AP framework concepts — from SQL injection (Topic 5.1) and cryptographic attacks (Topics 5.3–5.4) to network interception (Topic 3.1) and forensic analysis (Topics 4.4, 3.5). CTFs are how professionals practice these skills.</p>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Hints available
+      </div>
+      <p>Every challenge includes tiered hints so you can work through it independently. Hints reveal progressively more detail — try to solve with as few hints as possible. Solutions and explanations are built in for learning after you've made your attempt.</p>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Difficulty levels
+      </div>
+      <p>Each category has challenges rated Easy, Medium, and Hard. Easy challenges reinforce AP exam concepts directly. Medium bridges to real-world tool use. Hard challenges go beyond the AP scope and are designed for students interested in cybersecurity careers.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>&copy; 2026 apcyber.net &mdash; Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <div style="display:flex;gap:1rem">
+    <a href="legal.html" style="color:var(--muted);text-decoration:none">Privacy Policy</a>
+    <a href="legal.html?tab=terms" style="color:var(--muted);text-decoration:none">Terms of Service</a>
+  </div>
+</footer>
+
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
+</body>
+</html>

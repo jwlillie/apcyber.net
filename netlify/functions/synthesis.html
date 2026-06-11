@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cross-Unit Synthesis Quiz &mdash; AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0b1628;--navy-mid:#132040;--navy-light:#1e2e52;
+  --cyan:#00d4c8;--cyan-dim:#00a89f;--amber:#f5a623;
+  --green:#00c864;--red:#ff5555;--white:#f2f5fb;
+  --muted:#8899bb;--card-bg:#111e38;--border:rgba(0,212,200,.15);
+  --u1:#00d4c8;--u2:#f5a623;--u3:#64b4ff;--u4:#b464ff;--u5:#00c864;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 clamp(1rem,3vw,2rem);height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;flex-shrink:0}
+.nav-logo{width:36px;height:36px;background:var(--cyan);border-radius:8px;display:grid;place-items:center}
+.nav-logo svg{width:20px;height:20px}
+.nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.nav-title span{color:var(--cyan)}
+.nav-links{display:flex;align-items:center;gap:.15rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.75rem;font-weight:500;padding:.3rem .55rem;border-radius:6px;transition:color .2s,background .2s}
+.nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-links a.active{color:var(--cyan)}
+.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:600!important}
+@media(max-width:800px){.nav-links{display:none}}
+
+.screen{display:none}.screen.active{display:block}
+
+/* ── SETUP ─────────────────────────────── */
+.setup-wrap{max-width:800px;margin:0 auto;padding:clamp(2.5rem,6vw,4.5rem) clamp(1.5rem,4vw,2rem)}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(100,180,255,.1);border:1px solid rgba(100,180,255,.3);color:#64b4ff;font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.35rem .9rem;border-radius:100px;margin-bottom:1.5rem}
+.badge::before{content:'';width:7px;height:7px;border-radius:50%;background:#64b4ff;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.page-h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:.75rem}
+.page-h1 em{font-style:italic;color:var(--cyan)}
+.page-sub{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.75;margin-bottom:2rem;font-weight:300}
+
+/* unit pair selector */
+.pair-section{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:1.4rem;margin-bottom:1.25rem}
+.section-lbl{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:1rem;display:flex;align-items:center;gap:.4rem}
+.section-lbl::before{content:'';width:16px;height:2px;background:var(--cyan)}
+.unit-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.unit-chip{padding:.4rem .9rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:2px solid;transition:all .18s;background:transparent}
+.unit-chip:hover{opacity:.85}
+.unit-chip.u1{border-color:rgba(0,212,200,.3);color:var(--u1)}
+.unit-chip.u2{border-color:rgba(245,166,35,.3);color:var(--u2)}
+.unit-chip.u3{border-color:rgba(100,180,255,.3);color:var(--u3)}
+.unit-chip.u4{border-color:rgba(180,100,255,.3);color:var(--u4)}
+.unit-chip.u5{border-color:rgba(0,200,100,.3);color:var(--u5)}
+.unit-chip.selected.u1{background:rgba(0,212,200,.15);border-color:var(--u1)}
+.unit-chip.selected.u2{background:rgba(245,166,35,.15);border-color:var(--u2)}
+.unit-chip.selected.u3{background:rgba(100,180,255,.15);border-color:var(--u3)}
+.unit-chip.selected.u4{background:rgba(180,100,255,.15);border-color:var(--u4)}
+.unit-chip.selected.u5{background:rgba(0,200,100,.15);border-color:var(--u5)}
+.pair-hint{font-size:.77rem;color:var(--muted);margin-top:.65rem;line-height:1.5}
+
+/* options row */
+.options-row{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+@media(max-width:560px){.options-row{grid-template-columns:1fr}}
+.opt-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.2rem}
+.count-btns{display:flex;gap:.4rem;flex-wrap:wrap}
+.cnt-btn{flex:1;min-width:44px;padding:.55rem .3rem;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--muted);font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .18s;text-align:center}
+.cnt-btn:hover{border-color:rgba(0,212,200,.3);color:var(--white)}
+.cnt-btn.selected{background:var(--cyan);border-color:var(--cyan);color:var(--navy)}
+.focus-btns{display:flex;flex-direction:column;gap:.4rem}
+.focus-btn{padding:.5rem .85rem;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--muted);font-family:inherit;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;gap:.6rem}
+.focus-btn:hover{border-color:rgba(0,212,200,.25);color:var(--white)}
+.focus-btn.selected{border-color:var(--cyan);background:rgba(0,212,200,.1);color:var(--white)}
+.focus-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* example card */
+.example-card{background:rgba(100,180,255,.05);border:1px solid rgba(100,180,255,.2);border-radius:14px;padding:1.2rem;margin-bottom:1.5rem}
+.ex-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64b4ff;margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem}
+.ex-label::before{content:'';width:14px;height:2px;background:#64b4ff}
+.ex-text{font-size:.85rem;color:var(--muted);line-height:1.7;font-style:italic}
+.ex-tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.65rem}
+.ex-tag{font-size:.7rem;font-weight:600;padding:.18rem .55rem;border-radius:100px}
+
+.gen-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;background:linear-gradient(135deg,var(--cyan),#4a9eff);color:var(--navy);font-family:inherit;font-size:1rem;font-weight:700;padding:1rem 2rem;border-radius:12px;border:none;cursor:pointer;transition:transform .2s,opacity .2s;box-shadow:0 4px 24px rgba(0,212,200,.2)}
+.gen-btn:hover{transform:translateY(-2px);opacity:.9}
+.gen-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.gen-btn svg{width:18px;height:18px}
+
+/* ── LOADING ────────────────────────────── */
+.loading-wrap{max-width:500px;margin:0 auto;padding:clamp(5rem,12vw,8rem) 2rem;text-align:center}
+.loading-orb{width:80px;height:80px;border-radius:50%;border:3px solid rgba(100,180,255,.2);border-top-color:#64b4ff;animation:spin .9s linear infinite;margin:0 auto 1.5rem;position:relative}
+.loading-orb::after{content:'';position:absolute;inset:8px;border-radius:50%;border:2px solid rgba(0,212,200,.2);border-top-color:var(--cyan);animation:spin .6s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-h{font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:.5rem}
+.loading-sub{color:var(--muted);font-size:.88rem;line-height:1.7}
+.loading-units{display:flex;justify-content:center;gap:.4rem;margin-top:1rem;flex-wrap:wrap}
+.lu-tag{font-size:.72rem;font-weight:600;padding:.2rem .55rem;border-radius:100px;background:rgba(100,180,255,.1);color:#64b4ff;border:1px solid rgba(100,180,255,.25)}
+
+/* ── QUIZ SCREEN ────────────────────────── */
+.quiz-header{background:var(--navy-mid);border-bottom:1px solid var(--border);padding:.85rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:64px;z-index:100}
+.qh-left{display:flex;flex-direction:column;gap:.1rem}
+.qh-deck-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64b4ff}
+.qh-progress{font-family:'DM Serif Display',serif;font-size:1.1rem}
+.qh-right{display:flex;align-items:center;gap:.65rem;flex-shrink:0}
+.score-pill{display:flex;align-items:center;gap:.45rem;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.4rem .9rem;font-size:.82rem;font-weight:700;color:var(--white)}
+.score-pill svg{width:14px;height:14px;stroke:var(--cyan)}
+.btn-sm{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);font-family:inherit;font-size:.8rem;font-weight:500;padding:.38rem .8rem;border-radius:8px;cursor:pointer;transition:background .18s}
+.btn-sm:hover{background:rgba(255,255,255,.12)}
+.quiz-progress-bar{height:3px;background:rgba(255,255,255,.07)}
+.quiz-progress-fill{height:100%;background:linear-gradient(90deg,#64b4ff,var(--cyan));transition:width .4s ease}
+
+/* question card */
+.quiz-wrap{max-width:820px;margin:0 auto;padding:1.75rem clamp(1rem,3vw,2rem)}
+
+/* unit tags above question */
+.unit-tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.85rem}
+.unit-tag{font-size:.7rem;font-weight:700;padding:.2rem .6rem;border-radius:100px;letter-spacing:.04em}
+
+.q-card{background:var(--card-bg);border:1px solid var(--border);border-radius:18px;padding:clamp(1.4rem,3vw,2.2rem);margin-bottom:1.25rem}
+.q-stem{font-size:clamp(.95rem,1.7vw,1.06rem);line-height:1.82;font-weight:500;margin-bottom:1.5rem}
+/* highlight unit references inline */
+.u-ref{font-weight:700;border-radius:4px;padding:0 .2rem}
+.u-ref.u1{color:var(--u1);background:rgba(0,212,200,.08)}
+.u-ref.u2{color:var(--u2);background:rgba(245,166,35,.08)}
+.u-ref.u3{color:var(--u3);background:rgba(100,180,255,.08)}
+.u-ref.u4{color:var(--u4);background:rgba(180,100,255,.08)}
+.u-ref.u5{color:var(--u5);background:rgba(0,200,100,.08)}
+
+.answer-options{display:flex;flex-direction:column;gap:.6rem}
+.ans-btn{display:flex;align-items:flex-start;gap:.9rem;background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.08);border-radius:12px;padding:.95rem 1.1rem;cursor:pointer;transition:all .2s;text-align:left;font-family:inherit;font-size:.88rem;color:var(--muted);line-height:1.58;width:100%}
+.ans-btn:hover:not(:disabled){background:rgba(100,180,255,.07);border-color:rgba(100,180,255,.3);color:var(--white)}
+.ans-btn.selected{border-color:#64b4ff;background:rgba(100,180,255,.12);color:var(--white)}
+.ans-btn.correct{border-color:rgba(0,200,100,.5);background:rgba(0,200,100,.08);color:var(--white)}
+.ans-btn.wrong{border-color:rgba(255,85,85,.5);background:rgba(255,85,85,.08);color:var(--white)}
+.ans-btn.reveal{border-color:rgba(0,200,100,.35);background:rgba(0,200,100,.05)}
+.ans-btn:disabled{cursor:default}
+.ans-letter{min-width:28px;height:28px;border-radius:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;font-size:.78rem;font-weight:700;color:var(--muted);flex-shrink:0;transition:all .18s}
+.ans-btn.selected .ans-letter{background:rgba(100,180,255,.2);border-color:#64b4ff;color:#64b4ff}
+.ans-btn.correct .ans-letter{background:rgba(0,200,100,.2);border-color:var(--green);color:var(--green)}
+.ans-btn.wrong .ans-letter{background:rgba(255,85,85,.2);border-color:var(--red);color:var(--red)}
+.ans-btn.reveal .ans-letter{background:rgba(0,200,100,.12);border-color:rgba(0,200,100,.4);color:var(--green)}
+
+/* explanation box */
+.expl-box{border-radius:13px;padding:1.1rem 1.3rem;font-size:.875rem;line-height:1.72;margin-top:1rem;animation:fadeUp .3s ease both}
+.expl-box.correct-expl{background:rgba(0,200,100,.05);border:1px solid rgba(0,200,100,.2)}
+.expl-box.wrong-expl{background:rgba(255,85,85,.05);border:1px solid rgba(255,85,85,.2)}
+.expl-header{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.45rem}
+.expl-header.ch{color:var(--green)}.expl-header.wh{color:var(--red)}
+.expl-units{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.55rem}
+.expl-unit-tag{font-size:.7rem;font-weight:600;padding:.15rem .5rem;border-radius:100px;opacity:.8}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.next-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;background:var(--cyan);color:var(--navy);font-family:inherit;font-size:.95rem;font-weight:700;padding:.9rem 2rem;border-radius:11px;border:none;cursor:pointer;transition:transform .18s,opacity .18s;margin-top:1.1rem}
+.next-btn:hover{transform:translateY(-2px);opacity:.9}
+.next-btn svg{width:16px;height:16px}
+
+/* ── RESULTS ────────────────────────────── */
+.results-wrap{max-width:760px;margin:0 auto;padding:clamp(3rem,6vw,5rem) clamp(1.5rem,4vw,2rem)}
+.res-hero{background:var(--card-bg);border:1px solid var(--border);border-radius:18px;padding:2rem;display:grid;grid-template-columns:auto 1fr;gap:2rem;align-items:center;margin-bottom:2rem}
+@media(max-width:540px){.res-hero{grid-template-columns:1fr;text-align:center}}
+.res-circle{width:120px;height:120px;border-radius:50%;border:4px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 40px rgba(100,180,255,.15)}
+.res-pct{font-family:'DM Serif Display',serif;font-size:2rem;line-height:1}
+.res-frac{font-size:.78rem;color:var(--muted);font-weight:500}
+.res-title{font-family:'DM Serif Display',serif;font-size:clamp(1.6rem,3vw,2.2rem);margin-bottom:.4rem}
+.res-sub{font-size:.9rem;color:var(--muted);line-height:1.7;margin-bottom:.85rem}
+.unit-performance{display:flex;flex-wrap:wrap;gap:.4rem}
+.up-tag{font-size:.75rem;font-weight:600;padding:.25rem .65rem;border-radius:100px}
+
+.res-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}
+.res-stat{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center}
+.rs-num{font-family:'DM Serif Display',serif;font-size:1.8rem;line-height:1;margin-bottom:.2rem}
+.rs-lbl{font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+
+.section-lbl2{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64b4ff;display:flex;align-items:center;gap:.4rem;margin-bottom:.85rem}
+.section-lbl2::before{content:'';width:16px;height:2px;background:#64b4ff}
+
+.review-list{display:flex;flex-direction:column;gap:.65rem;margin-bottom:2rem}
+.rev-item{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:.9rem 1.1rem;display:flex;gap:.75rem;align-items:flex-start}
+.rev-item.ci{border-color:rgba(0,200,100,.2)}.rev-item.wi{border-color:rgba(255,85,85,.2)}
+.rev-icon{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex-shrink:0}
+.rev-icon svg{width:12px;height:12px}
+.rev-icon.ci{background:rgba(0,200,100,.15)}.rev-icon.ci svg{stroke:var(--green)}
+.rev-icon.wi{background:rgba(255,85,85,.15)}.rev-icon.wi svg{stroke:var(--red)}
+.rev-content{flex:1;min-width:0}
+.rev-q{font-size:.83rem;line-height:1.55;margin-bottom:.3rem}
+.rev-ans{font-size:.77rem;color:var(--muted)}
+.rev-ans .ca{color:var(--green);font-weight:600}
+.rev-ans .wa{color:var(--red)}
+.rev-units{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.4rem}
+
+.res-actions{display:flex;flex-wrap:wrap;gap:.85rem}
+.ra-btn{flex:1;min-width:160px;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.9rem 1.5rem;border-radius:11px;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;border:none;transition:transform .18s,opacity .18s}
+.ra-btn:hover{transform:translateY(-2px);opacity:.9}
+.ra-btn.primary{background:linear-gradient(135deg,var(--cyan),#4a9eff);color:var(--navy)}
+.ra-btn.secondary{background:rgba(255,255,255,.07);color:var(--white);border:1px solid rgba(255,255,255,.12)}
+.ra-btn svg{width:16px;height:16px}
+
+/* Dropdown nav */
+.nav-dropdown{position:relative}
+.nav-dropdown-btn{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.35rem .65rem;border-radius:6px;transition:color .2s,background .2s;background:none;border:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.3rem}
+.nav-dropdown-btn:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-btn.has-active{color:var(--cyan)}
+.nav-dropdown-btn svg{width:11px;height:11px;transition:transform .2s}
+.nav-dropdown:hover .nav-dropdown-btn svg{transform:rotate(180deg)}
+.nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:all .2s;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nav-dropdown:hover .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
+.nav-dropdown-menu a{display:block;color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.45rem .75rem;border-radius:7px;transition:color .15s,background .15s;white-space:nowrap}
+.nav-dropdown-menu a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-menu a.active{color:var(--cyan)}
+.nav-dropdown-menu .menu-divider{height:1px;background:var(--border);margin:.3rem .4rem}
+
+.nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.4rem;width:36px;height:36px;flex-shrink:0}
+.nav-hamburger span{display:block;height:2px;width:22px;background:var(--white);border-radius:2px;transition:all .25s}
+@media(max-width:900px){.nav-hamburger{display:flex}.nav-links{display:none!important}}
+.mobile-nav-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:490;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+.mobile-nav-backdrop.open{opacity:1;visibility:visible}
+.mobile-nav-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,88vw);background:var(--navy-mid);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.mobile-nav-drawer.open{transform:translateX(0)}
+.mobile-nav-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);height:64px;flex-shrink:0}
+.mobile-nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.mobile-nav-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);width:32px;height:32px;border-radius:7px;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;line-height:1;transition:background .18s}
+.mobile-nav-close:hover{background:rgba(255,255,255,.14)}
+.mobile-nav-links{padding:.75rem;display:flex;flex-direction:column;gap:.2rem;flex:1}
+.mobile-nav-links a{display:block;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:500;padding:.7rem .9rem;border-radius:9px;transition:color .18s,background .18s}
+.mobile-nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.mobile-nav-links a.active{color:var(--cyan);background:rgba(0,212,200,.07)}
+.mobile-nav-links a.nav-cta{background:var(--cyan);color:var(--navy);font-weight:700;margin-top:.5rem;text-align:center}
+.mobile-nav-links a.nav-cta:hover{opacity:.9}
+.mobile-nav-section-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem .9rem .3rem;opacity:.7}
+.mobile-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:.4rem .5rem}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="tools.html" class="active">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+<div class="mobile-nav-drawer" id="mobile-nav-drawer">
+  <div class="mobile-nav-header">
+    <span class="mobile-nav-title">AP <span style="color:var(--cyan)">Cybersecurity</span></span>
+    <button class="mobile-nav-close" onclick="closeMobileNav()">&times;</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="index.html" onclick="closeMobileNav()">Home</a>
+    <a href="socratic-anchors.html" onclick="closeMobileNav()">Socratic Guides</a>
+    <a href="tools.html" class="active" onclick="closeMobileNav()">Student Tools</a>
+    <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
+    <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
+  </div>
+</div>
+
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-wrap">
+    <div class="badge">Claude-Generated &middot; Cross-Unit</div>
+    <h1 class="page-h1">Cross-Unit<br><em>Synthesis Quiz</em></h1>
+    <p class="page-sub">Questions specifically engineered to connect concepts across units — exactly like the hardest AP exam questions do. Every question involves at least two units and requires you to reason across the full course, not just recall one topic.</p>
+
+    <div class="example-card">
+      <div class="ex-label">Example Question Type</div>
+      <div class="ex-text">"A stolen laptop contains unencrypted HR records that could be used for a spear-phishing campaign targeting employees on the corporate VPN. Identify the control failure at each layer."</div>
+      <div class="ex-tags">
+        <span class="unit-tag" style="background:rgba(230,126,34,.12);color:var(--u2);border:1px solid rgba(230,126,34,.25)">Unit 2 — Physical</span>
+        <span class="unit-tag" style="background:rgba(0,200,100,.1);color:var(--u5);border:1px solid rgba(0,200,100,.2)">Unit 5 — Data</span>
+        <span class="unit-tag" style="background:rgba(0,212,200,.1);color:var(--u1);border:1px solid rgba(0,212,200,.2)">Unit 1 — Social Eng.</span>
+        <span class="unit-tag" style="background:rgba(100,180,255,.1);color:var(--u3);border:1px solid rgba(100,180,255,.2)">Unit 3 — Networks</span>
+      </div>
+    </div>
+
+    <div class="pair-section">
+      <div class="section-lbl">Unit Combination</div>
+      <div class="unit-chips" id="unit-chips">
+        <button class="unit-chip u1" data-u="1" onclick="toggleUnit('1')">Unit 1 — Intro to Security</button>
+        <button class="unit-chip u2" data-u="2" onclick="toggleUnit('2')">Unit 2 — Securing Spaces</button>
+        <button class="unit-chip u3" data-u="3" onclick="toggleUnit('3')">Unit 3 — Networks</button>
+        <button class="unit-chip u4" data-u="4" onclick="toggleUnit('4')">Unit 4 — Devices</button>
+        <button class="unit-chip u5" data-u="5" onclick="toggleUnit('5')">Unit 5 — Apps &amp; Data</button>
+      </div>
+      <div class="pair-hint" id="pair-hint">Select 2–5 units. Each question will deliberately connect concepts from your chosen combination.</div>
+    </div>
+
+    <div class="options-row">
+      <div class="opt-card">
+        <div class="section-lbl" style="margin-bottom:.85rem">Number of Questions</div>
+        <div class="count-btns" id="count-btns">
+          <button class="cnt-btn" data-n="3" onclick="selectCount(3)">3</button>
+          <button class="cnt-btn" data-n="5" onclick="selectCount(5)">5</button>
+          <button class="cnt-btn" data-n="8" onclick="selectCount(8)">8</button>
+          <button class="cnt-btn" data-n="10" onclick="selectCount(10)">10</button>
+        </div>
+      </div>
+      <div class="opt-card">
+        <div class="section-lbl" style="margin-bottom:.85rem">Focus Theme</div>
+        <div class="focus-btns" id="focus-btns">
+          <button class="focus-btn" data-f="attack_chain" onclick="selectFocus(this)">
+            <div class="focus-dot" style="background:#e74c3c"></div>Attack chain &amp; propagation
+          </button>
+          <button class="focus-btn" data-f="control_gaps" onclick="selectFocus(this)">
+            <div class="focus-dot" style="background:var(--cyan)"></div>Control gaps &amp; defense layers
+          </button>
+          <button class="focus-btn" data-f="detection" onclick="selectFocus(this)">
+            <div class="focus-dot" style="background:var(--amber)"></div>Detection &amp; response
+          </button>
+          <button class="focus-btn" data-f="mixed" onclick="selectFocus(this)">
+            <div class="focus-dot" style="background:#64b4ff"></div>Mixed — all themes
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Optional API Key ──────────────────────────────── -->
+    <div style="margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem;cursor:pointer" onclick="toggleApiPanel()">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Use Your Own AI Key</div>
+        <div id="api-toggle-icon" style="font-size:.75rem;color:var(--muted);transition:transform .2s">&#9660;</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-left:auto;font-style:italic">Optional — leave blank to use the site default</div>
+      </div>
+      <div id="api-panel" style="display:none;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem">
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:.75rem;align-items:center">
+          <div>
+            <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:.5rem">AI Provider</div>
+            <select id="api-provider" onchange="updateApiPlaceholder()" style="width:100%;background:#0b1628;color:var(--white);border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:inherit;font-size:.83rem">
+              <option value="gemini">Google Gemini</option>
+              <option value="openai">OpenAI (ChatGPT)</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:.5rem">API Key</div>
+            <input id="api-key-input" type="password" placeholder="Paste your Gemini API key..." autocomplete="off"
+              style="width:100%;background:#0b1628;color:var(--white);border:1px solid var(--border);border-radius:8px;padding:.5rem .7rem;font-family:inherit;font-size:.83rem;box-sizing:border-box"
+              oninput="saveApiKey()">
+          </div>
+        </div>
+        <div style="margin-top:.65rem;font-size:.75rem;color:var(--muted);line-height:1.6">
+          &#128274; Your key is stored only in your browser session and never sent to our server.
+          Get a free Gemini key at <a href="https://aistudio.google.com" target="_blank" style="color:var(--cyan)">aistudio.google.com</a>,
+          OpenAI key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--cyan)">platform.openai.com</a>,
+          or Claude key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--cyan)">console.anthropic.com</a>.
+        </div>
+      </div>
+    </div>
+
+
+    <div id="syn-api-key-banner"></div>
+    <button class="gen-btn" id="gen-btn" onclick="startQuiz()" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Generate Synthesis Quiz
+    </button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading" class="screen">
+  <div class="loading-wrap">
+    <div class="loading-orb"></div>
+    <h2 class="loading-h">Building your quiz&hellip;</h2>
+    <p class="loading-sub">Claude is writing <span id="loading-count" style="color:var(--cyan);font-weight:600"></span> cross-unit synthesis questions connecting:</p>
+    <div class="loading-units" id="loading-units"></div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="screen-quiz" class="screen">
+  <div class="quiz-header">
+    <div class="qh-left">
+      <div class="qh-deck-label">Cross-Unit Synthesis</div>
+      <div class="qh-progress" id="qh-progress">Question 1 of 5</div>
+    </div>
+    <div class="qh-right">
+      <div class="score-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+        <span id="score-live">0 / 0</span>
+      </div>
+      <button class="btn-sm" onclick="goSetup()">&#x2190; Setup</button>
+    </div>
+  </div>
+  <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quiz-progress-fill" style="width:0%"></div></div>
+
+  <div class="quiz-wrap">
+    <div class="unit-tags" id="q-unit-tags"></div>
+    <div class="q-card">
+      <div class="q-stem" id="q-stem"></div>
+      <div class="answer-options" id="answer-options"></div>
+      <div id="expl-area"></div>
+    </div>
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()" style="display:none">
+      Next Question
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen">
+  <div class="results-wrap">
+    <div class="res-hero">
+      <div class="res-circle" id="res-circle">
+        <div class="res-pct" id="res-pct">--%</div>
+        <div class="res-frac" id="res-frac">0/0</div>
+      </div>
+      <div>
+        <div class="res-title" id="res-title">Quiz Complete</div>
+        <div class="res-sub" id="res-sub"></div>
+        <div class="unit-performance" id="unit-performance"></div>
+      </div>
+    </div>
+
+    <div class="res-stats">
+      <div class="res-stat"><div class="rs-num" id="rs-correct" style="color:var(--green)">0</div><div class="rs-lbl">Correct</div></div>
+      <div class="res-stat"><div class="rs-num" id="rs-wrong" style="color:var(--red)">0</div><div class="rs-lbl">Incorrect</div></div>
+      <div class="res-stat"><div class="rs-num" id="rs-units" style="color:#64b4ff">0</div><div class="rs-lbl">Units Tested</div></div>
+    </div>
+
+    <div class="section-lbl2">Question Review</div>
+    <div class="review-list" id="review-list"></div>
+
+    <div class="res-actions">
+      <button class="ra-btn primary" onclick="replayQuiz()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        New Synthesis Quiz
+      </button>
+      <button class="ra-btn secondary" onclick="goSetup()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Change Settings
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+
+// ── Shared API Key Functions ──────────────────────────────
+function getSavedApiKey() {
+  return {
+    key: sessionStorage.getItem('apcyber_api_key') || '',
+    provider: sessionStorage.getItem('apcyber_api_provider') || 'gemini'
+  };
+}
+
+function saveApiKeyToSession(key, provider) {
+  if (key) {
+    sessionStorage.setItem('apcyber_api_key', key);
+    sessionStorage.setItem('apcyber_api_provider', provider);
+  } else {
+    sessionStorage.removeItem('apcyber_api_key');
+    sessionStorage.removeItem('apcyber_api_provider');
+  }
+}
+
+function renderApiKeyBanner(containerId) {
+  var saved = getSavedApiKey();
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+
+  if (saved.key) {
+    // ── Compact state: key saved ──────────────────────────
+    var compact = document.createElement('div');
+    compact.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.45rem .7rem;margin-bottom:.6rem;background:rgba(0,200,100,.08);border:1px solid rgba(0,200,100,.2);border-radius:8px;cursor:pointer';
+    compact.title = 'Click to change API key';
+    compact.onclick = function() { renderApiKeyBannerExpanded(containerId); };
+
+    var dot = document.createElement('div');
+    dot.style.cssText = 'width:7px;height:7px;border-radius:50%;background:#00c864;flex-shrink:0';
+    compact.appendChild(dot);
+
+    var providerNames = { gemini:'Gemini', openai:'OpenAI', anthropic:'Claude' };
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:.72rem;font-weight:600;color:#00c864;flex:1';
+    lbl.textContent = (providerNames[saved.provider] || saved.provider) + ' key active';
+    compact.appendChild(lbl);
+
+    var change = document.createElement('div');
+    change.style.cssText = 'font-size:.68rem;color:rgba(255,255,255,.35)';
+    change.textContent = 'change';
+    compact.appendChild(change);
+
+    el.appendChild(compact);
+  } else {
+    // ── Expanded state: no key yet ────────────────────────
+    renderApiKeyBannerExpanded(containerId);
+  }
+}
+
+function renderApiKeyBannerExpanded(containerId) {
+  var saved = getSavedApiKey();
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'background:#111e38;border:1px solid rgba(0,212,200,.2);border-radius:10px;padding:.75rem;margin-bottom:.6rem';
+
+  var titleRow = document.createElement('div');
+  titleRow.style.cssText = 'font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#00d4c8;margin-bottom:.5rem';
+  titleRow.textContent = 'AI Provider & Key Required';
+  wrap.appendChild(titleRow);
+
+  var sel = document.createElement('select');
+  sel.style.cssText = 'width:100%;background:#0b1628;color:#f2f5fb;border:1px solid rgba(0,212,200,.2);border-radius:7px;padding:.35rem .6rem;font-family:inherit;font-size:.78rem;margin-bottom:.4rem';
+  [['gemini','Gemini (Free)'],['openai','OpenAI GPT-4o Mini'],['anthropic','Claude Haiku']].forEach(function(opt){
+    var o = document.createElement('option');
+    o.value = opt[0]; o.textContent = opt[1];
+    if (saved.provider === opt[0]) o.selected = true;
+    sel.appendChild(o);
+  });
+  wrap.appendChild(sel);
+
+  var inp = document.createElement('input');
+  inp.type = 'password';
+  inp.placeholder = 'Paste your API key...';
+  inp.value = saved.key;
+  inp.style.cssText = 'width:100%;background:#0b1628;color:#f2f5fb;border:1px solid rgba(0,212,200,.2);border-radius:7px;padding:.35rem .6rem;font-family:inherit;font-size:.78rem;box-sizing:border-box;margin-bottom:.5rem';
+  wrap.appendChild(inp);
+
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:.4rem;align-items:center';
+
+  var saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save Key';
+  saveBtn.style.cssText = 'background:#00d4c8;color:#0b1628;border:none;border-radius:7px;padding:.35rem .85rem;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;flex-shrink:0';
+  saveBtn.onclick = function() {
+    var k = inp.value.trim();
+    var p = sel.value;
+    saveApiKeyToSession(k, p);
+    renderApiKeyBanner(containerId);
+  };
+  btnRow.appendChild(saveBtn);
+
+  var hint = document.createElement('a');
+  hint.href = 'api-key-guide.html';
+  hint.target = '_blank';
+  hint.style.cssText = 'font-size:.72rem;color:#00d4c8;text-decoration:none;line-height:1.4';
+  hint.textContent = 'How to get a free key ↗';
+  btnRow.appendChild(hint);
+
+  wrap.appendChild(btnRow);
+  el.appendChild(wrap);
+}
+
+
+async function callAI(prompt, systemPrompt, conversationMessages) {
+  var info = getSavedApiKey();
+  if (!info.key) throw new Error('No API key set. Please enter your API key to use this tool.');
+  var key = info.key;
+  var provider = info.provider;
+
+  if (provider === 'gemini') {
+    var contents;
+    if (conversationMessages && conversationMessages.length) {
+      // Map conversation - Gemini requires alternating user/model turns
+      contents = conversationMessages.map(function(m) {
+        return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{text: m.content}] };
+      });
+    } else {
+      contents = [{ parts: [{text: prompt || ''}] }];
+    }
+    // Build request body - use system_instruction for system prompt (correct Gemini format)
+    var reqBody = {
+      contents: contents,
+      generationConfig: {maxOutputTokens:2000, temperature:0.7}
+    };
+    if (systemPrompt) {
+      reqBody.system_instruction = { parts: [{text: systemPrompt}] };
+    }
+    var resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key,
+      { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(reqBody) });
+    var data = await resp.json();
+    if (data.error) throw new Error('Gemini: ' + data.error.message);
+    if (!data.candidates || !data.candidates.length) throw new Error('Gemini returned no response.');
+    return (data.candidates[0].content || {parts:[{text:''}]}).parts.map(function(p){return p.text||'';}).join('');
+
+  } else if (provider === 'openai') {
+    var messages = [];
+    if (systemPrompt) messages.push({role:'system', content: systemPrompt});
+    if (conversationMessages && conversationMessages.length) {
+      conversationMessages.forEach(function(m){ messages.push({role: m.role, content: m.content}); });
+    } else if (prompt) {
+      messages.push({role:'user', content: prompt});
+    }
+    var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body: JSON.stringify({model:'gpt-4o-mini', messages:messages, max_tokens:2000, temperature:0.7})
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error('OpenAI: ' + data.error.message);
+    return data.choices[0].message.content || '';
+
+  } else if (provider === 'anthropic') {
+    var msgs = conversationMessages && conversationMessages.length ? conversationMessages : [{role:'user', content: prompt}];
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:2000, system: systemPrompt||undefined, messages: msgs })
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error('Anthropic: ' + data.error.message);
+    return (data.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+  }
+  throw new Error('Unknown provider: ' + provider);
+}
+
+
+
+var selectedUnits = new Set();
+var selectedCount = null;
+var selectedFocus = null;
+var questions = [];  // Claude-generated
+var currentIdx = 0;
+var score = 0;
+var answered = false;
+var sessionResults = [];  // {correct, q, chosen, correct_answer, units, explanation}
+
+var UNIT_NAMES = {
+  "1": "Unit 1 \u2014 Introduction to Security",
+  "2": "Unit 2 \u2014 Securing Spaces",
+  "3": "Unit 3 \u2014 Securing Networks",
+  "4": "Unit 4 \u2014 Securing Devices",
+  "5": "Unit 5 \u2014 Applications & Data"
+};
+var UNIT_COLORS = {"1":"var(--u1)","2":"var(--u2)","3":"var(--u3)","4":"var(--u4)","5":"var(--u5)"};
+var UNIT_BG = {"1":"rgba(0,212,200,.1)","2":"rgba(245,166,35,.1)","3":"rgba(100,180,255,.1)","4":"rgba(180,100,255,.1)","5":"rgba(0,200,100,.1)"};
+var UNIT_BORDER = {"1":"rgba(0,212,200,.25)","2":"rgba(245,166,35,.25)","3":"rgba(100,180,255,.25)","4":"rgba(180,100,255,.25)","5":"rgba(0,200,100,.25)"};
+
+var FOCUS_LABELS = {
+  attack_chain: "Attack chain & propagation",
+  control_gaps: "Control gaps & defense layers",
+  detection:    "Detection & response",
+  mixed:        "Mixed themes"
+};
+
+// ── Setup ─────────────────────────────────────────────────
+function toggleUnit(u) {
+  if (selectedUnits.has(u)) {
+    selectedUnits.delete(u);
+  } else {
+    if (selectedUnits.size >= 5) return;
+    selectedUnits.add(u);
+  }
+  document.querySelectorAll(".unit-chip").forEach(function(c) {
+    c.classList.toggle("selected", selectedUnits.has(c.dataset.u));
+  });
+  var n = selectedUnits.size;
+  var hint = document.getElementById("pair-hint");
+  if (n === 0) hint.textContent = "Select 2\u20135 units. Each question will deliberately connect concepts from your chosen combination.";
+  else if (n === 1) hint.textContent = "Select at least one more unit to enable synthesis questions.";
+  else hint.textContent = n + " units selected \u2014 Claude will connect concepts across all of them in every question.";
+  checkReady();
+}
+
+function selectCount(n) {
+  selectedCount = n;
+  document.querySelectorAll(".cnt-btn").forEach(function(b) {
+    b.classList.toggle("selected", Number(b.dataset.n) === n);
+  });
+  checkReady();
+}
+
+function selectFocus(btn) {
+  selectedFocus = btn.dataset.f;
+  document.querySelectorAll(".focus-btn").forEach(function(b) { b.classList.remove("selected"); });
+  btn.classList.add("selected");
+  checkReady();
+}
+
+function checkReady() {
+  document.getElementById("gen-btn").disabled = !(selectedUnits.size >= 2 && selectedCount && selectedFocus);
+}
+
+// ── Generate ──────────────────────────────────────────────
+// ── API Key Management ────────────────────────────────────
+function toggleApiPanel() {
+  var panel = document.getElementById('api-panel');
+  var icon  = document.getElementById('api-toggle-icon');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    icon.style.transform = 'rotate(180deg)';
+    // Restore saved key
+    var saved = sessionStorage.getItem('synthesis_api_key');
+    var savedProvider = sessionStorage.getItem('synthesis_api_provider');
+    if (saved) document.getElementById('api-key-input').value = saved;
+    if (savedProvider) document.getElementById('api-provider').value = savedProvider;
+    updateApiPlaceholder();
+  } else {
+    panel.style.display = 'none';
+    icon.style.transform = '';
+  }
+}
+
+function saveApiKey() {
+  var key = document.getElementById('api-key-input').value.trim();
+  var provider = document.getElementById('api-provider').value;
+  if (key) {
+    sessionStorage.setItem('synthesis_api_key', key);
+    sessionStorage.setItem('synthesis_api_provider', provider);
+  } else {
+    sessionStorage.removeItem('synthesis_api_key');
+    sessionStorage.removeItem('synthesis_api_provider');
+  }
+}
+
+function updateApiPlaceholder() {
+  var provider = document.getElementById('api-provider').value;
+  var input = document.getElementById('api-key-input');
+  var placeholders = {
+    gemini: 'Paste your Gemini API key (AIza...)',
+    openai: 'Paste your OpenAI API key (sk-...)',
+    anthropic: 'Paste your Anthropic API key (sk-ant-...)'
+  };
+  input.placeholder = placeholders[provider] || 'Paste your API key...';
+  saveApiKey();
+}
+
+function getApiKey() {
+  // Check live input first, then sessionStorage
+  var inputEl = document.getElementById('api-key-input');
+  var key = inputEl ? inputEl.value.trim() : '';
+  if (!key) key = sessionStorage.getItem('synthesis_api_key') || '';
+  var provider = (document.getElementById('api-provider') || {}).value
+               || sessionStorage.getItem('synthesis_api_provider')
+               || 'gemini';
+  return { key: key, provider: provider };
+}
+
+async function callAIWithKey(prompt, apiKey, provider) {
+  if (provider === 'gemini') {
+    var resp = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 2000, temperature: 0.4 }
+        })
+      }
+    );
+    var data = await resp.json();
+    if (data.error) throw new Error('Gemini error: ' + data.error.message);
+    if (!data.candidates || !data.candidates.length) throw new Error('No response from Gemini.');
+    var raw = (data.candidates[0].content || {parts:[{text:''}]}).parts.map(function(p){return p.text||'';}).join('');
+    return raw.replace(/```json|```/g, '').trim();
+
+  } else if (provider === 'openai') {
+    var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2000,
+        temperature: 0.4,
+        response_format: { type: 'json_object' }
+      })
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error('OpenAI error: ' + data.error.message);
+    return (data.choices[0].message.content || '').replace(/```json|```/g, '').trim();
+
+  } else if (provider === 'anthropic') {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error('Anthropic error: ' + data.error.message);
+    var raw = (data.content || []).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+    return raw.replace(/```json|```/g, '').trim();
+  }
+
+  throw new Error('Unknown provider: ' + provider);
+}
+
+
+async function startQuiz() {
+  var units = Array.from(selectedUnits).sort();
+
+  // Update loading screen
+  document.getElementById("loading-count").textContent = selectedCount + " questions";
+  var lu = document.getElementById("loading-units");
+  lu.innerHTML = "";
+  units.forEach(function(u) {
+    var tag = document.createElement("div");
+    tag.className = "lu-tag";
+    tag.style.background = UNIT_BG[u];
+    tag.style.color = UNIT_COLORS[u];
+    tag.style.borderColor = UNIT_BORDER[u];
+    tag.textContent = "Unit " + u;
+    lu.appendChild(tag);
+  });
+  showScreen("loading");
+
+  var unitDescriptions = {
+    "1": "Unit 1 (Social engineering, phishing, MFA, VPN, AI attacks, public Wi-Fi threats)",
+    "2": "Unit 2 (Attack phases, physical attacks, CIA triad, defense-in-depth layers, risk assessment, security controls)",
+    "3": "Unit 3 (ARP poisoning, MAC flooding, DNS poisoning, firewalls, VLANs, network segmentation, NIDS/NIPS/SIEM)",
+    "4": "Unit 4 (Malware types, authentication, password security, device hardening, IoC detection, anti-malware)",
+    "5": "Unit 5 (SQL injection, XSS, access controls, RBAC/MAC/DAC, cryptography, secure by design, data protection)"
+  };
+
+  var focusInstructions = {
+    attack_chain: "Each question should follow a realistic attack progression: how a vulnerability or event in one unit enables or amplifies an attack in another unit. Questions should ask students to trace cause-and-effect across units.",
+    control_gaps: "Each question should present a scenario with a security gap and ask which combination of controls (spanning the selected units) would best address it, or identify which specific layer of defense-in-depth was missing.",
+    detection:    "Each question should present indicators of compromise, log evidence, or system behaviors from different units and ask students to identify the attack, the phase, and the most appropriate detection or response control.",
+    mixed:        "Vary the theme across questions: some should trace attack chains, some should focus on control gaps, and some should present detection/response scenarios."
+  };
+
+  var unitDescs = units.map(function(u) { return unitDescriptions[u]; }).join("\n");
+
+  var prompt = "You are an AP Cybersecurity exam writer creating cross-unit synthesis questions for an advanced practice quiz.\n\n" +
+    "UNITS IN SCOPE:\n" + unitDescs + "\n\n" +
+    "QUESTION THEME: " + FOCUS_LABELS[selectedFocus] + "\n" +
+    (focusInstructions[selectedFocus] || "") + "\n\n" +
+    "REQUIREMENTS FOR EACH QUESTION:\n" +
+    "- Must explicitly connect concepts from AT LEAST 2 of the units listed above\n" +
+    "- Must have exactly 4 answer choices (A-D)\n" +
+    "- Exactly one correct answer\n" +
+    "- The other 3 options must be plausible distractors that a student who understands each unit in isolation (but not how they connect) might choose\n" +
+    "- units_tested: array of unit numbers (as strings) this question draws from, e.g. [\"1\",\"3\"]\n" +
+    "- explanation: 2-4 sentences using AP framework language explaining why the correct answer is right AND why each distractor fails — specifically naming which unit concept each element comes from\n" +
+    "- connection_note: one sentence describing the cross-unit link being tested (shown as a hint to the teacher)\n\n" +
+    "Generate exactly " + selectedCount + " questions.\n\n" +
+    "Return ONLY valid JSON, no markdown fences:\n" +
+    "{\n" +
+    "  \"questions\": [\n" +
+    "    {\n" +
+    "      \"stem\": \"The full question text...\",\n" +
+    "      \"options\": [\"A. ...\", \"B. ...\", \"C. ...\", \"D. ...\"],\n" +
+    "      \"correct_index\": 2,\n" +
+    "      \"units_tested\": [\"1\", \"3\"],\n" +
+    "      \"explanation\": \"...\",\n" +
+    "      \"connection_note\": \"...\"\n" +
+    "    }\n" +
+    "  ]\n" +
+    "}";
+
+  try {
+    var aiRaw = await callAI(prompt, null, null);
+    var clean = aiRaw.replace(/```json|```/g,'').trim();
+    var result = JSON.parse(clean);
+    questions = result.questions || [];
+    currentIdx = 0; score = 0; answered = false; sessionResults = [];
+    showScreen("quiz");
+    renderQuestion();
+  } catch(err) {
+    showScreen("setup");
+    alert("Generation failed: " + err.message + ". Check your connection and try again.");
+  }
+}
+
+// ── Render Question ───────────────────────────────────────
+function renderQuestion() {
+  answered = false;
+  document.getElementById("next-btn").style.display = "none";
+  document.getElementById("expl-area").innerHTML = "";
+
+  var q = questions[currentIdx];
+  var total = questions.length;
+
+  document.getElementById("qh-progress").textContent = "Question " + (currentIdx+1) + " of " + total;
+  document.getElementById("score-live").textContent = score + " / " + currentIdx;
+  document.getElementById("quiz-progress-fill").style.width = (currentIdx / total * 100) + "%";
+
+  // Unit tags
+  var tagsEl = document.getElementById("q-unit-tags");
+  tagsEl.innerHTML = "";
+  (q.units_tested || []).forEach(function(u) {
+    var tag = document.createElement("span");
+    tag.className = "unit-tag";
+    tag.style.background = UNIT_BG[u] || "rgba(255,255,255,.08)";
+    tag.style.color = UNIT_COLORS[u] || "var(--muted)";
+    tag.style.border = "1px solid " + (UNIT_BORDER[u] || "rgba(255,255,255,.15)");
+    tag.textContent = "Unit " + u;
+    tagsEl.appendChild(tag);
+  });
+
+  // Stem
+  document.getElementById("q-stem").textContent = q.stem || "";
+
+  // Options
+  var opts = document.getElementById("answer-options");
+  opts.innerHTML = "";
+  var labels = ["A","B","C","D"];
+  (q.options || []).forEach(function(opt, i) {
+    var btn = document.createElement("button");
+    btn.className = "ans-btn";
+    btn.dataset.i = i;
+
+    var ltr = document.createElement("div"); ltr.className = "ans-letter"; ltr.textContent = labels[i];
+    var txt = document.createElement("div");
+    // strip leading "A. " etc if Claude included it
+    var cleanOpt = opt.replace(/^[A-D]\.\s*/,"");
+    txt.textContent = cleanOpt;
+    btn.appendChild(ltr); btn.appendChild(txt);
+
+    btn.onclick = function() { selectAnswer(i); };
+    opts.appendChild(btn);
+  });
+}
+
+function selectAnswer(idx) {
+  if (answered) return;
+  answered = true;
+
+  var q = questions[currentIdx];
+  var isCorrect = idx === q.correct_index;
+  var labels = ["A","B","C","D"];
+
+  document.querySelectorAll(".ans-btn").forEach(function(btn, i) {
+    btn.disabled = true;
+    if (i === idx && isCorrect) btn.classList.add("correct");
+    else if (i === idx && !isCorrect) btn.classList.add("wrong");
+    else if (i === q.correct_index && !isCorrect) btn.classList.add("reveal");
+  });
+
+  if (isCorrect) score++;
+
+  sessionResults.push({
+    correct: isCorrect,
+    stem: q.stem,
+    chosen: idx,
+    correct_index: q.correct_index,
+    options: q.options,
+    units_tested: q.units_tested,
+    explanation: q.explanation,
+    connection_note: q.connection_note
+  });
+
+  // Explanation
+  var expl = document.createElement("div");
+  expl.className = "expl-box " + (isCorrect ? "correct-expl" : "wrong-expl");
+  var hdr = document.createElement("div");
+  hdr.className = "expl-header " + (isCorrect ? "ch" : "wh");
+  hdr.innerHTML = (isCorrect
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Correct!'
+    : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Incorrect \u2014 Correct answer: ' + labels[q.correct_index]);
+  var body = document.createElement("div");
+  body.textContent = q.explanation || "";
+  var unitLine = document.createElement("div");
+  unitLine.className = "expl-units";
+  (q.units_tested || []).forEach(function(u) {
+    var tag = document.createElement("span");
+    tag.className = "expl-unit-tag";
+    tag.style.background = UNIT_BG[u]; tag.style.color = UNIT_COLORS[u]; tag.style.border = "1px solid " + UNIT_BORDER[u];
+    tag.textContent = "Unit " + u + " concept";
+    unitLine.appendChild(tag);
+  });
+  expl.appendChild(hdr); expl.appendChild(body); expl.appendChild(unitLine);
+  document.getElementById("expl-area").appendChild(expl);
+
+  document.getElementById("score-live").textContent = score + " / " + (currentIdx+1);
+
+  var nextBtn = document.getElementById("next-btn");
+  nextBtn.style.display = "flex";
+  nextBtn.innerHTML = (currentIdx < questions.length - 1 ? "Next Question" : "See Results") +
+    ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+}
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx >= questions.length) showResults();
+  else { renderQuestion(); window.scrollTo(0,0); }
+}
+
+// ── Results ───────────────────────────────────────────────
+function showResults() {
+  var total = questions.length;
+  var pct = Math.round(score / total * 100);
+  var color = pct >= 80 ? "#64b4ff" : pct >= 60 ? "var(--amber)" : "var(--red)";
+
+  var circle = document.getElementById("res-circle");
+  circle.style.borderColor = color;
+  var pctEl = document.getElementById("res-pct"); pctEl.style.color = color; pctEl.textContent = pct + "%";
+  document.getElementById("res-frac").textContent = score + "/" + total;
+  document.getElementById("rs-correct").textContent = score;
+  document.getElementById("rs-wrong").textContent = total - score;
+  document.getElementById("rs-units").textContent = selectedUnits.size;
+
+  var title = pct >= 80 ? "Strong Synthesis!" : pct >= 60 ? "Solid Connections" : "Keep Building Links";
+  var sub = pct >= 80
+    ? "You can reason across units the way the AP exam demands. You\u2019re ready for the hardest free-response questions."
+    : pct >= 60
+      ? "You understand the individual units. Focus on the missed questions below to sharpen how you connect them."
+      : "Cross-unit reasoning takes practice. Review the explanations \u2014 each one names the exact unit link you needed to make.";
+  document.getElementById("res-title").textContent = title;
+  document.getElementById("res-sub").textContent = sub;
+
+  // Unit performance
+  var unitPerf = {};
+  sessionResults.forEach(function(r) {
+    (r.units_tested || []).forEach(function(u) {
+      if (!unitPerf[u]) unitPerf[u] = {c:0,t:0};
+      unitPerf[u].t++;
+      if (r.correct) unitPerf[u].c++;
+    });
+  });
+  var up = document.getElementById("unit-performance");
+  up.innerHTML = "";
+  Object.keys(unitPerf).sort().forEach(function(u) {
+    var p = unitPerf[u];
+    var pct2 = Math.round(p.c/p.t*100);
+    var tag = document.createElement("span");
+    tag.className = "up-tag";
+    tag.style.background = UNIT_BG[u]; tag.style.color = UNIT_COLORS[u]; tag.style.border = "1px solid " + UNIT_BORDER[u];
+    tag.textContent = "U" + u + ": " + pct2 + "%";
+    up.appendChild(tag);
+  });
+
+  // Review
+  var rl = document.getElementById("review-list");
+  rl.innerHTML = "";
+  var labels = ["A","B","C","D"];
+  sessionResults.forEach(function(r, i) {
+    var item = document.createElement("div");
+    item.className = "rev-item " + (r.correct ? "ci" : "wi");
+    var icon = document.createElement("div");
+    icon.className = "rev-icon " + (r.correct ? "ci" : "wi");
+    icon.innerHTML = r.correct
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    var content = document.createElement("div"); content.className = "rev-content";
+    var qDiv = document.createElement("div"); qDiv.className = "rev-q";
+    var strong = document.createElement("strong"); strong.textContent = "Q" + (i+1) + ". ";
+    qDiv.appendChild(strong);
+    qDiv.appendChild(document.createTextNode(r.stem));
+    var ansDiv = document.createElement("div"); ansDiv.className = "rev-ans";
+    if (!r.correct) {
+      var wa = document.createElement("span"); wa.className = "wa";
+      wa.textContent = "You: " + labels[r.chosen] + " \u2014 ";
+      var ca = document.createElement("span"); ca.className = "ca";
+      ca.textContent = "Correct: " + labels[r.correct_index];
+      ansDiv.appendChild(wa); ansDiv.appendChild(ca);
+    } else {
+      var ca = document.createElement("span"); ca.className = "ca";
+      ca.textContent = "Correct: " + labels[r.correct_index];
+      ansDiv.appendChild(ca);
+    }
+    var unitRow = document.createElement("div"); unitRow.className = "rev-units";
+    (r.units_tested || []).forEach(function(u) {
+      var tag = document.createElement("span");
+      tag.style.cssText = "font-size:.68rem;font-weight:600;padding:.12rem .45rem;border-radius:100px;background:" + UNIT_BG[u] + ";color:" + UNIT_COLORS[u] + ";border:1px solid " + UNIT_BORDER[u];
+      tag.textContent = "Unit " + u;
+      unitRow.appendChild(tag);
+    });
+    content.appendChild(qDiv); content.appendChild(ansDiv); content.appendChild(unitRow);
+    item.appendChild(icon); item.appendChild(content);
+    rl.appendChild(item);
+  });
+
+  showScreen("results");
+}
+
+// ── Nav ───────────────────────────────────────────────────
+function replayQuiz() { startQuiz(); }
+function goSetup() { showScreen("setup"); }
+
+function showScreen(name) {
+  document.querySelectorAll(".screen").forEach(function(s){ s.classList.remove("active"); });
+  document.getElementById("screen-" + name).classList.add("active");
+  window.scrollTo(0,0);
+}
+renderApiKeyBanner("syn-api-key-banner");
+</script>
+
+
+<footer style="background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)">
+  <span>&copy; 2026 apcyber.net &mdash; An unofficial supplemental tool. Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <div style="display:flex;gap:1rem">
+    <a href="legal.html" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a>
+    <a href="legal.html?tab=terms" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Terms of Service</a>
+  </div>
+</footer>
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
+</body>
+</html>

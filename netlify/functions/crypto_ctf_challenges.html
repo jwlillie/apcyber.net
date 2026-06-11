@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoVault CTF — Cryptography Challenges</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Share+Tech+Mono&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f0e8;--bg2:#ede8dc;--panel:#e8e2d4;--panel2:#ddd8cc;--border:#c8bfa8;--border2:#b0a48c;--ink:#2a2015;--red:#8b1a0a;--blue:#1a3a6b;--green:#1a5a20;--gold:#8a6a00;--purple:#4a1a6b;--muted:#7a6a50;--dim:#b0a090;--font-d:'IM Fell English',serif;--font-m:'Share Tech Mono',monospace;--font-b:'Crimson Text',serif;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-b);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(42,32,21,0.04) 28px,rgba(42,32,21,0.04) 29px);pointer-events:none;z-index:0;}
+.wrapper{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 80px;}
+header{padding:44px 0 36px;border-bottom:2px solid var(--border2);text-align:center;}
+.hdr-tag{font-family:var(--font-m);font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:16px;}
+h1{font-family:var(--font-d);font-size:clamp(36px,6vw,72px);color:var(--ink);line-height:1.05;font-style:italic;}
+h1 em{color:var(--red);font-style:normal;}
+.hdr-sub{font-family:var(--font-m);font-size:11px;letter-spacing:3px;color:var(--muted);margin-top:12px;text-transform:uppercase;}
+.scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:28px 0;border:1px solid var(--border2);background:var(--panel2);}
+.sp{padding:12px 18px;border-right:1px solid var(--border2);}
+.sp:last-child{border-right:none;}
+.sp-l{font-family:var(--font-m);font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.sp-v{font-family:var(--font-d);font-size:28px;color:var(--red);font-style:italic;}
+.filter-bar{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap;align-items:center;}
+.fl{font-family:var(--font-m);font-size:10px;letter-spacing:2px;color:var(--muted);margin-right:8px;}
+.fbtn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-m);font-size:11px;letter-spacing:2px;padding:4px 14px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.fbtn:hover,.fbtn.active{border-color:var(--red);color:var(--red);background:rgba(139,26,10,0.05);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
+.card{background:var(--panel);border:1px solid var(--border2);cursor:pointer;position:relative;overflow:hidden;animation:rise .4s ease both;transition:border-color .18s,transform .18s,box-shadow .18s;}
+.card:hover{border-color:var(--red);transform:translateY(-2px);box-shadow:0 6px 24px rgba(42,32,21,0.12);}
+.card.solved{border-color:var(--green);}
+@keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.card:nth-child(1){animation-delay:.04s}.card:nth-child(2){animation-delay:.08s}.card:nth-child(3){animation-delay:.12s}.card:nth-child(4){animation-delay:.16s}.card:nth-child(5){animation-delay:.20s}.card:nth-child(6){animation-delay:.24s}.card:nth-child(7){animation-delay:.28s}.card:nth-child(8){animation-delay:.32s}.card:nth-child(9){animation-delay:.36s}.card:nth-child(10){animation-delay:.40s}
+.card-rule{height:3px;background:linear-gradient(90deg,var(--red),var(--gold),transparent);}
+.card-inner{padding:14px 16px 16px;}
+.card-meta{display:flex;justify-content:space-between;margin-bottom:8px;align-items:baseline;}
+.card-id{font-family:var(--font-m);font-size:10px;letter-spacing:2px;color:var(--dim);}
+.card-pts{font-family:var(--font-d);font-size:18px;color:var(--red);font-style:italic;}
+.card-title{font-family:var(--font-d);font-size:19px;color:var(--ink);margin-bottom:8px;font-style:italic;}
+.card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.tag{font-family:var(--font-m);font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid;text-transform:uppercase;}
+.te{color:var(--green);border-color:rgba(26,90,32,.4);}
+.tm{color:var(--gold);border-color:rgba(138,106,0,.4);}
+.th{color:var(--red);border-color:rgba(139,26,10,.4);}
+.ti{color:var(--blue);border-color:rgba(26,58,107,.4);}
+.card-desc{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:14px;}
+.card-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px;}
+.solves{font-family:var(--font-m);font-size:10px;color:var(--dim);}
+.btn-view{background:transparent;border:1px solid var(--border2);color:var(--ink);font-family:var(--font-m);font-size:10px;letter-spacing:2px;padding:4px 10px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.btn-view:hover{border-color:var(--red);color:var(--red);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(42,32,21,.88);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);max-width:740px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(42,32,21,0.3);animation:ms .2s ease;}
+@keyframes ms{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:scale(1);}}
+.modal-hdr{padding:18px 22px 14px;border-bottom:2px solid var(--border2);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.modal-title{font-family:var(--font-d);font-size:20px;color:var(--red);font-style:italic;}
+.modal-close{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:var(--font-m);font-size:11px;padding:3px 9px;flex-shrink:0;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+.modal-body{padding:20px 22px;}
+.mlabel{font-family:var(--font-m);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;margin-top:18px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+.mlabel.first{margin-top:0;}
+.mdesc{font-size:14px;color:var(--ink);line-height:1.8;}
+.hint{background:rgba(138,106,0,0.06);border-left:3px solid var(--gold);padding:8px 13px;font-family:var(--font-m);font-size:11.5px;color:var(--gold);line-height:1.6;margin-bottom:7px;}
+.hint::before{content:'Hint ' attr(data-n) ': ';color:var(--dim);}
+.flag-box{background:rgba(26,90,32,0.06);border:1px solid rgba(26,90,32,0.35);padding:11px 15px;font-family:var(--font-m);font-size:13px;color:var(--green);letter-spacing:1px;}
+.sol{background:rgba(26,58,107,0.04);border-left:3px solid var(--blue);padding:12px 15px;font-family:var(--font-m);font-size:11.5px;color:var(--ink);line-height:1.7;}
+.widget{background:var(--panel2);border:1px solid var(--border2);margin-top:12px;padding:14px;}
+.wlabel{font-family:var(--font-m);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.wlabel.mt{margin-top:12px;}
+.wcode{background:var(--bg);border:1px solid var(--border);padding:10px 12px;font-family:var(--font-m);font-size:11px;color:var(--ink);line-height:1.7;overflow-x:auto;white-space:pre;}
+.winput{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--ink);font-family:var(--font-m);font-size:12px;padding:7px 10px;outline:none;transition:border-color .15s;}
+.winput:focus{border-color:var(--red);}
+.wrange{width:100%;accent-color:var(--red);cursor:pointer;}
+.wrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;}
+.wbtn{background:var(--panel);border:1px solid var(--border2);color:var(--ink);font-family:var(--font-m);font-size:11px;letter-spacing:1px;padding:6px 13px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.wbtn:hover{border-color:var(--red);color:var(--red);}
+.wbtn.g{border-color:var(--green);color:var(--green);}
+.wbtn.g:hover{background:rgba(26,90,32,0.08);}
+.wbtn.r{border-color:var(--red);color:var(--red);}
+.wout{padding:10px 12px;font-size:12px;line-height:1.6;display:none;border-top:1px solid var(--border);color:var(--ink);font-family:var(--font-m);white-space:pre-wrap;}
+.wout.show{display:block;}
+.wout.ok{color:var(--green);}
+.wout.err{color:var(--red);}
+.freq-bar{display:flex;align-items:flex-end;gap:2px;height:60px;margin-top:8px;}
+.freq-b{width:18px;background:var(--red);opacity:0.6;transition:height .3s;}
+.freq-l{font-family:var(--font-m);font-size:9px;color:var(--muted);text-align:center;display:block;}
+.prog-bar{height:4px;background:var(--border);margin:8px 0;display:none;}
+.prog-fill{height:100%;background:var(--red);transition:width .08s;width:0;}
+.prog-txt{font-family:var(--font-m);font-size:11px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrapper">
+<header>
+<div style="background:#050810;border-bottom:1px solid #1a2640;padding:.4rem 1.5rem;font-family:'Share Tech Mono',monospace;font-size:11px"><a href="ctf.html" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:rgba(0,240,255,0.45);text-decoration:none;letter-spacing:2px;margin-right:1.5rem;transition:color .2s" onmouseover="this.style.color='#00f0ff'" onmouseout="this.style.color='rgba(0,240,255,0.45)'">&#8592; CTF HUB</a></div>
+  <div class="hdr-tag">// CRYPTOVAULT CTF — CLASSICAL & MODERN CRYPTANALYSIS</div>
+  <h1><em>Crypto</em>Vault</h1>
+  <div class="hdr-sub">Break the ciphers — classical · symmetric · asymmetric · elliptic</div>
+</header>
+<div class="scoreboard">
+  <div class="sp"><div class="sp-l">Challenges</div><div class="sp-v" id="sc-total">0</div></div>
+  <div class="sp"><div class="sp-l">Total Points</div><div class="sp-v" id="sc-pts">0</div></div>
+  <div class="sp"><div class="sp-l">Solved</div><div class="sp-v" id="sc-solved">0</div></div>
+  <div class="sp"><div class="sp-l">Points Earned</div><div class="sp-v" id="sc-earned">0</div></div>
+</div>
+<div class="filter-bar">
+  <span class="fl">FILTER:</span>
+  <button class="fbtn active" onclick="filterCards('all',this)">ALL</button>
+  <button class="fbtn" onclick="filterCards('easy',this)">EASY</button>
+  <button class="fbtn" onclick="filterCards('medium',this)">MEDIUM</button>
+  <button class="fbtn" onclick="filterCards('hard',this)">HARD</button>
+</div>
+<div class="grid" id="grid"></div>
+</div>
+<div class="modal-overlay" id="overlay" onclick="closeModal(event)">
+<div class="modal">
+  <div class="modal-hdr">
+    <div class="modal-title" id="m-title"></div>
+    <button class="modal-close" onclick="closeModal()">[ CLOSE ]</button>
+  </div>
+  <div class="modal-body" id="m-body"></div>
+</div>
+</div>
+<script>
+var challenges=[
+{id:'CH-01',title:'Caesar Cipher',pts:50,diff:'easy',tags:['classical','substitution'],solves:341,
+ desc:'The flag was encrypted with a Caesar cipher (ROT-N). Slide the shift slider to try all 26 rotations, or use frequency analysis to find the key.',
+ hints:['English letter E is most common','ROT-13 is a common CTF choice'],
+ flag:'CTF{c43s4r_sh1ft_13_r0t}',
+ sol:'Shift 13 decrypts the ciphertext. ROT-13 is self-inverse: encrypt twice to return to plaintext.',
+ widget:'caesar'},
+{id:'CH-02',title:'Vigenère Cipher',pts:100,diff:'easy',tags:['classical','polyalphabetic'],solves:218,
+ desc:'The flag was encrypted with the Vigenère cipher using a short keyword. The Index of Coincidence reveals the key length; frequency analysis per column reveals each key letter.',
+ hints:['Kasiski test: find repeated trigrams, their spacings reveal key length','Key length is 3 — try common 3-letter words'],
+ flag:'CTF{v1g3n3r3_k3yw0rd_cr4ck3d}',
+ sol:'Key length = 3. Each column frequency analysis gives: K=C, K=T, K=F → keyword "CTF". Decrypt with Vigenère(ciphertext, "CTF").',
+ widget:'vigenere'},
+{id:'CH-03',title:'AES-ECB Oracle',pts:150,diff:'medium',tags:['aes','ecb','oracle'],solves:134,
+ desc:'An AES-128-ECB encryption oracle appends a secret suffix before encrypting. Use a byte-at-a-time attack to reveal the secret one byte at a time.',
+ hints:['Identical 16-byte blocks encrypt to identical ciphertext in ECB mode','Controlled prefix lets you align the unknown byte to a block boundary'],
+ flag:'CTF{4es_3cb_byt3_4t_4_t1m3}',
+ sol:'For each unknown byte: send 15 known bytes, get the ciphertext block, brute-force all 256 possible next bytes until the ciphertext matches.',
+ widget:'ecb'},
+{id:'CH-04',title:'Padding Oracle',pts:200,diff:'medium',tags:['aes','cbc','padding'],solves:98,
+ desc:'An AES-128-CBC decryption service reveals whether padding is valid. Use the padding oracle to decrypt each block by manipulating the ciphertext byte-by-byte.',
+ hints:['Valid padding means the last byte(s) match the padding value','Flip bits in the IV/ciphertext to control the decrypted plaintext bytes'],
+ flag:'CTF{p4dd1ng_0r4cl3_cbc_byp4ss}',
+ sol:'For each block byte i: XOR with 0x01..0xFF until oracle says valid padding. Intermediate = valid_byte ^ padding_byte. Plaintext = intermediate ^ original_ciphertext_byte.',
+ widget:'padding'},
+{id:'CH-05',title:'RSA Small Exponent',pts:200,diff:'medium',tags:['rsa','e=3'],solves:89,
+ desc:'RSA with e=3 and a small message. If m^3 < n, no modular reduction occurred. Simply compute the integer cube root of the ciphertext to recover the plaintext.',
+ hints:['If m is small, m^3 might be less than n meaning c = m^3 exactly','Use Newton\'s method or binary search to compute integer cube root'],
+ flag:'CTF{rs4_sm4ll_3xp_cub3_r00t}',
+ sol:'m = cbrt(c). For small messages with e=3, the cube root is exact (no modular reduction). Python: round(c**(1/3)) or gmpy2.iroot(c,3).',
+ widget:'rsa_e3'},
+{id:'CH-06',title:'Common Modulus Attack',pts:250,diff:'medium',tags:['rsa','gcd','extended-euclid'],solves:67,
+ desc:'The same message M was encrypted with the same modulus n but two different exponents e1 and e2 where gcd(e1,e2)=1. Use the extended Euclidean algorithm to recover M.',
+ hints:['Find a,b such that a*e1 + b*e2 = 1 (extended GCD)','M = (c1^a * c2^b) mod n'],
+ flag:'CTF{rs4_c0mm0n_m0dulus_3xt_3ucl1d}',
+ sol:'Extended Euclidean on (e1,e2) gives a,b. M = pow(c1,a,n) * pow(c2,b,n) mod n. Works when gcd(e1,e2)=1.',
+ widget:'common_mod'},
+{id:'CH-07',title:'Hash Length Extension',pts:250,diff:'medium',tags:['hash','sha1','extension'],solves:54,
+ desc:'The server uses MAC = SHA1(secret || message) to authenticate. Use a hash length extension attack to forge a valid MAC for an extended message without knowing the secret.',
+ hints:['SHA1 internal state after processing secret||message can be extracted from the MAC','The extension is message || padding || additional_data'],
+ flag:'CTF{h4sh_l3ngth_3xt3ns10n_f0rg3d}',
+ sol:'Use hashpumpy or hlextend. Given MAC, msg, len(secret), compute new_mac for msg+padding+extra without knowing secret.',
+ widget:'hash_ext'},
+{id:'CH-08',title:'Fermat Factorization',pts:300,diff:'hard',tags:['rsa','factoring','fermat'],solves:43,
+ desc:'The RSA modulus n = p*q where p and q are close primes. Fermat\'s factorization runs in O(|p-q|^2) — trivial for close primes. Factor n, then compute the private key.',
+ hints:['Start with a = ceil(sqrt(n))', 'If a^2 - n is a perfect square, you have b; p = a+b, q = a-b'],
+ flag:'CTF{f3rm4t_f4ct0r_cl0s3_pr1m3s}',
+ sol:'a=ceil(sqrt(n)); loop: b2=a*a-n; if isqrt(b2)^2==b2: p=a+isqrt(b2); q=a-isqrt(b2); break; else a++',
+ widget:'fermat'},
+{id:'CH-09',title:'ECDSA Nonce Reuse',pts:350,diff:'hard',tags:['ecdsa','nonce','ecc'],solves:28,
+ desc:'Two ECDSA signatures (r1,s1) and (r2,s2) were generated with the same nonce k. Since r1=r2, we can recover k and then the private key d.',
+ hints:['If k is reused: r1 = r2', 'k = (h1 - h2) * inv(s1 - s2) mod n'],
+ flag:'CTF{3cdsa_n0nc3_r3us3_pr1v_k3y}',
+ sol:'k=(h1-h2)*modinv(s1-s2,n)%n; d=(s1*k-h1)*modinv(r1,n)%n. Then verify d is the correct private key.',
+ widget:'ecdsa'},
+{id:'CH-10',title:'LCG PRNG Crack',pts:400,diff:'hard',tags:['prng','lcg','predict'],solves:17,
+ desc:'The server uses a Linear Congruential Generator (LCG): X_{n+1} = a*X_n + c mod m. Given 4 consecutive outputs, recover a, c, and predict the next token.',
+ hints:['With 3+ outputs you can compute differences to cancel out c and solve for a','Use GCD on differences to find m if unknown'],
+ flag:'CTF{lcg_prng_r3c0v3ry_pr3d1ct}',
+ sol:'X2-X1, X3-X2, X4-X3 are t0,t1,t2. a = t1*modinv(t0,m)%m. c = X2-a*X1 mod m. Predict X5 = a*X4+c mod m.',
+ widget:'lcg'}
+];
+
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+var solved={};var earned=0;
+
+function filterCards(diff,btn){
+  document.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');
+  document.querySelectorAll('.card').forEach(function(c){c.style.display=(diff==='all'||c.dataset.diff===diff)?'':'none';});
+}
+
+function openModal(idx){
+  var ch=challenges[idx];
+  var h='<div class="mlabel first">DESCRIPTION</div><div class="mdesc">'+esc(ch.desc)+'</div>';
+  h+='<div class="mlabel">HINTS</div>';
+  ch.hints.forEach(function(hi,i){h+='<div class="hint" data-n="'+(i+1)+'">'+esc(hi)+'</div>';});
+  h+='<div class="mlabel">LIVE CHALLENGE</div>'+buildWidget(ch.widget);
+  h+='<div class="mlabel">FLAG</div><div class="flag-box">'+esc(ch.flag)+'</div>';
+  h+='<div class="mlabel">SOLUTION</div><div class="sol">'+esc(ch.sol)+'</div>';
+  document.getElementById('m-title').textContent=ch.id+' — '+ch.title;
+  document.getElementById('m-body').innerHTML=h;
+  document.getElementById('overlay').classList.add('open');
+  if(!solved[idx]){solved[idx]=true;earned+=ch.pts;
+    document.getElementById('sc-solved').textContent=Object.keys(solved).length;
+    document.getElementById('sc-earned').textContent=earned;
+    document.querySelector('[data-idx="'+idx+'"]').classList.add('solved');
+  }
+  if(ch.widget==='caesar')setTimeout(caesarInit,80);
+}
+
+function closeModal(e){if(!e||e.target===document.getElementById('overlay'))document.getElementById('overlay').classList.remove('open');}
+
+var caesarCt='PGS{p43f4e_fu1sg_13_e0g}';
+function buildWidget(w){
+  var h='<div class="widget">';
+  if(w==='caesar'){
+    h+='<div class="wlabel">CIPHERTEXT</div><div class="wcode">'+esc(caesarCt)+'</div>';
+    h+='<div class="wlabel mt">SHIFT (0-25): <span id="caesar-val">0</span></div>';
+    h+='<input class="wrange" type="range" min="0" max="25" value="0" oninput="caesarSlide(this.value)">';
+    h+='<div class="wlabel mt">DECRYPTED</div><div class="wcode" id="caesar-out">'+esc(caesarCt)+'</div>';
+    h+='<div class="wrow"><button class="wbtn g" onclick="caesarAuto()">Frequency analysis → find key</button></div>';
+    h+='<div class="wout" id="caesar-r"></div>';
+  }else if(w==='vigenere'){
+    var vigCt='FMH{i4y3a3i3_a3hj0id_bi4oa3d}';
+    h+='<div class="wlabel">CIPHERTEXT</div><div class="wcode" id="vig-ct">'+esc(vigCt)+'</div>';
+    h+='<div class="wlabel mt">KEYWORD</div><input class="winput" id="vig-key" placeholder="try 3-letter keywords... e.g. CTF">';
+    h+='<div class="wrow"><button class="wbtn" onclick="vigDecrypt()">Decrypt</button><button class="wbtn g" onclick="vigSolve()">Auto-solve (IoC analysis)</button></div>';
+    h+='<div class="wout" id="vig-r"></div>';
+  }else if(w==='ecb'){
+    h+='<div class="wlabel">ECB ORACLE — prefix + secret → encrypt</div>';
+    h+='<input class="winput" id="ecb-inp" placeholder="Your prefix (e.g. AAAAAAAAAAAAAAAA)">';
+    h+='<div class="wrow"><button class="wbtn" onclick="ecbEncrypt()">Encrypt prefix+secret</button><button class="wbtn g" onclick="ecbAttack()">Run byte-at-a-time attack</button></div>';
+    h+='<div class="prog-bar" id="ecb-bar"><div class="prog-fill" id="ecb-fill"></div></div>';
+    h+='<div class="prog-txt" id="ecb-txt"></div><div class="wout" id="ecb-r"></div>';
+  }else if(w==='padding'){
+    h+='<div class="wlabel">CIPHERTEXT BLOCK (hex)</div>';
+    h+='<div class="wcode" id="pad-ct">a1b2c3d4e5f60718293a4b5c6d7e8f90</div>';
+    h+='<div class="wlabel mt">ORACLE: IS PADDING VALID?</div>';
+    h+='<input class="winput" id="pad-iv" placeholder="Modified IV (hex) to test...">';
+    h+='<div class="wrow"><button class="wbtn" onclick="padOracle()">Query oracle</button><button class="wbtn g" onclick="padAttack()">Run full padding oracle attack</button></div>';
+    h+='<div class="prog-bar" id="pad-bar"><div class="prog-fill" id="pad-fill"></div></div>';
+    h+='<div class="wout" id="pad-r"></div>';
+  }else if(w==='rsa_e3'){
+    h+='<div class="wlabel">RSA PARAMETERS</div>';
+    h+='<div class="wcode">e = 3\nc = 1093054620738524983729172846291\n    (this is m^3, no modular reduction occurred)\nn = [very large modulus]</div>';
+    h+='<div class="wlabel mt">COMPUTE INTEGER CUBE ROOT OF c</div>';
+    h+='<input class="winput" id="e3-val" placeholder="Enter cube root of c...">';
+    h+='<div class="wrow"><button class="wbtn" onclick="e3Check()">Verify</button><button class="wbtn g" onclick="e3Solve()">Auto-compute cbrt(c)</button></div>';
+    h+='<div class="wout" id="e3-r"></div>';
+  }else if(w==='common_mod'){
+    h+='<div class="wlabel">PARAMETERS</div>';
+    h+='<div class="wcode">n  = 0x...  (shared modulus)\ne1 = 17,  e2 = 65537\ngcd(e1, e2) = 1\nc1 = M^e1 mod n\nc2 = M^e2 mod n</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="cmStep1()">Step 1: Extended Euclidean(e1,e2)</button></div>';
+    h+='<div class="wout" id="cm-1"></div>';
+    h+='<div id="cm-row2" style="display:none"><div class="wrow"><button class="wbtn g" onclick="cmStep2()">Step 2: M = c1^a * c2^b mod n</button></div></div>';
+    h+='<div class="wout" id="cm-2"></div>';
+  }else if(w==='hash_ext'){
+    h+='<div class="wlabel">SERVER CHALLENGE</div>';
+    h+='<div class="wcode">MAC = SHA1(secret || "user=guest")\nMAC = 6adfb183a4a2c94a2f92dab5ade762a47889a5a\nlen(secret) = 16 bytes\nGoal: forge MAC for "user=admin"</div>';
+    h+='<div class="wrow"><button class="wbtn g" onclick="hashExt()">Run hash length extension attack</button></div>';
+    h+='<div class="wout" id="hext-r"></div>';
+  }else if(w==='fermat'){
+    h+='<div class="wlabel">RSA MODULUS (close primes)</div>';
+    h+='<div class="wcode">n = p * q where |p - q| is small\nn = 166153499473114484112975882535042793491\n\nFermat: a = ceil(sqrt(n))\nLoop: check if a^2 - n is a perfect square</div>';
+    h+='<div class="wrow"><button class="wbtn g" onclick="fermatRun()">Run Fermat factorization</button></div>';
+    h+='<div class="prog-bar" id="fer-bar"><div class="prog-fill" id="fer-fill"></div></div>';
+    h+='<div class="wout" id="fer-r"></div>';
+  }else if(w==='ecdsa'){
+    h+='<div class="wlabel">TWO SIGNATURES (same nonce k)</div>';
+    h+='<div class="wcode">Curve: secp256k1, order n\n\nsig1: r=0x1a2b3c... s1=0xdeadbe... h1=hash(msg1)\nsig2: r=0x1a2b3c... s2=0x4a5b6c... h2=hash(msg2)\n\nNote: r1 == r2 → same nonce k was used!</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="ecdsaStep1()">Step 1: Recover k</button></div>';
+    h+='<div class="wout" id="ec-1"></div>';
+    h+='<div id="ec-row2" style="display:none"><div class="wrow"><button class="wbtn g" onclick="ecdsaStep2()">Step 2: Recover private key d</button></div></div>';
+    h+='<div class="wout" id="ec-2"></div>';
+  }else if(w==='lcg'){
+    h+='<div class="wlabel">LCG OUTPUTS (4 consecutive tokens)</div>';
+    h+='<div class="wcode">X0 = 17365\nX1 = 62171\nX2 = 48981\nX3 = 27213\n\nLCG: X_{n+1} = a*X_n + c mod m  (m=65536)</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="lcgRecover()">Recover a and c</button></div>';
+    h+='<div class="wout" id="lcg-1"></div>';
+    h+='<div id="lcg-row2" style="display:none"><div class="wrow"><button class="wbtn g" onclick="lcgPredict()">Predict X4 (next token)</button></div></div>';
+    h+='<div class="wout" id="lcg-2"></div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+// CAESAR
+function caesarInit(){caesarSlide(0);}
+function rot(s,n){return s.split('').map(function(c){var code=c.charCodeAt(0);if(code>=65&&code<=90)return String.fromCharCode((code-65+n)%26+65);if(code>=97&&code<=122)return String.fromCharCode((code-97+n)%26+97);return c;}).join('');}
+function caesarSlide(v){
+  var el=document.getElementById('caesar-val');var out=document.getElementById('caesar-out');
+  if(el)el.textContent=v;
+  if(out)out.textContent=rot(caesarCt,parseInt(v));
+}
+function caesarAuto(){var r=document.getElementById('caesar-r');r.className='wout ok show';r.textContent='Frequency analysis:\nE is most common in English\nShift 13 maps P→C, G→T, S→F...\nKey: 13 (ROT-13)\nDecrypted: '+rot(caesarCt,13);}
+
+// VIGENERE
+function vigDecrypt(){
+  var vigCt='FMH{i4y3a3i3_a3hj0id_bi4oa3d}';
+  var key=document.getElementById('vig-key').value.toUpperCase();
+  var r=document.getElementById('vig-r');
+  if(!key){r.className='wout err show';r.textContent='Enter a keyword';return;}
+  var ki=0;var dec=vigCt.split('').map(function(c){
+    if(/[a-zA-Z]/.test(c)){var shift=key.charCodeAt(ki%key.length)-(key.charCodeAt(ki%key.length)>=97?97:65);ki++;return rot(c,-shift+26);}return c;
+  }).join('');
+  r.className=(dec.indexOf('CTF{')===0)?'wout ok show':'wout show';
+  r.textContent='Key: '+key+'\nDecrypted: '+dec;
+}
+function vigSolve(){var r=document.getElementById('vig-r');r.className='wout ok show';r.textContent='IoC analysis → key length = 3\nColumn frequency analysis:\n  Col 0: C most likely\n  Col 1: T most likely  \n  Col 2: F most likely\nKeyword: CTF\nDecrypted: CTF{v1g3n3r3_k3yw0rd_cr4ck3d}';}
+
+// ECB
+function ecbEncrypt(){
+  var inp=document.getElementById('ecb-inp').value;var r=document.getElementById('ecb-r');
+  var secret='CTF{4es_3cb_byt3_4t_4_t1m3}';
+  var combined=inp+secret;
+  var blocks=[];for(var i=0;i<combined.length;i+=16){blocks.push(combined.slice(i,i+16));}
+  var fakeEnc=blocks.map(function(b,i){return 'Block '+i+': '+btoa(b.padEnd(16,'\x00')).slice(0,22)+'==';}).join('\n');
+  r.className='wout show';r.textContent='Encrypted ('+blocks.length+' blocks):\n'+fakeEnc;
+}
+function ecbAttack(){
+  var bar=document.getElementById('ecb-bar');var fill=document.getElementById('ecb-fill');var txt=document.getElementById('ecb-txt');var r=document.getElementById('ecb-r');
+  bar.style.display='block';var p=0;var secret='CTF{4es_3cb_byt3_4t_4_t1m3}';var recovered='';var si=0;
+  var t=setInterval(function(){
+    if(si<secret.length){recovered+=secret[si++];p=Math.round(si/secret.length*100);}
+    fill.style.width=p+'%';txt.textContent='Recovering byte '+si+'/'+secret.length+': '+recovered;
+    if(si>=secret.length){clearInterval(t);r.className='wout ok show';r.textContent='Byte-at-a-time attack complete!\nRecovered secret: '+recovered;}
+  },80);
+}
+
+// PADDING ORACLE
+function padOracle(){var r=document.getElementById('pad-r');var iv=document.getElementById('pad-iv').value;r.className='wout show';r.textContent=Math.random()>0.7?'Oracle: VALID PADDING\n(last byte matches 0x01)':'Oracle: INVALID PADDING\nPKCS#7 padding check failed';}
+function padAttack(){
+  var bar=document.getElementById('pad-bar');var fill=document.getElementById('pad-fill');var r=document.getElementById('pad-r');
+  bar.style.display='block';var p=0;var plain='CTF{p4dd1ng_0r4cl3_cbc_byp4ss}';var rec='';var si=0;
+  var t=setInterval(function(){if(si<plain.length){rec+=plain[si++];p=Math.round(si/plain.length*100);}fill.style.width=p+'%';if(si>=plain.length){clearInterval(t);r.className='wout ok show';r.textContent='Padding oracle attack complete!\nDecrypted: '+rec;}},90);
+}
+
+// RSA e=3
+function e3Check(){var v=document.getElementById('e3-val').value.trim();var r=document.getElementById('e3-r');if(v==='1024'){r.className='wout ok show';r.textContent='cbrt(c)=1024 → m=1024\nASCII decode → flag embedded\nCTF{rs4_sm4ll_3xp_cub3_r00t}';}else{r.className='wout err show';r.textContent=v+'^3 ≠ c. Try again.';}
+}
+function e3Solve(){var r=document.getElementById('e3-r');r.className='wout ok show';r.textContent='c = 1093054620738524983729172846291\ncbrt(c) = 1024\nm = 1024 → flag is encoded in this and extra bytes\nCTF{rs4_sm4ll_3xp_cub3_r00t}';}
+
+// COMMON MODULUS
+function cmStep1(){var r=document.getElementById('cm-1');r.className='wout show';r.textContent='Extended Euclidean(17, 65537):\ngcd = 1\na = -3855\nb = 1\n\nVerify: (-3855)*17 + 1*65537 = 1 ✓';document.getElementById('cm-row2').style.display='block';}
+function cmStep2(){var r=document.getElementById('cm-2');r.className='wout ok show';r.textContent='M = pow(c1,-3855,n) * pow(c2,1,n) mod n\n  = c1^a * c2^b mod n\n  → decoded ASCII: CTF{rs4_c0mm0n_m0dulus_3xt_3ucl1d}';}
+
+// HASH EXT
+function hashExt(){var r=document.getElementById('hext-r');r.className='wout show';var s=['Computing SHA1 internal state from MAC...','Appending padding bytes to original message...','user=guest + \\x80\\x00...\\x00\\xb0 + user=admin','Continuing SHA1 compression from extracted state...'];r.textContent='';var i=0;var t=setInterval(function(){r.textContent+=s[i]+'\n';i++;if(i>=s.length){clearInterval(t);r.className='wout ok show';r.textContent+='\nForged MAC: 9abc1234ef56...\nServer accepted forged message!\nCTF{h4sh_l3ngth_3xt3ns10n_f0rg3d}';}},450);}
+
+// FERMAT
+function fermatRun(){
+  var bar=document.getElementById('fer-bar');var fill=document.getElementById('fer-fill');var r=document.getElementById('fer-r');
+  bar.style.display='block';var p=0;
+  var steps=['a = ceil(sqrt(n)) = 12890000000001','Checking: a^2 - n = 1... not a perfect square','a = 12890000000002, b^2 = 4... sqrt=2','p = a + b = 12890000000004','q = a - b = 12890000000000','Verifying: p*q = n ✓'];
+  var si=0;r.textContent='';
+  var t=setInterval(function(){p=Math.min(100,p+18);fill.style.width=p+'%';if(si<steps.length){r.className='wout show';r.textContent+=steps[si++]+'\n';}if(p>=100){clearInterval(t);r.className='wout ok show';r.textContent+='Private key d computed.\nDecrypted flag: CTF{f3rm4t_f4ct0r_cl0s3_pr1m3s}';}},350);}
+
+// ECDSA
+function ecdsaStep1(){var r=document.getElementById('ec-1');r.className='wout show';r.textContent='h1 = 0xa1b2c3d4...\nh2 = 0xe5f60718...\ns1 = 0xdeadbeef...\ns2 = 0x4a5b6c7d...\n\nk = (h1 - h2) * modinv(s1 - s2, n) mod n\nk = 0x3f2a1b9c...';document.getElementById('ec-row2').style.display='block';}
+function ecdsaStep2(){var r=document.getElementById('ec-2');r.className='wout ok show';r.textContent='d = (s1*k - h1) * modinv(r1, n) mod n\nd = 0x1337cafebabe...\n\nPrivate key recovered!\nSigned message decrypts to: CTF{3cdsa_n0nc3_r3us3_pr1v_k3y}';}
+
+// LCG
+function lcgRecover(){
+  var xs=[17365,62171,48981,27213];var m=65536;
+  var t0=((xs[1]-xs[0])+m)%m;var t1=((xs[2]-xs[1])+m)%m;
+  // modinv
+  function modinv(a,mod){var b=mod;var x0=0;var x1=1;if(mod===1)return 0;while(a>1){var q=Math.floor(a/b);var t=b;b=a%b;a=t;t=x0;x0=x1-q*x0;x1=t;}if(x1<0)x1+=mod;return x1;}
+  var a=(t1*modinv(t0,m))%m;var c=((xs[1]-a*xs[0])%m+m)%m;
+  var r=document.getElementById('lcg-1');r.className='wout show';r.textContent='Differences: t0='+t0+' t1='+t1+'\na = t1 * modinv(t0, m) mod m = '+a+'\nc = X1 - a*X0 mod m = '+c+'\n\nLCG parameters: a='+a+', c='+c+', m='+m;
+  document.getElementById('lcg-row2').style.display='block';
+}
+function lcgPredict(){
+  var xs=[17365,62171,48981,27213];var m=65536;
+  function modinv(a,mod){var b=mod;var x0=0;var x1=1;if(mod===1)return 0;while(a>1){var q=Math.floor(a/b);var t=b;b=a%b;a=t;t=x0;x0=x1-q*x0;x1=t;}if(x1<0)x1+=mod;return x1;}
+  var t0=((xs[1]-xs[0])+m)%m;var t1=((xs[2]-xs[1])+m)%m;
+  var a=(t1*modinv(t0,m))%m;var c=((xs[1]-a*xs[0])%m+m)%m;
+  var x4=(a*xs[3]+c)%m;
+  var r=document.getElementById('lcg-2');r.className='wout ok show';r.textContent='X4 = a*X3 + c mod m\n   = '+a+'*'+xs[3]+' + '+c+' mod '+m+'\n   = '+x4+'\n\nPrediction verified! Next token: '+x4+'\nFlag: CTF{lcg_prng_r3c0v3ry_pr3d1ct}';}
+
+window.addEventListener('DOMContentLoaded',function(){
+  var total=0;challenges.forEach(function(c){total+=c.pts;});
+  document.getElementById('sc-total').textContent=challenges.length;
+  document.getElementById('sc-pts').textContent=total;
+  var g=document.getElementById('grid');
+  challenges.forEach(function(ch,idx){
+    var dTag=ch.diff==='easy'?'<span class="tag te">EASY</span>':ch.diff==='medium'?'<span class="tag tm">MEDIUM</span>':'<span class="tag th">HARD</span>';
+    var tTags=ch.tags.map(function(t){return '<span class="tag ti">'+esc(t)+'</span>';}).join('');
+    var c=document.createElement('div');c.className='card';c.dataset.diff=ch.diff;c.dataset.idx=idx;
+    c.innerHTML='<div class="card-rule"></div><div class="card-inner">'
+      +'<div class="card-meta"><span class="card-id">'+esc(ch.id)+'</span><span class="card-pts">'+ch.pts+'</span></div>'
+      +'<div class="card-title">'+esc(ch.title)+'</div>'
+      +'<div class="card-tags">'+dTag+tTags+'</div>'
+      +'<div class="card-desc">'+esc(ch.desc.substring(0,100))+'...</div>'
+      +'<div class="card-footer"><span class="solves">'+ch.solves+' solves</span><button class="btn-view">OPEN</button></div></div>';
+    c.addEventListener('click',function(){openModal(idx);});
+    g.appendChild(c);
+  });
+});
+</script>
+
+<div style="text-align:center;padding:1rem;font-size:.7rem;color:#3a4a66;font-family:'Share Tech Mono',monospace">AP® is a trademark of the College Board. This site is not affiliated with the College Board.</div>
+</body>
+</html>
