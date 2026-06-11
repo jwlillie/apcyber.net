@@ -1595,6 +1595,7 @@ export default function App() {
   const [suggestStatus, setSuggestStatus] = useState(null);
   const [pendingSuggestions, setPendingSuggestions] = useState([]);
   const [suggestionsLoaded, setSuggestionsLoaded] = useState(false);
+  const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
 
   const buildHTMLDoc = (selectedList, analyses, teacherInfo, pForm = {}) => {
     const RISK_CSS = { Low: { bg: "#d1fae5", text: "#065f46" }, Medium: { bg: "#fef3c7", text: "#92400e" }, High: { bg: "#fee2e2", text: "#7f1d1d" } };
@@ -5014,12 +5015,78 @@ document.getElementById('sigDate').addEventListener('input', updateStatus);
       )}
 
       {/* ── Admin Suggestions Panel (injected into admin view via portal-style overlay) ── */}
-      {adminMode && view === "admin" && suggestionsLoaded && pendingSuggestions.length >= 0 && (
+      {adminMode && view === "admin" && (
         <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 8000 }}>
-          <button onClick={() => { setSuggestionsLoaded(false); loadSuggestions(); }}
+          <button onClick={() => { loadSuggestions(); setShowSuggestionsPanel(true); }}
             style={{ padding: "11px 20px", borderRadius: 30, background: pendingSuggestions.length > 0 ? "#7c3aed" : "#6b7280", color: "white", border: "none", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,0.2)" }}>
             💡 {pendingSuggestions.length} Pending Suggestion{pendingSuggestions.length !== 1 ? "s" : ""}
           </button>
+        </div>
+      )}
+
+      {showSuggestionsPanel && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 20, width: "100%", maxWidth: 700, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", padding: "22px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Admin · Tool Suggestions</div>
+                <h2 style={{ margin: 0, color: "white", fontSize: 18, fontWeight: 800 }}>💡 Pending Review ({pendingSuggestions.length})</h2>
+              </div>
+              <button onClick={() => setShowSuggestionsPanel(false)} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "white", fontSize: 20, width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>✕</button>
+            </div>
+            <div style={{ overflowY: "auto", padding: "20px 28px", flex: 1 }}>
+              {pendingSuggestions.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
+                  <div style={{ fontWeight: 700 }}>No pending suggestions</div>
+                  <div style={{ fontSize: 13, marginTop: 6 }}>Teacher submissions will appear here for review.</div>
+                </div>
+              ) : pendingSuggestions.map(s => (
+                <div key={s.id} style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 20px", marginBottom: 16, background: "#fafafa" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 16, color: "#1c3557", marginBottom: 2 }}>{s.name}</div>
+                      <a href={s.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#0f766e" }}>{s.url}</a>
+                      {s.note && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>"{s.note}"</div>}
+                      <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Submitted {new Date(s.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                      <div style={{ padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 800, textAlign: "center",
+                        background: s.analysis?.riskLevel === "High" ? "#fee2e2" : s.analysis?.riskLevel === "Medium" ? "#fef3c7" : "#d1fae5",
+                        color: s.analysis?.riskLevel === "High" ? "#991b1b" : s.analysis?.riskLevel === "Medium" ? "#92400e" : "#065f46" }}>
+                        {s.analysis?.riskLevel || "Unknown"} Risk
+                      </div>
+                    </div>
+                  </div>
+                  {s.analysis && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+                      {[["COPPA", s.analysis.coppaCompliant], ["FERPA", s.analysis.ferpaCompliant], ["Student Data Sold", s.analysis.studentDataSold], ["Account Required", s.analysis.accountRequired]].map(([label, val]) => (
+                        <div key={label} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 10px", fontSize: 12 }}>
+                          <span style={{ fontWeight: 700, color: "#374151" }}>{label}: </span>
+                          <span style={{ color: val === true || val === "true" ? "#dc2626" : val === false || val === "false" ? "#059669" : "#6b7280" }}>
+                            {String(val)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {s.analysis?.riskReason && (
+                    <div style={{ fontSize: 12, color: "#374151", background: "#f3f4f6", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>
+                      {s.analysis.riskReason}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => approveSuggestion(s)} style={{ flex: 1, padding: "9px 0", borderRadius: 9, border: "none", background: "#059669", color: "white", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                      ✓ Approve — Add to Resource List
+                    </button>
+                    <button onClick={() => denySuggestion(s)} style={{ padding: "9px 20px", borderRadius: 9, border: "1.5px solid #fca5a5", background: "white", color: "#dc2626", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      ✕ Deny
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
