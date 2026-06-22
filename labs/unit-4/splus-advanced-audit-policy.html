@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Configure an Advanced Audit Policy</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-advanced-audit-policy",
+  "title": "Lab — Configure an Advanced Audit Policy",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.4 Detecting Attacks on Devices"
+    ],
+    "skills": [
+      "3.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.4",
+      "5.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Single-File Lab Simulation
+  Lab: Configure an Advanced Audit Policy in Group Policy
+  assignmentId: splus-advanced-audit-policy
+  Objectives (SY0-701): 4.4 (alerting & monitoring / log aggregation),
+                        4.5 (modify enterprise capabilities / Group Policy),
+                        4.9 (data sources / OS-specific security logs)
+  .
+
+  Clean-room original work. Scenario, persona, organization, GPO name,
+  question wording, and all UI markup are original. The Windows audit
+  subcategory names are factual product feature names used for instruction.
+
+  Copyright (c) 2026 Brightpath Lab Library author.
+  Licensed for the author's CompTIA Security+ exam-prep lab library.
+  No third-party lab content, screenshots, or wording is reproduced.
+
+  Screenshot note: this file has ZERO runtime dependencies. Instead of an
+  inlined html2canvas, it captures a PNG of the lab DOM with the native
+  SVG <foreignObject> technique (works because the lab is self-drawn, so
+  the canvas is never tainted). To use html2canvas instead, paste the
+  minified library above the engine script and replace capturePng().
+  ============================================================================
+-->
+<style id="labStyle">
+  /* ---- Design tokens: "Endpoint Audit Console" identity ----------------- */
+  :root{
+    --ink:#1b2230;          /* deep slate, primary text */
+    --ink-soft:#56607a;     /* secondary text */
+    --surface:#eef1f5;      /* app backdrop */
+    --panel:#ffffff;        /* card surfaces */
+    --line:#d7dde7;         /* hairlines */
+    --line-strong:#bac3d2;
+    --accent:#a8541b;       /* burnt amber = "Success" auditing on */
+    --accent-ink:#7a3c12;
+    --teal:#0f5d63;         /* deep teal = "Failure" auditing on */
+    --teal-ink:#0a4045;
+    --pass:#1f7a40;         /* task satisfied */
+    --pass-bg:#e7f4ec;
+    --warn:#9a6a00;
+    --danger:#b3261e;
+    --danger-bg:#fbeae9;
+    --focus:#2563eb;
+    --radius:10px;
+    --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --shadow: 0 1px 2px rgba(27,34,48,.06), 0 6px 18px rgba(27,34,48,.06);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--ui);
+    color:var(--ink);
+    background:
+      radial-gradient(120% 80% at 100% 0%, #f6f8fb 0%, var(--surface) 60%) fixed;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 56px}
+
+  /* ---- Title block ------------------------------------------------------ */
+  .masthead{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent-ink);margin:0 0 6px;font-weight:600;
+  }
+  h1{font-size:25px;line-height:1.15;margin:0;letter-spacing:-.01em;font-weight:680}
+  .scenario{margin:10px 0 0;max-width:62ch;color:var(--ink-soft);font-size:14.5px}
+  .obj-tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .tag{font-family:var(--mono);font-size:11px;border:1px solid var(--line-strong);
+    border-radius:999px;padding:3px 9px;color:var(--ink-soft);background:#fff}
+
+  /* ---- Layout grid ------------------------------------------------------ */
+  .lab-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+  @media (max-width:880px){ .lab-grid{grid-template-columns:1fr} }
+
+  /* ---- Editor console --------------------------------------------------- */
+  .console{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden}
+  .console-bar{display:flex;align-items:center;gap:10px;padding:11px 14px;
+    background:linear-gradient(180deg,#fdfdfe,#f3f5f9);border-bottom:1px solid var(--line)}
+  .console-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px #a8541b22}
+  .console-title{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+  .console-path{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:auto;display:none}
+  @media (min-width:620px){ .console-path{display:block} }
+
+  .section{border-top:1px solid var(--line)}
+  .section:first-of-type{border-top:0}
+  .section-head{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    background:#fbfcfe;border:0;cursor:pointer;padding:12px 14px;font:inherit;color:var(--ink)}
+  .section-head:hover{background:#f4f7fb}
+  .section-head .chev{width:16px;height:16px;transition:transform .16s ease;color:var(--ink-soft)}
+  .section-head[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+  .section-head .s-label{font-weight:640;font-size:14px}
+  .section-head .s-meta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+  .section-body{padding:6px 14px 14px}
+  .section-body[hidden]{display:none}
+
+  /* policy row */
+  .prow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;
+    padding:11px 12px;border:1px solid var(--line);border-radius:9px;margin-top:9px;background:#fff}
+  .prow .pname{flex:1 1 240px;min-width:200px}
+  .prow .pname b{display:block;font-size:13.5px;font-weight:600}
+  .prow .pname small{color:var(--ink-soft);font-size:12px}
+  .prow.is-done{border-color:#bfe0cc;background:linear-gradient(0deg,#f4fbf6,#fff)}
+
+  /* segmented control (security options) */
+  .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:#fff}
+  .seg button{font:inherit;font-size:12.5px;border:0;background:#fff;color:var(--ink-soft);
+    padding:7px 12px;cursor:pointer;border-left:1px solid var(--line)}
+  .seg button:first-child{border-left:0}
+  .seg button[aria-checked="true"]{background:var(--ink);color:#fff}
+  .seg button:hover:not([aria-checked="true"]){background:#f0f3f8}
+
+  /* listbox (retention) */
+  .lb{display:flex;flex-direction:column;gap:6px;width:100%}
+  .lb button{font:inherit;font-size:13px;text-align:left;display:flex;gap:10px;align-items:center;
+    border:1px solid var(--line-strong);background:#fff;border-radius:8px;padding:9px 11px;cursor:pointer;color:var(--ink)}
+  .lb button:hover{background:#f4f7fb}
+  .lb button[aria-checked="true"]{border-color:var(--accent);background:#fdf4ec}
+  .lb .mark{width:15px;height:15px;border-radius:50%;border:2px solid var(--line-strong);flex:none}
+  .lb button[aria-checked="true"] .mark{border-color:var(--accent);background:radial-gradient(circle,#a8541b 0 5px,transparent 6px)}
+
+  /* audit pill toggles (success / failure) */
+  .audits{display:flex;gap:8px}
+  .pill{font:inherit;font-size:12px;font-weight:600;letter-spacing:.02em;border:1px solid var(--line-strong);
+    background:#fff;color:var(--ink-soft);border-radius:999px;padding:6px 13px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:7px;transition:background .14s,color .14s,border-color .14s}
+  .pill .glyph{width:13px;height:13px;border-radius:3px;border:1.5px solid currentColor;display:inline-block;position:relative}
+  .pill[aria-checked="true"][data-kind="success"]{background:var(--accent);border-color:var(--accent);color:#fff}
+  .pill[aria-checked="true"][data-kind="failure"]{background:var(--teal);border-color:var(--teal);color:#fff}
+  .pill[aria-checked="true"] .glyph{background:#fff;border-color:#fff}
+  .pill[aria-checked="true"] .glyph::after{content:"";position:absolute;inset:1px 3px 3px 1px;
+    border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(40deg);width:3px;height:6px}
+  .pill[data-kind="failure"][aria-checked="true"] .glyph::after{border-color:var(--teal)}
+  .pill:hover:not([aria-checked="true"]){background:#f0f3f8;color:var(--ink)}
+
+  /* ---- Side panel ------------------------------------------------------- */
+  .panel{position:sticky;top:14px;display:flex;flex-direction:column;gap:16px}
+  @media (max-width:880px){ .panel{position:static} }
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-soft);margin:0;padding:13px 15px 0}
+  .card .body{padding:11px 15px 15px}
+
+  .progress{display:flex;align-items:baseline;gap:8px;padding:0 15px 4px}
+  .progress .big{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .progress .small{color:var(--ink-soft);font-size:13px}
+  .bar{height:8px;border-radius:99px;background:#e7ebf2;margin:8px 15px 0;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--teal));transition:width .3s ease}
+
+  ul.tasks,ul.qs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  ul.tasks li{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink-soft)}
+  ul.tasks li .chk{flex:none;width:17px;height:17px;border-radius:5px;border:1.5px solid var(--line-strong);
+    margin-top:1px;position:relative}
+  ul.tasks li.done{color:var(--ink)}
+  ul.tasks li.done .chk{background:var(--pass);border-color:var(--pass)}
+  ul.tasks li.done .chk::after{content:"";position:absolute;left:5px;top:1.5px;width:4px;height:8px;
+    border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(40deg)}
+
+  /* questions */
+  .q{border:1px solid var(--line);border-radius:9px;padding:11px 12px}
+  .q + .q{margin-top:10px}
+  .q .prompt{font-size:13px;font-weight:600;margin:0 0 8px}
+  .q .opts{display:flex;flex-direction:column;gap:6px}
+  .q .opt{font:inherit;font-size:12.5px;text-align:left;border:1px solid var(--line-strong);background:#fff;
+    border-radius:7px;padding:8px 10px;cursor:pointer;color:var(--ink);display:flex;gap:9px;align-items:flex-start}
+  .q .opt .dot{flex:none;width:13px;height:13px;border-radius:50%;border:2px solid var(--line-strong);margin-top:2px}
+  .q .opt[aria-checked="true"]{border-color:var(--focus)}
+  .q .opt[aria-checked="true"] .dot{border-color:var(--focus);background:radial-gradient(circle,var(--focus) 0 4px,transparent 5px)}
+  .q.correct{border-color:#bfe0cc;background:#f6fbf8}
+  .q.correct .verdict{color:var(--pass)}
+  .q.wrong .verdict{color:var(--danger)}
+  .q .verdict{font-size:11.5px;font-family:var(--mono);margin-top:8px;min-height:14px}
+
+  /* ---- Submission bar --------------------------------------------------- */
+  .submit-card{margin-top:20px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 16px 18px}
+  .submit-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:5px;flex:1 1 240px}
+  .field label{font-size:12px;font-weight:600;color:var(--ink-soft)}
+  .field input{font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line-strong);
+    border-radius:8px;background:#fff;color:var(--ink)}
+  .field .hint{font-size:11.5px;color:var(--ink-soft)}
+  .btn{font:inherit;font-weight:640;font-size:14px;border:0;border-radius:8px;padding:11px 18px;cursor:pointer}
+  .btn-primary{background:var(--ink);color:#fff}
+  .btn-primary:hover{background:#0f1623}
+  .btn-primary:disabled{background:#aab2c1;cursor:not-allowed}
+  .btn-ghost{background:#fff;border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{background:#f4f7fb}
+  .status{margin-top:13px;font-size:13px;min-height:20px}
+  .status.ok{color:var(--pass)}
+  .status.err{color:var(--danger)}
+  .status a{color:var(--accent-ink);font-weight:600}
+  .status-card{margin-top:10px;border-radius:8px;padding:10px 12px;font-size:13px}
+  .status-card.ok{background:var(--pass-bg);border:1px solid #bfe0cc}
+  .status-card.err{background:var(--danger-bg);border:1px solid #f0c2bf}
+
+  /* ---- Utility / a11y --------------------------------------------------- */
+  :where(button,input,a,[tabindex]):focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+  .visually-hidden{position:absolute;width:1px;height:1px;clip:rect(0 0 0 0);overflow:hidden}
+  footer.legal{margin-top:26px;font-size:11.5px;color:var(--ink-soft);max-width:70ch}
+  .reset-btn{font:inherit;font-size:12.5px;background:#fff;border:1px solid var(--line-strong);
+    border-radius:7px;padding:6px 11px;cursor:pointer;color:var(--ink);margin-left:auto}
+  .reset-btn:hover{background:#f4f7fb}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Security+ SY0-701 · Lab</p>
+      <h1>Configure an Advanced Audit Policy</h1>
+      <p class="scenario">
+        You're the security analyst at <b>Brightpath Logistics</b>. After a near-miss where a
+        rogue logon went unnoticed, your lead asks you to turn on detailed auditing for every
+        delivery-depot workstation by editing the domain GPO <b>BP-Endpoint-Audit-Baseline</b>.
+        Configure the security options, the security-log retention, and the advanced audit
+        subcategories below so investigators can reconstruct who did what.
+      </p>
+      <div class="obj-tags" aria-label="Exam objectives">
+        <span class="tag">OBJ 4.4</span><span class="tag">OBJ 4.5</span><span class="tag">OBJ 4.9</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="lab-grid">
+
+    <!-- =================== EDITOR CONSOLE =================== -->
+    <main class="console" aria-label="Group Policy editor">
+      <div class="console-bar">
+        <span class="console-dot" aria-hidden="true"></span>
+        <span class="console-title">Group Policy Editor — BP-Endpoint-Audit-Baseline</span>
+        <span class="console-path">Computer Configuration ▸ Windows Settings ▸ Security Settings</span>
+        <button class="reset-btn" id="resetBtn" type="button">Reset lab</button>
+      </div>
+
+      <!-- the area captured for the submission screenshot -->
+      <div id="captureRoot">
+
+        <!-- Section: Security Options -->
+        <section class="section">
+          <button class="section-head" aria-expanded="true" data-target="secOptions" type="button">
+            <svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="s-label">Local Policies › Security Options</span>
+            <span class="s-meta" data-meta="secOptions">0 / 2 set</span>
+          </button>
+          <div class="section-body" id="secOptions"></div>
+        </section>
+
+        <!-- Section: Event Log -->
+        <section class="section">
+          <button class="section-head" aria-expanded="true" data-target="eventLog" type="button">
+            <svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="s-label">Event Log › Security log</span>
+            <span class="s-meta" data-meta="eventLog">0 / 1 set</span>
+          </button>
+          <div class="section-body" id="eventLog"></div>
+        </section>
+
+        <!-- Section: Advanced Audit Policy -->
+        <section class="section">
+          <button class="section-head" aria-expanded="true" data-target="advAudit" type="button">
+            <svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="s-label">Advanced Audit Policy Configuration</span>
+            <span class="s-meta" data-meta="advAudit">0 / 10 set</span>
+          </button>
+          <div class="section-body" id="advAudit"></div>
+        </section>
+
+      </div><!-- /captureRoot -->
+    </main>
+
+    <!-- =================== SIDE PANEL =================== -->
+    <aside class="panel" aria-label="Progress and questions">
+      <div class="card">
+        <h2>Progress</h2>
+        <div class="progress"><span class="big" id="scoreEarned">0</span><span class="small">/ <span id="scoreTotal">14</span> objectives met</span></div>
+        <div class="bar"><i id="bar"></i></div>
+        <div class="body">
+          <ul class="tasks" id="taskList"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Knowledge checks</h2>
+        <div class="body">
+          <div id="qList"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- =================== SUBMISSION =================== -->
+  <section class="submit-card" aria-label="Submit completed lab">
+    <div class="submit-row">
+      <div class="field">
+        <label for="hacker">Hacker name (pseudonym)</label>
+        <input id="hacker" type="text" maxlength="40" autocomplete="off" spellcheck="false"
+               placeholder="e.g. nightowl_42" aria-describedby="hackerHint">
+        <span class="hint" id="hackerHint">Use a handle, not your real name. This is what your instructor sees.</span>
+      </div>
+      <button class="btn btn-primary" id="submitBtn" type="button" disabled>Submit completed lab</button>
+      <button class="btn btn-ghost" id="recheckBtn" type="button">Re-check work</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <footer class="legal">
+    Original clean-room lab built from the public SY0-701 objectives. Windows audit subcategory
+    names are factual product terms used for instruction. © 2026 Brightpath Lab Library author —
+    all original scenario, wording, and UI. No third-party lab content is reproduced.
+  </footer>
+</div>
+
+<script>
+/* ============================================================================
+   LAB CONFIG + ANSWER KEY
+   ============================================================================ */
+const CONFIG = {
+  assignmentId: "splus-advanced-audit-policy",
+  title: "Configure an Advanced Audit Policy in Group Policy",
+  objectives: ["4.4", "4.5", "4.9"],
+
+  // Local Policies > Security Options  (state values: "notdefined" | "enabled" | "disabled")
+  securityOptions: [
+    { id:"so_force",    name:"Audit: Force audit policy subcategory settings to override audit policy category settings",
+      sub:"Lets the granular subcategory settings below actually take effect.", want:"enabled" },
+    { id:"so_shutdown", name:"Audit: Shut down system immediately if unable to log security audits",
+      sub:"Halts the machine if the security log cannot record an event.", want:"enabled" }
+  ],
+
+  // Event Log retention  (values match the option ids below)
+  retention: {
+    id:"retention",
+    name:"Retention method for the security log",
+    options:[
+      { id:"overwrite_needed", label:"Overwrite events as needed" },
+      { id:"overwrite_old",    label:"Overwrite events older than a set number of days" },
+      { id:"manual",           label:"Do not overwrite events (clear log manually)" }
+    ],
+    want:"manual"
+  },
+
+  // Advanced Audit Policy subcategories. want = {success:bool, failure:bool}
+  // (My own selection/ordering; subcategory names are factual Windows terms.)
+  auditCategories: [
+    { cat:"Account Logon", subs:[
+      { id:"al_cred",  name:"Audit Credential Validation",       want:{success:true,  failure:true } }
+    ]},
+    { cat:"Account Management", subs:[
+      { id:"am_user",  name:"Audit User Account Management",      want:{success:true,  failure:true } },
+      { id:"am_grp",   name:"Audit Security Group Management",    want:{success:true,  failure:true } }
+    ]},
+    { cat:"Detailed Tracking", subs:[
+      { id:"dt_proc",  name:"Audit Process Creation",            want:{success:true,  failure:false} }
+    ]},
+    { cat:"Logon/Logoff", subs:[
+      { id:"lo_logon", name:"Audit Logon",                       want:{success:true,  failure:true } },
+      { id:"lo_off",   name:"Audit Logoff",                      want:{success:true,  failure:false} }
+    ]},
+    { cat:"Policy Change", subs:[
+      { id:"pc_audit", name:"Audit Audit Policy Change",         want:{success:true,  failure:true } }
+    ]},
+    { cat:"Privilege Use", subs:[
+      { id:"pu_sens",  name:"Audit Sensitive Privilege Use",     want:{success:true,  failure:true } }
+    ]},
+    { cat:"System", subs:[
+      { id:"sy_state", name:"Audit Security State Change",       want:{success:true,  failure:true } },
+      { id:"sy_integ", name:"Audit System Integrity",            want:{success:true,  failure:true } }
+    ]}
+  ],
+
+  // Knowledge checks (original wording). correct = index of right option.
+  questions: [
+    { id:"q1",
+      prompt:"You enabled “Force audit policy subcategory settings to override audit policy category settings.” What does that buy you?",
+      options:[
+        "The fine-grained subcategory settings take precedence over the older, broad audit categories.",
+        "It encrypts the security log so it can't be tampered with.",
+        "It forwards audit events to a central SIEM automatically.",
+        "It clears the existing security log before applying the policy."
+      ], correct:0 },
+    { id:"q2",
+      prompt:"“Shut down system immediately if unable to log security audits” trades availability for assurance. When the security log can no longer record an event, what happens?",
+      options:[
+        "Old events are silently overwritten so logging continues.",
+        "The system halts until an admin clears the log and restores auditing.",
+        "Auditing quietly switches to a backup log file.",
+        "The event is dropped but the user is warned on screen."
+      ], correct:1 },
+    { id:"q3",
+      prompt:"You set the security log retention to “Do not overwrite events (clear log manually).” What must you plan for operationally?",
+      options:[
+        "Logs are deleted automatically every 24 hours.",
+        "Nothing — the log can never fill up.",
+        "Once the log fills, new events stop recording until someone archives and clears it.",
+        "Events are compressed and kept forever with no action needed."
+      ], correct:2 },
+    { id:"q4",
+      prompt:"An investigator wants to see when an account was created, disabled, or had its password reset. Which subcategory captures those events?",
+      options:[
+        "Audit Process Creation",
+        "Audit Sensitive Privilege Use",
+        "Audit User Account Management",
+        "Audit Security State Change"
+      ], correct:2 }
+  ],
+
+  // --- Submission wiring (set by instructor; see INSTRUCTOR_SETUP.md) ------
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+};
+
+/* ============================================================================
+   IN-MEMORY STATE
+   ============================================================================ */
+const state = {
+  securityOptions:{},   // id -> "notdefined" | "enabled" | "disabled"
+  retention:"notdefined",
+  audits:{},            // id -> {success, failure}
+  answers:{}            // qid -> chosen index
+};
+CONFIG.securityOptions.forEach(o => state.securityOptions[o.id] = "notdefined");
+CONFIG.auditCategories.forEach(c => c.subs.forEach(s => state.audits[s.id] = {success:false, failure:false}));
+
+/* ============================================================================
+   RENDER
+   ============================================================================ */
+const $ = sel => document.querySelector(sel);
+const el = (tag, attrs={}, html) => {
+  const n = document.createElement(tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (html != null) n.innerHTML = html;
+  return n;
+};
+
+function renderSecurityOptions(){
+  const wrap = $("#secOptions"); wrap.innerHTML = "";
+  CONFIG.securityOptions.forEach(o => {
+    const row = el("div",{class:"prow","data-row":o.id});
+    row.appendChild(el("div",{class:"pname"}, `<b>${o.name}</b><small>${o.sub}</small>`));
+    const seg = el("div",{class:"seg",role:"radiogroup","aria-label":o.name});
+    [["notdefined","Not defined"],["enabled","Enabled"],["disabled","Disabled"]].forEach(([val,label])=>{
+      const b = el("button",{type:"button",role:"radio","data-val":val,
+        "aria-checked": String(state.securityOptions[o.id]===val)}, label);
+      b.addEventListener("click",()=>{ state.securityOptions[o.id]=val; refresh(); });
+      seg.appendChild(b);
+    });
+    row.appendChild(seg);
+    wrap.appendChild(row);
+  });
+}
+
+function renderRetention(){
+  const wrap = $("#eventLog"); wrap.innerHTML = "";
+  const r = CONFIG.retention;
+  const row = el("div",{class:"prow","data-row":r.id});
+  row.appendChild(el("div",{class:"pname"}, `<b>${r.name}</b><small>Controls what happens when the security log is full.</small>`));
+  const lb = el("div",{class:"lb",role:"radiogroup","aria-label":r.name});
+  r.options.forEach(opt=>{
+    const b = el("button",{type:"button",role:"radio","data-val":opt.id,
+      "aria-checked": String(state.retention===opt.id)});
+    b.innerHTML = `<span class="mark" aria-hidden="true"></span><span>${opt.label}</span>`;
+    b.addEventListener("click",()=>{ state.retention=opt.id; refresh(); });
+    lb.appendChild(b);
+  });
+  row.appendChild(lb);
+  wrap.appendChild(row);
+}
+
+function renderAudits(){
+  const wrap = $("#advAudit"); wrap.innerHTML = "";
+  CONFIG.auditCategories.forEach(cat=>{
+    const head = el("div",{}, `<div style="font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin:12px 2px 2px">${cat.cat}</div>`);
+    wrap.appendChild(head);
+    cat.subs.forEach(s=>{
+      const row = el("div",{class:"prow","data-row":s.id});
+      row.appendChild(el("div",{class:"pname"}, `<b>${s.name}</b>`));
+      const audits = el("div",{class:"audits"});
+      [["success","Success"],["failure","Failure"]].forEach(([kind,label])=>{
+        const b = el("button",{type:"button",role:"switch","data-kind":kind,
+          "aria-label":`${label} auditing for ${s.name}`,
+          "aria-checked": String(!!state.audits[s.id][kind])});
+        b.innerHTML = `<span class="glyph" aria-hidden="true"></span>${label}`;
+        b.classList.add("pill");
+        b.addEventListener("click",()=>{ state.audits[s.id][kind]=!state.audits[s.id][kind]; refresh(); });
+        audits.appendChild(b);
+      });
+      row.appendChild(audits);
+      wrap.appendChild(row);
+    });
+  });
+}
+
+function renderQuestions(){
+  const wrap = $("#qList"); wrap.innerHTML = "";
+  CONFIG.questions.forEach((q,qi)=>{
+    const card = el("div",{class:"q","data-q":q.id});
+    card.appendChild(el("p",{class:"prompt"}, `${qi+1}. ${q.prompt}`));
+    const opts = el("div",{class:"opts",role:"radiogroup","aria-label":q.prompt});
+    q.options.forEach((text,i)=>{
+      const b = el("button",{type:"button",role:"radio",class:"opt",
+        "aria-checked": String(state.answers[q.id]===i)});
+      b.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${text}</span>`;
+      b.addEventListener("click",()=>{ state.answers[q.id]=i; refresh(); });
+      opts.appendChild(b);
+    });
+    card.appendChild(opts);
+    card.appendChild(el("div",{class:"verdict","aria-live":"polite"}, ""));
+    wrap.appendChild(card);
+  });
+}
+
+/* ============================================================================
+   EVALUATION
+   ============================================================================ */
+function buildTasks(){
+  const tasks = [];
+  CONFIG.securityOptions.forEach(o=>{
+    tasks.push({ id:o.id, label:`Set “${shortName(o.name)}” to Enabled`,
+      passed: state.securityOptions[o.id]===o.want, kind:"task" });
+  });
+  tasks.push({ id:CONFIG.retention.id, label:`Set security-log retention to “Do not overwrite (clear manually)”`,
+    passed: state.retention===CONFIG.retention.want, kind:"task" });
+  CONFIG.auditCategories.forEach(cat=>cat.subs.forEach(s=>{
+    const cur = state.audits[s.id], w = s.want;
+    const want = w.success && w.failure ? "Success and Failure" : (w.success ? "Success" : "Failure");
+    tasks.push({ id:s.id, label:`${s.name} → ${want}`,
+      passed: cur.success===w.success && cur.failure===w.failure, kind:"task" });
+  });
+  return tasks;
+}
+function shortName(n){ return n.replace(/^Audit:\s*/,'').split(' to override')[0]; }
+
+function buildQuestions(){
+  return CONFIG.questions.map(q=>({
+    id:q.id, prompt:q.prompt,
+    answer: state.answers[q.id]==null ? null : q.options[state.answers[q.id]],
+    correct: state.answers[q.id]===q.correct
+  }));
+}
+
+function refresh(){
+  // re-render control states without rebuilding (keeps focus reasonable)
+  document.querySelectorAll('#secOptions .seg button').forEach(b=>{
+    const row = b.closest('[data-row]').dataset.row;
+    b.setAttribute('aria-checked', String(state.securityOptions[row]===b.dataset.val));
+  });
+  document.querySelectorAll('#eventLog .lb button').forEach(b=>{
+    b.setAttribute('aria-checked', String(state.retention===b.dataset.val));
+  });
+  document.querySelectorAll('#advAudit .pill').forEach(b=>{
+    const row = b.closest('[data-row]').dataset.row;
+    b.setAttribute('aria-checked', String(!!state.audits[row][b.dataset.kind]));
+  });
+  document.querySelectorAll('#qList .q').forEach(card=>{
+    const qid = card.dataset.q;
+    card.querySelectorAll('.opt').forEach((o,i)=>o.setAttribute('aria-checked', String(state.answers[qid]===i)));
+  });
+
+  const tasks = buildTasks();
+  const qs = buildQuestions();
+
+  // task checklist
+  const tl = $("#taskList"); tl.innerHTML = "";
+  tasks.forEach(t=>{
+    const li = el("li",{class: t.passed ? "done":""});
+    li.innerHTML = `<span class="chk" aria-hidden="true"></span><span>${t.label}</span>`;
+    tl.appendChild(li);
+  });
+
+  // mark configured rows
+  document.querySelectorAll('#captureRoot .prow').forEach(r=>{
+    const id = r.dataset.row;
+    const t = tasks.find(x=>x.id===id);
+    r.classList.toggle('is-done', !!(t && t.passed));
+  });
+
+  // section meta counts
+  setMeta("secOptions", CONFIG.securityOptions.filter(o=>state.securityOptions[o.id]===o.want).length, CONFIG.securityOptions.length);
+  setMeta("eventLog", state.retention===CONFIG.retention.want?1:0, 1);
+  const auditTotal = CONFIG.auditCategories.reduce((a,c)=>a+c.subs.length,0);
+  const auditDone = tasks.filter(t=>t.kind==="task" && t.passed && state.audits[t.id]).length;
+  setMeta("advAudit", auditDone, auditTotal);
+
+  // question verdicts (only show once answered)
+  document.querySelectorAll('#qList .q').forEach(card=>{
+    const q = qs.find(x=>x.id===card.dataset.q);
+    const answered = state.answers[card.dataset.q]!=null;
+    card.classList.toggle('correct', answered && q.correct);
+    card.classList.toggle('wrong', answered && !q.correct);
+    const v = card.querySelector('.verdict');
+    v.textContent = !answered ? "" : (q.correct ? "✓ Correct" : "✗ Not quite — try again");
+  });
+
+  // score
+  const earned = tasks.filter(t=>t.passed).length + qs.filter(q=>q.correct).length;
+  const total = tasks.length + qs.length;
+  $("#scoreEarned").textContent = earned;
+  $("#scoreTotal").textContent = total;
+  $("#bar").style.width = (earned/total*100).toFixed(1) + "%";
+
+  // submit gating
+  const name = $("#hacker").value.trim();
+  $("#submitBtn").disabled = name.length===0;
+  return { tasks, qs, earned, total };
+}
+function setMeta(target, done, total){
+  const m = document.querySelector(`[data-meta="${target}"]`);
+  if (m) m.textContent = `${done} / ${total} set`;
+}
+
+/* ============================================================================
+   SCREENSHOT (dependency-free, SVG foreignObject -> canvas -> PNG)
+   ============================================================================ */
+async function capturePng(node){
+  try{
+    const css = document.getElementById('labStyle').textContent;
+    const rect = node.getBoundingClientRect();
+    const w = Math.max(1, Math.ceil(rect.width));
+    const h = Math.max(1, Math.ceil(node.scrollHeight || rect.height));
+    const clone = node.cloneNode(true);
+    const xml = new XMLSerializer().serializeToString(clone);
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+      `<foreignObject x="0" y="0" width="${w}" height="${h}">`+
+      `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:#ffffff;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;color:#1b2230">`+
+      `<style>${css}</style>${xml}</div>`+
+      `</foreignObject></svg>`;
+    const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    try{
+      const img = new Image();
+      await new Promise((res,rej)=>{
+        img.onload=res; img.onerror=()=>rej(new Error('render failed'));
+        img.src=url;
+      });
+      const scale = Math.min(2, window.devicePixelRatio || 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(w*scale);
+      canvas.height = Math.round(h*scale);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img, 0, 0, w, h);
+      return canvas.toDataURL('image/png');
+    } finally { URL.revokeObjectURL(url); }
+  } catch(e){
+    console.warn('Screenshot capture failed; submitting without image.', e);
+    return ""; // server tolerates an empty screenshot
+  }
+}
+
+/* ============================================================================
+   SUBMIT
+   ============================================================================ */
+async function submit(){
+  const status = $("#status");
+  const btn = $("#submitBtn");
+  const name = $("#hacker").value.trim();
+  if (!name){ setStatus("Enter a hacker name before submitting.","err"); return; }
+  if (name.length > 40){ setStatus("Hacker name is too long (40 characters max).","err"); return; }
+
+  const { tasks, qs, earned, total } = refresh();
+
+  btn.disabled = true;
+  setStatus("Capturing your work and submitting…","");
+
+  const screenshot = await capturePng(document.getElementById('captureRoot'));
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: name,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: tasks.map(t=>({ id:t.id, label:t.label, passed:t.passed })),
+    questions: qs.map(q=>({ id:q.id, prompt:q.prompt, answer:q.answer, correct:q.correct })),
+    score: { earned, total },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("This lab isn't wired to a submission endpoint yet. Ask your instructor to set APPS_SCRIPT_URL.","err");
+    btn.disabled = false;
+    return;
+  }
+
+  try{
+    // Simple request: no custom headers, text/plain body => no CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:"POST",
+      body: JSON.stringify(payload)
+    });
+    const out = await res.json();
+    if (out && out.success){
+      const link = out.docUrl ? ` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission</a>` : "";
+      setStatus(`Submitted as <b>${escapeHtml(name)}</b> — scored ${earned}/${total}.${link}`,"ok");
+    } else {
+      setStatus(`Submission rejected: ${escapeHtml((out && out.error) || "unknown error")}.`,"err");
+      btn.disabled = false;
+    }
+  } catch(err){
+    // Locked-down fallback: fire-and-forget; can't read docUrl.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("Submitted, but this browser blocked reading the response. Confirm receipt with your instructor.","ok");
+    } catch(err2){
+      setStatus("Couldn't reach the submission server. Check your connection and try again.","err");
+      btn.disabled = false;
+    }
+  }
+}
+function setStatus(html, cls){
+  const s = $("#status"); s.className = "status " + (cls||""); s.innerHTML = html;
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============================================================================
+   WIRING
+   ============================================================================ */
+function reset(){
+  CONFIG.securityOptions.forEach(o => state.securityOptions[o.id]="notdefined");
+  state.retention="notdefined";
+  CONFIG.auditCategories.forEach(c=>c.subs.forEach(s=> state.audits[s.id]={success:false,failure:false}));
+  state.answers={};
+  $("#hacker").value="";
+  setStatus("","");
+  refresh();
+}
+
+document.addEventListener("click",(e)=>{
+  const head = e.target.closest(".section-head");
+  if (head){
+    const open = head.getAttribute("aria-expanded")==="true";
+    head.setAttribute("aria-expanded", String(!open));
+    document.getElementById(head.dataset.target).hidden = open;
+  }
+});
+
+renderSecurityOptions();
+renderRetention();
+renderAudits();
+renderQuestions();
+$("#hacker").addEventListener("input", refresh);
+$("#submitBtn").addEventListener("click", submit);
+$("#recheckBtn").addEventListener("click", ()=>{ refresh(); setStatus("Work re-checked. See the panel for what's still open.",""); });
+$("#resetBtn").addEventListener("click", reset);
+refresh();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-host-firewall-public-profile.html",title:"Lab \u2014 Host Firewall for Untrusted Networks"}, NEXT=null, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.4 Detecting Attacks on Devices";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

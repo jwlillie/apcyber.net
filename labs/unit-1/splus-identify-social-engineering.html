@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mail Triage Lab — Identify Social Engineering | Security+ SY0-701</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-identify-social-engineering",
+  "title": "Mail Triage Lab — Identify Social Engineering | Security+ SY0-701",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 1,
+    "unitTitle": "Introduction to Security",
+    "topics": [
+      "1.1 Understanding Social Engineering"
+    ],
+    "skills": [
+      "1.B"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.2",
+      "5.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Brightpath Mail Triage — "Identify Social Engineering" simulation lab
+  CompTIA Security+ (SY0-701)  •  Objectives 2.2 (human vectors / social
+  engineering) and 5.6 (recognizing a phishing attempt).
+
+  Clean-room original work. Scenario, personas, company, domains, addresses,
+  subject lines, body copy, link values, and UI are all original and were
+  authored from the public SY0-701 objectives. This file is NOT derived from,
+  and does not copy the wording, ordering, names, paths, or screenshots of,
+  any third-party vendor's lab.
+
+  © 2026 <AUTHOR NAME / ORGANIZATION>. All rights reserved.
+  License: <choose one — e.g. proprietary, or MIT for the engine>. Not
+  affiliated with or endorsed by CompTIA or any product vendor referenced for
+  instructional realism.
+
+  Self-contained: opens directly in any modern browser. No build step, no
+  external runtime dependencies, no CDN. The only network call at runtime is a
+  single submission POST to the instructor's Apps Script web app.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Palette — pine + trail-marker, chosen for an outdoor-gear retailer's
+       internal tooling; deliberately not the cream/serif/terracotta default. */
+    --ink:#10231C;          /* deep pine — top chrome + primary text */
+    --bg:#E7ECE8;           /* cool sage app background */
+    --surface:#FFFFFF;      /* panes / cards */
+    --surface-2:#F4F7F4;    /* recessed surfaces */
+    --line:#D2DBD4;         /* hairline borders */
+    --line-strong:#B7C3BB;
+    --brand:#2E6F4E;        /* pine green primary action */
+    --brand-press:#235B3F;
+    --muted:#56655C;        /* secondary text */
+    --muted-2:#7C8A82;
+    --safe:#1F7A4D;         /* keep / legitimate */
+    --safe-bg:#E4F2E9;
+    --danger:#BB3D24;       /* delete / social engineering */
+    --danger-bg:#FBE7E1;
+    --blaze:#D2562B;        /* trail-marker accent — logo + danger emphasis only */
+    --warn:#B8860B;
+    --warn-bg:#FBF1D9;
+    --focus:#1763C9;        /* focus ring */
+    --inspect-bg:#0C1812;   /* forensic status strip */
+    --inspect-ink:#CFE6D8;
+    --inspect-mono:#8FE3B4;
+    --inspect-warn:#FFB37A;
+
+    --ui: "Segoe UI", Roboto, "Helvetica Neue", system-ui, -apple-system, Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+
+    --r:10px; --r-sm:7px;
+    --shadow:0 1px 2px rgba(16,35,28,.06), 0 8px 24px rgba(16,35,28,.06);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--ui);
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 500px at 100% -10%, rgba(46,111,78,.10), transparent 60%),
+      var(--bg);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:18px;
+  }
+
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ---- Lab framing header (outside the captured app) ---------------------- */
+  .labhead{margin:2px 4px 14px}
+  .eyebrow{
+    font:600 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+    color:var(--brand);display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  }
+  .eyebrow .obj{color:var(--muted);background:var(--surface);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px;letter-spacing:.08em}
+  .labhead h1{font-size:23px;margin:9px 0 4px;letter-spacing:-.01em}
+  .labhead p{margin:0;color:var(--muted);max-width:74ch;font-size:14px}
+
+  /* ---- The captured application card -------------------------------------- */
+  #app{
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    border-radius:var(--r);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+
+  .topbar{
+    display:flex;align-items:center;gap:14px;
+    background:var(--ink);color:#EAF2EC;
+    padding:11px 16px;
+  }
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+  .logo svg{display:block}
+  .logo .sub{font:600 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+    color:#9DC4AC;border-left:1px solid rgba(255,255,255,.18);padding-left:12px;margin-left:2px}
+  .topbar .who{margin-left:auto;font-size:12.5px;color:#AFCBBB;text-align:right}
+  .topbar .who b{color:#EAF2EC;font-weight:600}
+
+  /* scenario strip */
+  .scenario{
+    display:flex;gap:12px;align-items:flex-start;
+    background:var(--surface-2);border-bottom:1px solid var(--line);
+    padding:11px 16px;font-size:13px;color:var(--muted);
+  }
+  .scenario .pin{flex:0 0 auto;color:var(--blaze);font-size:16px;line-height:1.2}
+  .scenario b{color:var(--ink)}
+
+  /* three-pane client */
+  .client{display:grid;grid-template-columns:170px minmax(280px,1fr) minmax(300px,1.25fr);
+    min-height:520px}
+  .pane{border-right:1px solid var(--line);min-width:0}
+  .pane:last-child{border-right:0}
+
+  /* folders */
+  .folders{padding:12px 10px;display:flex;flex-direction:column;gap:4px;background:var(--surface-2)}
+  .folders h2{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted-2);margin:4px 8px 8px}
+  .folder{
+    display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+    border:0;background:transparent;border-radius:var(--r-sm);
+    padding:9px 10px;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer;
+  }
+  .folder .ic{width:16px;height:16px;flex:0 0 auto;color:var(--muted)}
+  .folder .count{margin-left:auto;font:600 11px/1 var(--mono);color:var(--muted);
+    background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 7px;min-width:22px;text-align:center}
+  .folder[aria-current="true"]{background:#E3EFE7;color:var(--brand-press);font-weight:600}
+  .folder[aria-current="true"] .ic{color:var(--brand)}
+  .folder:hover{background:#EAF2EC}
+
+  .progress{margin-top:auto;padding:10px 8px 4px}
+  .progress .bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+  .progress .bar i{display:block;height:100%;width:0;background:var(--brand);transition:width .35s}
+  .progress .lab{font:600 11px/1.3 var(--mono);color:var(--muted);margin-top:7px;letter-spacing:.02em}
+
+  /* message list */
+  .listwrap{display:flex;flex-direction:column;min-width:0}
+  .listhead{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);
+    font:600 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .listhead .back{display:none}
+  .msglist{list-style:none;margin:0;padding:6px;overflow:auto;flex:1}
+  .msg{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;text-align:left;
+    border:1px solid transparent;border-radius:var(--r-sm);background:transparent;
+    padding:11px 12px;cursor:pointer;font:inherit;color:var(--ink)}
+  .msg:hover{background:var(--surface-2)}
+  .msg[aria-selected="true"]{background:#E9F1EC;border-color:var(--line-strong)}
+  .msg .from{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg .date{font:600 10.5px/1.6 var(--mono);color:var(--muted-2);white-space:nowrap}
+  .msg .subj{grid-column:1/3;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg .snip{grid-column:1/3;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg .tags{grid-column:1/3;display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+  .pill{font:600 10px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 7px;border-radius:999px;border:1px solid transparent}
+  .pill.unread{color:var(--brand);border-color:#BFE0CC;background:#EAF6EF}
+  .pill.kept{color:var(--safe);border-color:#BBDFC8;background:var(--safe-bg)}
+  .pill.del{color:var(--danger);border-color:#EEC4B8;background:var(--danger-bg)}
+  .msg .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);align-self:center}
+  .msg.read .dot{background:transparent;border:1px solid var(--line-strong)}
+
+  .emptyfolder{padding:34px 18px;text-align:center;color:var(--muted)}
+  .emptyfolder svg{opacity:.5;margin-bottom:8px}
+
+  /* reading pane */
+  .reader{display:flex;flex-direction:column;min-width:0}
+  .reader .empty{margin:auto;text-align:center;color:var(--muted);padding:40px 24px;max-width:34ch}
+  .reader .empty svg{opacity:.45;margin-bottom:10px}
+  .rhead{padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+  .rhead h3{margin:0 0 8px;font-size:16px;letter-spacing:-.01em}
+  .addr{display:flex;align-items:baseline;gap:8px;font-size:12.5px;color:var(--muted);margin-top:2px}
+  .addr .nm{color:var(--ink);font-weight:600}
+  .addr .em{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .rbody{padding:16px 18px;overflow:auto;flex:1;font-size:13.5px;color:#1c2c24}
+  .rbody p{margin:0 0 11px}
+  .rbody a{color:var(--focus);text-decoration:underline;text-underline-offset:2px;cursor:pointer;
+    word-break:break-word}
+  .rbody a:hover,.rbody a:focus-visible{background:#FFF3CC;border-radius:3px}
+  .rbody .sig{color:var(--muted);margin-top:14px;border-top:1px dashed var(--line);padding-top:11px;font-size:12.5px}
+  .rbody .attach{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);
+    border-radius:var(--r-sm);padding:8px 11px;font-size:12.5px;background:var(--surface-2);margin-top:4px}
+  .rbody .attach .ic{color:var(--muted)}
+
+  /* verdict / disposition control */
+  .verdict{border-top:1px solid var(--line);background:var(--surface-2);padding:14px 18px}
+  .verdict h4{margin:0 0 4px;font-size:13px}
+  .verdict .hint{margin:0 0 11px;font-size:12px;color:var(--muted)}
+  .options{display:flex;flex-direction:column;gap:8px}
+  .opt{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line-strong);
+    background:var(--surface);border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;
+    font:inherit;font-size:13px;text-align:left;color:var(--ink);transition:border-color .12s,background .12s}
+  .opt:hover{border-color:var(--brand)}
+  .opt .mark{flex:0 0 auto;width:16px;height:16px;border-radius:50%;border:2px solid var(--line-strong);
+    margin-top:1px;position:relative}
+  .opt .txt b{display:block;font-weight:600}
+  .opt .txt small{color:var(--muted);font-size:11.5px}
+  .opt[aria-pressed="true"]{border-color:var(--brand);background:#ECF5EF}
+  .opt[aria-pressed="true"] .mark{border-color:var(--brand)}
+  .opt[aria-pressed="true"] .mark::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--brand)}
+  .opt.danger[aria-pressed="true"]{border-color:var(--danger);background:var(--danger-bg)}
+  .opt.danger[aria-pressed="true"] .mark{border-color:var(--danger)}
+  .opt.danger[aria-pressed="true"] .mark::after{background:var(--danger)}
+
+  .feedback{margin-top:11px;font-size:12.5px;border-radius:var(--r-sm);padding:10px 12px;display:none}
+  .feedback.show{display:block}
+  .feedback.ok{background:var(--safe-bg);color:#155e3a;border:1px solid #BBDFC8}
+  .feedback.no{background:var(--warn-bg);color:#7a5a07;border:1px solid #E8D29A}
+  .feedback b{font-weight:600}
+
+  /* task checklist */
+  .tasks{border-top:1px solid var(--line);padding:13px 16px 14px;background:var(--surface)}
+  .tasks h2{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);margin:0 0 10px}
+  .tasklist{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+  .task{display:flex;align-items:flex-start;gap:10px;font-size:13px}
+  .task .box{flex:0 0 auto;width:18px;height:18px;border-radius:5px;border:2px solid var(--line-strong);
+    display:grid;place-items:center;color:#fff;margin-top:1px}
+  .task.done .box{background:var(--safe);border-color:var(--safe)}
+  .task .box svg{opacity:0}
+  .task.done .box svg{opacity:1}
+  .task .lbl b{font-weight:600}
+  .task.done .lbl{color:var(--muted)}
+
+  /* forensic status bar — the signature element */
+  .inspector{
+    background:var(--inspect-bg);color:var(--inspect-ink);
+    display:flex;align-items:center;gap:12px;padding:9px 16px;min-height:42px;
+    font-family:var(--mono);font-size:12px;border-top:1px solid #0a140f;
+  }
+  .inspector .label{color:#6FAE89;letter-spacing:.08em;text-transform:uppercase;font-size:10px;
+    flex:0 0 auto;display:flex;align-items:center;gap:7px}
+  .inspector .url{color:var(--inspect-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+  .inspector .url.idle{color:#5C7A6B}
+  .inspector .flag{flex:0 0 auto;display:none;align-items:center;gap:6px;color:var(--inspect-warn);
+    border:1px solid rgba(255,179,122,.4);border-radius:999px;padding:3px 9px;font-size:10.5px;letter-spacing:.04em}
+  .inspector.mismatch .flag{display:inline-flex}
+  .inspector.mismatch .url{color:var(--inspect-warn)}
+
+  /* submission bar */
+  .submit{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:14px 16px;border-top:1px solid var(--line);background:var(--surface-2)}
+  .field{display:flex;flex-direction:column;gap:4px;min-width:200px;flex:1}
+  .field label{font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .field input{font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line-strong);
+    border-radius:var(--r-sm);background:var(--surface);color:var(--ink)}
+  .field .note{font-size:11px;color:var(--muted-2)}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:var(--r-sm);padding:11px 18px;cursor:pointer;
+    border:1px solid transparent}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn.primary{background:var(--brand);color:#fff;border-color:var(--brand-press)}
+  .btn.primary:hover:not(:disabled){background:var(--brand-press)}
+  .btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--line-strong)}
+  .btn.ghost:hover{background:#EAF2EC}
+
+  .status{flex-basis:100%;font-size:13px;min-height:0;display:none;border-radius:var(--r-sm);padding:0}
+  .status.show{display:block;padding:11px 13px;margin-top:2px}
+  .status.work{background:var(--surface);border:1px solid var(--line-strong);color:var(--muted)}
+  .status.good{background:var(--safe-bg);border:1px solid #BBDFC8;color:#155e3a}
+  .status.bad{background:var(--danger-bg);border:1px solid #EEC4B8;color:#8a2a16}
+  .status a{color:inherit;font-weight:600}
+
+  /* footer */
+  .colophon{font-size:11px;color:var(--muted-2);margin:12px 6px 2px;line-height:1.5}
+  .colophon code{font-family:var(--mono)}
+
+  *:focus-visible{outline:2.5px solid var(--focus);outline-offset:2px;border-radius:4px}
+
+  @media (max-width:840px){
+    body{padding:10px}
+    .client{grid-template-columns:1fr;min-height:0}
+    .pane{border-right:0;border-bottom:1px solid var(--line)}
+    .folders{flex-direction:row;align-items:center;gap:6px;flex-wrap:wrap}
+    .folders h2{display:none}
+    .folder{width:auto}
+    .progress{margin:0 0 0 auto;padding:4px 0;flex:1;min-width:160px}
+    /* mobile: show list OR reader */
+    .client[data-mobile="reading"] .listwrap{display:none}
+    .client[data-mobile="list"] .reader{display:none}
+    .listhead .back{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);
+      background:var(--surface);border-radius:var(--r-sm);padding:6px 10px;font:inherit;font-size:12px;cursor:pointer}
+    .inspector .label span{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="labhead">
+    <div class="eyebrow">
+      <span>Security+ SY0-701 · Lab</span>
+      <span class="obj">Obj 2.2 — social engineering</span>
+      <span class="obj">Obj 5.6 — phishing recognition</span>
+    </div>
+    <h1>Mail Triage — Identify Social Engineering</h1>
+    <p>Work the president's flagged inbox. Read each message, decide whether it's
+       a genuine business email or a social-engineering attempt, and sort it.
+       <b>Hover (or focus) any link to reveal its true destination</b> in the
+       inspector strip at the bottom of the client.</p>
+  </header>
+
+  <!-- ===================== CAPTURED APPLICATION ======================= -->
+  <main id="app" aria-label="Brightpath mail triage application">
+
+    <div class="topbar">
+      <span class="logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2 L21 20 L14.5 16.5 L12 22 L9.5 16.5 L3 20 Z" fill="#D2562B"/>
+          <path d="M12 2 L12 22 L9.5 16.5 L3 20 Z" fill="#2E6F4E"/>
+        </svg>
+        Brightpath Outfitters
+        <span class="sub">Mail&nbsp;Triage</span>
+      </span>
+      <span class="who">Reviewing for <b>Dana Ruiz</b> · President &amp; CEO<br>brightpathoutfitters.com</span>
+    </div>
+
+    <div class="scenario">
+      <span class="pin" aria-hidden="true">▲</span>
+      <span>You're the IT security administrator at <b>Brightpath Outfitters</b>, a
+        U.S. outdoor-gear retailer. The president forwarded eight flagged messages.
+        Brightpath's verified vendors are <b>Atlas Payroll</b> (portal.atlaspayroll.com)
+        and supplier <b>Northwind Textiles</b>. The company email domain is
+        <b>brightpathoutfitters.com</b> — watch for look-alikes.</span>
+    </div>
+
+    <div class="client" id="client" data-mobile="list">
+
+      <!-- folders -->
+      <nav class="pane folders" aria-label="Folders">
+        <h2>Folders</h2>
+        <button class="folder" id="fld-inbox" data-folder="inbox" aria-current="true">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 12h5l2 3h4l2-3h5M4 6h16v12H4z"/></svg>
+          Inbox <span class="count" id="count-inbox">0</span>
+        </button>
+        <button class="folder" id="fld-trash" data-folder="trash" aria-current="false">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M6 7l1 13h10l1-13"/></svg>
+          Trash <span class="count" id="count-trash">0</span>
+        </button>
+        <div class="progress" aria-hidden="false">
+          <div class="bar"><i id="progbar"></i></div>
+          <div class="lab" id="proglab">0 / 8 sorted</div>
+        </div>
+      </nav>
+
+      <!-- message list -->
+      <section class="pane listwrap" aria-label="Messages">
+        <div class="listhead">
+          <button class="back" id="backBtn" type="button" aria-label="Back to message list">‹ List</button>
+          <span id="listTitle">Inbox</span>
+        </div>
+        <ul class="msglist" id="msglist" role="listbox" aria-label="Message list" tabindex="0"></ul>
+      </section>
+
+      <!-- reading pane -->
+      <section class="pane reader" id="reader" aria-label="Reading pane" aria-live="polite">
+        <div class="empty" id="readerEmpty">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M4 7l8 6 8-6"/></svg>
+          <div>Select a message to read it and record your assessment.</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- task checklist -->
+    <section class="tasks" aria-label="Lab tasks">
+      <h2>Your tasks</h2>
+      <ul class="tasklist" id="tasklist"></ul>
+    </section>
+
+    <!-- forensic status bar (signature element) -->
+    <div class="inspector" id="inspector" aria-live="polite">
+      <span class="label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><span>Link destination</span></span>
+      <span class="url idle" id="inspUrl">Hover a link in a message to inspect where it really goes.</span>
+      <span class="flag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg> domain ≠ link text</span>
+    </div>
+
+    <!-- submission -->
+    <div class="submit">
+      <div class="field">
+        <label for="hacker">Hacker name (pseudonym — no real names)</label>
+        <input id="hacker" type="text" autocomplete="off" spellcheck="false"
+               maxlength="40" placeholder="e.g. trailhawk_07" aria-describedby="hackerNote">
+        <span class="note" id="hackerNote">Used to label your submission. Keep personal info out.</span>
+      </div>
+      <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+      <button class="btn primary" id="submitBtn" type="button">Submit completed lab</button>
+      <div class="status" id="status" role="status" aria-live="assertive"></div>
+    </div>
+  </main>
+  <!-- =================== END CAPTURED APPLICATION ====================== -->
+
+  <p class="colophon">
+    Clean-room original lab for CompTIA Security+ SY0-701, objectives 2.2 &amp; 5.6.
+    Self-contained single file; submits to the course Apps Script web app at
+    <code>APPS_SCRIPT_URL</code>. © 2026 &lt;Author / Org&gt;. Not affiliated with
+    or endorsed by CompTIA or any vendor named for instructional realism.
+  </p>
+</div>
+
+<script>
+/* ============================================================================
+   LAB CONFIG  +  ANSWER KEY                                (edit per assignment)
+   ========================================================================== */
+const CONFIG = {
+  assignmentId: "splus-identify-social-engineering",
+  title: "Mail Triage — Identify Social Engineering",
+  objectives: ["2.2", "5.6"],
+  // Deployed Apps Script /exec URL — same across the whole library:
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  // Per-cohort shared secret (rotate each cohort). Validated server-side:
+  submissionToken: "REPLACE_WITH_PER_COHORT_TOKEN",
+  passThreshold: "All tasks complete and every message classified correctly."
+};
+
+/* Disposition options shown for every message. value -> label/role.
+   "keep" is the only non-deletion option; the three others move to Trash. */
+const OPTIONS = [
+  { v:"keep",    danger:false, title:"Keep — legitimate business email",
+    sub:"From a known person or verified vendor; no manipulation." },
+  { v:"phish",   danger:true,  title:"Delete — Phishing",
+    sub:"Fake or mismatched link aimed at stealing credentials." },
+  { v:"bec",     danger:true,  title:"Delete — Business email compromise",
+    sub:"Executive impersonation pushing an urgent payment or secrecy." },
+  { v:"impersonation", danger:true, title:"Delete — Tech-support / brand impersonation",
+    sub:"Look-alike brand or support desk creating fear to make you act." }
+];
+
+/* The eight messages. Bodies, names, addresses, domains, link values are all
+   original. `key` is the correct disposition; `why` is shown after answering. */
+const MESSAGES = [
+  {
+    id:"m1", key:"phish",
+    from:"Brightpath IT Helpdesk", addr:"support@brightpath-outfitters-it.com",
+    date:"08:14", subject:"[Action needed] Your mailbox is at 98% — verify to avoid lockout",
+    snippet:"Confirm your account within 24 hours or outgoing mail will be suspended…",
+    body:[
+      {p:"Our mail servers show your mailbox is 98% full. To keep sending and receiving, confirm your account in the next 24 hours. Unverified mailboxes are suspended automatically."},
+      {p:"Verify here: ", link:{text:"https://mail.brightpathoutfitters.com/quota", real:"http://account-check.brightpath-mail-verify.net/login?u=dana"}},
+      {sig:"— Brightpath IT Helpdesk (automated)"}
+    ],
+    why:"The sender domain (<b>brightpath-outfitters-it.com</b>) isn't the company's, the link <i>text</i> looks internal but its real destination is <b>brightpath-mail-verify.net</b>, and it manufactures a 24-hour lockout deadline. Classic credential-harvesting phishing."
+  },
+  {
+    id:"m2", key:"keep",
+    from:"Marcus Webb · Facilities", addr:"mwebb@brightpathoutfitters.com",
+    date:"08:39", subject:"East lot closed Thu–Fri for resurfacing",
+    snippet:"Please use the west lot this Thursday and Friday while crews repave…",
+    body:[
+      {p:"Heads up: the east parking lot will be closed Thursday and Friday while the crew resurfaces it. Please park in the west lot both days. The loading dock stays open."},
+      {p:"Updated lot map: ", link:{text:"https://intranet.brightpathoutfitters.com/facilities/parking", real:"https://intranet.brightpathoutfitters.com/facilities/parking"}},
+      {sig:"Thanks,\nMarcus Webb · Facilities"}
+    ],
+    why:"From a real coworker on the company domain, the request is routine, there's no urgency or credential ask, and the link's text matches its actual destination on the company intranet."
+  },
+  {
+    id:"m3", key:"bec",
+    from:"Dana Ruiz", addr:"dana.ruiz@brightpath-outfltters.com",
+    date:"09:02", subject:"Quick favor — are you at your desk?",
+    snippet:"I'm stuck in meetings and need a quick gift-card purchase handled quietly…",
+    body:[
+      {p:"Are you around? I'm in back-to-back meetings and can't take calls."},
+      {p:"I need you to pick up five $200 gift cards for a client thank-you. Scratch the codes and send me photos of the backs. I'll get you reimbursed this week."},
+      {p:"Please keep this between us until I announce the partnership. Time-sensitive — thanks for jumping on it."},
+      {sig:"Dana"}
+    ],
+    why:"The display name says the CEO, but the address is the look-alike <b>brightpath-outfltters.com</b> (an 'l' where the 'i' belongs). Urgency, a gift-card request, secrecy, and 'can't talk on the phone' are textbook business email compromise."
+  },
+  {
+    id:"m4", key:"keep",
+    from:"Atlas Payroll", addr:"notifications@atlaspayroll.com",
+    date:"09:20", subject:"Your June statement is ready",
+    snippet:"Sign in to the Atlas portal to view your June pay statement…",
+    body:[
+      {p:"Your June pay statement is now available. Sign in to the Atlas portal to view or download it. We never ask for your password by email."},
+      {p:"Open the portal: ", link:{text:"https://portal.atlaspayroll.com", real:"https://portal.atlaspayroll.com"}},
+      {sig:"Atlas Payroll · automated notification"}
+    ],
+    why:"Atlas Payroll is Brightpath's verified payroll provider. The message is generic, makes no threat, doesn't ask for credentials in the email, and the link text matches the real portal domain."
+  },
+  {
+    id:"m5", key:"phish",
+    from:"Brightpath Benefits", addr:"hr-benefits@brightpathoutfitters.com",
+    date:"10:05", subject:"Confirm your 401(k) beneficiary by Friday",
+    snippet:"Records are being updated — confirm your beneficiary using the secure link…",
+    body:[
+      {p:"We're updating retirement records. Please confirm your 401(k) beneficiary by Friday using the secure link below, or your election may be reset to the default."},
+      {p:"Confirm beneficiary: ", link:{text:"https://benefits.brightpathoutfitters.com/confirm", real:"https://bp-benefits.secure-formslogin.com/confirm?id=8841"}},
+      {sig:"Brightpath Benefits"}
+    ],
+    why:"Even though the <i>From</i> line looks internal, hovering the link is the tell: the visible text reads brightpathoutfitters.com but it actually points to <b>secure-formslogin.com</b>. A deadline plus a mismatched link is phishing — verify links before trusting the sender name."
+  },
+  {
+    id:"m6", key:"keep",
+    from:"Priya Nadar", addr:"pnadar@brightpathoutfitters.com",
+    date:"10:31", subject:"Notes + action items from Tuesday's inventory sync",
+    snippet:"Recap and owners from the sync — full notes linked below…",
+    body:[
+      {p:"Thanks all. Quick recap: we're moving the trail-pack SKUs to the front rack, and receiving will recount the tent inventory before the weekend."},
+      {p:"Full notes and owners: ", link:{text:"https://docs.brightpathoutfitters.com/inventory/2026-06-09", real:"https://docs.brightpathoutfitters.com/inventory/2026-06-09"}},
+      {sig:"Priya"}
+    ],
+    why:"An expected internal recap from a coworker on the company domain. No pressure, no credential request, and the link text and destination match on the company doc site."
+  },
+  {
+    id:"m7", key:"impersonation",
+    from:"Microsoft 365 Security", addr:"security-alert@microsft-365-defender.com",
+    date:"11:12", subject:"Sign-in blocked: unrecognized device detected",
+    snippet:"We blocked a sign-in from an unfamiliar device — call our security desk now…",
+    body:[
+      {p:"We blocked a sign-in to your account from an unrecognized device in another country. If this wasn't you, your account is at risk."},
+      {p:"Call the Microsoft security desk now at +1 (888) 555-0148 and our agent will secure your account. Do not ignore this message."},
+      {sig:"Microsoft 365 Security Team"}
+    ],
+    why:"The sender domain is the misspelled <b>microsft-365-defender.com</b>, and a real provider won't tell you to phone a number in a scary email. Fear plus a 'call us now' handoff is brand-impersonation pretexting (a setup for a phone scam)."
+  },
+  {
+    id:"m8", key:"keep",
+    from:"Sofia Almeida · Northwind Textiles", addr:"s.almeida@northwind-textiles.com",
+    date:"13:44", subject:"Invoice for PO-4471 (spring fabric order)",
+    snippet:"As discussed Monday, the invoice for PO-4471 is attached. Net-30…",
+    body:[
+      {p:"Hi — following up from our call Monday. Attached is the invoice for the spring fabric order under PO-4471, billed Net-30 to the usual account. Let me know if you need the PO split across two lines."},
+      {attach:"Invoice_PO-4471.pdf"},
+      {sig:"Best,\nSofia Almeida · Northwind Textiles"}
+    ],
+    why:"Northwind Textiles is a verified supplier, this references a real purchase order and a prior call, and it doesn't try to redirect payment or rush you. Expected business mail from a known contact — keep it (and still scan attachments as normal)."
+  }
+];
+
+/* ============================================================================
+   ENGINE STATE
+   ========================================================================== */
+const state = {
+  folder: "inbox",
+  selected: null,
+  opened: {},          // id -> true once read
+  verdict: {}          // id -> option value
+};
+
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const byId = id => MESSAGES.find(m=>m.id===id);
+const domainOf = u => { try { return new URL(u).hostname.replace(/^www\./,""); } catch { return ""; } };
+
+/* ---- rendering ---------------------------------------------------------- */
+function folderOf(id){ const v=state.verdict[id]; if(!v) return "inbox";
+  return v==="keep" ? "inbox" : "trash"; }
+
+function renderCounts(){
+  let inbox=0, trash=0;
+  MESSAGES.forEach(m=> folderOf(m.id)==="trash" ? trash++ : inbox++);
+  $("#count-inbox").textContent = inbox;
+  $("#count-trash").textContent = trash;
+  const sorted = MESSAGES.filter(m=>state.verdict[m.id]).length;
+  $("#progbar").style.width = (sorted/MESSAGES.length*100)+"%";
+  $("#proglab").textContent = sorted+" / "+MESSAGES.length+" sorted";
+}
+
+function renderList(){
+  const list = $("#msglist");
+  $("#listTitle").textContent = state.folder==="trash" ? "Trash" : "Inbox";
+  $$(".folder").forEach(f=>f.setAttribute("aria-current", String(f.dataset.folder===state.folder)));
+  const items = MESSAGES.filter(m=>folderOf(m.id)===state.folder);
+  list.innerHTML = "";
+  if(!items.length){
+    const li=document.createElement("li");
+    li.className="emptyfolder";
+    li.innerHTML='<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M4 7l8 6 8-6"/></svg><div>'+
+      (state.folder==="trash"?"Trash is empty — nothing deleted yet.":"Inbox is empty.")+'</div>';
+    list.appendChild(li);
+    return;
+  }
+  items.forEach(m=>{
+    const li=document.createElement("li");
+    li.className="msg"+(state.opened[m.id]?" read":"");
+    li.setAttribute("role","option");
+    li.setAttribute("aria-selected", String(state.selected===m.id));
+    li.tabIndex = 0;
+    li.dataset.id=m.id;
+    const v=state.verdict[m.id];
+    const pill = !state.opened[m.id] ? '<span class="pill unread">Unread</span>'
+      : v==="keep" ? '<span class="pill kept">Kept</span>'
+      : v ? '<span class="pill del">Deleted</span>' : '';
+    li.innerHTML =
+      '<span class="dot" aria-hidden="true"></span>'+
+      '<span class="from">'+esc(m.from)+'</span>'+
+      '<span class="date">'+esc(m.date)+'</span>'+
+      '<span class="subj">'+esc(m.subject)+'</span>'+
+      '<span class="snip">'+esc(m.snippet)+'</span>'+
+      (pill?'<span class="tags">'+pill+'</span>':'');
+    list.appendChild(li);
+  });
+}
+
+function renderReader(){
+  const r=$("#reader");
+  if(!state.selected){
+    r.innerHTML='<div class="empty" id="readerEmpty"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M4 7l8 6 8-6"/></svg><div>Select a message to read it and record your assessment.</div></div>';
+    return;
+  }
+  const m=byId(state.selected);
+  const bodyHtml = m.body.map(seg=>{
+    if(seg.sig) return '<div class="sig">'+esc(seg.sig).replace(/\n/g,"<br>")+'</div>';
+    if(seg.attach) return '<p><span class="attach"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/></svg>'+esc(seg.attach)+'</span></p>';
+    let html = seg.p ? esc(seg.p) : "";
+    if(seg.link){
+      html += '<a href="#" data-real="'+esc(seg.link.real)+'" data-text="'+esc(seg.link.text)+
+              '" role="link">'+esc(seg.link.text)+'</a>';
+    }
+    return '<p>'+html+'</p>';
+  }).join("");
+
+  const opts = OPTIONS.map(o=>{
+    const on = state.verdict[m.id]===o.v;
+    return '<button type="button" class="opt'+(o.danger?' danger':'')+'" data-v="'+o.v+
+      '" aria-pressed="'+on+'"><span class="mark" aria-hidden="true"></span>'+
+      '<span class="txt"><b>'+esc(o.title)+'</b><small>'+esc(o.sub)+'</small></span></button>';
+  }).join("");
+
+  const answered = !!state.verdict[m.id];
+  const correct = answered && state.verdict[m.id]===m.key;
+
+  r.innerHTML =
+    '<div class="rhead"><h3>'+esc(m.subject)+'</h3>'+
+      '<div class="addr"><span class="nm">'+esc(m.from)+'</span>'+
+        '<span class="em">&lt;'+esc(m.addr)+'&gt;</span></div></div>'+
+    '<div class="rbody">'+bodyHtml+'</div>'+
+    '<div class="verdict"><h4>Your assessment</h4>'+
+      '<p class="hint">Choosing a deletion category moves the message to Trash. Keeping it leaves it in the Inbox. You can change your answer.</p>'+
+      '<div class="options" role="group" aria-label="Disposition for this message">'+opts+'</div>'+
+      '<div class="feedback'+(answered?(correct?' show ok':' show no'):'')+'" id="fb">'+
+        (answered?('<b>'+(correct?'Correct.':'Reconsider.')+'</b> '+m.why):'')+
+      '</div>'+
+    '</div>';
+
+  // wire link inspection
+  $$('.rbody a', r).forEach(a=>{
+    const real=a.dataset.real, text=a.dataset.text;
+    const show=()=>setInspector(real, domainOf(real)!==domainOf(text));
+    const clear=()=>resetInspector();
+    a.addEventListener("mouseenter",show);
+    a.addEventListener("mouseleave",clear);
+    a.addEventListener("focus",show);
+    a.addEventListener("blur",clear);
+    a.addEventListener("click",e=>{e.preventDefault();show();});
+  });
+  // wire options
+  $$('.opt', r).forEach(b=>b.addEventListener("click",()=>chooseVerdict(m.id,b.dataset.v)));
+}
+
+function setInspector(url, mismatch){
+  const insp=$("#inspector"), out=$("#inspUrl");
+  out.textContent = url;
+  out.classList.remove("idle");
+  insp.classList.toggle("mismatch", !!mismatch);
+}
+function resetInspector(){
+  const insp=$("#inspector"), out=$("#inspUrl");
+  out.textContent="Hover a link in a message to inspect where it really goes.";
+  out.classList.add("idle");
+  insp.classList.remove("mismatch");
+}
+
+/* ---- interaction -------------------------------------------------------- */
+function selectMessage(id){
+  state.selected=id;
+  state.opened[id]=true;
+  $("#client").setAttribute("data-mobile","reading");
+  renderList(); renderReader(); renderTasks(); renderCounts();
+  $("#reader").scrollTop=0;
+}
+
+function chooseVerdict(id, v){
+  state.verdict[id]=v;
+  renderList(); renderReader(); renderTasks(); renderCounts();
+}
+
+function switchFolder(f){
+  state.folder=f;
+  // keep selection only if it lives in this folder
+  if(state.selected && folderOf(state.selected)!==f) state.selected=null;
+  $("#client").setAttribute("data-mobile","list");
+  renderList(); renderReader();
+}
+
+/* ---- tasks -------------------------------------------------------------- */
+function taskStates(){
+  const openedAll = MESSAGES.every(m=>state.opened[m.id]);
+  const malicious = MESSAGES.filter(m=>m.key!=="keep");
+  const legit = MESSAGES.filter(m=>m.key==="keep");
+  const deletedAllBad = malicious.every(m=>state.verdict[m.id] && state.verdict[m.id]!=="keep");
+  const keptAllGood = legit.every(m=>state.verdict[m.id]==="keep");
+  return [
+    {id:"review", passed:openedAll, label:"Open and read all eight messages"},
+    {id:"delete-bad", passed:deletedAllBad, label:"Delete every social-engineering email"},
+    {id:"keep-good", passed:keptAllGood, label:"Keep all legitimate emails"}
+  ];
+}
+function renderTasks(){
+  const ul=$("#tasklist");
+  ul.innerHTML="";
+  taskStates().forEach(t=>{
+    const li=document.createElement("li");
+    li.className="task"+(t.passed?" done":"");
+    li.innerHTML='<span class="box" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L19 7"/></svg></span>'+
+      '<span class="lbl">'+esc(t.label)+'</span>';
+    li.setAttribute("aria-label", t.label+(t.passed?" — complete":" — incomplete"));
+    ul.appendChild(li);
+  });
+}
+
+/* ---- scoring ------------------------------------------------------------ */
+function buildQuestions(){
+  return MESSAGES.map(m=>{
+    const chosen = state.verdict[m.id] || null;
+    const chosenLabel = chosen ? (OPTIONS.find(o=>o.v===chosen)||{}).title : "(not classified)";
+    return { id:m.id, prompt:m.subject, answer:chosenLabel, correct: chosen===m.key };
+  });
+}
+function score(){
+  const tasks=taskStates();
+  const questions=buildQuestions();
+  const earned = tasks.filter(t=>t.passed).length + questions.filter(q=>q.correct).length;
+  const total = tasks.length + questions.length;
+  return {tasks,questions,earned,total};
+}
+
+/* ============================================================================
+   NATIVE SCREENSHOT (no html2canvas / no CDN).
+   Clones the app card, inlines computed styles, wraps it in an SVG
+   <foreignObject>, rasterizes to a canvas, returns a PNG data URL.
+   All lab visuals are self-drawn markup/CSS with no external images, so the
+   canvas never taints and toDataURL() succeeds. A canvas "receipt" is drawn
+   as a fallback if anything fails, so the payload always has a PNG.
+   ========================================================================== */
+const STYLE_PROPS = ["display","position","top","left","right","bottom","width","height",
+  "min-width","max-width","min-height","margin","margin-top","margin-right","margin-bottom",
+  "margin-left","padding","padding-top","padding-right","padding-bottom","padding-left",
+  "border","border-top","border-right","border-bottom","border-left","border-radius",
+  "border-color","border-width","border-style","background","background-color","background-image",
+  "color","font","font-family","font-size","font-weight","font-style","line-height",
+  "letter-spacing","text-align","text-transform","text-decoration","text-overflow",
+  "white-space","word-break","overflow","opacity","box-shadow","box-sizing","vertical-align",
+  "flex","flex-direction","flex-wrap","align-items","align-self","justify-content","gap",
+  "grid-template-columns","grid-column","place-items","fill","stroke","stroke-width",
+  "list-style","transform","z-index"];
+
+function cloneWithStyles(src){
+  const clone = src.cloneNode(false);
+  if(src.nodeType===1){
+    const cs=getComputedStyle(src);
+    let css="";
+    for(const p of STYLE_PROPS){ const val=cs.getPropertyValue(p); if(val) css+=p+":"+val+";"; }
+    clone.setAttribute("style", css);
+    clone.removeAttribute("class");
+  }
+  for(const child of src.childNodes){
+    if(child.nodeType===1 || (child.nodeType===3 && child.textContent.trim()!=="") || child.nodeType===3){
+      clone.appendChild(cloneWithStyles(child));
+    }
+  }
+  return clone;
+}
+
+async function capturePNG(node){
+  const rect=node.getBoundingClientRect();
+  const w=Math.max(1,Math.ceil(rect.width)), h=Math.max(1,Math.ceil(rect.height));
+  const clone=cloneWithStyles(node);
+  clone.setAttribute("style",(clone.getAttribute("style")||"")+
+    ";margin:0;background:#ffffff;width:"+w+"px;");
+  const xml=new XMLSerializer().serializeToString(clone);
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+    '<foreignObject x="0" y="0" width="'+w+'" height="'+h+'">'+
+    '<div xmlns="http://www.w3.org/1999/xhtml" style="background:#ffffff">'+xml+'</div>'+
+    '</foreignObject></svg>';
+  const url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  const scale=Math.min(2, window.devicePixelRatio||1);
+  const img=new Image();
+  const png=await new Promise(res=>{
+    img.onload=()=>{
+      try{
+        const c=document.createElement("canvas");
+        c.width=Math.round(w*scale); c.height=Math.round(h*scale);
+        const ctx=c.getContext("2d");
+        ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,c.width,c.height);
+        ctx.setTransform(scale,0,0,scale,0,0);
+        ctx.drawImage(img,0,0);
+        res(c.toDataURL("image/png"));
+      }catch(e){ res(null); }
+    };
+    img.onerror=()=>res(null);
+    img.src=url;
+  });
+  return png || receiptPNG();
+}
+
+/* fallback: draw a text receipt so a PNG is always present */
+function receiptPNG(){
+  const s=score();
+  const lines=[
+    "Brightpath Mail Triage — submission receipt",
+    "Assignment: "+CONFIG.assignmentId,
+    "Hacker: "+($("#hacker").value||"(none)"),
+    "Score: "+s.earned+" / "+s.total,
+    ""
+  ].concat(s.questions.map(q=>(q.correct?"[ok] ":"[--] ")+q.prompt.slice(0,46)));
+  const c=document.createElement("canvas"); c.width=640; c.height=44+lines.length*22+16;
+  const ctx=c.getContext("2d");
+  ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillStyle="#10231C"; ctx.font="14px monospace";
+  lines.forEach((l,i)=>ctx.fillText(l,16,34+i*22));
+  return c.toDataURL("image/png");
+}
+
+/* ============================================================================
+   SUBMISSION
+   ========================================================================== */
+function setStatus(kind,html){
+  const el=$("#status");
+  el.className="status show "+kind;
+  el.innerHTML=html;
+}
+
+async function submit(){
+  const hacker=$("#hacker").value.trim();
+  if(!hacker){ setStatus("bad","Enter a hacker name before submitting."); $("#hacker").focus(); return; }
+
+  const s=score();
+  const unsorted=MESSAGES.filter(m=>!state.verdict[m.id]).length;
+  if(unsorted>0){
+    setStatus("bad","You still have "+unsorted+" message"+(unsorted>1?"s":"")+
+      " with no assessment. Classify every message, then submit.");
+    return;
+  }
+
+  const btn=$("#submitBtn"); btn.disabled=true;
+  setStatus("work","Capturing your work and submitting…");
+
+  let shot;
+  try{ shot=await capturePNG($("#app")); }
+  catch(e){ shot=receiptPNG(); }
+
+  const payload={
+    assignmentId: CONFIG.assignmentId,
+    hackerName: hacker.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: s.tasks.map(t=>({id:t.id,label:t.label,passed:t.passed})),
+    questions: s.questions,
+    score: { earned:s.earned, total:s.total },
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("bad","Submission endpoint isn't configured yet. Ask your instructor to set "+
+      "<code>APPS_SCRIPT_URL</code> in this lab file. Your score this run: "+
+      s.earned+" / "+s.total+".");
+    btn.disabled=false; return;
+  }
+
+  try{
+    // Simple request (no custom headers, text/plain body) → no CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+    const out=await res.json();
+    if(out && out.success){
+      const link=out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission record ↗</a>' : '';
+      setStatus("good","Submitted. Score "+s.earned+" / "+s.total+"."+link);
+    }else{
+      setStatus("bad","The server rejected the submission"+(out&&out.error?(": "+esc(out.error)):".")+
+        " Tell your instructor and try again.");
+      btn.disabled=false;
+    }
+  }catch(err){
+    // Fallback for locked-down contexts: fire-and-forget, can't read docUrl.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      setStatus("good","Submitted (your browser blocked the confirmation reply). Score "+
+        s.earned+" / "+s.total+". Confirm receipt with your instructor.");
+    }catch(e2){
+      setStatus("bad","Couldn't reach the submission server. Check your connection and try again.");
+      btn.disabled=false;
+    }
+  }
+}
+
+function resetLab(){
+  state.folder="inbox"; state.selected=null; state.opened={}; state.verdict={};
+  $("#hacker").value="";
+  $("#status").className="status";
+  $("#submitBtn").disabled=false;
+  $("#client").setAttribute("data-mobile","list");
+  resetInspector();
+  renderAll();
+}
+
+/* ---- helpers / wiring --------------------------------------------------- */
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>(
+  {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function renderAll(){ renderList(); renderReader(); renderTasks(); renderCounts(); }
+
+document.addEventListener("DOMContentLoaded",()=>{
+  $$(".folder").forEach(f=>f.addEventListener("click",()=>switchFolder(f.dataset.folder)));
+  $("#msglist").addEventListener("click",e=>{
+    const li=e.target.closest(".msg"); if(li) selectMessage(li.dataset.id);
+  });
+  $("#msglist").addEventListener("keydown",e=>{
+    const li=e.target.closest(".msg"); if(!li) return;
+    if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectMessage(li.dataset.id); }
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+      e.preventDefault();
+      const items=$$(".msg"); const i=items.indexOf(li);
+      const n=items[e.key==="ArrowDown"?Math.min(i+1,items.length-1):Math.max(i-1,0)];
+      if(n) n.focus();
+    }
+  });
+  $("#backBtn").addEventListener("click",()=>{
+    state.selected=null;
+    $("#client").setAttribute("data-mobile","list");
+    renderList(); renderReader();
+  });
+  $("#submitBtn").addEventListener("click",submit);
+  $("#resetBtn").addEventListener("click",resetLab);
+  renderAll();
+});
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV=null, NEXT={href:"splus-mail-safelist-filters.html",title:"Larkspur Mail \u2014 Safety Center | Security+ Lab"}, CRUMB="All Labs \u203a Unit 1 \u2014 Introduction to Security \u203a 1.1 Understanding Social Engineering";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

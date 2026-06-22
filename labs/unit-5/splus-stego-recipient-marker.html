@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Hide a Recipient Marker with OpenStego (Steganography)</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-stego-recipient-marker",
+  "title": "Lab — Hide a Recipient Marker with OpenStego (Steganography)",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 5,
+    "unitTitle": "Securing Applications and Data",
+    "topics": [
+      "5.3 Protecting Stored Data with Cryptography"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "1.4",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Single-File Simulation Lab
+  Objective: 1.4.4.1 Obfuscation — Steganography
+  Assignment: splus-stego-recipient-marker
+
+  ORIGINALITY / IP: This is an ORIGINAL clean-room teaching lab built from the
+  public SY0-701 objective and the documented behavior of OpenStego (a genuine
+  GPL open-source tool by Samir Vaidya). Scenario, personas, file names, paths,
+  values, password, task wording, and question wording are the author's own
+  expression. It is NOT derived from, and is not a reskin of, any third-party
+  courseware lab. Self-rendered UI; no captured product screenshots.
+
+  © 2026 [AUTHOR NAME]. All rights reserved. Licensed for instructional use
+  within the author's CompTIA Security+ course. "OpenStego" is the name of an
+  independent open-source project; this simulation is not affiliated with or
+  endorsed by it, nor by CompTIA or any courseware vendor.
+
+  Screenshot note: This file is dependency-free. Rather than load html2canvas
+  from a CDN (which would break the "single self-contained file" rule), the
+  lab captures the simulated DOM with a built-in SVG <foreignObject> renderer.
+  The capture target is entirely self-drawn markup, so this works without any
+  external library. To use html2canvas instead, paste its minified source into
+  the marked block and call html2canvas() inside captureLabArea().
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0f141b;
+    --app-bg:#eef0f3;
+    --app-chrome:#d7dbe1;
+    --titlebar:#2b3a55;
+    --titlebar-text:#f4f6fa;
+    --nav-bg:#e3e6ec;
+    --nav-sel:#c3d4f2;
+    --nav-sel-bar:#2b6fd6;
+    --panel:#f7f8fa;
+    --field-bg:#ffffff;
+    --field-border:#9aa3af;
+    --field-focus:#2b6fd6;
+    --label:#27303d;
+    --muted:#5b6675;
+    --btn:#2b6fd6;
+    --btn-text:#ffffff;
+    --btn-hover:#225bb0;
+    --accent:#2b6fd6;
+    --ok:#1f8a4c;
+    --ok-bg:#e5f5ec;
+    --warn:#b23b3b;
+    --warn-bg:#fae8e8;
+    --task-bg:#ffffff;
+    --task-border:#dfe3ea;
+    --line:#cfd5de;
+    --code:#1f2733;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:#e7ebf1;
+    font-family:var(--sans);
+    line-height:1.5;
+    padding:24px 16px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  .lab-head{margin:0 auto 18px;max-width:1080px}
+  .lab-head h1{font-size:1.25rem;margin:0 0 4px}
+  .lab-head .obj{color:#9fb4d8;font-size:.85rem;font-weight:600;letter-spacing:.02em}
+  .scenario{
+    background:#161e29;border:1px solid #26313f;border-radius:10px;
+    padding:14px 16px;margin:14px auto 20px;max-width:1080px;font-size:.95rem;color:#cdd6e2;
+  }
+  .scenario strong{color:#eaf0f8}
+
+  /* layout: sim left, tasks right */
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  /* ---- simulated app window ---- */
+  .app{
+    background:var(--app-bg);border:1px solid #b6bcc6;border-radius:10px;overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);color:#1c2430;
+  }
+  .titlebar{
+    background:var(--titlebar);color:var(--titlebar-text);
+    display:flex;align-items:center;gap:10px;padding:8px 12px;font-weight:600;font-size:.92rem;
+  }
+  .titlebar .dots{display:flex;gap:6px;margin-left:auto}
+  .titlebar .dots span{width:11px;height:11px;border-radius:50%;display:inline-block;opacity:.85}
+  .dot-min{background:#f2c14e}.dot-max{background:#5bbd6b}.dot-cls{background:#e36a6a}
+  .titlebar .logo{display:flex;align-items:center;gap:8px}
+  .titlebar .logo svg{display:block}
+
+  .app-body{display:flex;min-height:430px}
+  .nav{
+    width:172px;background:var(--nav-bg);border-right:1px solid #c2c8d1;padding:10px 0;flex:none;
+  }
+  .nav .group{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    padding:8px 14px 4px;font-weight:700}
+  .nav button.navitem{
+    width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;
+    padding:9px 14px;font-size:.9rem;color:#27303d;cursor:pointer;font-family:inherit;
+  }
+  .nav button.navitem:hover{background:#d6dbe3}
+  .nav button.navitem[aria-selected="true"]{background:var(--nav-sel);border-left-color:var(--nav-sel-bar);font-weight:600}
+  .nav .disabled{color:#9aa3af;padding:9px 14px;font-size:.9rem;cursor:not-allowed}
+
+  .content{flex:1;background:var(--panel);padding:18px 20px}
+  .content h2{margin:0 0 14px;font-size:1.02rem;color:#1c2430}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:.82rem;color:var(--label);font-weight:600;margin-bottom:5px}
+  .field-row{display:flex;gap:8px}
+  .field input[type=text],.field input[type=password],.field select{
+    flex:1;min-width:0;font-family:var(--mono);font-size:.84rem;
+    background:var(--field-bg);border:1px solid var(--field-border);border-radius:6px;
+    padding:8px 10px;color:#1c2430;
+  }
+  .field select{font-family:var(--sans)}
+  .field input:focus,.field select:focus,.browse:focus,.run:focus,
+  button:focus,input:focus{outline:3px solid var(--field-focus);outline-offset:1px}
+  .field input[readonly]{background:#f1f3f6;color:#384150}
+  .browse{
+    flex:none;background:#e4e8ee;border:1px solid #b3bbc6;border-radius:6px;
+    padding:8px 12px;font-size:.82rem;cursor:pointer;color:#27303d;font-family:inherit;
+  }
+  .browse:hover{background:#d6dbe3}
+  .optbox{border:1px solid var(--line);border-radius:8px;padding:14px 14px 4px;margin:6px 0 16px;background:#fff}
+  .optbox legend{font-size:.8rem;font-weight:700;color:var(--muted);padding:0 6px}
+  .run{
+    background:var(--btn);color:var(--btn-text);border:0;border-radius:7px;
+    padding:11px 20px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .run:hover{background:var(--btn-hover)}
+  .run:disabled{background:#9fb0c8;cursor:not-allowed}
+  .app-msg{margin-top:14px;font-size:.85rem;border-radius:7px;padding:10px 12px;display:none}
+  .app-msg.ok{display:block;background:var(--ok-bg);color:var(--ok);border:1px solid #bfe3cd}
+  .app-msg.err{display:block;background:var(--warn-bg);color:var(--warn);border:1px solid #f0c9c9}
+  .recovered{margin-top:14px;border:1px dashed #b8c0cc;border-radius:8px;padding:12px;background:#fbfcfe;display:none}
+  .recovered.show{display:block}
+  .recovered .rf{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:.85rem}
+  .recovered .rf button{margin-left:auto;background:#e4e8ee;border:1px solid #b3bbc6;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:inherit;font-size:.82rem}
+
+  /* ---- task panel ---- */
+  .tasks{
+    background:var(--task-bg);border:1px solid var(--task-border);border-radius:10px;padding:16px 16px 18px;color:#1c2430;
+  }
+  .tasks h3{margin:0 0 4px;font-size:.95rem}
+  .tasks .sub{font-size:.78rem;color:#5b6675;margin:0 0 12px}
+  .tasklist{list-style:none;margin:0 0 14px;padding:0}
+  .tasklist li{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #eef1f5;font-size:.85rem}
+  .tasklist li:last-child{border-bottom:0}
+  .chk{width:18px;height:18px;border-radius:5px;border:2px solid #c2c8d1;flex:none;margin-top:1px;display:grid;place-items:center;font-size:.7rem;color:#fff;background:#fff}
+  .tasklist li.done .chk{background:var(--ok);border-color:var(--ok)}
+  .tasklist li.done .lbl{color:#5b6675;text-decoration:line-through}
+  .phase{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:#8a93a0;font-weight:700;margin:10px 0 2px}
+
+  .questions{margin-top:6px;border-top:1px solid #eef1f5;padding-top:12px}
+  .q{margin-bottom:14px}
+  .q .qp{font-size:.85rem;font-weight:600;margin-bottom:7px}
+  .q .opt{display:block;font-size:.83rem;margin:4px 0;cursor:pointer;padding:6px 8px;border:1px solid #e1e5ec;border-radius:6px}
+  .q .opt:hover{background:#f3f6fa}
+  .q .opt input{margin-right:8px}
+  .q .opt.correct{border-color:#bfe3cd;background:#eaf7ef}
+  .q .opt.wrong{border-color:#f0c9c9;background:#fbecec}
+  .q .verdict{font-size:.78rem;margin-top:4px;font-weight:600}
+  .q .verdict.ok{color:var(--ok)}.q .verdict.no{color:var(--warn)}
+
+  /* ---- submission bar ---- */
+  .submit-bar{
+    background:#161e29;border:1px solid #26313f;border-radius:10px;margin:20px auto 0;max-width:1080px;
+    padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;color:#dbe3ee;
+  }
+  .submit-bar .f{display:flex;flex-direction:column;gap:5px}
+  .submit-bar label{font-size:.78rem;font-weight:600;color:#aebbcd}
+  .submit-bar input{font-family:var(--sans);font-size:.9rem;background:#0f141b;border:1px solid #2c3947;border-radius:7px;padding:9px 11px;color:#eaf0f8;min-width:220px}
+  .submit-bar .grow{flex:1}
+  .btn-primary{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:11px 22px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-primary:disabled{background:#3a4a60;color:#8a97a8;cursor:not-allowed}
+  .btn-ghost{background:none;color:#aebbcd;border:1px solid #2c3947;border-radius:8px;padding:11px 16px;font-size:.88rem;cursor:pointer;font-family:inherit}
+  .btn-ghost:hover{border-color:#46566a;color:#dbe3ee}
+  .status{margin:14px auto 0;max-width:1080px;font-size:.9rem;border-radius:8px;padding:12px 14px;display:none}
+  .status.show{display:block}
+  .status.ok{background:#10261a;color:#7fe0a3;border:1px solid #1f5436}
+  .status.err{background:#2a1414;color:#f0a3a3;border:1px solid #5a2424}
+  .status.info{background:#161e29;color:#cdd6e2;border:1px solid #2c3947}
+  .status a{color:#9fd0ff}
+
+  .legal{max-width:1080px;margin:26px auto 0;font-size:.72rem;color:#6b7686;line-height:1.55}
+
+  /* modal file dialog */
+  .modal-bk{position:fixed;inset:0;background:rgba(8,12,18,.6);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
+  .modal-bk.show{display:flex}
+  .dialog{background:#f4f6f9;color:#1c2430;border-radius:10px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden}
+  .dialog header{background:#2b3a55;color:#fff;padding:10px 14px;font-size:.9rem;font-weight:600;display:flex;align-items:center}
+  .dialog header button{margin-left:auto;background:none;border:0;color:#fff;font-size:1.1rem;cursor:pointer;line-height:1}
+  .dialog .path{font-family:var(--mono);font-size:.78rem;background:#e6e9ee;padding:8px 14px;color:#384150;display:flex;align-items:center;gap:8px}
+  .dialog .path .up{background:#fff;border:1px solid #b3bbc6;border-radius:5px;padding:3px 9px;cursor:pointer;font-family:inherit;font-size:.75rem}
+  .dialog .list{max-height:240px;overflow:auto;padding:6px;background:#fff;margin:0}
+  .entry{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:.86rem;font-family:var(--mono)}
+  .entry:hover{background:#eef3fb}
+  .entry[aria-selected="true"]{background:#cfe0f8}
+  .entry .ic{width:18px;text-align:center}
+  .entry.folder .nm{font-weight:600}
+  .dialog .fname{display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid #e1e5ec;font-size:.82rem}
+  .dialog .fname label{font-weight:600;white-space:nowrap}
+  .dialog .fname input{flex:1;font-family:var(--mono);font-size:.82rem;border:1px solid #9aa3af;border-radius:6px;padding:7px 9px}
+  .dialog footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid #e1e5ec;background:#eef0f3}
+  .dialog footer button{padding:8px 16px;border-radius:6px;font-size:.86rem;cursor:pointer;font-family:inherit;border:1px solid #b3bbc6;background:#fff}
+  .dialog footer .primary{background:var(--btn);color:#fff;border-color:var(--btn)}
+  .dialog footer .primary:disabled{background:#9fb0c8;border-color:#9fb0c8;cursor:not-allowed}
+
+  /* text viewer */
+  .viewer pre{margin:0;padding:14px;background:#fff;font-family:var(--mono);font-size:.82rem;white-space:pre-wrap;max-height:300px;overflow:auto;color:#1c2430}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+  <div class="lab-head">
+    <h1>Lab: Trace a Leak — Embed a Hidden Recipient Marker</h1>
+    <div class="obj">CompTIA Security+ SY0-701 · Objective 1.4.4.1 — Obfuscation: Steganography</div>
+  </div>
+
+  <div class="scenario">
+    <strong>Scenario.</strong> You are <strong>Diana Vargas</strong>, security analyst at
+    <strong>Brackwater Freight Co.</strong> Last quarter a confidential rate banner was leaked to a
+    competitor, and there was no way to tell which partner's copy got out. Before emailing this
+    quarter's banner image to your distribution partner, <strong>Ridgeline Brokers</strong>, you will
+    use <strong>OpenStego</strong> to hide a small, password-protected <em>recipient marker</em>
+    inside the image. If the image ever leaks again, extracting that marker will reveal exactly which
+    recipient's copy was exposed. After embedding it, you'll verify the marker by extracting and
+    opening it.
+  </div>
+
+  <div class="grid">
+    <!-- ============ SIMULATED OPENSTEGO APP (capture target) ============ -->
+    <div id="labArea">
+      <div class="app" role="application" aria-label="OpenStego data-hiding simulator">
+        <div class="titlebar">
+          <span class="logo" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="3" fill="#7fb0ff"/>
+              <path d="M7 14l3-3 2 2 4-5" stroke="#1c2b45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          OpenStego — Data Hiding
+          <span class="dots" aria-hidden="true"><span class="dot-min"></span><span class="dot-max"></span><span class="dot-cls"></span></span>
+        </div>
+        <div class="app-body">
+          <div class="nav" role="tablist" aria-label="OpenStego functions">
+            <div class="group">Data Hiding</div>
+            <button class="navitem" role="tab" id="tab-hide" aria-selected="true" aria-controls="panel-hide" data-mode="hide">Hide Data</button>
+            <button class="navitem" role="tab" id="tab-extract" aria-selected="false" aria-controls="panel-extract" data-mode="extract">Extract Data</button>
+            <div class="group">Digital Watermarking</div>
+            <div class="disabled" aria-disabled="true">Generate Signature</div>
+            <div class="disabled" aria-disabled="true">Embed Watermark</div>
+          </div>
+
+          <!-- HIDE PANEL -->
+          <div class="content" id="panel-hide" role="tabpanel" aria-labelledby="tab-hide">
+            <h2>Hide Data in Harmless File</h2>
+            <div class="field">
+              <label for="msgFile">Message File</label>
+              <div class="field-row">
+                <input type="text" id="msgFile" readonly placeholder="(select the file to hide)" aria-label="Message file path"/>
+                <button class="browse" data-browse="msgFile">Browse…</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="coverFile">Cover File</label>
+              <div class="field-row">
+                <input type="text" id="coverFile" readonly placeholder="(select the image to hide it in)" aria-label="Cover file path"/>
+                <button class="browse" data-browse="coverFile">Browse…</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="outFile">Output Stego File</label>
+              <div class="field-row">
+                <input type="text" id="outFile" readonly placeholder="(choose where to save the output image)" aria-label="Output stego file path"/>
+                <button class="browse" data-browse="outFile">Browse…</button>
+              </div>
+            </div>
+            <fieldset class="optbox">
+              <legend>Options</legend>
+              <div class="field">
+                <label for="algo">Encryption Algorithm</label>
+                <select id="algo"><option value="AES128">AES128</option><option value="AES256">AES256</option></select>
+              </div>
+              <div class="field">
+                <label for="pw1">Password</label>
+                <input type="password" id="pw1" placeholder="Password" autocomplete="off"/>
+              </div>
+              <div class="field">
+                <label for="pw2">Confirm Password</label>
+                <input type="password" id="pw2" placeholder="Confirm Password" autocomplete="off"/>
+              </div>
+            </fieldset>
+            <button class="run" id="btnHide">Hide Data</button>
+            <div class="app-msg" id="hideMsg" role="status" aria-live="polite"></div>
+          </div>
+
+          <!-- EXTRACT PANEL -->
+          <div class="content" id="panel-extract" role="tabpanel" aria-labelledby="tab-extract" hidden>
+            <h2>Extract Hidden Data</h2>
+            <div class="field">
+              <label for="inFile">Input Stego File</label>
+              <div class="field-row">
+                <input type="text" id="inFile" readonly placeholder="(select the stego image)" aria-label="Input stego file path"/>
+                <button class="browse" data-browse="inFile">Browse…</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="outFolder">Output Folder for Message File</label>
+              <div class="field-row">
+                <input type="text" id="outFolder" readonly placeholder="(choose a folder for the recovered file)" aria-label="Output folder path"/>
+                <button class="browse" data-browse="outFolder">Browse…</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="pwE">Password</label>
+              <input type="password" id="pwE" placeholder="Password" autocomplete="off"/>
+            </div>
+            <button class="run" id="btnExtract">Extract Data</button>
+            <div class="app-msg" id="extractMsg" role="status" aria-live="polite"></div>
+            <div class="recovered" id="recoveredBox">
+              <div class="rf">
+                <span aria-hidden="true">📄</span>
+                <span id="recoveredName">partner-tag.txt</span>
+                <button id="btnOpenRecovered">Open</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TASK + QUESTION PANEL ============ -->
+    <aside class="tasks" aria-label="Lab tasks and questions">
+      <h3>Lab checklist</h3>
+      <p class="sub">Tasks auto-complete as you work. Answer the review questions, then submit.</p>
+
+      <div class="phase">Phase 1 — Embed the marker</div>
+      <ul class="tasklist" id="taskList1">
+        <li data-task="t_msg"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Set the message file to <code>partner-tag.txt</code></span></li>
+        <li data-task="t_cover"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Set the cover file to <code>quarterly-banner.png</code></span></li>
+        <li data-task="t_out"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Save output as <code>ridgeline-banner.png</code> in the Documents folder</span></li>
+        <li data-task="t_pwd"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Set & confirm the assigned password</span></li>
+        <li data-task="t_hide"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Run <strong>Hide Data</strong> successfully</span></li>
+      </ul>
+
+      <div class="phase">Phase 2 — Verify the marker</div>
+      <ul class="tasklist" id="taskList2">
+        <li data-task="t_in"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Select <code>ridgeline-banner.png</code> as the input stego file</span></li>
+        <li data-task="t_folder"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Extract to the <code>Documents\Recovered</code> folder</span></li>
+        <li data-task="t_epwd"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Enter the correct password</span></li>
+        <li data-task="t_extract"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Run <strong>Extract Data</strong> successfully</span></li>
+        <li data-task="t_open"><span class="chk" aria-hidden="true">✓</span><span class="lbl">Open the recovered file & confirm the recipient marker</span></li>
+      </ul>
+
+      <div class="questions" id="questions" aria-label="Review questions">
+        <h3 style="font-size:.9rem;margin:0 0 8px">Review questions</h3>
+        <!-- questions injected by JS -->
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============ SUBMISSION BAR ============ -->
+  <div class="submit-bar">
+    <div class="f">
+      <label for="hackerName">Hacker name (pseudonym — no real names)</label>
+      <input type="text" id="hackerName" maxlength="40" placeholder="e.g., night-owl-42" autocomplete="off"/>
+    </div>
+    <div class="grow"></div>
+    <button class="btn-ghost" id="btnReset" type="button">Reset lab</button>
+    <button class="btn-primary" id="btnSubmit" type="button" disabled>Submit completed lab</button>
+  </div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+
+  <div class="legal">
+    © 2026 [AUTHOR NAME]. Original clean-room instructional simulation for CompTIA Security+ (SY0-701),
+    objective 1.4.4.1 (Steganography). Self-rendered UI; not affiliated with or derived from any
+    third-party courseware, CompTIA, or the OpenStego open-source project. All scenario, file, path,
+    and value details are fictional and the author's own. Pseudonymous "hacker names" only — do not
+    enter real names or other personal data.
+  </div>
+</div>
+
+<!-- ============ FILE DIALOG MODAL ============ -->
+<div class="modal-bk" id="modalBk" role="presentation">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" id="dialog">
+    <header><span id="dlgTitle">Open</span><button id="dlgClose" aria-label="Close dialog">×</button></header>
+    <div class="path"><button class="up" id="dlgUp" aria-label="Up one folder">↑ Up</button><span id="dlgPath"></span></div>
+    <ul class="list" id="dlgList" role="listbox" aria-label="Files and folders"></ul>
+    <div class="fname" id="dlgFnameRow" hidden>
+      <label for="dlgFname">File name:</label>
+      <input type="text" id="dlgFname" autocomplete="off"/>
+    </div>
+    <footer>
+      <button id="dlgCancel">Cancel</button>
+      <button class="primary" id="dlgOk" disabled>Open</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ TEXT VIEWER MODAL ============ -->
+<div class="modal-bk" id="viewerBk" role="presentation">
+  <div class="dialog viewer" role="dialog" aria-modal="true" aria-labelledby="vwTitle">
+    <header><span id="vwTitle">partner-tag.txt — Notepad</span><button id="vwClose" aria-label="Close viewer">×</button></header>
+    <pre id="vwBody"></pre>
+    <footer><button class="primary" id="vwOk">Close</button></footer>
+  </div>
+</div>
+
+<!-- =========================================================================
+     html2canvas (OPTIONAL): paste minified source here to use it instead of
+     the built-in foreignObject capture. Leave empty to use the built-in path.
+     <script> /* html2canvas minified source */ </script>
+     ========================================================================= -->
+
+<script>
+/* ============================ LAB CONFIG ================================= */
+const CONFIG = {
+  assignmentId: 'splus-stego-recipient-marker',
+  title: 'Trace a Leak — Embed a Hidden Recipient Marker with OpenStego',
+  objectives: ["1.4", "4.1"],
+  APPS_SCRIPT_URL: 'PASTE_SHARED_/exec_URL_HERE',   // shared across the library
+  submissionToken: 'REPLACE_WITH_COHORT_TOKEN',      // per-cohort secret
+
+  // --- original answer key (values are the author's own) ---
+  MSG_FILE:  'partner-tag.txt',
+  COVER_FILE:'quarterly-banner.png',
+  OUT_FILE:  'ridgeline-banner.png',
+  PASSWORD:  'Br@ckwater-Tr@ce#27',
+  DOCS_PATH: 'C:\\Users\\dvargas\\Documents',
+  RECOVERED_PATH: 'C:\\Users\\dvargas\\Documents\\Recovered',
+
+  // recovered marker the learner must confirm (analogous to an embedded username)
+  MARKER_TEXT:
+`=== Brackwater Freight Co. — Confidential Distribution Tag ===
+Recipient : Ridgeline Brokers
+Tag ID    : RB-4471
+Issued by : D. Vargas  (Security)
+Issued    : 2026-06-15
+Notice    : This image copy is individually watermarked.
+            Any redistribution is traceable to the recipient above.`,
+
+  questions: [
+    { id:'q1', prompt:'Steganography primarily conceals which property of the hidden data?',
+      options:['Its very existence','Its file size','Its hash value','Its file extension'], answer:0 },
+    { id:'q2', prompt:'Why password-protect (encrypt) the embedded payload in addition to hiding it?',
+      options:[
+        'So the payload stays confidential even if the hidden data is discovered and extracted',
+        'To make the cover image load faster',
+        'To convert the image to a different file format',
+        'To stop the image from being resized'], answer:0 },
+    { id:'q3', prompt:'What is the security purpose of embedding a unique recipient marker before sharing this image?',
+      options:[
+        'Attribution — tracing a future leak back to the specific recipient who received this copy',
+        'Encrypting the workstation\u2019s full-disk volume',
+        'Issuing a digital certificate to the partner',
+        'Generating a hash to verify file integrity'], answer:0 },
+    { id:'q4', prompt:'Which SY0-701 obfuscation technique did you apply in this lab?',
+      options:['Steganography','Tokenization','Data masking','Salting'], answer:0 }
+  ]
+};
+
+/* ============================ LAB STATE ================================== */
+const state = {
+  mode:'hide',
+  hide:{ msg:'', cover:'', outPath:'', algo:'AES128', pw1:'', pw2:'', done:false },
+  extract:{ inFile:'', folder:'', pw:'', done:false, opened:false },
+  tasks:{ t_msg:false,t_cover:false,t_out:false,t_pwd:false,t_hide:false,
+          t_in:false,t_folder:false,t_epwd:false,t_extract:false,t_open:false },
+  answers:{}, // qid -> chosen index
+  outputCreated:false // ridgeline-banner.png exists after a successful hide
+};
+
+const TASK_LABELS = {
+  t_msg:'Set message file to partner-tag.txt',
+  t_cover:'Set cover file to quarterly-banner.png',
+  t_out:'Save output as ridgeline-banner.png in Documents',
+  t_pwd:'Set & confirm the assigned password',
+  t_hide:'Run Hide Data successfully',
+  t_in:'Select ridgeline-banner.png as input stego file',
+  t_folder:'Extract to Documents\\Recovered',
+  t_epwd:'Enter correct password',
+  t_extract:'Run Extract Data successfully',
+  t_open:'Open recovered file & confirm recipient marker'
+};
+
+/* ====================== SIMULATED FILE SYSTEM =========================== */
+// Minimal tree. Folders contain children; files are leaves with optional content.
+function buildFS(){
+  return {
+    name:'C:', type:'folder', children:[
+      { name:'Users', type:'folder', children:[
+        { name:'dvargas', type:'folder', children:[
+          { name:'Documents', type:'folder', children:[
+            { name:'partner-tag.txt', type:'file', kind:'txt' },
+            { name:'quarterly-banner.png', type:'file', kind:'png' },
+            { name:'Recovered', type:'folder', children:[] }
+          ]},
+          { name:'Desktop', type:'folder', children:[] }
+        ]}
+      ]}
+    ]
+  };
+}
+let FS = buildFS();
+
+function pathParts(p){ return p.replace(/\\+$/,'').split('\\').filter(Boolean); }
+function getNode(parts){
+  let node = FS; if(!parts.length || parts[0]!=='C:') return null;
+  for(let i=1;i<parts.length;i++){
+    if(node.type!=='folder') return null;
+    node = (node.children||[]).find(c=>c.name===parts[i]);
+    if(!node) return null;
+  }
+  return node;
+}
+function joinPath(parts){ return parts.join('\\'); }
+
+/* ====================== DOM HELPERS ===================================== */
+const $ = (sel,root) => (root||document).querySelector(sel);
+const $$ = (sel,root) => Array.from((root||document).querySelectorAll(sel));
+
+/* ====================== TAB SWITCHING =================================== */
+$$('.navitem').forEach(btn=>{
+  btn.addEventListener('click',()=>switchMode(btn.dataset.mode));
+});
+function switchMode(mode){
+  state.mode = mode;
+  $$('.navitem').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.mode===mode)));
+  $('#panel-hide').hidden = (mode!=='hide');
+  $('#panel-extract').hidden = (mode!=='extract');
+}
+
+/* ====================== FILE DIALOG ===================================== */
+const dlg = {
+  bk:$('#modalBk'), title:$('#dlgTitle'), path:$('#dlgPath'), list:$('#dlgList'),
+  up:$('#dlgUp'), ok:$('#dlgOk'), cancel:$('#dlgCancel'), close:$('#dlgClose'),
+  fnameRow:$('#dlgFnameRow'), fname:$('#dlgFname'),
+  mode:'pickFile', filter:null, target:null, cwd:['C:','Users','dvargas','Documents'],
+  selected:null, lastFocus:null
+};
+
+function openDialog(opts){
+  dlg.mode = opts.mode;          // 'pickFile' | 'saveFile' | 'pickFolder'
+  dlg.filter = opts.filter||null;
+  dlg.target = opts.target;
+  dlg.title.textContent = opts.titleText || 'Open';
+  dlg.ok.textContent = (opts.mode==='saveFile')?'Save':(opts.mode==='pickFolder')?'Choose':'Open';
+  dlg.cwd = opts.startPath ? pathParts(opts.startPath) : ['C:','Users','dvargas','Documents'];
+  dlg.fnameRow.hidden = (opts.mode!=='saveFile');
+  dlg.fname.value = opts.suggestName || '';
+  dlg.selected = null;
+  dlg.lastFocus = document.activeElement;
+  renderDialog();
+  dlg.bk.classList.add('show');
+  (dlg.mode==='saveFile'? dlg.fname : dlg.list).focus();
+  updateOk();
+}
+function closeDialog(){
+  dlg.bk.classList.remove('show');
+  if(dlg.lastFocus && dlg.lastFocus.focus) dlg.lastFocus.focus();
+}
+function renderDialog(){
+  dlg.path.textContent = joinPath(dlg.cwd);
+  const node = getNode(dlg.cwd);
+  dlg.list.innerHTML='';
+  dlg.selected=null;
+  const children = (node && node.children) ? node.children.slice() : [];
+  // folders first, then files
+  children.sort((a,b)=> (a.type===b.type)? a.name.localeCompare(b.name) : (a.type==='folder'?-1:1));
+  children.forEach(child=>{
+    const visibleFile = child.type==='file' && (!dlg.filter || child.name.toLowerCase().endsWith(dlg.filter));
+    if(child.type==='folder' || (dlg.mode!=='pickFolder' && visibleFile)){
+      const li=document.createElement('li');
+      li.className='entry '+(child.type==='folder'?'folder':'file');
+      li.setAttribute('role','option');
+      li.setAttribute('aria-selected','false');
+      li.tabIndex=0;
+      li.innerHTML='<span class="ic" aria-hidden="true">'+(child.type==='folder'?'📁':(child.kind==='png'?'🖼️':'📄'))+'</span><span class="nm">'+child.name+'</span>';
+      const activate=()=>{
+        if(child.type==='folder'){
+          // single click selects (for pickFolder), double/Enter opens
+        }
+        selectEntry(li, child);
+      };
+      li.addEventListener('click',activate);
+      li.addEventListener('dblclick',()=>{
+        if(child.type==='folder'){ dlg.cwd=dlg.cwd.concat(child.name); renderDialog(); }
+        else { selectEntry(li,child); confirmDialog(); }
+      });
+      li.addEventListener('keydown',e=>{
+        if(e.key==='Enter'){ e.preventDefault();
+          if(child.type==='folder'){ dlg.cwd=dlg.cwd.concat(child.name); renderDialog(); }
+          else { selectEntry(li,child); confirmDialog(); }
+        }
+      });
+      dlg.list.appendChild(li);
+    }
+  });
+  dlg.up.disabled = (dlg.cwd.length<=1);
+  updateOk();
+}
+function selectEntry(li, child){
+  $$('.entry',).forEach(e=>e.setAttribute('aria-selected','false'));
+  li.setAttribute('aria-selected','true');
+  dlg.selected = child;
+  if(dlg.mode==='saveFile' && child.type==='file'){ dlg.fname.value = child.name; }
+  updateOk();
+}
+function updateOk(){
+  let ok=false;
+  if(dlg.mode==='pickFile'){ ok = !!(dlg.selected && dlg.selected.type==='file'); }
+  else if(dlg.mode==='pickFolder'){ ok = true; /* choose current folder */ }
+  else if(dlg.mode==='saveFile'){ ok = dlg.fname.value.trim().length>0; }
+  dlg.ok.disabled = !ok;
+}
+dlg.up.addEventListener('click',()=>{ if(dlg.cwd.length>1){ dlg.cwd=dlg.cwd.slice(0,-1); renderDialog(); }});
+dlg.cancel.addEventListener('click',closeDialog);
+dlg.close.addEventListener('click',closeDialog);
+dlg.fname.addEventListener('input',updateOk);
+dlg.ok.addEventListener('click',confirmDialog);
+dlg.bk.addEventListener('mousedown',e=>{ if(e.target===dlg.bk) closeDialog(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(dlg.bk.classList.contains('show'))closeDialog(); if($('#viewerBk').classList.contains('show'))closeViewer(); }});
+
+function confirmDialog(){
+  if(dlg.mode==='pickFile'){
+    if(!(dlg.selected && dlg.selected.type==='file')) return;
+    dlg.target(joinPath(dlg.cwd)+'\\'+dlg.selected.name, dlg.selected.name);
+  } else if(dlg.mode==='pickFolder'){
+    dlg.target(joinPath(dlg.cwd));
+  } else if(dlg.mode==='saveFile'){
+    const nm=dlg.fname.value.trim(); if(!nm) return;
+    dlg.target(joinPath(dlg.cwd)+'\\'+nm, nm, joinPath(dlg.cwd));
+  }
+  closeDialog();
+}
+
+/* ====================== BROWSE BUTTON WIRING ============================ */
+$$('[data-browse]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const field = btn.dataset.browse;
+    if(field==='msgFile'){
+      openDialog({mode:'pickFile', titleText:'Select message file', startPath:CONFIG.DOCS_PATH,
+        target:(full,nm)=>{ $('#msgFile').value=full; state.hide.msg=nm; check(); }});
+    } else if(field==='coverFile'){
+      openDialog({mode:'pickFile', filter:'.png', titleText:'Select cover file', startPath:CONFIG.DOCS_PATH,
+        target:(full,nm)=>{ $('#coverFile').value=full; state.hide.cover=nm; check(); }});
+    } else if(field==='outFile'){
+      openDialog({mode:'saveFile', filter:'.png', titleText:'Save stego file as', startPath:CONFIG.DOCS_PATH,
+        suggestName:'', target:(full,nm,folder)=>{ $('#outFile').value=full; state.hide.outPath=full; check(); }});
+    } else if(field==='inFile'){
+      openDialog({mode:'pickFile', filter:'.png', titleText:'Select input stego file', startPath:CONFIG.DOCS_PATH,
+        target:(full,nm)=>{ $('#inFile').value=full; state.extract.inFile=nm; check(); }});
+    } else if(field==='outFolder'){
+      openDialog({mode:'pickFolder', titleText:'Select output folder', startPath:CONFIG.DOCS_PATH,
+        target:(full)=>{ $('#outFolder').value=full; state.extract.folder=full; check(); }});
+    }
+  });
+});
+
+/* ====================== PASSWORD / ALGO INPUTS ========================== */
+$('#pw1').addEventListener('input',e=>{ state.hide.pw1=e.target.value; check(); });
+$('#pw2').addEventListener('input',e=>{ state.hide.pw2=e.target.value; check(); });
+$('#algo').addEventListener('change',e=>{ state.hide.algo=e.target.value; });
+$('#pwE').addEventListener('input',e=>{ state.extract.pw=e.target.value; check(); });
+
+/* ====================== RUN: HIDE DATA ================================== */
+$('#btnHide').addEventListener('click',()=>{
+  const m=$('#hideMsg'); m.className='app-msg';
+  const h=state.hide;
+  if(!h.msg){ return fail(m,'No message file selected. Click Browse next to “Message File”.'); }
+  if(!h.cover){ return fail(m,'No cover file selected. Choose an image for “Cover File”.'); }
+  if(!h.outPath){ return fail(m,'No output file set. Use Browse next to “Output Stego File”.'); }
+  if(!h.pw1){ return fail(m,'Enter a password to encrypt the hidden data.'); }
+  if(h.pw1!==h.pw2){ return fail(m,'Passwords do not match. Re-type the same value in both fields.'); }
+  // success
+  state.hide.done=true;
+  state.outputCreated=true;
+  // create the output file in its folder so it can be re-opened/extracted
+  const parts=pathParts(h.outPath); const nm=parts.pop();
+  const folder=getNode(parts);
+  if(folder && folder.type==='folder' && !folder.children.find(c=>c.name===nm)){
+    folder.children.push({name:nm,type:'file',kind:'png',stego:true});
+  }
+  ok(m,'Message successfully hidden in the cover file. Output saved to:\n'+h.outPath);
+  check();
+});
+
+/* ====================== RUN: EXTRACT DATA =============================== */
+$('#btnExtract').addEventListener('click',()=>{
+  const m=$('#extractMsg'); m.className='app-msg';
+  const x=state.extract;
+  if(!x.inFile){ return fail(m,'No input stego file selected.'); }
+  if(!state.outputCreated || x.inFile!==CONFIG.OUT_FILE){
+    return fail(m,'That file contains no hidden message. Select the stego image you created ('+CONFIG.OUT_FILE+').');
+  }
+  if(!x.folder){ return fail(m,'No output folder selected for the recovered file.'); }
+  if(!x.pw){ return fail(m,'Enter the password that was used to hide the data.'); }
+  if(x.pw!==CONFIG.PASSWORD){ return fail(m,'Incorrect password — extraction failed. Re-enter the password used during hiding.'); }
+  // success
+  state.extract.done=true;
+  // place recovered file into the chosen folder
+  const folder=getNode(pathParts(x.folder));
+  if(folder && folder.type==='folder' && !folder.children.find(c=>c.name===CONFIG.MSG_FILE)){
+    folder.children.push({name:CONFIG.MSG_FILE,type:'file',kind:'txt',content:CONFIG.MARKER_TEXT});
+  }
+  ok(m,'Hidden message extracted to:\n'+x.folder+'\\'+CONFIG.MSG_FILE);
+  $('#recoveredBox').classList.add('show');
+  $('#recoveredName').textContent=CONFIG.MSG_FILE;
+  check();
+});
+
+/* ====================== OPEN RECOVERED FILE ============================= */
+$('#btnOpenRecovered').addEventListener('click',()=>{
+  $('#vwTitle').textContent=CONFIG.MSG_FILE+' — Notepad';
+  $('#vwBody').textContent=CONFIG.MARKER_TEXT;
+  $('#viewerBk').classList.add('show');
+  $('#vwOk').focus();
+  state.extract.opened=true;
+  check();
+});
+function closeViewer(){ $('#viewerBk').classList.remove('show'); }
+$('#vwOk').addEventListener('click',closeViewer);
+$('#vwClose').addEventListener('click',closeViewer);
+$('#viewerBk').addEventListener('mousedown',e=>{ if(e.target===$('#viewerBk')) closeViewer(); });
+
+function ok(el,txt){ el.className='app-msg ok'; el.textContent=txt; }
+function fail(el,txt){ el.className='app-msg err'; el.textContent=txt; }
+
+/* ====================== TASK CHECKING =================================== */
+function basename(p){ return p.split('\\').pop(); }
+function dirname(p){ const a=p.split('\\'); a.pop(); return a.join('\\'); }
+
+function check(){
+  const t=state.tasks, h=state.hide, x=state.extract;
+  t.t_msg   = h.msg===CONFIG.MSG_FILE;
+  t.t_cover = h.cover===CONFIG.COVER_FILE;
+  t.t_out   = !!h.outPath && basename(h.outPath)===CONFIG.OUT_FILE && dirname(h.outPath).toLowerCase()===CONFIG.DOCS_PATH.toLowerCase();
+  t.t_pwd   = h.pw1.length>0 && h.pw1===h.pw2 && h.pw1===CONFIG.PASSWORD;
+  t.t_hide  = h.done===true;
+  t.t_in    = x.inFile===CONFIG.OUT_FILE;
+  t.t_folder= !!x.folder && x.folder.toLowerCase()===CONFIG.RECOVERED_PATH.toLowerCase();
+  t.t_epwd  = x.pw===CONFIG.PASSWORD;
+  t.t_extract = x.done===true;
+  t.t_open  = x.opened===true;
+  renderTasks();
+  updateSubmitState();
+}
+function renderTasks(){
+  $$('.tasklist li').forEach(li=>{
+    const id=li.dataset.task;
+    li.classList.toggle('done', !!state.tasks[id]);
+  });
+}
+
+/* ====================== QUESTIONS ======================================= */
+function renderQuestions(){
+  const wrap=$('#questions');
+  // keep heading, append question blocks
+  CONFIG.questions.forEach((q,qi)=>{
+    const div=document.createElement('div'); div.className='q'; div.dataset.qid=q.id;
+    const p=document.createElement('div'); p.className='qp'; p.textContent=(qi+1)+'. '+q.prompt; div.appendChild(p);
+    q.options.forEach((opt,oi)=>{
+      const lab=document.createElement('label'); lab.className='opt';
+      const inp=document.createElement('input'); inp.type='radio'; inp.name=q.id; inp.value=oi;
+      inp.addEventListener('change',()=>{ state.answers[q.id]=oi; gradeQuestion(q); updateSubmitState(); });
+      lab.appendChild(inp); lab.appendChild(document.createTextNode(opt));
+      div.appendChild(lab);
+    });
+    const v=document.createElement('div'); v.className='verdict'; v.id='v_'+q.id; div.appendChild(v);
+    wrap.appendChild(div);
+  });
+}
+function gradeQuestion(q){
+  const chosen=state.answers[q.id];
+  const block=$('.q[data-qid="'+q.id+'"]');
+  $$('.opt',block).forEach((lab,i)=>{
+    lab.classList.remove('correct','wrong');
+    if(i===chosen) lab.classList.add(i===q.answer?'correct':'wrong');
+  });
+  const v=$('#v_'+q.id);
+  if(chosen===q.answer){ v.className='verdict ok'; v.textContent='Correct.'; }
+  else { v.className='verdict no'; v.textContent='Not quite — review and try again.'; }
+}
+function allQuestionsAnswered(){ return CONFIG.questions.every(q=>state.answers[q.id]!==undefined); }
+function allQuestionsCorrect(){ return CONFIG.questions.every(q=>state.answers[q.id]===q.answer); }
+function allTasksDone(){ return Object.values(state.tasks).every(Boolean); }
+function correctCount(){ return CONFIG.questions.filter(q=>state.answers[q.id]===q.answer).length; }
+
+/* ====================== SUBMIT GATING ================================== */
+function updateSubmitState(){
+  const ready = allTasksDone() && allQuestionsAnswered() && $('#hackerName').value.trim().length>0;
+  $('#btnSubmit').disabled = !ready;
+}
+$('#hackerName').addEventListener('input',updateSubmitState);
+
+/* ====================== SCREENSHOT (dependency-free) ==================== */
+// Captures #labArea by serializing it into an SVG <foreignObject> with inlined
+// computed styles, then drawing to a canvas. Works because the lab DOM is fully
+// self-drawn (no external images/fonts). Swap in html2canvas if preferred.
+function inlineComputedStyle(src,dst){
+  const cs=getComputedStyle(src);
+  let css='';
+  for(let i=0;i<cs.length;i++){ const p=cs[i]; css+=p+':'+cs.getPropertyValue(p)+';'; }
+  dst.setAttribute('style',css);
+  if(src.tagName==='INPUT'){ dst.setAttribute('value',src.value||''); dst.removeAttribute('placeholder'); if(src.type==='password'&&src.value){ dst.setAttribute('value','••••••••'); } }
+  if(src.tagName==='SELECT'){ const opts=dst.querySelectorAll('option'); if(opts[src.selectedIndex]) opts[src.selectedIndex].setAttribute('selected','selected'); }
+  const sc=src.children, dc=dst.children;
+  for(let i=0;i<sc.length;i++){ if(dc[i]) inlineComputedStyle(sc[i],dc[i]); }
+}
+async function captureLabArea(maxWidth){
+  const node=$('#labArea');
+  // If html2canvas was pasted in above, prefer it:
+  if(typeof window.html2canvas==='function'){
+    const canvas=await window.html2canvas(node,{backgroundColor:'#0f141b',scale:1});
+    return scaleCanvas(canvas,maxWidth);
+  }
+  const rect=node.getBoundingClientRect();
+  const w=Math.ceil(rect.width), h=Math.ceil(rect.height);
+  const clone=node.cloneNode(true);
+  inlineComputedStyle(node,clone);
+  clone.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+  const xml=new XMLSerializer().serializeToString(clone);
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+            '<foreignObject x="0" y="0" width="100%" height="100%">'+xml+'</foreignObject></svg>';
+  const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  const img=new Image();
+  const loaded=new Promise((res,rej)=>{ img.onload=()=>res(); img.onerror=()=>rej(new Error('render failed')); });
+  img.src=url; await loaded;
+  const canvas=document.createElement('canvas');
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#0f141b'; ctx.fillRect(0,0,w,h);
+  ctx.drawImage(img,0,0);
+  return scaleCanvas(canvas,maxWidth);
+}
+function scaleCanvas(canvas,maxWidth){
+  if(!maxWidth || canvas.width<=maxWidth) return canvas.toDataURL('image/png');
+  const ratio=maxWidth/canvas.width;
+  const c2=document.createElement('canvas');
+  c2.width=maxWidth; c2.height=Math.round(canvas.height*ratio);
+  c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+  return c2.toDataURL('image/png');
+}
+
+/* ====================== SUBMISSION ===================================== */
+$('#btnSubmit').addEventListener('click',submitLab);
+async function submitLab(){
+  const status=$('#status');
+  const btn=$('#btnSubmit');
+  btn.disabled=true;
+  setStatus('info','Capturing screenshot and submitting…');
+
+  let shot='';
+  try{ shot=await captureLabArea(900); }
+  catch(err){ shot=''; /* proceed; server can store without image */ }
+
+  const earned = Object.values(state.tasks).filter(Boolean).length + correctCount();
+  const total  = Object.keys(state.tasks).length + CONFIG.questions.length;
+
+  const payload={
+    assignmentId:CONFIG.assignmentId,
+    hackerName:$('#hackerName').value.trim().slice(0,40),
+    clientTimestamp:new Date().toISOString(),
+    objectives:CONFIG.objectives,
+    tasks:Object.keys(state.tasks).map(id=>({id,label:TASK_LABELS[id],passed:!!state.tasks[id]})),
+    questions:CONFIG.questions.map(q=>({
+      id:q.id, prompt:q.prompt,
+      answer:(state.answers[q.id]!==undefined)?q.options[state.answers[q.id]]:'(blank)',
+      correct: state.answers[q.id]===q.answer
+    })),
+    score:{ earned, total },
+    screenshot:shot,
+    submissionToken:CONFIG.submissionToken
+  };
+
+  if(CONFIG.APPS_SCRIPT_URL==='PASTE_DEPLOYED_EXEC_URL_HERE'){
+    setStatus('err','This lab has not been configured yet: the instructor still needs to paste the deployed Apps Script URL into APPS_SCRIPT_URL. Your work was not submitted.');
+    btn.disabled=false; return;
+  }
+
+  try{
+    // SIMPLE request: no custom headers, default text/plain body → no CORS preflight
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:'POST', body:JSON.stringify(payload) });
+    const out=await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ' Your submission document: <a href="'+out.docUrl+'" target="_blank" rel="noopener">open it here</a>.' : '';
+      setStatus('ok','Submitted! Score recorded: '+earned+'/'+total+'.'+link);
+    } else {
+      setStatus('err','Submission was rejected: '+((out&&out.error)||'unknown error')+'. Check with your instructor.');
+      btn.disabled=false;
+    }
+  } catch(err){
+    // Fallback: fire-and-forget (cannot read the Doc link)
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:'POST', mode:'no-cors', body:JSON.stringify(payload) });
+      setStatus('ok','Submitted (no confirmation could be read back in this browser). Score: '+earned+'/'+total+'. Confirm receipt with your instructor.');
+    } catch(e2){
+      setStatus('err','Could not reach the submission server. Check your connection and try again, or notify your instructor.');
+      btn.disabled=false;
+    }
+  }
+}
+function setStatus(kind,html){ const s=$('#status'); s.className='status show '+kind; s.innerHTML=html; }
+
+/* ====================== RESET ========================================== */
+$('#btnReset').addEventListener('click',()=>{
+  FS=buildFS();
+  Object.assign(state,{
+    mode:'hide',
+    hide:{ msg:'', cover:'', outPath:'', algo:'AES128', pw1:'', pw2:'', done:false },
+    extract:{ inFile:'', folder:'', pw:'', done:false, opened:false },
+    tasks:{ t_msg:false,t_cover:false,t_out:false,t_pwd:false,t_hide:false,
+            t_in:false,t_folder:false,t_epwd:false,t_extract:false,t_open:false },
+    answers:{}, outputCreated:false
+  });
+  ['msgFile','coverFile','outFile','inFile','outFolder'].forEach(id=>$('#'+id).value='');
+  ['pw1','pw2','pwE'].forEach(id=>$('#'+id).value='');
+  $('#algo').value='AES128';
+  $('#hideMsg').className='app-msg'; $('#hideMsg').textContent='';
+  $('#extractMsg').className='app-msg'; $('#extractMsg').textContent='';
+  $('#recoveredBox').classList.remove('show');
+  $$('.q .opt').forEach(o=>o.classList.remove('correct','wrong'));
+  $$('.q input[type=radio]').forEach(r=>r.checked=false);
+  $$('.q .verdict').forEach(v=>{v.className='verdict';v.textContent='';});
+  $('#status').className='status';
+  switchMode('hide');
+  renderTasks(); updateSubmitState();
+});
+
+/* ====================== INIT =========================================== */
+renderQuestions();
+renderTasks();
+updateSubmitState();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-md5-integrity-check.html",title:"Lab \u00b7 Verify a Download with an MD5 Hash"}, NEXT={href:"splus-efs-folder-encryption.html",title:"Lab \u2014 Protect Bid Files with EFS"}, CRUMB="All Labs \u203a Unit 5 \u2014 Securing Applications and Data \u203a 5.3 Protecting Stored Data with Cryptography";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

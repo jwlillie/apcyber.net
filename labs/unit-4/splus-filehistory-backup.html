@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Security+ Lab Simulation — Configure File History Backups
+  assignmentId: splus-filehistory-backup   |  SY0-701 objective 3.4 (Backups)
+
+  Copyright (c) 2026 [REPLACE: Author / Instructor Name].
+  Licensed for classroom use within your cohort. All scenario text, persona,
+  file names, paths, values, task wording, and question wording are original
+  and authored for this library. Built clean-room from the public CompTIA
+  SY0-701 objective and Windows' documented File History behavior. Not derived
+  from, and not a reskin of, any third-party courseware lab.
+
+  Single file. No build step, no CDN, no runtime network calls except one
+  submission POST to the cohort's Apps Script Web App. In-memory state only.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-filehistory-backup",
+  "title": "Configure File History Backups",
+  "version": "1.0.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.3 Protecting Devices"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "3.4"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Configure File History Backups</title>
+<style id="labStyles">
+  :root{
+    --bg:#0e1116; --chrome:#161b22; --chrome-2:#1d242d; --line:#2a323c;
+    --ink:#e6edf3; --muted:#9aa7b4; --accent:#4cc2ff; --accent-dim:#1f6feb;
+    --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+    --win-bg:#f3f3f3; --win-card:#ffffff; --win-ink:#1b1b1b; --win-sub:#5b5b5b;
+    --win-accent:#0067c0; --win-border:#e3e3e3; --win-hover:#f5f5f5;
+    --radius:10px; --mono:ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.45;-webkit-text-size-adjust:100%}
+  a{color:var(--accent)}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted)}
+
+  /* ---- console chrome ---- */
+  .top{border-bottom:1px solid var(--line);background:linear-gradient(180deg,#11161d,#0e1116);
+    padding:16px clamp(14px,3vw,30px)}
+  .top-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+    max-width:1180px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:12px}
+  .glyph{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);
+    background:radial-gradient(120% 120% at 30% 20%,#1f2a36,#11161d);
+    display:grid;place-items:center;color:var(--accent);flex:none}
+  .glyph svg{width:20px;height:20px}
+  h1{font-size:clamp(16px,2.4vw,20px);margin:0;font-weight:650;letter-spacing:.2px}
+  .obj{display:inline-flex;gap:6px;align-items:center;margin-top:3px}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--accent);
+    border:1px solid var(--accent-dim);background:#0d2436;border-radius:999px;padding:2px 9px}
+  .btn{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+    background:var(--chrome-2);color:var(--ink);padding:9px 14px;font-weight:600;
+    transition:border-color .12s,background .12s,transform .04s}
+  .btn:hover{border-color:#3b4655}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:transparent}
+  .btn:focus-visible,a:focus-visible,input:focus-visible,
+  [role=switch]:focus-visible,.opt:focus-visible,.dd-trigger:focus-visible,
+  .win-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* ---- layout ---- */
+  .wrap{max-width:1180px;margin:0 auto;padding:clamp(14px,3vw,26px)}
+  .stage{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
+    gap:22px;align-items:start}
+  @media (max-width:880px){.stage{grid-template-columns:1fr}}
+
+  .scenario{border:1px solid var(--line);background:var(--chrome);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:20px}
+  .scenario p{margin:8px 0 0;color:#cdd6e0;font-size:14.5px}
+  .scenario b{color:#fff}
+
+  /* ---- Windows pane (faithful, self-drawn) ---- */
+  .win{background:var(--win-bg);color:var(--win-ink);border-radius:var(--radius);
+    overflow:hidden;border:1px solid #000;box-shadow:0 16px 40px rgba(0,0,0,.45);
+    font-size:14px}
+  .win-title{display:flex;align-items:center;gap:10px;background:#fafafa;
+    border-bottom:1px solid var(--win-border);padding:8px 12px}
+  .win-title .ico{width:16px;height:16px;color:var(--win-accent)}
+  .win-title .name{font-weight:600;font-size:13px}
+  .win-dots{margin-left:auto;display:flex;gap:14px;color:#8a8a8a}
+  .win-dots span{width:12px;height:12px;display:inline-block;position:relative}
+  .win-body{padding:18px 20px 22px}
+  .crumb{color:var(--win-sub);font-size:12.5px;margin:0 0 4px}
+  .win-h{font-size:21px;font-weight:600;margin:0 0 14px}
+  .status-banner{display:flex;align-items:center;gap:10px;border-radius:8px;
+    padding:10px 12px;font-size:13.5px;margin-bottom:16px;border:1px solid var(--win-border)}
+  .status-banner.off{background:#fff4f4;border-color:#f3caca;color:#8a1f1f}
+  .status-banner.on{background:#eef8ef;border-color:#c4e6c6;color:#1d6b27}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .dot.r{background:#c62828}.dot.g{background:#2e7d32}
+
+  .field{padding:14px 0;border-top:1px solid var(--win-border)}
+  .field:first-of-type{border-top:0}
+  .field .lab{font-weight:600;margin:0 0 2px}
+  .field .hint{color:var(--win-sub);font-size:12.5px;margin:0 0 10px}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .win-btn{font:inherit;font-size:13.5px;cursor:pointer;border:1px solid #c9c9c9;
+    background:#fdfdfd;color:var(--win-ink);border-radius:6px;padding:7px 14px;font-weight:600}
+  .win-btn:hover{background:var(--win-hover)}
+  .win-btn.primary{background:var(--win-accent);border-color:var(--win-accent);color:#fff}
+  .win-btn.primary:hover{background:#0a5cab}
+  .win-btn:disabled{opacity:.45;cursor:not-allowed}
+  .pill{font-size:12.5px;background:#eef1f4;border:1px solid #dfe3e8;border-radius:6px;
+    padding:5px 10px;color:#33414f}
+  .pill.empty{color:#8a1f1f;background:#fff4f4;border-color:#f3caca}
+
+  /* windows switch */
+  .switch{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;
+    font-weight:600;background:none;border:0;color:inherit;font:inherit;padding:0}
+  .switch .track{width:40px;height:20px;border-radius:11px;background:#b9b9b9;
+    position:relative;transition:background .15s;border:1px solid #9a9a9a;flex:none}
+  .switch .knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;transition:left .15s}
+  .switch[aria-checked=true] .track{background:var(--win-accent);border-color:var(--win-accent)}
+  .switch[aria-checked=true] .knob{left:22px}
+
+  /* custom dropdown (renders chosen value as text so it appears in the proof image) */
+  .dd{position:relative;min-width:230px}
+  .dd-trigger{width:100%;text-align:left;font:inherit;font-size:13.5px;cursor:pointer;
+    border:1px solid #c9c9c9;background:#fff;border-radius:6px;padding:8px 34px 8px 12px;
+    color:var(--win-ink);position:relative}
+  .dd-trigger[aria-expanded=true]{border-color:var(--win-accent)}
+  .dd-trigger.unset{color:#8a1f1f}
+  .dd-trigger::after{content:"";position:absolute;right:12px;top:50%;width:7px;height:7px;
+    border-right:2px solid #6a6a6a;border-bottom:2px solid #6a6a6a;
+    transform:translateY(-70%) rotate(45deg)}
+  .dd-list{position:absolute;z-index:5;top:calc(100% + 4px);left:0;right:0;background:#fff;
+    border:1px solid #c9c9c9;border-radius:6px;box-shadow:0 10px 26px rgba(0,0,0,.18);
+    padding:4px;max-height:230px;overflow:auto}
+  .dd-list[hidden]{display:none}
+  .opt{display:block;width:100%;text-align:left;font:inherit;font-size:13.5px;cursor:pointer;
+    border:0;background:none;border-radius:5px;padding:8px 10px;color:var(--win-ink)}
+  .opt:hover{background:#eef4fb}
+  .opt[aria-selected=true]{background:#e7f1fb;font-weight:600}
+  .opt[aria-selected=true]::before{content:"\2713  ";color:var(--win-accent)}
+
+  .folder-list{list-style:none;margin:0 0 10px;padding:0;border:1px solid var(--win-border);
+    border-radius:6px;background:#fff}
+  .folder-list li{display:flex;align-items:center;gap:9px;padding:8px 11px;font-size:13px;
+    border-top:1px solid #eee}
+  .folder-list li:first-child{border-top:0}
+  .folder-list .fico{width:15px;height:13px;background:#ffce5c;border-radius:2px;flex:none;
+    position:relative}
+  .folder-list .fico::before{content:"";position:absolute;top:-3px;left:1px;width:7px;height:3px;
+    background:#ffce5c;border-radius:2px 2px 0 0}
+  .rm{margin-left:auto;border:0;background:none;color:#8a1f1f;cursor:pointer;font:inherit;
+    font-size:12.5px;text-decoration:underline}
+
+  .last-run{font-size:12.5px;color:var(--win-sub);margin:6px 0 0}
+
+  /* ---- dialogs ---- */
+  .overlay{position:fixed;inset:0;background:rgba(8,11,15,.6);display:grid;place-items:center;
+    padding:16px;z-index:40}
+  .overlay[hidden]{display:none}
+  .dialog{background:#fff;color:var(--win-ink);border-radius:10px;max-width:420px;width:100%;
+    padding:18px 20px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .dialog h2{margin:0 0 4px;font-size:16px}
+  .dialog p{margin:0 0 14px;color:var(--win-sub);font-size:13px}
+  .pick{display:block;width:100%;text-align:left;font:inherit;border:1px solid #e1e1e1;
+    background:#fafafa;border-radius:7px;padding:11px 13px;margin:8px 0;cursor:pointer;font-size:13.5px}
+  .pick:hover{border-color:var(--win-accent);background:#f0f7ff}
+  .pick small{display:block;color:var(--win-sub);font-weight:400;margin-top:2px}
+  .dialog .row{justify-content:flex-end;margin-top:8px}
+
+  /* ---- right panel: tasks + questions ---- */
+  .panel{display:flex;flex-direction:column;gap:18px}
+  .card{border:1px solid var(--line);background:var(--chrome);border-radius:var(--radius);
+    padding:16px 18px}
+  .card h2{margin:0 0 4px;font-size:15px}
+  .card .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+  .check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .check li{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:#cdd6e0}
+  .mark{width:20px;height:20px;border-radius:50%;border:1.5px solid #3a4450;flex:none;
+    display:grid;place-items:center;font-size:12px;color:transparent;margin-top:1px}
+  .check li.done .mark{background:var(--ok);border-color:var(--ok);color:#06210d}
+  .check li.done .txt{color:#fff}
+  .progress{height:6px;border-radius:4px;background:#222b34;overflow:hidden;margin-top:14px}
+  .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent-dim),var(--accent));
+    transition:width .25s}
+
+  fieldset.q{border:1px solid var(--line);border-radius:8px;margin:0 0 12px;padding:12px 14px}
+  fieldset.q legend{font-size:13.5px;font-weight:600;padding:0 6px;color:#fff}
+  .ans{display:flex;gap:9px;align-items:flex-start;padding:7px 6px;border-radius:6px;
+    font-size:13px;color:#cdd6e0;cursor:pointer}
+  .ans:hover{background:#1b232c}
+  .ans input{margin-top:3px;accent-color:var(--accent)}
+  .verdict{font-size:12.5px;margin:6px 0 0;min-height:1em}
+  .verdict.ok{color:var(--ok)}.verdict.no{color:var(--bad)}
+
+  /* ---- submission bar ---- */
+  .submit{border:1px solid var(--line);background:linear-gradient(180deg,#141a21,#10151b);
+    border-radius:var(--radius);padding:16px 18px;margin-top:20px}
+  .submit .grid{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+  .submit label{display:block;font-size:12.5px;color:var(--muted);margin:0 0 5px}
+  .submit input[type=text]{font:inherit;background:#0c1117;border:1px solid var(--line);
+    color:var(--ink);border-radius:8px;padding:10px 12px;min-width:220px}
+  .submit .scorebox{margin-left:auto;text-align:right}
+  .scorebox b{font-size:22px;color:#fff}
+  .scorebox span{display:block;font-size:11.5px;color:var(--muted)}
+  .status{margin-top:14px;border-radius:8px;padding:11px 13px;font-size:13.5px;display:none}
+  .status.show{display:block}
+  .status.info{background:#0d2436;border:1px solid var(--accent-dim);color:#bfe3ff}
+  .status.ok{background:#0f2417;border:1px solid #1c7a32;color:#aef0bc}
+  .status.err{background:#2a1416;border:1px solid #7a1c1c;color:#ffc4c4}
+  .status.warn{background:#2a230f;border:1px solid #7a5c1c;color:#ffe3a8}
+  .status a{color:#fff;font-weight:700}
+
+  footer{max-width:1180px;margin:0 auto;padding:24px clamp(14px,3vw,26px);
+    color:#5d6b78;font-size:11.5px;line-height:1.6}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+
+<header class="top">
+  <div class="top-row">
+    <div class="brand">
+      <span class="glyph" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </span>
+      <div>
+        <h1>Configure File History Backups</h1>
+        <div class="obj">
+          <span class="eyebrow">SY0-701</span>
+          <span class="tag">3.4 &middot; Backups</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="scenario" aria-label="Scenario">
+    <span class="eyebrow">Scenario</span>
+    <p>You are the IT lead at <b>Halvorsen Tax Group</b>. A new Windows workstation,
+    <b>WS-AUDIT-14</b>, was just issued to staff accountant <b>Priya Nandakumar</b>. Her
+    casework lives on the firm's <b>Records (R:)</b> drive, and a second internal disk,
+    <b>Vault (V:)</b>, was added specifically to hold local recovery copies. Configure File
+    History so a recent version of her work is always recoverable after accidental edits or a
+    disk failure.</p>
+  </section>
+
+  <div class="stage">
+
+    <!-- ===== EMULATED WINDOWS PANE (capture target) ===== -->
+    <section class="win" id="winPane" aria-label="Windows backup settings (simulated)">
+      <div class="win-title">
+        <svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 5h7l2 2h9v12H3z"/></svg>
+        <span class="name">Settings &mdash; Backup</span>
+        <span class="win-dots" aria-hidden="true"><span>&ndash;</span><span>&#9633;</span><span>&times;</span></span>
+      </div>
+      <div class="win-body">
+        <p class="crumb">Update &amp; Security &rsaquo; Backup &rsaquo; Backup options</p>
+        <h2 class="win-h">Backup options</h2>
+
+        <div class="status-banner off" id="banner" role="status">
+          <span class="dot r" id="bannerDot" aria-hidden="true"></span>
+          <span id="bannerText">File History is off. Choose a drive and turn it on to begin protecting files.</span>
+        </div>
+
+        <!-- Drive -->
+        <div class="field">
+          <p class="lab">Back up to</p>
+          <p class="hint">File History copies your selected folders to this drive on a schedule.</p>
+          <div class="row">
+            <span class="pill empty" id="drivePill">No drive selected</span>
+            <button class="win-btn" id="addDriveBtn" type="button">Add a drive</button>
+          </div>
+        </div>
+
+        <!-- Auto toggle -->
+        <div class="field">
+          <p class="lab">Automatically back up my files</p>
+          <p class="hint">When on, File History runs on the schedule below.</p>
+          <button class="switch" id="autoSwitch" role="switch" aria-checked="false" type="button" disabled>
+            <span class="track" aria-hidden="true"><span class="knob"></span></span>
+            <span id="autoLabel">Off</span>
+          </button>
+        </div>
+
+        <!-- Frequency -->
+        <div class="field">
+          <p class="lab">Back up my files</p>
+          <p class="hint">How often a new version of each file is captured.</p>
+          <div class="dd" data-dd="freq">
+            <button class="dd-trigger unset" type="button" aria-haspopup="listbox" aria-expanded="false"
+                    id="freqTrigger">Select a frequency</button>
+            <div class="dd-list" role="listbox" aria-label="Backup frequency" hidden id="freqList"></div>
+          </div>
+        </div>
+
+        <!-- Retention -->
+        <div class="field">
+          <p class="lab">Keep my backups</p>
+          <p class="hint">How long older versions are retained before being cleaned up.</p>
+          <div class="dd" data-dd="retain">
+            <button class="dd-trigger unset" type="button" aria-haspopup="listbox" aria-expanded="false"
+                    id="retainTrigger">Select a retention period</button>
+            <div class="dd-list" role="listbox" aria-label="Keep backups" hidden id="retainList"></div>
+          </div>
+        </div>
+
+        <!-- Folders -->
+        <div class="field">
+          <p class="lab">Back up these folders</p>
+          <p class="hint">Folders included in every backup.</p>
+          <ul class="folder-list" id="folderList"></ul>
+          <button class="win-btn" id="addFolderBtn" type="button">Add a folder</button>
+        </div>
+
+        <!-- Run now -->
+        <div class="field">
+          <p class="lab">Run a backup</p>
+          <p class="hint">Capture a version of the included folders right now.</p>
+          <button class="win-btn primary" id="backupNowBtn" type="button" disabled>Back up now</button>
+          <p class="last-run" id="lastRun">No backup has run yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TASK + QUESTION PANEL ===== -->
+    <aside class="panel">
+      <div class="card">
+        <h2>Your tasks</h2>
+        <p class="sub">Each item checks itself as you work in the panel on the left.</p>
+        <ul class="check" id="taskList"></ul>
+        <div class="progress" aria-hidden="true"><i id="taskBar"></i></div>
+      </div>
+
+      <div class="card">
+        <h2>Knowledge check</h2>
+        <p class="sub">Three questions on why this configuration matters.</p>
+        <div id="questionList"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===== SUBMISSION BAR ===== -->
+  <section class="submit" aria-label="Submit lab">
+    <div class="grid">
+      <div>
+        <label for="hackerName">Hacker name (pseudonym &mdash; do not use your real name)</label>
+        <input type="text" id="hackerName" maxlength="40" autocomplete="off"
+               placeholder="e.g., night_owl_42" spellcheck="false">
+      </div>
+      <button class="btn" id="submitBtn" type="button" style="background:var(--accent-dim);border-color:var(--accent-dim)">
+        Submit completed lab
+      </button>
+      <div class="scorebox" aria-live="polite">
+        <b id="scoreNum">0 / 9</b>
+        <span>tasks + questions</span>
+      </div>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+</div>
+
+<!-- drive picker -->
+<div class="overlay" id="driveOverlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="driveDlgTitle">
+    <h2 id="driveDlgTitle">Select a drive</h2>
+    <p>Choose where File History should store recovery copies.</p>
+    <div id="driveChoices"></div>
+    <div class="row"><button class="win-btn" type="button" data-close>Cancel</button></div>
+  </div>
+</div>
+
+<!-- folder picker -->
+<div class="overlay" id="folderOverlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="folderDlgTitle">
+    <h2 id="folderDlgTitle">Add a folder</h2>
+    <p>Pick a folder to include in every backup.</p>
+    <div id="folderChoices"></div>
+    <div class="row"><button class="win-btn" type="button" data-close>Cancel</button></div>
+  </div>
+</div>
+
+<footer>
+  Original training simulation &middot; CompTIA Security+ SY0-701 objective 3.4 (Backups).
+  &copy; 2026 [REPLACE: Author / Instructor Name]. Licensed for classroom use within your cohort.
+  Built clean-room from the public exam objective and Windows' documented File History behavior;
+  not derived from any third-party courseware. Self-contained: no external dependencies, no
+  runtime network calls except the single submission below.
+</footer>
+
+<!--
+  ==========================================================================
+  SCREENSHOT CAPTURE
+  --------------------------------------------------------------------------
+  The master spec calls for an INLINED copy of html2canvas. That library is
+  not retrievable in this build environment, so this file ships with a small,
+  truly dependency-free capture routine (SVG <foreignObject> rasterization)
+  that works for the lab's self-drawn DOM and keeps the file standalone.
+
+  If you prefer html2canvas specifically, paste its minified source into the
+  block marked >>> HTML2CANVAS SLOT <<< below. The capture routine prefers
+  window.html2canvas automatically when present and otherwise uses the
+  built-in method. No other change needed.
+  ==========================================================================
+-->
+<script>
+/* >>> HTML2CANVAS SLOT <<<  (optional: paste minified html2canvas here) */
+</script>
+
+<script>
+/* ============================ LAB CONFIG ============================ */
+const CONFIG = {
+  assignmentId: "splus-filehistory-backup",
+  title: "Configure File History Backups",
+  objectives: ["3.4"],                 // SY0-701; resilience & recovery — Backups
+  passThreshold: "all tasks + all questions",
+
+  // Same /exec URL across the whole library. Replace before deploying.
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "REPLACE_WITH_COHORT_TOKEN",
+
+  // Answer key (client-side / self-reported; have Apps Script re-score if it must be trusted)
+  answer: { drive:"V", frequency:"h3", retention:"y1", folder:"R:\\Casework" },
+
+  drives: [
+    { id:"V", label:"Vault (V:)",          desc:"Internal disk \u00b7 240 GB free \u00b7 fixed",   correct:true },
+    { id:"T", label:"Transit (T:)",        desc:"Removable USB \u00b7 14 GB free \u00b7 not always attached" },
+    { id:"R", label:"Records (R:)",        desc:"Source data \u00b7 holds Priya's working files" }
+  ],
+  freqOptions: [
+    { v:"m10", t:"Every 10 minutes" },
+    { v:"m30", t:"Every 30 minutes" },
+    { v:"h1",  t:"Every hour" },
+    { v:"h3",  t:"Every 3 hours" },
+    { v:"h6",  t:"Every 6 hours" },
+    { v:"h12", t:"Every 12 hours" },
+    { v:"d1",  t:"Daily" }
+  ],
+  retainOptions: [
+    { v:"space", t:"Until space is needed" },
+    { v:"m1",    t:"1 month" },
+    { v:"m3",    t:"3 months" },
+    { v:"m6",    t:"6 months" },
+    { v:"m9",    t:"9 months" },
+    { v:"y1",    t:"1 year" },
+    { v:"y2",    t:"2 years" },
+    { v:"forever", t:"Forever" }
+  ],
+  folderChoices: [
+    { p:"R:\\Casework", d:"Priya's active client files (the data to protect)" },
+    { p:"R:\\Archive",  d:"Closed matters \u2014 already on cold storage" },
+    { p:"C:\\Temp",     d:"Scratch space \u2014 safe to lose" }
+  ],
+  defaultFolders: ["C:\\Users\\pnandakumar"],
+
+  tasks: [
+    { id:"drive",  label:"Set Vault (V:) as the backup drive" },
+    { id:"freq",   label:"Capture a new version every 3 hours" },
+    { id:"retain", label:"Keep saved versions for 1 year" },
+    { id:"folder", label:"Add R:\\Casework to the backup set" },
+    { id:"on",     label:"Turn File History on" },
+    { id:"now",    label:"Run a backup now" }
+  ],
+
+  questions: [
+    { id:"q1",
+      prompt:"A scheduled File History backup most directly protects which property of Priya's casework?",
+      options:[
+        { k:"a", t:"Confidentiality" },
+        { k:"b", t:"Integrity" },
+        { k:"c", t:"Availability" },
+        { k:"d", t:"Non-repudiation" }
+      ], correct:"c" },
+    { id:"q2",
+      prompt:"Why store the backup on Vault (V:) instead of leaving the only copy on the workstation's system drive?",
+      options:[
+        { k:"a", t:"It encrypts the files automatically" },
+        { k:"b", t:"A failure of the system drive would otherwise destroy both the working files and their only backup" },
+        { k:"c", t:"It makes each backup run faster" },
+        { k:"d", t:"A second internal volume satisfies the full 3-2-1 rule by itself" }
+      ], correct:"b" },
+    { id:"q3",
+      prompt:"Changing the schedule from Daily to every 3 hours mainly improves which recovery metric?",
+      options:[
+        { k:"a", t:"Recovery Time Objective (RTO)" },
+        { k:"b", t:"Recovery Point Objective (RPO)" },
+        { k:"c", t:"Mean Time Between Failures (MTBF)" },
+        { k:"d", t:"Annualized Loss Expectancy (ALE)" }
+      ], correct:"b" }
+  ]
+};
+
+/* ============================ STATE ============================ */
+var state = {
+  drive:null, frequency:null, retention:null,
+  folders: CONFIG.defaultFolders.slice(),
+  on:false, backedUpNow:false,
+  answers:{}   // qid -> chosen key
+};
+
+/* ============================ HELPERS ============================ */
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, txt){ var e=document.createElement(tag); if(cls)e.className=cls;
+  if(txt!=null)e.textContent=txt; return e; }
+function labelFor(list,v){ for(var i=0;i<list.length;i++){ if(list[i].v===v) return list[i].t; } return null; }
+
+/* ============================ TASK EVALUATION ============================ */
+function taskPassed(id){
+  switch(id){
+    case "drive":  return state.drive===CONFIG.answer.drive;
+    case "freq":   return state.frequency===CONFIG.answer.frequency;
+    case "retain": return state.retention===CONFIG.answer.retention;
+    case "folder": return state.folders.indexOf(CONFIG.answer.folder)>-1;
+    case "on":     return state.on===true;
+    case "now":    return state.backedUpNow===true;
+  }
+  return false;
+}
+function questionCorrect(q){ return state.answers[q.id]===q.correct; }
+
+/* ============================ RENDER: PANEL ============================ */
+function renderTasks(){
+  var ul=$("taskList"); ul.innerHTML="";
+  CONFIG.tasks.forEach(function(t){
+    var li=el("li"); var done=taskPassed(t.id); if(done)li.className="done";
+    var m=el("span","mark"); m.setAttribute("aria-hidden","true"); m.textContent="\u2713";
+    var s=el("span","txt",t.label);
+    li.appendChild(m); li.appendChild(s);
+    li.setAttribute("aria-label",t.label+(done?" \u2014 complete":" \u2014 not yet"));
+    ul.appendChild(li);
+  });
+  var passed=CONFIG.tasks.filter(function(t){return taskPassed(t.id);}).length;
+  $("taskBar").style.width=(passed/CONFIG.tasks.length*100)+"%";
+  updateScore();
+}
+function renderQuestions(){
+  var box=$("questionList"); box.innerHTML="";
+  CONFIG.questions.forEach(function(q,qi){
+    var fs=el("fieldset","q"); var lg=el("legend",null,(qi+1)+". "+q.prompt); fs.appendChild(lg);
+    q.options.forEach(function(o){
+      var lab=el("label","ans");
+      var inp=document.createElement("input");
+      inp.type="radio"; inp.name=q.id; inp.value=o.k;
+      if(state.answers[q.id]===o.k) inp.checked=true;
+      inp.addEventListener("change",function(){
+        state.answers[q.id]=o.k; markVerdict(q,v); updateScore();
+      });
+      lab.appendChild(inp); lab.appendChild(el("span",null,o.t));
+      fs.appendChild(lab);
+    });
+    var v=el("p","verdict"); v.id="v_"+q.id; fs.appendChild(v);
+    box.appendChild(fs);
+    if(state.answers[q.id]) markVerdict(q,v);
+  });
+}
+function markVerdict(q,v){
+  if(!state.answers[q.id]){ v.textContent=""; v.className="verdict"; return; }
+  if(questionCorrect(q)){ v.textContent="Correct."; v.className="verdict ok"; }
+  else { v.textContent="Not quite \u2014 reconsider and choose again."; v.className="verdict no"; }
+}
+function updateScore(){
+  var t=CONFIG.tasks.filter(function(x){return taskPassed(x.id);}).length;
+  var q=CONFIG.questions.filter(questionCorrect).length;
+  var total=CONFIG.tasks.length+CONFIG.questions.length;
+  $("scoreNum").textContent=(t+q)+" / "+total;
+}
+
+/* ============================ RENDER: WINDOWS PANE ============================ */
+function renderBanner(){
+  var b=$("banner"), dot=$("bannerDot"), txt=$("bannerText");
+  if(state.on){
+    b.className="status-banner on"; dot.className="dot g";
+    txt.textContent="File History is on. Selected folders are protected on the chosen drive.";
+  } else {
+    b.className="status-banner off"; dot.className="dot r";
+    txt.textContent=state.drive
+      ? "File History is off. Turn it on to start protecting files."
+      : "File History is off. Choose a drive and turn it on to begin protecting files.";
+  }
+}
+function renderDrive(){
+  var pill=$("drivePill"), sw=$("autoSwitch"), addBtn=$("addDriveBtn");
+  if(state.drive){
+    var d=CONFIG.drives.filter(function(x){return x.id===state.drive;})[0];
+    pill.textContent=d.label; pill.className="pill"; addBtn.textContent="Change drive";
+    sw.disabled=false;
+  } else {
+    pill.textContent="No drive selected"; pill.className="pill empty"; addBtn.textContent="Add a drive";
+    sw.disabled=true;
+  }
+}
+function renderSwitch(){
+  var sw=$("autoSwitch");
+  sw.setAttribute("aria-checked", state.on?"true":"false");
+  $("autoLabel").textContent=state.on?"On":"Off";
+  $("backupNowBtn").disabled=!state.on;
+}
+function renderFolders(){
+  var ul=$("folderList"); ul.innerHTML="";
+  state.folders.forEach(function(p){
+    var li=el("li");
+    li.appendChild(el("span","fico"));
+    li.appendChild(el("span",null,p));
+    if(p!==CONFIG.defaultFolders[0]){
+      var rm=el("button","rm","Remove"); rm.type="button";
+      rm.addEventListener("click",function(){
+        state.folders=state.folders.filter(function(x){return x!==p;});
+        renderFolders(); renderTasks();
+      });
+      li.appendChild(rm);
+    }
+    ul.appendChild(li);
+  });
+}
+function renderLastRun(){
+  $("lastRun").textContent = state.backedUpNow
+    ? "Last backup: "+state.backedUpNow
+    : "No backup has run yet.";
+}
+function renderWin(){ renderBanner(); renderDrive(); renderSwitch(); renderFolders(); renderLastRun(); }
+
+/* ============================ DROPDOWNS ============================ */
+function buildDropdown(key, listEl, triggerEl, options, getVal, setVal){
+  function refresh(){
+    var cur=getVal();
+    listEl.innerHTML="";
+    options.forEach(function(o){
+      var b=el("button","opt",o.t); b.type="button"; b.setAttribute("role","option");
+      b.setAttribute("aria-selected", cur===o.v?"true":"false");
+      b.addEventListener("click",function(){
+        setVal(o.v); close(); triggerEl.textContent=o.t; triggerEl.classList.remove("unset");
+        renderTasks();
+      });
+      listEl.appendChild(b);
+    });
+  }
+  function open(){ refresh(); listEl.hidden=false; triggerEl.setAttribute("aria-expanded","true");
+    document.addEventListener("click",outside,true); }
+  function close(){ listEl.hidden=true; triggerEl.setAttribute("aria-expanded","false");
+    document.removeEventListener("click",outside,true); }
+  function outside(e){ if(!listEl.parentNode.contains(e.target)) close(); }
+  triggerEl.addEventListener("click",function(e){ e.stopPropagation();
+    listEl.hidden?open():close(); });
+  triggerEl.addEventListener("keydown",function(e){ if(e.key==="Escape") close(); });
+  listEl.addEventListener("keydown",function(e){ if(e.key==="Escape"){ close(); triggerEl.focus(); } });
+  return { close:close };
+}
+
+/* ============================ DIALOGS ============================ */
+function openOverlay(id){ var o=$(id); o.hidden=false; var f=o.querySelector("button"); if(f)f.focus();
+  o.addEventListener("keydown",escClose); }
+function closeOverlay(id){ var o=$(id); o.hidden=true; o.removeEventListener("keydown",escClose); }
+function escClose(e){ if(e.key==="Escape"){ e.currentTarget.hidden=true; } }
+
+function buildDriveDialog(){
+  var c=$("driveChoices"); c.innerHTML="";
+  CONFIG.drives.forEach(function(d){
+    var b=el("button","pick"); b.type="button";
+    b.appendChild(el("span",null,d.label));
+    b.appendChild(el("small",null,d.desc));
+    b.addEventListener("click",function(){
+      state.drive=d.id; closeOverlay("driveOverlay"); renderWin(); renderTasks();
+    });
+    c.appendChild(b);
+  });
+}
+function buildFolderDialog(){
+  var c=$("folderChoices"); c.innerHTML="";
+  CONFIG.folderChoices.forEach(function(f){
+    var already=state.folders.indexOf(f.p)>-1;
+    var b=el("button","pick"); b.type="button";
+    b.appendChild(el("span",null,f.p+(already?"  \u2713 added":"")));
+    b.appendChild(el("small",null,f.d));
+    if(already) b.disabled=true;
+    b.addEventListener("click",function(){
+      if(state.folders.indexOf(f.p)===-1) state.folders.push(f.p);
+      closeOverlay("folderOverlay"); renderFolders(); renderTasks();
+    });
+    c.appendChild(b);
+  });
+}
+
+/* ============================ SCREENSHOT ============================ */
+function captureScreenshot(){
+  var node=$("winPane");
+  if(window.html2canvas){
+    return window.html2canvas(node,{backgroundColor:"#0e1116",
+      scale:Math.min(2,window.devicePixelRatio||1)}).then(function(c){return c.toDataURL("image/png");});
+  }
+  return domToPng(node);
+}
+function domToPng(node){
+  return new Promise(function(resolve,reject){
+    try{
+      var rect=node.getBoundingClientRect();
+      var w=Math.ceil(rect.width), h=Math.ceil(rect.height);
+      var css=$("labStyles").textContent;
+      var xhtml=new XMLSerializer().serializeToString(node);
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+        '<foreignObject width="100%" height="100%">'+
+        '<div xmlns="http://www.w3.org/1999/xhtml">'+
+        '<style>'+css+'</style>'+xhtml+'</div></foreignObject></svg>';
+      var url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+      var img=new Image();
+      img.onload=function(){
+        var scale=Math.min(2,window.devicePixelRatio||1);
+        var canvas=document.createElement("canvas");
+        canvas.width=w*scale; canvas.height=h*scale;
+        var ctx=canvas.getContext("2d");
+        ctx.fillStyle="#0e1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.scale(scale,scale); ctx.drawImage(img,0,0);
+        try{ resolve(canvas.toDataURL("image/png")); }catch(e){ reject(e); }
+      };
+      img.onerror=function(){ reject(new Error("capture render failed")); };
+      img.src=url;
+    }catch(e){ reject(e); }
+  });
+}
+
+/* ============================ SUBMISSION ============================ */
+function setStatus(kind,html){ var s=$("status"); s.className="status show "+kind; s.innerHTML=html; }
+
+function buildPayload(screenshot){
+  var tasks=CONFIG.tasks.map(function(t){ return { id:t.id, label:t.label, passed:taskPassed(t.id) }; });
+  var questions=CONFIG.questions.map(function(q){
+    return { id:q.id, prompt:q.prompt, answer:state.answers[q.id]||null, correct:questionCorrect(q) };
+  });
+  var earned=tasks.filter(function(t){return t.passed;}).length
+            +questions.filter(function(q){return q.correct;}).length;
+  return {
+    assignmentId:CONFIG.assignmentId,
+    hackerName:$("hackerName").value.trim(),
+    clientTimestamp:new Date().toISOString(),
+    objectives:CONFIG.objectives,
+    tasks:tasks, questions:questions,
+    score:{ earned:earned, total:tasks.length+questions.length },
+    screenshot:screenshot||"",
+    submissionToken:CONFIG.submissionToken
+  };
+}
+
+function onSubmit(){
+  var name=$("hackerName").value.trim();
+  if(!name){ setStatus("err","Enter a hacker name before submitting. Use a pseudonym, not your real name."); $("hackerName").focus(); return; }
+  if(CONFIG.APPS_SCRIPT_URL.indexOf("REPLACE_WITH")>-1){
+    setStatus("warn","Submission endpoint isn't configured yet. Ask your instructor for the deployed lab URL, or have them set <b>APPS_SCRIPT_URL</b> in this file."); return; }
+
+  // close any open UI so the proof image is clean
+  closeOverlay("driveOverlay"); closeOverlay("folderOverlay");
+  setStatus("info","Capturing your work\u2026");
+
+  captureScreenshot().catch(function(){ return ""; }).then(function(shot){
+    var payload=buildPayload(shot);
+    setStatus("info","Submitting to your instructor\u2026");
+    return fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) })
+      .then(function(res){ return res.json(); })
+      .then(function(out){
+        if(out && out.success){
+          var link=out.docUrl?(' <a href="'+out.docUrl+'" target="_blank" rel="noopener">View your submission</a>'):"";
+          setStatus("ok","Submitted. Your instructor received this attempt."+link);
+        } else {
+          setStatus("err","The server rejected the submission"+(out&&out.error?(": "+out.error):".")+" Check with your instructor.");
+        }
+      })
+      .catch(function(){
+        // locked-down fallback: fire-and-forget, can't read the reply
+        return fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) })
+          .then(function(){ setStatus("warn","Sent, but this browser blocked the confirmation. Confirm receipt with your instructor."); })
+          .catch(function(){ setStatus("err","Couldn't reach the submission server. Check your connection and try again."); });
+      });
+  });
+}
+
+/* ============================ RESET ============================ */
+function resetLab(){
+  state={ drive:null, frequency:null, retention:null,
+    folders:CONFIG.defaultFolders.slice(), on:false, backedUpNow:false, answers:{} };
+  $("freqTrigger").textContent="Select a frequency"; $("freqTrigger").classList.add("unset");
+  $("retainTrigger").textContent="Select a retention period"; $("retainTrigger").classList.add("unset");
+  $("hackerName").value="";
+  $("status").className="status";
+  renderWin(); renderTasks(); renderQuestions();
+}
+
+/* ============================ INIT ============================ */
+(function init(){
+  renderQuestions(); renderWin(); renderTasks();
+
+  buildDropdown("freq",$("freqList"),$("freqTrigger"),CONFIG.freqOptions,
+    function(){return state.frequency;}, function(v){state.frequency=v;});
+  buildDropdown("retain",$("retainList"),$("retainTrigger"),CONFIG.retainOptions,
+    function(){return state.retention;}, function(v){state.retention=v;});
+
+  buildDriveDialog(); buildFolderDialog();
+
+  $("addDriveBtn").addEventListener("click",function(){ buildDriveDialog(); openOverlay("driveOverlay"); });
+  $("addFolderBtn").addEventListener("click",function(){ buildFolderDialog(); openOverlay("folderOverlay"); });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-close]"),function(b){
+    b.addEventListener("click",function(){ closeOverlay("driveOverlay"); closeOverlay("folderOverlay"); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".overlay"),function(o){
+    o.addEventListener("click",function(e){ if(e.target===o) o.hidden=true; });
+  });
+
+  $("autoSwitch").addEventListener("click",function(){
+    if(this.disabled) return;
+    state.on=!state.on;
+    if(!state.on) state.backedUpNow=false;   // turning off stops the schedule
+    renderWin(); renderTasks();
+  });
+
+  $("backupNowBtn").addEventListener("click",function(){
+    if(!state.on) return;
+    var now=new Date();
+    state.backedUpNow=now.toLocaleString();
+    renderLastRun(); renderTasks();
+    $("backupNowBtn").textContent="Backed up \u2713";
+    setTimeout(function(){ $("backupNowBtn").textContent="Back up now"; },1400);
+  });
+
+  $("submitBtn").addEventListener("click",onSubmit);
+  $("resetBtn").addEventListener("click",resetLab);
+})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-mobile-mail-browser-harden.html",title:"Lab: Harden Mobile Mail & Browser on a Tablet"}, NEXT={href:"splus-filehistory-recovery.html",title:"Recover Prior File Versions with File History"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.3 Protecting Devices";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

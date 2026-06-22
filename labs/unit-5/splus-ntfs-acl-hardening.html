@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-ntfs-acl-hardening",
+  "title": "Lock Down Shared Folders with NTFS Permissions",
+  "version": "1.0.0",
+  "ap": {
+    "unit": 5,
+    "unitTitle": "Securing Applications and Data",
+    "topics": [
+      "5.2 Protecting Applications and Data: Managerial Controls and Access Controls"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.5",
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lock Down Shared Folders with NTFS Permissions — Security+ Lab</title>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Simulation Lab — "Lock Down Shared Folders with NTFS Permissions"
+  assignmentId: splus-ntfs-acl-hardening
+  Objectives: 2.5.2 (Access control: ACL & Permissions), 2.5.8 (Least privilege),
+              4.6.8 (Access controls)
+
+  Clean-room original work. Teaches the documented Windows NTFS permissions
+  procedure using an entirely original scenario, names, paths, and wording.
+  Not derived from, and not a reskin of, any third-party lab.
+
+  Copyright (c) 2026 [AUTHOR / INSTRUCTOR NAME]. All rights reserved.
+  Licensed for classroom use within the author's CompTIA Security+ program.
+  ============================================================================
+-->
+<style>
+  :root{
+    --win-bg:#f3f3f3;
+    --win-surface:#ffffff;
+    --win-surface-2:#fafafa;
+    --win-line:#d6d6d6;
+    --win-line-strong:#b9b9b9;
+    --text:#1b1b1b;
+    --text-dim:#5b5b5b;
+    --accent:#0067c0;
+    --accent-weak:#cfe6fb;
+    --select:#cce8ff;
+    --select-line:#99d1ff;
+    --good:#107c41;
+    --good-weak:#e6f4ea;
+    --bad:#c42b1c;
+    --bad-weak:#fdecea;
+    --warn:#9d5d00;
+    --warn-weak:#fff4d6;
+    --panel:#1f2430;
+    --panel-2:#272d3a;
+    --panel-line:#39414f;
+    --panel-text:#e7ebf2;
+    --panel-dim:#9aa6b8;
+    --focus:#1a73e8;
+    --radius:8px;
+    --mono:"Cascadia Code",ui-monospace,Consolas,"Courier New",monospace;
+    --ui:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--ui);
+    color:var(--text);
+    background:linear-gradient(180deg,#e9edf3,#dfe5ee);
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 16px 60px}
+  .topbar{
+    display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;
+    margin-bottom:14px;
+  }
+  .topbar h1{font-size:1.18rem;margin:0;font-weight:650;letter-spacing:.1px}
+  .topbar .host{font-family:var(--mono);font-size:.82rem;color:var(--text-dim)}
+  .objtags{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .objtag{
+    font-size:.72rem;font-weight:650;letter-spacing:.3px;
+    background:#eaf2fb;color:#0a4d8c;border:1px solid #bcd9f5;
+    padding:3px 8px;border-radius:999px;
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns:230px minmax(0,1fr) 340px;
+    gap:14px;align-items:start;
+  }
+
+  /* ---------- generic window chrome ---------- */
+  .win{
+    background:var(--win-surface);
+    border:1px solid var(--win-line-strong);
+    border-radius:var(--radius);
+    box-shadow:0 10px 30px rgba(20,30,50,.14);
+    overflow:hidden;
+  }
+  .titlebar{
+    display:flex;align-items:center;gap:8px;
+    background:var(--win-surface);
+    border-bottom:1px solid var(--win-line);
+    padding:8px 12px;font-size:.85rem;font-weight:600;
+  }
+  .titlebar .dot{width:11px;height:11px;border-radius:50%;background:#d9d9d9;border:1px solid #c4c4c4}
+  .titlebar .dot.r{background:#ff6159;border-color:#e24b43}
+  .titlebar .dot.y{background:#ffbd2e;border-color:#e2a722}
+  .titlebar .dot.g{background:#28c840;border-color:#1fae33}
+  .titlebar .crumb{margin-left:6px;color:var(--text-dim);font-weight:500;font-family:var(--mono);font-size:.78rem}
+
+  /* ---------- explorer ---------- */
+  .explorer .body{padding:8px}
+  .tree-root{font-size:.86rem;color:var(--text-dim);padding:6px 8px;display:flex;gap:6px;align-items:center}
+  .drive{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--text);padding:6px 8px}
+  .drive .ic{font-size:1rem}
+  .folderbtn{
+    display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+    background:transparent;border:1px solid transparent;border-radius:6px;
+    padding:8px 10px;margin:2px 0 2px 16px;cursor:pointer;font:inherit;color:var(--text);
+  }
+  .folderbtn:hover{background:#f0f6fd}
+  .folderbtn[aria-pressed="true"]{background:var(--select);border-color:var(--select-line)}
+  .folderbtn .ic{font-size:1.05rem}
+  .folderbtn .meta{display:block;font-size:.72rem;color:var(--text-dim);font-family:var(--mono)}
+  .folderbtn .lockic{margin-left:auto;font-size:.85rem}
+
+  .explorer .hint{font-size:.74rem;color:var(--text-dim);padding:8px 10px;border-top:1px solid var(--win-line);margin-top:6px}
+
+  /* ---------- properties / security tab ---------- */
+  .props .body{padding:0}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--win-line);padding:8px 12px 0;background:var(--win-surface-2)}
+  .tab{
+    border:1px solid transparent;border-bottom:none;background:transparent;
+    padding:7px 14px;font:inherit;font-size:.83rem;cursor:pointer;border-radius:6px 6px 0 0;color:var(--text-dim)
+  }
+  .tab[aria-selected="true"]{background:var(--win-surface);border-color:var(--win-line);color:var(--text);font-weight:600;margin-bottom:-1px}
+  .tabpanel{padding:14px}
+  .secline{font-size:.82rem;color:var(--text-dim);margin:0 0 8px;font-family:var(--mono);word-break:break-all}
+
+  .label{font-size:.8rem;font-weight:600;margin:6px 0 5px}
+  .acl{
+    border:1px solid var(--win-line-strong);border-radius:6px;background:#fff;
+    min-height:132px;max-height:200px;overflow:auto;padding:3px;
+  }
+  .acl-item{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    border:1px solid transparent;border-radius:5px;background:transparent;
+    padding:7px 9px;font:inherit;cursor:pointer;color:var(--text)
+  }
+  .acl-item:hover{background:#f3f8fe}
+  .acl-item[aria-selected="true"]{background:var(--select);border-color:var(--select-line)}
+  .acl-item .who{display:flex;flex-direction:column;min-width:0}
+  .acl-item .who b{font-weight:600;font-size:.86rem}
+  .acl-item .who small{color:var(--text-dim);font-size:.72rem;font-family:var(--mono)}
+  .badge{font-size:.66rem;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:4px;margin-left:auto;white-space:nowrap}
+  .badge.inh{background:#eef1f5;color:#5b5b5b;border:1px solid #dde1e7}
+  .badge.exp{background:#e8f3ff;color:#0a4d8c;border:1px solid #bcd9f5}
+
+  .acl-actions{display:flex;gap:8px;margin:10px 0 4px;flex-wrap:wrap}
+  .btn{
+    font:inherit;font-size:.82rem;border:1px solid var(--win-line-strong);
+    background:linear-gradient(180deg,#fff,#f4f4f4);border-radius:6px;
+    padding:7px 14px;cursor:pointer;color:var(--text)
+  }
+  .btn:hover{background:linear-gradient(180deg,#fff,#ededed);border-color:var(--accent)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;border-color:var(--win-line)}
+  .btn.primary{background:var(--accent);border-color:#005aa6;color:#fff}
+  .btn.primary:hover{background:#0a72cf}
+  .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+
+  .perms{margin-top:12px;border-top:1px solid var(--win-line);padding-top:10px}
+  .perms h4{margin:0 0 8px;font-size:.82rem;font-weight:600}
+  .perms .selnote{font-size:.76rem;color:var(--text-dim);margin-bottom:8px}
+  table.permtbl{width:100%;border-collapse:collapse;font-size:.82rem}
+  table.permtbl th{
+    text-align:left;font-weight:600;color:var(--text-dim);font-size:.74rem;
+    padding:4px 6px;border-bottom:1px solid var(--win-line)
+  }
+  table.permtbl td{padding:5px 6px;border-bottom:1px solid #eee}
+  table.permtbl td.chk{width:54px;text-align:center}
+  table.permtbl input{width:16px;height:16px;cursor:pointer}
+  table.permtbl input:disabled{cursor:not-allowed}
+  .applyrow{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+  /* ---------- lab panel ---------- */
+  .lab{
+    background:var(--panel);color:var(--panel-text);border-radius:var(--radius);
+    border:1px solid var(--panel-line);overflow:hidden;
+    box-shadow:0 10px 30px rgba(20,30,50,.18);
+  }
+  .lab .lhead{padding:12px 14px;border-bottom:1px solid var(--panel-line);background:var(--panel-2)}
+  .lab .lhead h2{margin:0;font-size:.98rem}
+  .lab .lhead p{margin:6px 0 0;font-size:.8rem;color:var(--panel-dim)}
+  .lab .lbody{padding:12px 14px;font-size:.84rem}
+  .scenario{font-size:.82rem;color:#d4dbe8;background:#1a1f29;border:1px solid var(--panel-line);border-radius:6px;padding:10px 11px;margin-bottom:12px}
+  .scenario b{color:#fff}
+  .seclabel{font-size:.72rem;letter-spacing:.6px;text-transform:uppercase;color:var(--panel-dim);margin:14px 0 6px;font-weight:700}
+  .seclabel:first-child{margin-top:0}
+
+  ul.checklist{list-style:none;margin:0;padding:0}
+  ul.checklist li{
+    display:flex;gap:9px;align-items:flex-start;padding:7px 8px;border-radius:6px;
+    border:1px solid var(--panel-line);margin-bottom:6px;background:#1a1f29;font-size:.81rem
+  }
+  ul.checklist li .mark{
+    flex:0 0 18px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
+    font-size:.7rem;font-weight:800;background:#2a3140;color:var(--panel-dim);border:1px solid #3a4252;margin-top:1px
+  }
+  ul.checklist li.done .mark{background:var(--good);color:#fff;border-color:var(--good)}
+  ul.checklist li.done{border-color:#27543b}
+  ul.checklist li .txt{flex:1}
+  ul.checklist li .folder{display:block;font-size:.7rem;color:var(--panel-dim);font-family:var(--mono);margin-top:2px}
+
+  .q{border:1px solid var(--panel-line);border-radius:6px;padding:9px 10px;margin-bottom:8px;background:#1a1f29}
+  .q .prompt{font-size:.82rem;margin-bottom:7px}
+  .q label{display:flex;gap:8px;align-items:flex-start;font-size:.8rem;padding:4px 6px;border-radius:5px;cursor:pointer;color:#d4dbe8}
+  .q label:hover{background:#222836}
+  .q input{margin-top:3px}
+  .q.correct{border-color:#27543b}
+  .q.incorrect{border-color:#5a2b25}
+  .q .verdict{font-size:.74rem;margin-top:5px;font-weight:600}
+  .q.correct .verdict{color:#7ad79a}
+  .q.incorrect .verdict{color:#e79a90}
+
+  .scorebar{display:flex;align-items:center;gap:10px;margin:14px 0 6px;font-size:.85rem}
+  .scorebar .pill{font-weight:800;background:#2a3140;border:1px solid #3a4252;border-radius:999px;padding:4px 12px}
+  .scorebar .pill.pass{background:var(--good);border-color:var(--good);color:#fff}
+
+  .submit{border-top:1px solid var(--panel-line);padding:12px 14px;background:var(--panel-2)}
+  .submit label{font-size:.74rem;color:var(--panel-dim);display:block;margin-bottom:4px;font-weight:600;letter-spacing:.3px}
+  .submit input[type=text]{
+    width:100%;padding:9px 10px;border-radius:6px;border:1px solid #3a4252;
+    background:#11151d;color:#fff;font:inherit;font-size:.85rem
+  }
+  .submit .row{display:flex;gap:8px;margin-top:10px}
+  .submit .btn{flex:1;justify-content:center;text-align:center}
+  .submit .btn.go{background:var(--accent);border-color:#005aa6;color:#fff;font-weight:600}
+  .submit .btn.go:hover{background:#0a72cf}
+  .submit .btn.reset{background:#222836;border-color:#3a4252;color:#d4dbe8}
+  .status{margin-top:10px;font-size:.8rem;border-radius:6px;padding:0;max-height:0;overflow:hidden;transition:max-height .2s ease,padding .2s ease}
+  .status.show{padding:9px 11px;max-height:400px}
+  .status.ok{background:var(--good-weak);color:#0b5d31;border:1px solid #b8e0c6}
+  .status.err{background:var(--bad-weak);color:#9c241a;border:1px solid #f1c4bf}
+  .status.info{background:#eef3fb;color:#23456e;border:1px solid #c9dcf3}
+  .status.busy{background:#fff7e0;color:#7a5300;border:1px solid #f0dca0}
+  .status a{color:inherit;font-weight:700}
+  .status .dl{display:inline-block;margin-top:6px}
+
+  /* ---------- modal dialogs ---------- */
+  .scrim{
+    position:fixed;inset:0;background:rgba(15,20,30,.45);display:none;
+    align-items:center;justify-content:center;padding:18px;z-index:50
+  }
+  .scrim.show{display:flex}
+  .dialog{
+    background:var(--win-surface);border-radius:8px;border:1px solid var(--win-line-strong);
+    box-shadow:0 24px 60px rgba(0,0,0,.4);width:min(460px,100%);max-height:90vh;overflow:auto
+  }
+  .dialog .dlg-title{padding:11px 14px;border-bottom:1px solid var(--win-line);font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:8px}
+  .dialog .dlg-body{padding:14px}
+  .dialog .dlg-body p{margin:0 0 12px;font-size:.84rem}
+  .choice{
+    display:flex;gap:10px;align-items:flex-start;border:1px solid var(--win-line);border-radius:7px;
+    padding:11px 12px;margin-bottom:9px;cursor:pointer;background:#fff
+  }
+  .choice:hover{border-color:var(--accent);background:#f6fbff}
+  .choice .ci{font-size:1.1rem;margin-top:1px}
+  .choice b{display:block;font-size:.85rem}
+  .choice small{color:var(--text-dim);font-size:.76rem}
+  .pickbox{border:1px solid var(--win-line-strong);border-radius:6px;max-height:220px;overflow:auto;margin:6px 0 4px}
+  .pickrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:none;border-bottom:1px solid #eee;padding:9px 11px;cursor:pointer;font:inherit}
+  .pickrow:hover{background:#f3f8fe}
+  .pickrow[aria-selected="true"]{background:var(--select)}
+  .pickrow .who b{font-size:.85rem}
+  .pickrow .who small{display:block;color:var(--text-dim);font-size:.72rem;font-family:var(--mono)}
+  .dlg-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 14px;border-top:1px solid var(--win-line);background:var(--win-surface-2)}
+  .dlg-status{font-size:.78rem;color:var(--bad);min-height:1.1em;margin:2px 2px 8px}
+  .inh-state{font-size:.84rem;background:var(--win-surface-2);border:1px solid var(--win-line);border-radius:6px;padding:10px 12px;margin-bottom:12px}
+  .inh-state b{color:var(--accent)}
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);
+    background:#1f2430;color:#fff;padding:10px 16px;border-radius:8px;font-size:.84rem;
+    box-shadow:0 10px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.25s;z-index:80
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr}
+    .acl{max-height:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+  <header class="topbar">
+    <div>
+      <h1>Lock Down Shared Folders with NTFS Permissions</h1>
+      <span class="host">FS-RIDGE07 · Driftwood Outfitters · R:\ (Departments)</span>
+    </div>
+    <div class="objtags" aria-label="Exam objectives">
+      <span class="objtag">SY0-701 · 2.5.2</span>
+      <span class="objtag">2.5.8</span>
+      <span class="objtag">4.6.8</span>
+    </div>
+  </header>
+
+  <!-- region we screenshot on submit -->
+  <main class="layout" id="labArea">
+
+    <!-- EXPLORER -->
+    <section class="win explorer" aria-label="File Explorer">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span>File Explorer</span><span class="crumb">FS-RIDGE07 \ R:\</span>
+      </div>
+      <div class="body">
+        <div class="tree-root">📁 This PC</div>
+        <div class="drive"><span class="ic">💽</span> Departments (R:)</div>
+        <div id="folderList" role="group" aria-label="Folders on drive R"></div>
+        <p class="hint">Select a folder, then open the <b>Security</b> tab to edit who can access it.</p>
+      </div>
+    </section>
+
+    <!-- PROPERTIES -->
+    <section class="win props" aria-label="Folder properties">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span id="propsTitle">Properties</span>
+      </div>
+      <div class="body">
+        <div class="tabs" role="tablist" aria-label="Properties tabs">
+          <button class="tab" role="tab" aria-selected="false" id="tabGeneral">General</button>
+          <button class="tab" role="tab" aria-selected="true" id="tabSecurity">Security</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" aria-labelledby="tabSecurity" id="securityPanel">
+          <p class="secline" id="secObjectName">No folder selected.</p>
+
+          <div class="label">Group or user names:</div>
+          <div class="acl" id="aclList" role="listbox" aria-label="Access control list" tabindex="0"></div>
+
+          <div class="acl-actions">
+            <button class="btn" id="btnAdd" type="button">Add…</button>
+            <button class="btn danger" id="btnRemove" type="button">Remove</button>
+            <button class="btn" id="btnAdvanced" type="button">Advanced…</button>
+          </div>
+
+          <div class="perms">
+            <h4 id="permsHeading">Permissions</h4>
+            <p class="selnote" id="permsSelNote">Select a group or user above to view its permissions.</p>
+            <table class="permtbl" aria-describedby="permsHeading">
+              <thead><tr><th>Permission</th><th class="chk">Allow</th></tr></thead>
+              <tbody id="permsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="applyrow">
+            <button class="btn primary" id="btnApply" type="button">Apply</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAB PANEL -->
+    <aside class="lab" aria-label="Lab tasks and submission">
+      <div class="lhead">
+        <h2>Your assignment</h2>
+        <p>Give each team exclusive access to its own folder — and nothing more.</p>
+      </div>
+      <div class="lbody">
+        <div class="scenario">
+          A new auditor flagged that <b>everyone in the domain</b> can read both department
+          shares on <b>FS-RIDGE07</b>. Tighten them up: each folder should grant access only
+          to the team that owns it, while keeping the built-in administrative accounts intact.
+        </div>
+
+        <div class="seclabel">Tasks</div>
+        <ul class="checklist" id="checklist"></ul>
+
+        <div class="seclabel">Knowledge check</div>
+        <div id="questions"></div>
+
+        <div class="scorebar">
+          <span>Score</span>
+          <span class="pill" id="scorePill">0 / 13</span>
+          <span id="passLabel" style="font-size:.78rem;color:var(--panel-dim)"></span>
+        </div>
+      </div>
+
+      <div class="submit">
+        <label for="hackerName">Hacker name (pseudonym — no real names)</label>
+        <input type="text" id="hackerName" maxlength="40" autocomplete="off"
+               placeholder="e.g. null_byte_ranger" spellcheck="false">
+        <div class="row">
+          <button class="btn go" id="btnSubmit" type="button">Submit completed lab</button>
+          <button class="btn reset" id="btnReset" type="button">Reset lab</button>
+        </div>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<!-- ADVANCED SECURITY dialog -->
+<div class="scrim" id="advScrim" role="dialog" aria-modal="true" aria-labelledby="advTitle">
+  <div class="dialog">
+    <div class="dlg-title" id="advTitle">🛡️ Advanced Security Settings</div>
+    <div class="dlg-body">
+      <div class="inh-state" id="inhState"></div>
+      <div id="inhButtons"></div>
+      <div id="convertChoice" hidden>
+        <p>Turning off inheritance. What should happen to the entries that were inherited from the parent folder?</p>
+        <button class="choice" id="choiceConvert" type="button">
+          <span class="ci">📄</span>
+          <span><b>Convert inherited permissions into explicit permissions</b>
+          <small>Keeps the current entries but makes them editable on this folder. Recommended.</small></span>
+        </button>
+        <button class="choice" id="choiceRemove" type="button">
+          <span class="ci">🗑️</span>
+          <span><b>Remove all inherited permissions</b>
+          <small>Starts with an empty list. You will have to re-add every account, including Administrators and SYSTEM.</small></span>
+        </button>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" id="advClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD principal dialog -->
+<div class="scrim" id="addScrim" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+  <div class="dialog">
+    <div class="dlg-title" id="addTitle">👥 Select User or Group</div>
+    <div class="dlg-body">
+      <p>Pick the account to add to this folder's permission list.</p>
+      <div class="pickbox" id="pickBox" role="listbox" aria-label="Selectable accounts"></div>
+      <div class="dlg-status" id="addStatus"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" id="addCancel" type="button">Cancel</button>
+      <button class="btn primary" id="addOk" type="button">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!--
+  ============================================================================
+  OPTIONAL pixel-perfect capture:
+  Paste the minified html2canvas source between the two markers below to make
+  screenshots fully offline + pixel-accurate. If present it is used
+  automatically; otherwise a built-in dependency-free snapshot (SVG
+  foreignObject) runs, with a drawn summary canvas as a final fallback so a
+  PNG is ALWAYS produced.
+  --- BEGIN html2canvas ---
+  --- END html2canvas ---
+  ============================================================================
+-->
+
+<script>
+"use strict";
+/* ===========================================================================
+   LAB CONFIG  (the only block an author edits per lab, plus the answer key)
+   =========================================================================== */
+const CONFIG = {
+  assignmentId: "splus-ntfs-acl-hardening",
+  title: "Lock Down Shared Folders with NTFS Permissions",
+  objectives: ["2.5", "4.6"],
+  // Instructor pastes the deployed Apps Script /exec URL here (same across library):
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "__PER_COHORT_TOKEN__",
+  domain: "DRIFTWOOD",
+  server: "FS-RIDGE07"
+};
+
+/* Available accounts in the "Select User or Group" picker.
+   Two are the correct department groups; the rest are realistic distractors.
+   Administrators / SYSTEM are included so a learner who chooses "Remove all"
+   can still recover without resetting. */
+const DIRECTORY = [
+  { id:"cartography", name:"Cartography",      qualifier:"DRIFTWOOD\\Cartography",  kind:"group" },
+  { id:"procurement", name:"Procurement",      qualifier:"DRIFTWOOD\\Procurement",  kind:"group" },
+  { id:"surveyors",   name:"Field Surveyors",  qualifier:"DRIFTWOOD\\FieldSurvey",  kind:"group" },
+  { id:"helpdesk",    name:"Helpdesk",         qualifier:"DRIFTWOOD\\Helpdesk",     kind:"group" },
+  { id:"domainusers", name:"Domain Users",     qualifier:"DRIFTWOOD\\Domain Users", kind:"group" },
+  { id:"admins",      name:"Administrators",   qualifier:"FS-RIDGE07\\Administrators", kind:"group" },
+  { id:"system",      name:"SYSTEM",           qualifier:"NT AUTHORITY\\SYSTEM",    kind:"builtin" }
+];
+
+const PERMS = [
+  { key:"full",     label:"Full control" },
+  { key:"modify",   label:"Modify" },
+  { key:"readExec", label:"Read & execute" },
+  { key:"list",     label:"List folder contents" },
+  { key:"read",     label:"Read" },
+  { key:"write",    label:"Write" }
+];
+
+/* Folder definitions. The "target" group is the department that should own it. */
+const FOLDERS = [
+  { key:"trail",  path:"R:\\Trail Maps Archive", target:"cartography", targetName:"Cartography",
+    icon:"🗺️" },
+  { key:"vendor", path:"R:\\Vendor Contracts",   target:"procurement", targetName:"Procurement",
+    icon:"📑" }
+];
+
+/* Knowledge-check questions — original wording. */
+const QUESTIONS = [
+  { id:"q1",
+    prompt:"Before you can directly remove or change an entry a folder inherited from its parent, what must you do to that folder?",
+    options:[
+      "Take ownership of the folder",
+      "Turn off inheritance and convert the inherited entries to explicit ones",
+      "Share the folder on the network first",
+      "Add the Everyone group with Deny"
+    ], answer:1 },
+  { id:"q2",
+    prompt:"On a Windows file server the folder's owner decides which users and groups may access it. Which access-control model is that?",
+    options:[
+      "Mandatory Access Control (MAC)",
+      "Role-Based Access Control (RBAC)",
+      "Discretionary Access Control (DAC)",
+      "Attribute-Based Access Control (ABAC)"
+    ], answer:2 },
+  { id:"q3",
+    prompt:"You replace the broad Domain Users entry with a single department group that gets only what that team needs. Which principle does this best demonstrate?",
+    options:[
+      "Defense in depth",
+      "Least privilege",
+      "Separation of duties",
+      "Implicit allow"
+    ], answer:1 },
+  { id:"q4",
+    prompt:"A user belongs to two groups on one folder: one entry Allows Modify, another explicitly Denies Write. What is the effective result for writing?",
+    options:[
+      "Write is allowed because Allow is listed first",
+      "Write is denied — an explicit Deny overrides an Allow",
+      "The entries cancel out and Windows prompts the user",
+      "Write is allowed only for administrators"
+    ], answer:1 }
+];
+
+/* ===========================================================================
+   STATE
+   =========================================================================== */
+function freshPerms(level){
+  if(level==="full") return {full:true,modify:true,readExec:true,list:true,read:true,write:true};
+  if(level==="rx")   return {full:false,modify:false,readExec:true,list:true,read:true,write:false};
+  return {full:false,modify:false,readExec:false,list:false,read:false,write:false};
+}
+function startingAcl(){
+  // Entries inherited from the parent R:\ — same starting point for both folders.
+  return [
+    { dir:"system", type:"Allow", perms:freshPerms("full"), inherited:true },
+    { dir:"admins", type:"Allow", perms:freshPerms("full"), inherited:true },
+    { dir:"domainusers", type:"Allow", perms:freshPerms("rx"), inherited:true }
+  ];
+}
+let state, selectedFolderKey, selectedIndex, pendingAdd, answers;
+
+function resetState(){
+  state = {};
+  FOLDERS.forEach(f => state[f.key] = {
+    inheritance:true, converted:false, acl:startingAcl()
+  });
+  selectedFolderKey = FOLDERS[0].key;
+  selectedIndex = -1;
+  pendingAdd = null;
+  answers = {};
+}
+
+/* ===========================================================================
+   HELPERS
+   =========================================================================== */
+const $ = sel => document.querySelector(sel);
+const el = (tag, props={}, kids=[]) => {
+  const n = document.createElement(tag);
+  Object.entries(props).forEach(([k,v])=>{
+    if(k==="class") n.className=v;
+    else if(k==="text") n.textContent=v;
+    else if(k.startsWith("on")&&typeof v==="function") n.addEventListener(k.slice(2),v);
+    else if(v!==null&&v!==undefined&&v!==false) n.setAttribute(k,v===true?"":v);
+  });
+  (Array.isArray(kids)?kids:[kids]).forEach(c=>c!=null&&n.append(c.nodeType?c:document.createTextNode(c)));
+  return n;
+};
+const dir = id => DIRECTORY.find(d=>d.id===id);
+const curFolder = () => state[selectedFolderKey];
+
+let toastTimer;
+function toast(msg){
+  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+/* ===========================================================================
+   RENDER
+   =========================================================================== */
+function renderExplorer(){
+  const list=$("#folderList"); list.innerHTML="";
+  FOLDERS.forEach(f=>{
+    const fs=state[f.key];
+    const locked = !fs.inheritance;
+    const b=el("button",{class:"folderbtn",type:"button","aria-pressed":selectedFolderKey===f.key,
+      onclick:()=>{ selectedFolderKey=f.key; selectedIndex=-1; renderAll(); }},[
+      el("span",{class:"ic",text:f.icon}),
+      el("span",{class:"who"},[
+        el("span",{text:f.path.split("\\").pop()}),
+        el("small",{class:"meta",text:f.path})
+      ]),
+      el("span",{class:"lockic",text:locked?"🔒":"",title:locked?"Inheritance disabled":""})
+    ]);
+    list.append(b);
+  });
+}
+
+function renderSecurity(){
+  const f=FOLDERS.find(x=>x.key===selectedFolderKey);
+  const fs=curFolder();
+  $("#propsTitle").textContent = f.path.split("\\").pop()+" Properties";
+  $("#secObjectName").textContent = "Object name:  "+f.path;
+
+  const acl=$("#aclList"); acl.innerHTML="";
+  fs.acl.forEach((entry,i)=>{
+    const d=dir(entry.dir);
+    const item=el("button",{class:"acl-item",type:"button",role:"option",
+      "aria-selected":selectedIndex===i,
+      onclick:()=>{ selectedIndex=i; renderSecurity(); }},[
+      el("span",{class:"who"},[
+        el("b",{text:d.name+(entry.type==="Deny"?"  (Deny)":"")}),
+        el("small",{text:d.qualifier})
+      ]),
+      el("span",{class:"badge "+(entry.inherited?"inh":"exp"),
+        text:entry.inherited?"Inherited":"Explicit"})
+    ]);
+    acl.append(item);
+  });
+  if(!fs.acl.length) acl.append(el("div",{class:"selnote",style:"padding:10px",
+    text:"The permission list is empty. Add the accounts this folder needs."}));
+
+  // buttons
+  const entry = selectedIndex>=0 ? fs.acl[selectedIndex] : null;
+  $("#btnRemove").disabled = !entry;
+
+  // perms table
+  const body=$("#permsBody"); body.innerHTML="";
+  if(!entry){
+    $("#permsHeading").textContent="Permissions";
+    $("#permsSelNote").textContent="Select a group or user above to view its permissions.";
+    $("#permsSelNote").style.display="";
+  } else {
+    const d=dir(entry.dir);
+    $("#permsHeading").textContent="Permissions for "+d.name;
+    $("#permsSelNote").style.display = entry.inherited ? "" : "none";
+    $("#permsSelNote").textContent = entry.inherited
+      ? "These permissions are inherited. Disable inheritance and convert to explicit before editing them."
+      : "";
+    PERMS.forEach(p=>{
+      const cb=el("input",{type:"checkbox","aria-label":p.label});
+      cb.checked=!!entry.perms[p.key];
+      cb.disabled=entry.inherited;
+      cb.addEventListener("change",()=>{
+        entry.perms[p.key]=cb.checked;
+        if(p.key==="full" && cb.checked){ // Full control implies the rest
+          PERMS.forEach(pp=>{ if(pp.key!=="full") entry.perms[pp.key]=true; });
+        }
+        renderSecurity(); refreshProgress();
+      });
+      body.append(el("tr",{},[
+        el("td",{text:p.label}),
+        el("td",{class:"chk"},[cb])
+      ]));
+    });
+  }
+}
+
+function renderChecklist(){
+  const ul=$("#checklist"); ul.innerHTML="";
+  taskList().forEach(t=>{
+    ul.append(el("li",{class:t.passed?"done":""},[
+      el("span",{class:"mark",text:t.passed?"✓":"•"}),
+      el("span",{class:"txt"},[ t.label, t.folder?el("span",{class:"folder",text:t.folder}):null ])
+    ]));
+  });
+}
+
+function renderQuestions(){
+  const box=$("#questions"); box.innerHTML="";
+  QUESTIONS.forEach(q=>{
+    const chosen=answers[q.id];
+    const answered = chosen!==undefined;
+    const correct = chosen===q.answer;
+    const wrap=el("div",{class:"q "+(answered?(correct?"correct":"incorrect"):"")});
+    wrap.append(el("div",{class:"prompt",text:q.prompt}));
+    q.options.forEach((opt,oi)=>{
+      const id=q.id+"_"+oi;
+      const input=el("input",{type:"radio",name:q.id,id});
+      input.checked = chosen===oi;
+      input.addEventListener("change",()=>{ answers[q.id]=oi; renderQuestions(); refreshProgress(); });
+      wrap.append(el("label",{for:id},[input,el("span",{text:opt})]));
+    });
+    if(answered) wrap.append(el("div",{class:"verdict",
+      text:correct?"Correct.":"Not quite — review inheritance, DAC, and least privilege."}));
+    box.append(wrap);
+  });
+}
+
+/* ===========================================================================
+   TASK / SCORE LOGIC
+   =========================================================================== */
+function hasEntry(fs, dirId){ return fs.acl.find(e=>e.dir===dirId && e.type==="Allow"); }
+function fullControl(entry){ return entry && entry.type==="Allow" && entry.perms.full===true; }
+
+function taskList(){
+  const tasks=[];
+  FOLDERS.forEach(f=>{
+    const fs=state[f.key];
+    const leaf=f.path.split("\\").pop();
+    tasks.push({ id:f.key+"-inherit",
+      label:"Disable inheritance and convert existing permissions to explicit",
+      folder:f.path, passed: fs.inheritance===false && fs.converted===true });
+    tasks.push({ id:f.key+"-removeDU",
+      label:"Remove the Domain Users group from the list",
+      folder:leaf, passed: !hasEntry(fs,"domainusers") });
+    tasks.push({ id:f.key+"-add",
+      label:"Add the "+f.targetName+" group",
+      folder:leaf, passed: !!hasEntry(fs,f.target) });
+    tasks.push({ id:f.key+"-full",
+      label:"Give "+f.targetName+" Full control",
+      folder:leaf, passed: fullControl(hasEntry(fs,f.target)) });
+  });
+  // integrity: built-in accounts preserved on BOTH folders
+  const preserved = FOLDERS.every(f=>{
+    const fs=state[f.key];
+    return fullControl(hasEntry(fs,"admins")) && fullControl(hasEntry(fs,"system"));
+  });
+  tasks.push({ id:"preserve-builtins",
+    label:"Keep Administrators and SYSTEM with full access on both folders",
+    folder:null, passed:preserved });
+  return tasks;
+}
+
+function questionResults(){
+  return QUESTIONS.map(q=>({ id:q.id, prompt:q.prompt,
+    answer: answers[q.id]!==undefined ? q.options[answers[q.id]] : null,
+    correct: answers[q.id]===q.answer }));
+}
+
+function refreshProgress(){
+  renderExplorer(); renderChecklist();
+  const tasks=taskList();
+  const qres=questionResults();
+  const earned = tasks.filter(t=>t.passed).length + qres.filter(q=>q.correct).length;
+  const total  = tasks.length + qres.length;
+  const passed = earned===total;
+  const pill=$("#scorePill");
+  pill.textContent = earned+" / "+total;
+  pill.classList.toggle("pass", passed);
+  $("#passLabel").textContent = passed ? "All objectives met — ready to submit." : "";
+  return {earned,total,passed,tasks,qres};
+}
+
+function renderAll(){ renderExplorer(); renderSecurity(); renderChecklist(); renderQuestions(); refreshProgress(); }
+
+/* ===========================================================================
+   ADVANCED (inheritance) dialog
+   =========================================================================== */
+function openAdvanced(){
+  const fs=curFolder();
+  const state2=$("#inhState");
+  state2.innerHTML = fs.inheritance
+    ? "Inheritance is currently <b>ON</b>. Entries marked “Inherited” come from the parent folder and can't be edited or removed here."
+    : "Inheritance is currently <b>OFF</b>. "+(fs.converted
+        ? "The previously inherited entries were converted to explicit entries you can edit."
+        : "The previously inherited entries were removed.");
+  const btns=$("#inhButtons"); btns.innerHTML="";
+  $("#convertChoice").hidden=true;
+  if(fs.inheritance){
+    btns.append(el("button",{class:"btn",type:"button",text:"Disable inheritance",
+      onclick:()=>{ $("#convertChoice").hidden=false; btns.innerHTML=""; }}));
+  } else {
+    btns.append(el("button",{class:"btn",type:"button",text:"Enable inheritance",
+      onclick:()=>{ fs.inheritance=true; fs.converted=false;
+        fs.acl=fs.acl.filter(e=>!wasInheritable(e)); // re-add inherited base, dedupe
+        mergeInheritedBack(fs); selectedIndex=-1; closeAdvanced(); renderAll();
+        toast("Inheritance re-enabled."); }}));
+  }
+  showScrim("#advScrim");
+}
+function wasInheritable(e){ return ["system","admins","domainusers"].includes(e.dir); }
+function mergeInheritedBack(fs){
+  startingAcl().forEach(base=>{
+    if(!fs.acl.find(e=>e.dir===base.dir)) fs.acl.unshift({...base, perms:{...base.perms}});
+    else { const ex=fs.acl.find(e=>e.dir===base.dir); ex.inherited=true; }
+  });
+}
+function applyInheritanceChoice(convert){
+  const fs=curFolder();
+  fs.inheritance=false;
+  if(convert){ fs.converted=true; fs.acl.forEach(e=>{ e.inherited=false; }); }
+  else { fs.converted=false; fs.acl=fs.acl.filter(e=>!e.inherited); }
+  selectedIndex=-1; closeAdvanced(); renderAll();
+  toast(convert?"Inherited permissions converted to explicit.":"All inherited permissions removed.");
+}
+function closeAdvanced(){ hideScrim("#advScrim"); }
+
+/* ===========================================================================
+   ADD / REMOVE principals
+   =========================================================================== */
+function openAdd(){
+  pendingAdd=null;
+  const box=$("#pickBox"); box.innerHTML=""; $("#addStatus").textContent="";
+  DIRECTORY.forEach(d=>{
+    const row=el("button",{class:"pickrow",type:"button",role:"option","aria-selected":false,
+      onclick:()=>{ pendingAdd=d.id;
+        box.querySelectorAll(".pickrow").forEach(r=>r.setAttribute("aria-selected","false"));
+        row.setAttribute("aria-selected","true"); $("#addStatus").textContent=""; }},[
+      el("span",{class:"who"},[ el("b",{text:d.name}), el("small",{text:d.qualifier}) ])
+    ]);
+    box.append(row);
+  });
+  showScrim("#addScrim");
+}
+function confirmAdd(){
+  const fs=curFolder();
+  if(!pendingAdd){ $("#addStatus").textContent="Choose an account first."; return; }
+  if(fs.acl.find(e=>e.dir===pendingAdd && e.type==="Allow")){
+    $("#addStatus").textContent=dir(pendingAdd).name+" is already in the list."; return;
+  }
+  const lvl = pendingAdd==="admins"||pendingAdd==="system" ? "full" : "none";
+  fs.acl.push({ dir:pendingAdd, type:"Allow", perms:freshPerms(lvl), inherited:false });
+  selectedIndex=fs.acl.length-1;
+  hideScrim("#addScrim"); renderAll();
+  toast(dir(pendingAdd).name+" added — now set its permissions.");
+}
+function removeSelected(){
+  const fs=curFolder();
+  if(selectedIndex<0) return;
+  const entry=fs.acl[selectedIndex];
+  if(entry.inherited){
+    setStatus("err","You can't remove an inherited entry. Open <b>Advanced…</b>, disable inheritance, and convert to explicit first.");
+    toast("Inherited entries can't be removed directly.");
+    return;
+  }
+  const name=dir(entry.dir).name;
+  fs.acl.splice(selectedIndex,1);
+  selectedIndex=-1; renderAll();
+  toast(name+" removed.");
+}
+
+/* ===========================================================================
+   SCRIM helpers + focus management
+   =========================================================================== */
+let lastFocus=null;
+function showScrim(sel){ lastFocus=document.activeElement; const s=$(sel); s.classList.add("show");
+  const f=s.querySelector("button"); if(f) f.focus(); }
+function hideScrim(sel){ $(sel).classList.remove("show"); if(lastFocus) lastFocus.focus(); }
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ document.querySelectorAll(".scrim.show").forEach(s=>s.classList.remove("show")); }
+});
+
+/* ===========================================================================
+   SCREENSHOT  (dependency-free; uses html2canvas if you pasted it above)
+   =========================================================================== */
+async function captureLabArea(){
+  const node=$("#labArea");
+  try{
+    if(window.html2canvas){
+      const cv=await window.html2canvas(node,{backgroundColor:"#e9edf3",scale:1});
+      return cv.toDataURL("image/png");
+    }
+    return await snapshotForeignObject(node);
+  }catch(err){
+    console.warn("Visual capture failed, using drawn summary:",err);
+    return drawSummaryCanvas();
+  }
+}
+
+const STYLE_KEYS=["display","position","top","left","right","bottom","width","height",
+  "margin","margin-top","margin-right","margin-bottom","margin-left",
+  "padding","padding-top","padding-right","padding-bottom","padding-left",
+  "border","border-top","border-right","border-bottom","border-left","border-radius",
+  "background","background-color","color","font","font-family","font-size","font-weight",
+  "line-height","text-align","text-transform","letter-spacing","white-space","vertical-align",
+  "box-sizing","box-shadow","opacity","overflow","list-style","gap",
+  "flex","flex-direction","flex-wrap","align-items","justify-content","grid-template-columns"];
+
+function inlineStyles(src,dst){
+  const cs=getComputedStyle(src);
+  let s="";
+  for(const k of STYLE_KEYS){ const v=cs.getPropertyValue(k); if(v) s+=k+":"+v+";"; }
+  dst.setAttribute("style",s);
+  if(src.tagName==="INPUT"){
+    if(src.type==="checkbox"||src.type==="radio"){ if(src.checked) dst.setAttribute("checked","checked"); }
+    else dst.setAttribute("value",src.value||"");
+  }
+  const a=src.children, b=dst.children;
+  for(let i=0;i<a.length;i++){ if(b[i]) inlineStyles(a[i],b[i]); }
+}
+async function snapshotForeignObject(node){
+  const rect=node.getBoundingClientRect();
+  const w=Math.max(1,Math.ceil(rect.width)), h=Math.max(1,Math.ceil(rect.height));
+  const clone=node.cloneNode(true);
+  inlineStyles(node,clone);
+  const xml=new XMLSerializer().serializeToString(clone);
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+    '<foreignObject x="0" y="0" width="100%" height="100%">'+
+    '<div xmlns="http://www.w3.org/1999/xhtml">'+xml+'</div></foreignObject></svg>';
+  const url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  const img=new Image();
+  await new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error("svg load")); img.src=url; });
+  const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+  const ctx=cv.getContext("2d");
+  ctx.fillStyle="#e9edf3"; ctx.fillRect(0,0,w,h);
+  ctx.drawImage(img,0,0);
+  return cv.toDataURL("image/png"); // throws if tainted -> caught upstream
+}
+function drawSummaryCanvas(){
+  const prog=refreshProgress();
+  const cv=document.createElement("canvas"); cv.width=720; cv.height=560;
+  const c=cv.getContext("2d");
+  c.fillStyle="#1f2430"; c.fillRect(0,0,720,560);
+  c.fillStyle="#ffffff"; c.font="bold 22px Segoe UI,Arial"; c.fillText(CONFIG.title,28,46);
+  c.fillStyle="#9aa6b8"; c.font="13px Consolas,monospace";
+  c.fillText("assignmentId: "+CONFIG.assignmentId+"   ·   "+CONFIG.objectives.join(", "),28,72);
+  c.fillText("hacker: "+($("#hackerName").value||"(none)")+"   ·   "+new Date().toISOString(),28,92);
+  c.fillStyle = prog.passed ? "#7ad79a" : "#f3c969";
+  c.font="bold 16px Segoe UI,Arial";
+  c.fillText("Score "+prog.earned+" / "+prog.total+(prog.passed?"  — PASS":"  — incomplete"),28,124);
+  let y=158; c.font="14px Segoe UI,Arial";
+  prog.tasks.forEach(t=>{ c.fillStyle=t.passed?"#7ad79a":"#e79a90";
+    c.fillText((t.passed?"[x] ":"[ ] ")+t.label,28,y); y+=24; });
+  y+=6; c.fillStyle="#9aa6b8";
+  prog.qres.forEach((q,i)=>{ c.fillStyle=q.correct?"#7ad79a":"#e79a90";
+    c.fillText((q.correct?"[x] ":"[ ] ")+"Q"+(i+1)+" "+(q.answer||"(unanswered)"),28,y); y+=22; });
+  c.fillStyle="#5b6573"; c.font="11px Segoe UI,Arial";
+  c.fillText("Rendered summary — pixel capture unavailable in this browser.",28,544);
+  return cv.toDataURL("image/png");
+}
+
+/* ===========================================================================
+   STATUS + SUBMISSION
+   =========================================================================== */
+function setStatus(kind,html){
+  const s=$("#status"); s.className="status show "+kind; s.innerHTML=html;
+}
+function clearStatus(){ const s=$("#status"); s.className="status"; s.innerHTML=""; }
+
+function downloadFallback(payload){
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  return '<a class="dl" download="'+CONFIG.assignmentId+'_'+(payload.hackerName||"submission")+'.json" href="'+url+'">Download your submission file</a>';
+}
+
+async function submitLab(){
+  const name=$("#hackerName").value.trim();
+  if(!name){ setStatus("err","Enter a hacker name (a pseudonym) before submitting."); $("#hackerName").focus(); return; }
+  if(name.length>40){ setStatus("err","Keep the hacker name to 40 characters or fewer."); return; }
+
+  const prog=refreshProgress();
+  $("#btnSubmit").disabled=true;
+  setStatus("busy","Capturing your work and submitting…");
+
+  let screenshot="";
+  try{ screenshot=await captureLabArea(); }catch(e){ screenshot=""; }
+
+  const payload={
+    assignmentId: CONFIG.assignmentId,
+    hackerName: name,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: prog.tasks.map(t=>({id:t.id,label:t.label,passed:t.passed})),
+    questions: prog.qres,
+    score: { earned: prog.earned, total: prog.total },
+    screenshot: screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("PASTE")>-1){
+    setStatus("info","No submission endpoint is configured yet. Your instructor needs to paste the Apps Script URL into this lab. In the meantime, save your proof locally:<br>"+downloadFallback(payload));
+    $("#btnSubmit").disabled=false; return;
+  }
+
+  // Simple request: NO custom headers (text/plain default) so CORS preflight is avoided.
+  try{
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+    const out=await res.json();
+    if(out && out.success){
+      let msg="Submitted as <b>"+name+"</b>. Score "+prog.earned+" / "+prog.total+".";
+      if(out.docUrl) msg+=' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission</a>.';
+      if(!prog.passed) msg+=" (Some tasks aren't complete yet — your instructor will see the details.)";
+      setStatus("ok",msg);
+    } else {
+      setStatus("err","The server rejected the submission"+(out&&out.error?": "+out.error:".")+"<br>"+downloadFallback(payload));
+    }
+  }catch(err){
+    // Locked-down context: fire-and-forget so the work still arrives; can't read docUrl.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      setStatus("info","Submission sent, but the confirmation couldn't be read in this browser. Check with your instructor that it arrived.<br>"+downloadFallback(payload));
+    }catch(e2){
+      setStatus("err","Couldn't reach the submission server. Save your proof and send it to your instructor:<br>"+downloadFallback(payload));
+    }
+  }finally{
+    $("#btnSubmit").disabled=false;
+  }
+}
+
+/* ===========================================================================
+   TABS (General is informational only)
+   =========================================================================== */
+function selectTab(which){
+  const sec=which==="security";
+  $("#tabSecurity").setAttribute("aria-selected",sec);
+  $("#tabGeneral").setAttribute("aria-selected",!sec);
+  $("#securityPanel").style.display = sec ? "" : "block";
+  $("#securityPanel").innerHTML; // no-op
+  if(!sec){
+    $("#securityPanel").style.display="none";
+    if(!$("#generalPanel")){
+      const f=FOLDERS.find(x=>x.key===selectedFolderKey);
+      const g=el("div",{id:"generalPanel",class:"tabpanel"},[
+        el("p",{class:"secline",text:"Object name:  "+f.path}),
+        el("p",{style:"font-size:.84rem;color:var(--text-dim)",
+          text:"Type: File folder.  Location: "+CONFIG.server+".  Use the Security tab to manage who can access this folder."})
+      ]);
+      $("#securityPanel").after(g);
+    } else {
+      $("#generalPanel").querySelector(".secline").textContent="Object name:  "+FOLDERS.find(x=>x.key===selectedFolderKey).path;
+      $("#generalPanel").style.display="";
+    }
+  } else {
+    if($("#generalPanel")) $("#generalPanel").style.display="none";
+    $("#securityPanel").style.display="";
+  }
+}
+
+/* ===========================================================================
+   WIRE UP
+   =========================================================================== */
+function init(){
+  resetState();
+  renderAll();
+  selectTab("security");
+
+  $("#btnAdvanced").addEventListener("click",openAdvanced);
+  $("#advClose").addEventListener("click",closeAdvanced);
+  $("#choiceConvert").addEventListener("click",()=>applyInheritanceChoice(true));
+  $("#choiceRemove").addEventListener("click",()=>applyInheritanceChoice(false));
+
+  $("#btnAdd").addEventListener("click",openAdd);
+  $("#addOk").addEventListener("click",confirmAdd);
+  $("#addCancel").addEventListener("click",()=>hideScrim("#addScrim"));
+  $("#btnRemove").addEventListener("click",removeSelected);
+
+  $("#tabSecurity").addEventListener("click",()=>selectTab("security"));
+  $("#tabGeneral").addEventListener("click",()=>selectTab("general"));
+
+  $("#btnApply").addEventListener("click",()=>{ refreshProgress(); clearStatus(); toast("Permissions applied."); });
+  $("#btnSubmit").addEventListener("click",submitLab);
+  $("#btnReset").addEventListener("click",()=>{
+    resetState(); renderAll(); selectTab("security"); clearStatus();
+    $("#hackerName").value=""; toast("Lab reset.");
+  });
+
+  document.querySelectorAll(".scrim").forEach(s=>{
+    s.addEventListener("mousedown",e=>{ if(e.target===s) s.classList.remove("show"); });
+  });
+}
+document.addEventListener("DOMContentLoaded",init);
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-ntfs-disable-inheritance.html",title:"Lab \u2014 Restrict a Folder with NTFS Permissions & Disable Inheritance"}, NEXT={href:"splus-md5-integrity-check.html",title:"Lab \u00b7 Verify a Download with an MD5 Hash"}, CRUMB="All Labs \u203a Unit 5 \u2014 Securing Applications and Data \u203a 5.2 Protecting Applications and Data: Managerial Controls and Access Controls";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

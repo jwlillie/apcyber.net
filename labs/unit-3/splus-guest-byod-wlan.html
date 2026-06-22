@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Stand Up a Guest BYOD Wireless Network</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-guest-byod-wlan",
+  "title": "Lab — Stand Up a Guest BYOD Wireless Network",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.3 Protecting Networks: Segmentation"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.5",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ SY0-701 Lab Simulation
+  "Stand Up a Guest BYOD Wireless Network"  (assignmentId: splus-guest-byod-wlan)
+  Objectives: 2.5 Isolation | 4.1 Wireless devices / BYOD | 4.5 Network access control
+
+  Original clean-room work built from the public SY0-701 objectives and the
+  documented behavior of wireless controllers in general. All scenario text,
+  persona, device model, host names, IP addresses, SSIDs, credentials, values,
+  task wording and question wording are original to this file and are not copied
+  from any vendor's lab.
+
+  Copyright (c) 2026 J. Author. All rights reserved.
+  Licensed for classroom use within the author's CompTIA Security+ program.
+  Not for redistribution without permission.
+  ============================================================================
+-->
+<style id="labcss">
+  :root{
+    --chrome:#14202b;
+    --rail:#1b2c3a;
+    --rail-active:#0f3a40;
+    --surface:#eef2f5;
+    --card:#ffffff;
+    --line:#d6dee4;
+    --ink:#1d2b36;
+    --ink-soft:#5b6b78;
+    --ink-faint:#8a99a5;
+    --accent:#0f9aa3;
+    --accent-bright:#13c2cb;
+    --accent-ink:#08474b;
+    --ok:#1f9d57;
+    --ok-bg:#e7f6ec;
+    --warn:#c47a13;
+    --warn-bg:#fbf1df;
+    --bad:#c5443b;
+    --bad-bg:#fbe9e7;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:10px;
+    --shadow:0 1px 2px rgba(20,32,43,.06),0 6px 18px rgba(20,32,43,.07);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 85% -10%,rgba(19,194,203,.10),transparent 60%),
+      var(--surface);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent)}
+  button{font-family:inherit}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px 60px}
+
+  /* ---------- lab header ---------- */
+  .labhead{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  .labhead h1{font-size:21px;letter-spacing:-.01em;margin:0 0 3px}
+  .labhead .sub{color:var(--ink-soft);font-size:13.5px;margin:0}
+  .objtags{display:flex;gap:6px;flex-wrap:wrap}
+  .objtag{font:600 11px/1 var(--mono);letter-spacing:.02em;color:var(--accent-ink);
+    background:#dff4f5;border:1px solid #bfe6e8;border-radius:999px;padding:6px 9px}
+
+  /* ---------- two column shell ---------- */
+  .shell{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+
+  /* ---------- the simulated appliance ---------- */
+  .device{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .topbar{display:flex;align-items:center;gap:12px;background:var(--chrome);color:#cfe6e8;padding:11px 14px}
+  .brandmark{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.01em;color:#eafbfc}
+  .brandmark .dot{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent-bright),#0b6d73);
+    display:grid;place-items:center;box-shadow:0 0 0 1px rgba(255,255,255,.08) inset}
+  .brandmark .dot svg{width:13px;height:13px}
+  .brandmark small{display:block;font:500 10px/1 var(--mono);color:#8fc7cb;letter-spacing:.06em;margin-top:2px}
+  .topbar .meta{margin-left:auto;display:flex;align-items:center;gap:14px;font:500 12px/1 var(--mono);color:#9fc6ca}
+  .topbar .meta .who{color:#eafbfc}
+  .topbar .pill{font:600 10.5px/1 var(--sans);color:#04282b;background:var(--accent-bright);border-radius:999px;padding:5px 9px;letter-spacing:.02em}
+
+  .body{display:grid;grid-template-columns:188px minmax(0,1fr);min-height:520px}
+  @media (max-width:560px){.body{grid-template-columns:1fr}}
+  .rail{background:var(--rail);padding:12px 10px;display:flex;flex-direction:column;gap:3px}
+  .rail .grp{font:600 10px/1 var(--mono);letter-spacing:.12em;color:#5f7a86;padding:12px 10px 6px}
+  .navbtn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:transparent;color:#bcd3da;
+    padding:9px 10px;border-radius:8px;font-size:13px;cursor:pointer}
+  .navbtn svg{width:15px;height:15px;flex:none;opacity:.85}
+  .navbtn:hover{background:rgba(255,255,255,.05);color:#eafbfc}
+  .navbtn[aria-current="true"]{background:var(--rail-active);color:#eafbfc}
+  .navbtn[aria-current="true"] svg{opacity:1;color:var(--accent-bright)}
+  .navbtn:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px}
+  .navbtn .chk{margin-left:auto;width:15px;height:15px;display:grid;place-items:center;border-radius:50%;
+    background:#0c5158;color:#bdf3f6;font-size:9px;opacity:0;transition:opacity .15s}
+  .navbtn.done .chk{opacity:1}
+  .navbtn[disabled]{opacity:.4;cursor:not-allowed}
+
+  .screen{padding:20px 22px;min-width:0}
+  .screen h2{font-size:16.5px;margin:0 0 2px;letter-spacing:-.01em}
+  .screen .lead{color:var(--ink-soft);font-size:13px;margin:0 0 16px}
+  .hidden{display:none !important}
+
+  /* ---------- generic form bits ---------- */
+  .field{margin-bottom:13px}
+  .field>label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+  .field .hint{font-size:11.5px;color:var(--ink-faint);margin-top:4px}
+  input[type=text],input[type=password],select{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fbfdfe;color:var(--ink);
+    font-family:var(--sans)}
+  input.mono{font-family:var(--mono);letter-spacing:.02em}
+  input:focus,select:focus{outline:2px solid var(--accent-bright);outline-offset:1px;border-color:var(--accent)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:520px){.row2{grid-template-columns:1fr}}
+
+  .toggle{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fbfdfe;cursor:pointer}
+  .toggle input{margin-top:2px;width:16px;height:16px;accent-color:var(--accent)}
+  .toggle .t{font-size:13px;font-weight:600}
+  .toggle .d{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+  .toggle:focus-within{outline:2px solid var(--accent-bright);outline-offset:1px}
+
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fbfdfe}
+  .seg button{border:0;background:transparent;padding:8px 13px;font-size:12.5px;cursor:pointer;color:var(--ink-soft)}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+  .seg button:focus-visible{outline:2px solid var(--accent-bright);outline-offset:-2px}
+
+  .btn{appearance:none;border:1px solid transparent;border-radius:9px;padding:10px 15px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:hover{background:#0c8087}
+  .btn.ghost{background:#fff;border-color:var(--line);color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .btn:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+
+  .inlinemsg{margin-top:12px;font-size:12.5px;border-radius:8px;padding:9px 11px;display:none}
+  .inlinemsg.show{display:block}
+  .inlinemsg.bad{background:var(--bad-bg);color:#8e2c25;border:1px solid #f0c4bf}
+  .inlinemsg.ok{background:var(--ok-bg);color:#136b3c;border:1px solid #bfe6cc}
+
+  /* restricted subnet list */
+  .subnets{list-style:none;margin:6px 0 0;padding:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .subnets li{display:flex;align-items:center;gap:10px;padding:9px 11px;font-family:var(--mono);font-size:12.5px;border-top:1px solid var(--line)}
+  .subnets li:first-child{border-top:0}
+  .subnets li .tag{margin-left:auto;font:600 10px/1 var(--sans);padding:4px 7px;border-radius:999px}
+  .subnets li.flagged{background:#f3fbfb}
+  .subnets li .tag.in{background:var(--ok-bg);color:#136b3c}
+
+  /* topology signature element */
+  .topo{margin-top:16px;border:1px solid var(--line);border-radius:11px;background:linear-gradient(180deg,#fbfefe,#f3f9fa);padding:12px}
+  .topo h3{margin:0 0 8px;font:600 11px/1 var(--mono);letter-spacing:.1em;color:var(--ink-soft)}
+  .topo svg{width:100%;height:auto;display:block}
+
+  /* guest pass portal "window" */
+  .browserwin{border:1px solid var(--line);border-radius:11px;overflow:hidden;box-shadow:var(--shadow);background:#fff}
+  .chrome2{display:flex;align-items:center;gap:8px;background:#e9eef1;padding:8px 11px;border-bottom:1px solid var(--line)}
+  .chrome2 .dots{display:flex;gap:5px}
+  .chrome2 .dots i{width:10px;height:10px;border-radius:50%;display:block}
+  .chrome2 .url{flex:1;background:#fff;border:1px solid var(--line);border-radius:7px;padding:6px 10px;font:500 12px/1 var(--mono);color:var(--ink-soft)}
+  .portal{padding:18px}
+  .keychip{display:flex;align-items:center;gap:10px;margin-top:6px}
+  .keychip code{flex:1;font-family:var(--mono);font-size:15px;letter-spacing:.06em;background:#0f2c30;color:#9ff3f8;padding:11px 13px;border-radius:8px}
+  .copybtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:10px 12px;cursor:pointer;font-size:12.5px;font-weight:600}
+  .copybtn:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px}
+
+  /* connect screen */
+  .laptop{max-width:380px;margin:0 auto}
+  .wifi-list{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px}
+  .wifi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:#fff;padding:11px 13px;cursor:pointer;font-size:13.5px}
+  .wifi:first-child{border-top:0}
+  .wifi:hover{background:#f3f9fa}
+  .wifi[aria-current="true"]{background:#eafbfb}
+  .wifi .nm{font-weight:600}
+  .wifi .lk{margin-left:auto;font-size:11px;color:var(--ink-faint);font-family:var(--mono)}
+  .wifi:focus-visible{outline:2px solid var(--accent-bright);outline-offset:-2px}
+
+  /* ---------- questions ---------- */
+  .qcard{border:1px solid var(--line);border-radius:10px;padding:13px 14px;margin-bottom:12px;background:#fff}
+  .qcard .q{font-size:13.5px;font-weight:600;margin-bottom:9px}
+  .qcard .opt{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:7px;cursor:pointer;font-size:13px}
+  .qcard .opt input{margin-top:2px;accent-color:var(--accent)}
+  .qcard .opt:hover{border-color:var(--accent)}
+  .qcard .opt:focus-within{outline:2px solid var(--accent-bright);outline-offset:1px}
+  .qcard.correct{border-color:#bfe6cc;background:#f6fdf8}
+  .qcard.incorrect{border-color:#f0c4bf;background:#fdf7f6}
+  .qfeed{font-size:12px;margin-top:4px;display:none}
+  .qfeed.show{display:block}
+  .qfeed.ok{color:#136b3c}
+  .qfeed.no{color:#8e2c25}
+
+  /* ---------- task panel (right column) ---------- */
+  .panel{position:sticky;top:18px;display:flex;flex-direction:column;gap:14px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);overflow:hidden}
+  .pcard .ph{padding:13px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .pcard .ph h2{font-size:14px;margin:0}
+  .pcard .ph .count{margin-left:auto;font:600 12px/1 var(--mono);color:var(--accent-ink);background:#dff4f5;border:1px solid #bfe6e8;border-radius:999px;padding:5px 8px}
+  .prog{height:6px;background:#e6edf1}
+  .prog>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-bright));transition:width .4s ease}
+
+  .tasklist{list-style:none;margin:0;padding:6px 8px}
+  .tasklist li{display:flex;gap:10px;align-items:flex-start;padding:9px 9px;border-radius:8px;font-size:13px}
+  .tasklist li .mk{flex:none;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);display:grid;place-items:center;margin-top:1px;background:#fff;transition:all .2s}
+  .tasklist li .mk svg{width:11px;height:11px;opacity:0;transform:scale(.4);transition:all .2s}
+  .tasklist li.done .mk{background:var(--ok);border-color:var(--ok)}
+  .tasklist li.done .mk svg{opacity:1;transform:scale(1)}
+  .tasklist li.done .lab{color:var(--ink-soft)}
+  .tasklist li .lab b{font-weight:600;color:var(--ink)}
+  .tasklist li .lab .o{display:block;font:600 10px/1 var(--mono);color:var(--ink-faint);margin-top:3px;letter-spacing:.04em}
+
+  /* scenario card */
+  .scen{padding:14px 15px;font-size:12.8px;color:var(--ink-soft)}
+  .scen h2{font-size:13px;color:var(--ink);margin:0 0 7px;display:flex;align-items:center;gap:7px}
+  .scen p{margin:0 0 8px}
+  .scen .kv{font-family:var(--mono);font-size:11.5px;background:#f3f7f9;border:1px solid var(--line);border-radius:7px;padding:8px 10px;color:var(--ink)}
+  .scen .kv div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+  .scen .kv span:first-child{color:var(--ink-faint)}
+
+  /* submission bar */
+  .submit{padding:14px 15px}
+  .submit label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+  .submit .note{font-size:11px;color:var(--ink-faint);margin:7px 0 11px}
+  .submit .btn.primary{width:100%}
+  .substatus{margin-top:11px;font-size:12.5px;border-radius:8px;padding:10px 11px;display:none}
+  .substatus.show{display:block}
+  .substatus.work{background:#eef6f7;color:#0b585d;border:1px solid #cfe9ea}
+  .substatus.ok{background:var(--ok-bg);color:#136b3c;border:1px solid #bfe6cc}
+  .substatus.bad{background:var(--bad-bg);color:#8e2c25;border:1px solid #f0c4bf}
+  .substatus a{font-weight:600}
+
+  .footer{margin-top:22px;font-size:11px;color:var(--ink-faint);text-align:center;line-height:1.6}
+
+  @media (max-width:900px){
+    .shell{grid-template-columns:1fr}
+    .panel{position:static}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important}
+  }
+  .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="labhead">
+    <div>
+      <h1>Stand Up a Guest BYOD Wireless Network</h1>
+      <p class="sub">Configure isolated guest access on a wireless controller, then provision and test a guest pass.</p>
+    </div>
+    <div class="objtags" aria-label="Exam objectives">
+      <span class="objtag">SY0-701 · 2.5</span>
+      <span class="objtag">SY0-701 · 4.1</span>
+      <span class="objtag">SY0-701 · 4.5</span>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- ============ SIMULATED APPLIANCE ============ -->
+    <main class="device" aria-label="Aperture WX-300 wireless controller console">
+      <div class="topbar">
+        <span class="brandmark">
+          <span class="dot" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#04282b" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8 15.5a6 6 0 0 1 8 0"/><circle cx="12" cy="18.5" r="1.4" fill="#04282b" stroke="none"/></svg>
+          </span>
+          <span>Aperture WX&#8209;300<small>WIRELESS CONTROLLER</small></span>
+        </span>
+        <span class="meta">
+          <span id="ctlIp">10.30.0.4</span>
+          <span class="who" id="ctlWho">not signed in</span>
+          <span class="pill" id="ctlPill" hidden>online</span>
+        </span>
+      </div>
+
+      <div class="body">
+        <nav class="rail" aria-label="Controller sections">
+          <span class="grp">CONFIGURE</span>
+          <button class="navbtn" data-screen="signin" id="navSignin" aria-current="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+            Sign in <span class="chk">&#10003;</span>
+          </button>
+          <button class="navbtn" data-screen="service" id="navService" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3.9a7 7 0 0 0-1.7-1L14.5 2h-5l-.4 2.5a7 7 0 0 0-1.7 1L5 4.6l-2 3.4L5 9.5a7 7 0 0 0 0 2L3 13l2 3.4 2.3-.9a7 7 0 0 0 1.7 1l.4 2.5h5l.4-2.5a7 7 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5a7 7 0 0 0 .1-1z"/></svg>
+            Guest Access Service <span class="chk">&#10003;</span>
+          </button>
+          <button class="navbtn" data-screen="wlan" id="navWlan" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 9a16 16 0 0 1 20 0"/><path d="M5 13a11 11 0 0 1 14 0"/><path d="M8.5 16.5a6 6 0 0 1 7 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+            Wireless LANs <span class="chk">&#10003;</span>
+          </button>
+          <span class="grp">PROVISION &amp; TEST</span>
+          <button class="navbtn" data-screen="pass" id="navPass" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h5"/></svg>
+            Guest Pass Portal <span class="chk">&#10003;</span>
+          </button>
+          <button class="navbtn" data-screen="connect" id="navConnect" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>
+            Foyer&#8209;PC (Lobby) <span class="chk">&#10003;</span>
+          </button>
+          <span class="grp">REVIEW</span>
+          <button class="navbtn" data-screen="quiz" id="navQuiz">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.1 9a3 3 0 1 1 4 2.8c-.8.4-1.1 1-1.1 2"/><circle cx="12" cy="17" r="1" fill="currentColor"/><circle cx="12" cy="12" r="9"/></svg>
+            Knowledge check <span class="chk">&#10003;</span>
+          </button>
+        </nav>
+
+        <!-- ---- SCREENS ---- -->
+        <section class="screen">
+
+          <!-- SIGN IN -->
+          <div id="s-signin" class="view">
+            <h2>Sign in to the controller</h2>
+            <p class="lead">Reach the management console at <code style="font-family:var(--mono)">10.30.0.4</code> and authenticate as the administrator.</p>
+            <div class="field">
+              <label for="inUser">Administrator username <span class="hint" style="display:inline">(case sensitive)</span></label>
+              <input type="text" id="inUser" class="mono" autocomplete="off" spellcheck="false" placeholder="username">
+            </div>
+            <div class="field">
+              <label for="inPass">Password</label>
+              <input type="password" id="inPass" class="mono" autocomplete="off" placeholder="password">
+            </div>
+            <div class="actions">
+              <button class="btn primary" id="btnSignin">Sign in</button>
+            </div>
+            <div class="inlinemsg bad" id="signinMsg" role="alert"></div>
+          </div>
+
+          <!-- GUEST ACCESS SERVICE -->
+          <div id="s-service" class="view hidden">
+            <h2>Create a guest access service</h2>
+            <p class="lead">Define how visitors authenticate and what they may reach. Name it, set the post&#8209;login behavior, and confirm the corporate network is shielded.</p>
+
+            <div class="field">
+              <label for="svcName">Service name</label>
+              <input type="text" id="svcName" class="mono" autocomplete="off" spellcheck="false" placeholder="e.g. Visitor_Net">
+            </div>
+
+            <div class="field">
+              <label>Guest authentication method</label>
+              <div class="seg" role="group" aria-label="Authentication method">
+                <button type="button" data-auth="guestpass" aria-pressed="false">Guest pass</button>
+                <button type="button" data-auth="radius" aria-pressed="false">802.1X / RADIUS</button>
+                <button type="button" data-auth="none" aria-pressed="false">No authentication</button>
+              </div>
+              <div class="hint">A guest pass is a short&#8209;lived code an authorized host hands to a visitor.</div>
+            </div>
+
+            <div class="field">
+              <label for="svcRedirect">After the visitor accepts the terms of use</label>
+              <select id="svcRedirect">
+                <option value="">— choose post&#8209;login behavior —</option>
+                <option value="requested">Forward to the page the visitor originally requested</option>
+                <option value="portal">Keep the visitor on the sign&#8209;in portal</option>
+                <option value="block">Drop the session</option>
+              </select>
+            </div>
+
+            <label class="toggle" for="svcTou">
+              <input type="checkbox" id="svcTou">
+              <span><span class="t">Show a terms&#8209;of&#8209;use statement before granting access</span>
+              <span class="d">The visitor must accept the acceptable&#8209;use policy first.</span></span>
+            </label>
+
+            <p class="lead" style="margin:18px 0 4px;color:var(--ink)">Restricted subnets</p>
+            <p class="hint">Traffic to these ranges is blocked for guests. Confirm the corporate range is listed.</p>
+            <ul class="subnets" id="subnetList">
+              <li><span>10.30.0.0/16</span><label class="visually-hidden" for="subChk">confirm corporate subnet</label>
+                <button type="button" class="copybtn" id="subChk" style="margin-left:auto;padding:5px 10px">Confirm on list</button></li>
+              <li><span>10.40.7.0/24</span><span class="tag in">restricted</span></li>
+              <li><span>198.51.100.0/24</span><span class="tag in">restricted</span></li>
+            </ul>
+
+            <div class="actions" style="margin-top:16px">
+              <button class="btn primary" id="btnSaveSvc">Save service</button>
+            </div>
+            <div class="inlinemsg" id="svcMsg" role="alert"></div>
+          </div>
+
+          <!-- WLAN -->
+          <div id="s-wlan" class="view hidden">
+            <h2>Create the guest wireless LAN</h2>
+            <p class="lead">Broadcast an open guest SSID, bind it to your guest access service, and isolate guest devices from one another.</p>
+
+            <div class="row2">
+              <div class="field">
+                <label for="wlName">WLAN name (internal)</label>
+                <input type="text" id="wlName" class="mono" autocomplete="off" spellcheck="false" placeholder="e.g. Visitor">
+              </div>
+              <div class="field">
+                <label for="wlEssid">ESSID (broadcast)</label>
+                <input type="text" id="wlEssid" class="mono" autocomplete="off" spellcheck="false" placeholder="e.g. LR-Visitor">
+              </div>
+            </div>
+
+            <div class="row2">
+              <div class="field">
+                <label for="wlType">WLAN type</label>
+                <select id="wlType">
+                  <option value="">— select —</option>
+                  <option value="guest">Guest access</option>
+                  <option value="standard">Standard (internal)</option>
+                  <option value="hotspot">Hotspot 2.0</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="wlAuth">Authentication</label>
+                <select id="wlAuth">
+                  <option value="">— select —</option>
+                  <option value="open">Open</option>
+                  <option value="psk">WPA2/WPA3 Personal (PSK)</option>
+                  <option value="ent">WPA2/WPA3 Enterprise</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row2">
+              <div class="field">
+                <label for="wlEnc">Encryption method</label>
+                <select id="wlEnc">
+                  <option value="">— select —</option>
+                  <option value="none">None</option>
+                  <option value="ccmp">AES-CCMP</option>
+                  <option value="gcmp">GCMP-256</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="wlSvc">Guest access service</label>
+                <select id="wlSvc">
+                  <option value="">— select —</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="toggle" for="wlIsolate">
+              <input type="checkbox" id="wlIsolate">
+              <span><span class="t">Isolate guest clients on this WLAN</span>
+              <span class="d">Block station&#8209;to&#8209;station traffic so guest devices can't reach each other or other clients on the access point.</span></span>
+            </label>
+
+            <div class="actions" style="margin-top:16px">
+              <button class="btn primary" id="btnSaveWlan">Save WLAN</button>
+            </div>
+            <div class="inlinemsg" id="wlanMsg" role="alert"></div>
+
+            <!-- SIGNATURE: live topology -->
+            <div class="topo" aria-hidden="true">
+              <h3>LIVE TOPOLOGY</h3>
+              <svg id="topoSvg" viewBox="0 0 460 150" role="img"></svg>
+            </div>
+          </div>
+
+          <!-- GUEST PASS PORTAL -->
+          <div id="s-pass" class="view hidden">
+            <h2>Provision a guest pass</h2>
+            <p class="lead">Open the guest&#8209;pass portal in a separate window and, as an authorized host, generate a pass for a visitor.</p>
+
+            <div class="browserwin">
+              <div class="chrome2" aria-hidden="true">
+                <span class="dots"><i style="background:#ec6a5e"></i><i style="background:#f4bf4f"></i><i style="background:#61c454"></i></span>
+                <span class="url">10.30.0.4/passes</span>
+              </div>
+              <div class="portal" id="passPortal">
+                <!-- portal login -->
+                <div id="passLogin">
+                  <h2 style="font-size:15px;margin:0 0 3px">Visitor pass portal</h2>
+                  <p class="lead" style="margin:0 0 14px">Sign in as an authorized host to issue a pass.</p>
+                  <div class="field">
+                    <label for="phUser">Host username <span class="hint" style="display:inline">(case sensitive)</span></label>
+                    <input type="text" id="phUser" class="mono" autocomplete="off" spellcheck="false" placeholder="username">
+                  </div>
+                  <div class="field">
+                    <label for="phPass">Password</label>
+                    <input type="password" id="phPass" class="mono" autocomplete="off" placeholder="password">
+                  </div>
+                  <div class="actions"><button class="btn primary" id="btnHostLogin">Sign in</button></div>
+                  <div class="inlinemsg bad" id="passLoginMsg" role="alert"></div>
+                </div>
+
+                <!-- pass form -->
+                <div id="passForm" class="hidden">
+                  <h2 style="font-size:15px;margin:0 0 3px">Issue a visitor pass</h2>
+                  <p class="lead" style="margin:0 0 14px">Bound to service <code style="font-family:var(--mono)">Visitor_Net</code>.</p>
+                  <div class="field">
+                    <label for="phName">Visitor full name</label>
+                    <input type="text" id="phName" autocomplete="off" placeholder="any full name">
+                  </div>
+                  <div class="actions"><button class="btn primary" id="btnGenPass">Generate pass</button></div>
+                  <div class="inlinemsg bad" id="passFormMsg" role="alert"></div>
+
+                  <div id="passResult" class="hidden" style="margin-top:14px">
+                    <label style="display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px">Visitor pass key</label>
+                    <div class="keychip">
+                      <code id="passKey">—</code>
+                      <button class="copybtn" id="btnCopyKey">Copy</button>
+                    </div>
+                    <div class="hint" style="margin-top:6px">Hand this key to the visitor. You'll enter it on Foyer&#8209;PC to test.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONNECT (laptop) -->
+          <div id="s-connect" class="view hidden">
+            <h2>Test from Foyer&#8209;PC</h2>
+            <p class="lead">On the lobby laptop, join the guest SSID and authenticate with the pass key.</p>
+
+            <div class="laptop">
+              <div class="field" style="margin-bottom:6px">
+                <label>Available networks</label>
+              </div>
+              <div class="wifi-list" id="wifiList" role="listbox" aria-label="Available wireless networks"></div>
+
+              <div id="connectAuth" class="hidden" style="margin-top:14px">
+                <div class="field">
+                  <label for="cnKey">Enter your visitor pass key</label>
+                  <input type="text" id="cnKey" class="mono" autocomplete="off" spellcheck="false" placeholder="paste or type the key">
+                </div>
+                <div class="actions"><button class="btn primary" id="btnConnect">Connect</button></div>
+                <div class="inlinemsg" id="connectMsg" role="status"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- QUIZ -->
+          <div id="s-quiz" class="view hidden">
+            <h2>Knowledge check</h2>
+            <p class="lead">Three questions on the security reasoning behind what you just configured. Pick the best answer.</p>
+            <div id="quizHost"></div>
+            <div class="actions"><button class="btn primary" id="btnCheckQuiz">Check answers</button></div>
+            <div class="inlinemsg" id="quizMsg" role="status"></div>
+          </div>
+
+        </section>
+      </div>
+    </main>
+
+    <!-- ============ TASK / SUBMISSION PANEL ============ -->
+    <aside class="panel" aria-label="Lab progress and submission">
+
+      <div class="pcard">
+        <div class="ph">
+          <h2>Lab tasks</h2>
+          <span class="count" id="taskCount">0 / 8</span>
+        </div>
+        <div class="prog"><i id="taskBar"></i></div>
+        <ul class="tasklist" id="taskList"></ul>
+      </div>
+
+      <div class="pcard scen">
+        <h2>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>
+          Scenario
+        </h2>
+        <p>You're the network tech at <b>Lindell &amp; Roe Architects</b>. Visiting clients and staff personal phones keep asking for Wi&#8209;Fi. Stand up a guest network that gives them internet only — never the design servers on the corporate LAN.</p>
+        <div class="kv">
+          <div><span>Controller</span><span>10.30.0.4</span></div>
+          <div><span>Admin</span><span>netadmin / Spruce!42</span></div>
+          <div><span>Pass host</span><span>lobbydesk / Welcome#9</span></div>
+          <div><span>Corp range</span><span>10.30.0.0/16</span></div>
+        </div>
+      </div>
+
+      <div class="pcard">
+        <div class="ph"><h2>Submit completed lab</h2></div>
+        <div class="submit">
+          <label for="hackerName">Hacker name (no real names)</label>
+          <input type="text" id="hackerName" autocomplete="off" spellcheck="false" placeholder="e.g. cyan-otter-42" maxlength="40">
+          <p class="note">A screenshot of this lab and your results go to your instructor's Drive. Use a pseudonym — keep personal info out.</p>
+          <button class="btn primary" id="btnSubmit">Submit completed lab</button>
+          <div class="substatus" id="subStatus" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <p class="footer">
+    Aperture WX&#8209;300 is a fictitious training appliance. Original simulation for CompTIA Security+ (SY0&#8209;701) exam prep.<br>
+    &copy; 2026 J. Author. All rights reserved. Classroom use only.
+  </p>
+</div>
+
+<script>
+/* ============================================================================
+   LAB CONFIG + ANSWER KEY  (the only per-lab section to edit across the library)
+   ========================================================================== */
+const CONFIG = {
+  assignmentId: "splus-guest-byod-wlan",
+  title: "Stand Up a Guest BYOD Wireless Network",
+  objectives: ["2.5", "4.1", "4.5"],
+  // shared across the whole library:
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "REPLACE_PER_COHORT_TOKEN",
+
+  // --- answer key (inspectable client-side; self-reported, see Integrity note) ---
+  creds: { adminUser:"netadmin", adminPass:"Spruce!42", hostUser:"lobbydesk", hostPass:"Welcome#9" },
+  service: { name:"Visitor_Net", auth:"guestpass", redirect:"requested", tou:true, subnet:"10.30.0.0/16" },
+  wlan: { name:"Visitor", essid:"LR-Visitor", type:"guest", auth:"open", enc:"none", svc:"Visitor_Net", isolate:true },
+
+  tasks: [
+    { id:"signin",   label:"Sign in to the controller as the administrator",                 objective:"4.1" },
+    { id:"svc-name", label:"Name the guest access service Visitor_Net with guest-pass auth",  objective:"4.5" },
+    { id:"svc-tou",  label:"Show the terms of use, then forward to the requested page",       objective:"5.1" },
+    { id:"svc-sub",  label:"Confirm 10.30.0.0/16 is on the restricted-subnet list",           objective:"2.5" },
+    { id:"wlan",     label:"Create open guest WLAN LR-Visitor bound to Visitor_Net",          objective:"4.1" },
+    { id:"isolate",  label:"Enable client isolation on the guest WLAN",                       objective:"2.5" },
+    { id:"pass",     label:"Generate a visitor pass as the lobby-desk host",                  objective:"4.5" },
+    { id:"connect",  label:"Authenticate Foyer-PC to LR-Visitor with the pass key",           objective:"4.1" }
+  ],
+
+  questions: [
+    {
+      id:"q1",
+      prompt:"You enabled client isolation on the guest WLAN. What threat does that primarily reduce?",
+      options:[
+        "A visitor's device attacking or snooping on other devices sharing the same access point",
+        "Brute-force attempts against the controller's admin login",
+        "Rogue access points broadcasting the same ESSID nearby",
+        "Outdated firmware on the wireless controller"
+      ],
+      answerIndex:0,
+      why:"Isolation blocks station-to-station traffic, so a compromised or hostile guest device can't reach its wireless neighbors — a mitigation aimed at lateral movement among peers."
+    },
+    {
+      id:"q2",
+      prompt:"An open SSID that forces visitors through a sign-in page before they get internet is an example of which control?",
+      options:[
+        "A captive portal performing network access control",
+        "A site-to-site VPN tunnel",
+        "Full-disk encryption on the endpoint",
+        "A host-based intrusion prevention system"
+      ],
+      answerIndex:0,
+      why:"The guest pass page gates access until the visitor authenticates and accepts terms — a captive portal acting as network access control (NAC) for unmanaged devices."
+    },
+    {
+      id:"q3",
+      prompt:"Why list the corporate range 10.30.0.0/16 as a restricted subnet on the guest service?",
+      options:[
+        "So guest traffic is blocked from reaching internal hosts and only internet access remains",
+        "To give guests a faster route to internal file servers",
+        "To encrypt all guest traffic with AES automatically",
+        "To register each guest device in the corporate asset inventory"
+      ],
+      answerIndex:0,
+      why:"Restricting the internal range keeps guests segmented to internet-only access, preventing their unmanaged devices from touching corporate resources."
+    }
+  ],
+
+  passThreshold: "all tasks complete and all questions correct"
+};
+
+/* ============================================================================
+   ENGINE
+   ========================================================================== */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+
+const state = {
+  signedIn:false,
+  svcSaved:false,
+  wlanSaved:false,
+  passKey:null,
+  connected:false,
+  svc:{ name:"", auth:"", redirect:"", tou:false, subnetConfirmed:false },
+  wlan:{ name:"", essid:"", type:"", auth:"", enc:"", svc:"", isolate:false },
+  quiz:{}, // id -> chosen index
+  quizChecked:false,
+  tasks:{} // id -> bool
+};
+CONFIG.tasks.forEach(t=>state.tasks[t.id]=false);
+
+/* ---------- task rendering ---------- */
+function renderTasks(){
+  const host=$("#taskList"); host.innerHTML="";
+  CONFIG.tasks.forEach(t=>{
+    const done=state.tasks[t.id];
+    const li=document.createElement("li");
+    li.className=done?"done":"";
+    li.innerHTML=`<span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+      <span class="lab"><b>${t.label}</b><span class="o">SY0-701 · ${t.objective}</span></span>`;
+    host.appendChild(li);
+  });
+  const done=CONFIG.tasks.filter(t=>state.tasks[t.id]).length;
+  const total=CONFIG.tasks.length;
+  $("#taskCount").textContent=`${done} / ${total}`;
+  $("#taskBar").style.width=(done/total*100)+"%";
+  // reflect on nav checkmarks
+  setNavDone("navSignin", state.tasks["signin"]);
+  setNavDone("navService", state.tasks["svc-name"]&&state.tasks["svc-tou"]&&state.tasks["svc-sub"]);
+  setNavDone("navWlan", state.tasks["wlan"]&&state.tasks["isolate"]);
+  setNavDone("navPass", state.tasks["pass"]);
+  setNavDone("navConnect", state.tasks["connect"]);
+  setNavDone("navQuiz", state.quizChecked && allQuizCorrect());
+}
+function setNavDone(id,on){ const b=$("#"+id); if(b) b.classList.toggle("done",!!on); }
+function setTask(id,val){ if(state.tasks[id]!==val){ state.tasks[id]=val; renderTasks(); } }
+
+/* ---------- navigation ---------- */
+const screens=["signin","service","wlan","pass","connect","quiz"];
+function showScreen(name){
+  screens.forEach(s=>$("#s-"+s).classList.toggle("hidden", s!==name));
+  $$(".navbtn").forEach(b=>b.setAttribute("aria-current", b.dataset.screen===name?"true":"false"));
+  if(name==="wlan") drawTopo();
+}
+$$(".navbtn").forEach(b=>{
+  b.addEventListener("click",()=>{ if(b.disabled) return; showScreen(b.dataset.screen); });
+});
+function unlock(id){ const b=$("#"+id); if(b){ b.disabled=false; } }
+
+/* ---------- SIGN IN ---------- */
+$("#btnSignin").addEventListener("click",()=>{
+  const u=$("#inUser").value, p=$("#inPass").value;
+  const msg=$("#signinMsg");
+  if(u===CONFIG.creds.adminUser && p===CONFIG.creds.adminPass){
+    state.signedIn=true;
+    $("#ctlWho").textContent=CONFIG.creds.adminUser+"@wx300";
+    $("#ctlPill").hidden=false;
+    msg.classList.remove("show");
+    setTask("signin",true);
+    ["navService","navWlan","navPass","navConnect"].forEach(unlock);
+    showScreen("service");
+  } else {
+    msg.textContent = u!==CONFIG.creds.adminUser
+      ? "No administrator account by that name. Check the username — it's case sensitive."
+      : "Password rejected for that account. Re-enter the administrator password.";
+    msg.classList.add("show");
+  }
+});
+
+/* ---------- GUEST ACCESS SERVICE ---------- */
+$$('.seg [data-auth]').forEach(b=>{
+  b.addEventListener("click",()=>{
+    $$('.seg [data-auth]').forEach(x=>x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+    state.svc.auth=b.dataset.auth;
+  });
+});
+$("#subChk").addEventListener("click",()=>{
+  state.svc.subnetConfirmed=true;
+  const li=$("#subChk").closest("li");
+  li.classList.add("flagged");
+  $("#subChk").outerHTML='<span class="tag in">restricted &#10003;</span>';
+});
+$("#btnSaveSvc").addEventListener("click",()=>{
+  const msg=$("#svcMsg"); msg.className="inlinemsg";
+  const name=$("#svcName").value.trim();
+  state.svc.name=name;
+  state.svc.redirect=$("#svcRedirect").value;
+  state.svc.tou=$("#svcTou").checked;
+
+  const errs=[];
+  if(name!==CONFIG.service.name) errs.push(`Name the service exactly "${CONFIG.service.name}".`);
+  if(state.svc.auth!==CONFIG.service.auth) errs.push("Set authentication to Guest pass.");
+  if(!state.svc.tou) errs.push("Turn on the terms-of-use statement.");
+  if(state.svc.redirect!==CONFIG.service.redirect) errs.push("After terms, forward the visitor to the page they requested.");
+  if(!state.svc.subnetConfirmed) errs.push("Confirm 10.30.0.0/16 is on the restricted list.");
+
+  if(errs.length){
+    msg.classList.add("bad","show");
+    msg.innerHTML="Couldn't save the service:<br>&bull; "+errs.join("<br>&bull; ");
+    return;
+  }
+  state.svcSaved=true;
+  // populate WLAN service dropdown
+  const sel=$("#wlSvc");
+  if(![...sel.options].some(o=>o.value===CONFIG.service.name)){
+    const o=document.createElement("option"); o.value=o.textContent=CONFIG.service.name; sel.appendChild(o);
+  }
+  setTask("svc-name",true); setTask("svc-tou",true); setTask("svc-sub",true);
+  msg.classList.add("ok","show");
+  msg.textContent="Guest access service \u201CVisitor_Net\u201D saved. Next: build the WLAN.";
+  showScreen("wlan");
+});
+
+/* ---------- WLAN ---------- */
+["wlName","wlEssid","wlType","wlAuth","wlEnc","wlSvc","wlIsolate"].forEach(id=>{
+  $("#"+id).addEventListener("input",syncWlan);
+  $("#"+id).addEventListener("change",syncWlan);
+});
+function syncWlan(){
+  state.wlan.name=$("#wlName").value.trim();
+  state.wlan.essid=$("#wlEssid").value.trim();
+  state.wlan.type=$("#wlType").value;
+  state.wlan.auth=$("#wlAuth").value;
+  state.wlan.enc=$("#wlEnc").value;
+  state.wlan.svc=$("#wlSvc").value;
+  state.wlan.isolate=$("#wlIsolate").checked;
+  drawTopo();
+}
+$("#btnSaveWlan").addEventListener("click",()=>{
+  syncWlan();
+  const msg=$("#wlanMsg"); msg.className="inlinemsg";
+  const w=CONFIG.wlan, s=state.wlan, errs=[];
+  if(s.name!==w.name) errs.push(`Set the WLAN name to "${w.name}".`);
+  if(s.essid!==w.essid) errs.push(`Set the ESSID to "${w.essid}".`);
+  if(s.type!==w.type) errs.push("Set the type to Guest access.");
+  if(s.auth!==w.auth) errs.push("Set authentication to Open.");
+  if(s.enc!==w.enc) errs.push("Set encryption to None (an open guest WLAN).");
+  if(s.svc!==w.svc) errs.push("Bind the WLAN to the Visitor_Net guest access service.");
+  if(!s.isolate) errs.push("Enable client isolation.");
+
+  if(errs.length){
+    msg.classList.add("bad","show");
+    msg.innerHTML="Couldn't save the WLAN:<br>&bull; "+errs.join("<br>&bull; ");
+    return;
+  }
+  state.wlanSaved=true;
+  setTask("wlan",true); setTask("isolate",true);
+  // make the SSID appear on the laptop
+  buildWifiList();
+  msg.classList.add("ok","show");
+  msg.textContent="Guest WLAN \u201CLR-Visitor\u201D is live. Next: provision a guest pass.";
+  showScreen("pass");
+});
+
+/* ---------- topology signature ---------- */
+function drawTopo(){
+  const svg=$("#topoSvg"); if(!svg) return;
+  const s=state.wlan;
+  const live = state.wlanSaved || (s.essid && s.type==="guest");
+  const iso = s.isolate;
+  const ess = s.essid || "—";
+  const ink="#1d2b36", soft="#5b6b78", acc="#0f9aa3", ok="#1f9d57", bad="#c5443b", line="#cdd8de";
+  svg.innerHTML=`
+    <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0 0L6 3L0 6Z" fill="${soft}"/></marker></defs>
+    <!-- AP -->
+    <g transform="translate(210,18)">
+      <rect x="-34" y="0" width="68" height="26" rx="6" fill="#0f2c30"/>
+      <text x="0" y="17" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#9ff3f8">AP · ${ess}</text>
+    </g>
+    <!-- corp lan -->
+    <g transform="translate(360,95)">
+      <rect x="-44" y="-16" width="88" height="40" rx="8" fill="#fff" stroke="${line}"/>
+      <text x="0" y="-1" text-anchor="middle" font-size="10.5" fill="${ink}" font-weight="600">Corp LAN</text>
+      <text x="0" y="14" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9.5" fill="${soft}">10.30.0.0/16</text>
+    </g>
+    <!-- internet -->
+    <g transform="translate(210,128)">
+      <text x="0" y="0" text-anchor="middle" font-size="11" fill="${soft}">&#127760; Internet</text>
+    </g>
+    <!-- two guest clients -->
+    <g transform="translate(60,95)">
+      <rect x="-30" y="-14" width="60" height="34" rx="7" fill="#fff" stroke="${line}"/>
+      <text x="0" y="6" text-anchor="middle" font-size="10" fill="${ink}">Guest A</text>
+    </g>
+    <g transform="translate(140,95)">
+      <rect x="-30" y="-14" width="60" height="34" rx="7" fill="#fff" stroke="${line}"/>
+      <text x="0" y="6" text-anchor="middle" font-size="10" fill="${ink}">Guest B</text>
+    </g>
+    <!-- client->AP links -->
+    <path d="M60 81 L195 40" stroke="${live?acc:line}" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+    <path d="M140 81 L205 44" stroke="${live?acc:line}" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+    <!-- AP -> internet -->
+    <path d="M210 46 L210 118" stroke="${live?acc:line}" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+    <!-- AP -> corp lan : blocked because restricted subnet -->
+    <path d="M244 34 L320 86" stroke="${bad}" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
+    <text x="300" y="55" font-size="9.5" fill="${bad}" font-weight="600">blocked</text>
+    <!-- guest A <-> guest B isolation -->
+    <path d="M90 98 L110 98" stroke="${iso?bad:soft}" stroke-width="2" stroke-dasharray="${iso?'4 4':'0'}" fill="none"/>
+    <text x="100" y="118" text-anchor="middle" font-size="9" fill="${iso?bad:soft}" font-weight="600">${iso?'isolated':'peer traffic'}</text>
+  `;
+}
+
+/* ---------- GUEST PASS PORTAL ---------- */
+$("#btnHostLogin").addEventListener("click",()=>{
+  const u=$("#phUser").value, p=$("#phPass").value, msg=$("#passLoginMsg");
+  if(u===CONFIG.creds.hostUser && p===CONFIG.creds.hostPass){
+    msg.classList.remove("show");
+    $("#passLogin").classList.add("hidden");
+    $("#passForm").classList.remove("hidden");
+  } else {
+    msg.textContent = u!==CONFIG.creds.hostUser
+      ? "That host account isn't authorized to issue passes. Check the username (case sensitive)."
+      : "Wrong password for the lobby-desk host account.";
+    msg.classList.add("show");
+  }
+});
+function makeKey(){
+  const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let k="";
+  for(let g=0;g<2;g++){ for(let i=0;i<4;i++) k+=a[Math.floor(Math.random()*a.length)]; if(g===0) k+="-"; }
+  return k; // e.g. K7QF-9MTX
+}
+$("#btnGenPass").addEventListener("click",()=>{
+  const name=$("#phName").value.trim(), msg=$("#passFormMsg");
+  if(name.split(/\s+/).filter(Boolean).length<2){
+    msg.textContent="Enter a visitor's full name (first and last) to issue the pass.";
+    msg.classList.add("show"); return;
+  }
+  msg.classList.remove("show");
+  state.passKey=makeKey();
+  $("#passKey").textContent=state.passKey;
+  $("#passResult").classList.remove("hidden");
+  setTask("pass",true);
+});
+$("#btnCopyKey").addEventListener("click",async()=>{
+  const btn=$("#btnCopyKey");
+  try{ await navigator.clipboard.writeText(state.passKey); btn.textContent="Copied"; }
+  catch(e){ btn.textContent="Select & copy"; }
+  setTimeout(()=>btn.textContent="Copy",1400);
+});
+
+/* ---------- CONNECT (laptop) ---------- */
+function buildWifiList(){
+  const host=$("#wifiList"); host.innerHTML="";
+  const nets=[
+    {ssid:"LR-Corp", lock:"WPA3 \u00B7 locked", guest:false},
+    {ssid:(state.wlan.essid||"LR-Visitor"), lock:"open", guest:true},
+    {ssid:"Cedar-Cafe Free WiFi", lock:"open", guest:false}
+  ];
+  nets.forEach(n=>{
+    const b=document.createElement("button");
+    b.className="wifi"; b.type="button"; b.setAttribute("role","option");
+    b.innerHTML=`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="${n.guest?'#0f9aa3':'#8a99a5'}" stroke-width="2" stroke-linecap="round"><path d="M2 9a16 16 0 0 1 20 0"/><path d="M6 13a10 10 0 0 1 12 0"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+      <span class="nm">${n.ssid}</span><span class="lk">${n.lock}</span>`;
+    b.addEventListener("click",()=>{
+      $$(".wifi",host).forEach(x=>x.setAttribute("aria-current","false"));
+      b.setAttribute("aria-current","true");
+      const auth=$("#connectAuth");
+      if(n.guest){
+        auth.classList.remove("hidden");
+        $("#connectMsg").className="inlinemsg";
+      } else {
+        auth.classList.add("hidden");
+      }
+    });
+    host.appendChild(b);
+  });
+}
+$("#btnConnect").addEventListener("click",()=>{
+  const msg=$("#connectMsg"); msg.className="inlinemsg show";
+  const entered=$("#cnKey").value.trim().toUpperCase();
+  if(!state.passKey){
+    msg.classList.add("bad");
+    msg.textContent="No pass has been issued yet. Generate one in the Guest Pass Portal first.";
+    return;
+  }
+  if(entered===state.passKey){
+    state.connected=true;
+    setTask("connect",true);
+    msg.classList.add("ok");
+    msg.textContent="Connected to LR-Visitor. Internet reachable; corporate LAN unreachable, as intended.";
+  } else {
+    msg.classList.add("bad");
+    msg.textContent="That key didn't authenticate. Re-check the pass key from the portal (it's case insensitive but must match).";
+  }
+});
+
+/* ---------- QUIZ ---------- */
+function renderQuiz(){
+  const host=$("#quizHost"); host.innerHTML="";
+  CONFIG.questions.forEach((q,qi)=>{
+    const card=document.createElement("div");
+    card.className="qcard"; card.id="qc-"+q.id;
+    let opts="";
+    q.options.forEach((o,oi)=>{
+      opts+=`<label class="opt"><input type="radio" name="${q.id}" value="${oi}"> <span>${o}</span></label>`;
+    });
+    card.innerHTML=`<div class="q">${qi+1}. ${q.prompt}</div>${opts}<div class="qfeed" id="fb-${q.id}"></div>`;
+    host.appendChild(card);
+  });
+  host.addEventListener("change",e=>{
+    if(e.target.name){ state.quiz[e.target.name]=parseInt(e.target.value,10); }
+  });
+}
+function allQuizCorrect(){
+  return CONFIG.questions.every(q=>state.quiz[q.id]===q.answerIndex);
+}
+$("#btnCheckQuiz").addEventListener("click",()=>{
+  state.quizChecked=true;
+  let right=0;
+  CONFIG.questions.forEach(q=>{
+    const chosen=state.quiz[q.id];
+    const card=$("#qc-"+q.id), fb=$("#fb-"+q.id);
+    card.classList.remove("correct","incorrect");
+    fb.className="qfeed show";
+    if(chosen===q.answerIndex){
+      right++; card.classList.add("correct"); fb.classList.add("ok");
+      fb.textContent="Correct. "+q.why;
+    } else {
+      card.classList.add("incorrect"); fb.classList.add("no");
+      fb.textContent = chosen==null ? "Pick an answer for this question." : "Not quite. "+q.why;
+    }
+  });
+  const msg=$("#quizMsg"); msg.className="inlinemsg show";
+  if(right===CONFIG.questions.length){ msg.classList.add("ok"); msg.textContent="All correct. You're ready to submit."; }
+  else { msg.classList.add("bad"); msg.textContent=`${right} of ${CONFIG.questions.length} correct. Review the feedback and try the missed ones again.`; }
+  renderTasks();
+});
+
+/* ============================================================================
+   SCREENSHOT  (zero-dependency: serialize the lab DOM into an SVG foreignObject
+   and rasterize to PNG via canvas; manual fallback draws a summary card).
+   This replaces an inlined html2canvas because the lab UI is fully self-drawn,
+   so no cross-origin content can taint the canvas.
+   ========================================================================== */
+function escapeForSvg(html){
+  return html; // content is our own well-formed HTML; ampersand entities already used
+}
+async function captureScreenshot(){
+  const node=$(".device");
+  const w=Math.min(node.offsetWidth, 1100)||820;
+  const h=node.offsetHeight||620;
+  const css=$("#labcss").textContent;
+  // clone so we can neutralize the .hidden screens: show the WLAN view (most informative)
+  const clone=node.cloneNode(true);
+  // strip interactive-only artifacts that don't matter visually
+  const cloneHtml=new XMLSerializer().serializeToString(clone);
+  const svg=
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+    `<foreignObject width="100%" height="100%">`+
+    `<div xmlns="http://www.w3.org/1999/xhtml" style="background:#eef2f5;padding:0;width:${w}px">`+
+    `<style>${css}</style>${cloneHtml}</div>`+
+    `</foreignObject></svg>`;
+  try{
+    const blob=new Blob([svg],{type:"image/svg+xml;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    const png=await new Promise((res,rej)=>{
+      img.onload=()=>{
+        try{
+          const scale=Math.min(2, 1100/w);
+          const c=document.createElement("canvas");
+          c.width=Math.round(w*scale); c.height=Math.round(h*scale);
+          const ctx=c.getContext("2d");
+          ctx.fillStyle="#eef2f5"; ctx.fillRect(0,0,c.width,c.height);
+          ctx.drawImage(img,0,0,c.width,c.height);
+          res(c.toDataURL("image/png"));
+        }catch(err){ rej(err); }
+        finally{ URL.revokeObjectURL(url); }
+      };
+      img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error("svg render failed")); };
+      img.src=url;
+    });
+    return png;
+  }catch(e){
+    return fallbackCard();
+  }
+}
+function fallbackCard(){
+  // hand-drawn summary so a submission always carries evidence
+  const c=document.createElement("canvas"); c.width=900; c.height=560;
+  const x=c.getContext("2d");
+  x.fillStyle="#0f2c30"; x.fillRect(0,0,900,72);
+  x.fillStyle="#9ff3f8"; x.font="bold 22px ui-monospace,monospace";
+  x.fillText("Aperture WX-300 · "+CONFIG.assignmentId,24,44);
+  x.fillStyle="#eef2f5"; x.fillRect(0,72,900,488);
+  x.fillStyle="#1d2b36"; x.font="bold 18px system-ui,sans-serif";
+  x.fillText(CONFIG.title,24,112);
+  x.font="13px system-ui,sans-serif"; x.fillStyle="#5b6b78";
+  x.fillText("Handle: "+($("#hackerName").value||"(none)")+"   ·   "+new Date().toLocaleString(),24,138);
+  let y=176;
+  CONFIG.tasks.forEach(t=>{
+    const done=state.tasks[t.id];
+    x.fillStyle=done?"#1f9d57":"#c5443b";
+    x.beginPath(); x.arc(34,y-5,7,0,7); x.fill();
+    x.fillStyle="#fff"; x.font="bold 10px system-ui"; x.fillText(done?"\u2713":"\u00D7",30,y-1);
+    x.fillStyle="#1d2b36"; x.font="13px system-ui,sans-serif";
+    x.fillText(t.label,52,y); y+=30;
+  });
+  const sc=computeScore();
+  x.fillStyle="#0f9aa3"; x.font="bold 15px system-ui,sans-serif";
+  x.fillText(`Score: ${sc.earned} / ${sc.total}`,24,y+12);
+  return c.toDataURL("image/png");
+}
+
+/* ============================================================================
+   SCORE + SUBMIT
+   ========================================================================== */
+function computeScore(){
+  const taskPts=CONFIG.tasks.filter(t=>state.tasks[t.id]).length;
+  const qPts=CONFIG.questions.filter(q=>state.quiz[q.id]===q.answerIndex).length;
+  return { earned: taskPts+qPts, total: CONFIG.tasks.length+CONFIG.questions.length };
+}
+function buildPayload(screenshot){
+  return {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: $("#hackerName").value.trim(),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: CONFIG.tasks.map(t=>({ id:t.id, label:t.label, passed:!!state.tasks[t.id] })),
+    questions: CONFIG.questions.map(q=>({
+      id:q.id, prompt:q.prompt,
+      answer: (state.quiz[q.id]!=null)? q.options[state.quiz[q.id]] : null,
+      correct: state.quiz[q.id]===q.answerIndex
+    })),
+    score: computeScore(),
+    screenshot: screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+}
+function setStatus(kind,html){
+  const s=$("#subStatus"); s.className="substatus show "+kind; s.innerHTML=html;
+}
+$("#btnSubmit").addEventListener("click",async()=>{
+  const handle=$("#hackerName").value.trim();
+  if(!handle){ setStatus("bad","Enter a lab handle (a pseudonym) before submitting."); $("#hackerName").focus(); return; }
+  const incomplete=CONFIG.tasks.filter(t=>!state.tasks[t.id]);
+  if(incomplete.length){
+    setStatus("bad",`You still have ${incomplete.length} task(s) open. You can submit anyway, but finish them for full credit. Click Submit again to send as-is.`);
+    if(!$("#btnSubmit").dataset.warned){ $("#btnSubmit").dataset.warned="1"; return; }
+  }
+  const btn=$("#btnSubmit"); btn.disabled=true;
+  setStatus("work","Capturing your lab and uploading\u2026");
+  try{
+    const shot=await captureScreenshot();
+    const payload=buildPayload(shot);
+
+    if(!/^https:\/\//.test(CONFIG.APPS_SCRIPT_URL)){
+      throw new Error("This lab hasn't been wired to a submission endpoint yet. Ask your instructor to paste the Apps Script URL into APPS_SCRIPT_URL.");
+    }
+    // simple request: no custom headers -> default text/plain -> no CORS preflight
+    let out=null;
+    try{
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+      out=await res.json();
+    }catch(corsErr){
+      // locked-down fallback: fire-and-forget, can't read docUrl
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      setStatus("ok","Submitted (fire-and-forget mode). The browser couldn't read the response, so confirm receipt with your instructor.");
+      btn.disabled=false; return;
+    }
+    if(out && out.success){
+      const link = out.docUrl ? ` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission \u2197</a>` : "";
+      setStatus("ok","Submitted. Your instructor has it."+link);
+    } else {
+      setStatus("bad","The server rejected the submission: "+((out&&out.error)||"unknown error")+". Check your handle/token and try again.");
+      btn.disabled=false;
+    }
+  }catch(err){
+    setStatus("bad",err.message||"Submission failed. Check your connection and try again.");
+    btn.disabled=false;
+  }
+});
+
+/* ---------- reset ---------- */
+function resetLab(){
+  location.reload();
+}
+// add a reset control to the top bar
+(function(){
+  const bar=$(".topbar .meta");
+  const b=document.createElement("button");
+  b.textContent="Reset lab";
+  b.className="copybtn";
+  b.style.cssText="margin-left:6px;padding:5px 10px;font-size:11px";
+  b.addEventListener("click",()=>{ if(confirm("Reset the lab? All progress in this session will be cleared.")) resetLab(); });
+  bar.appendChild(b);
+})();
+
+/* ---------- init ---------- */
+renderTasks();
+renderQuiz();
+showScreen("signin");
+$("#inUser").focus();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-wlan-wpa2-personal.html",title:"Configure a WPA2-Personal Wireless Network"}, NEXT={href:"splus-screened-subnet.html",title:"Lab \u2014 Deploy a Screened Subnet (Sentinel Gateway OS)"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.3 Protecting Networks: Segmentation";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

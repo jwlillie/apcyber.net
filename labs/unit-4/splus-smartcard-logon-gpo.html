@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab: Enforce Smart Card Logon via Group Policy</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-smartcard-logon-gpo",
+  "title": "Lab: Enforce Smart Card Logon via Group Policy",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  CompTIA Security+ (SY0-701) — Clean-room simulation lab
+  Assignment: splus-smartcard-logon-gpo
+  Objective : 4.6  Implement and maintain identity and access management
+              (MFA factor "something you have"; smart-card logon hardening)
+
+  © 2026 <AUTHOR / INSTITUTION — fill in>. All rights reserved.
+  Original work. This simulation was authored clean-room from the public
+  CompTIA SY0-701 objective and the documented behavior of Windows Group
+  Policy. It is NOT derived from, and does not reproduce, any third-party
+  vendor's lab text, scenario, names, values, ordering, or screenshots.
+  Windows policy NAMES (e.g., "Interactive logon: Require smart card") are
+  factual product settings and are used as facts, not as protected expression.
+
+  License: <choose, e.g. proprietary / CC-BY-NC — fill in>.
+  ============================================================================
+-->
+<style id="labStyles">
+  :root{
+    --bg:#0b1020;
+    --panel:#121a30;
+    --panel-2:#0f1730;
+    --ink:#e8edf7;
+    --muted:#9aa6c2;
+    --line:#243154;
+    --accent:#5b8cff;
+    --accent-ink:#0b1020;
+    --ok:#36d399;
+    --bad:#ff6b81;
+    --warn:#ffd166;
+    /* simulated Windows console (light) */
+    --mmc:#f3f4f7;
+    --mmc-ink:#1b1f27;
+    --mmc-line:#c9ccd6;
+    --mmc-sel:#cfe0ff;
+    --mmc-head:#e7ebf3;
+    --focus:#ffd166;
+    --radius:12px;
+    --radius-sm:8px;
+    font-synthesis-weight:none;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1200px 600px at 80% -10%, #16203f 0%, var(--bg) 60%);
+    color:var(--ink);
+    font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    padding:18px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+
+  header.top{
+    display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;
+    border:1px solid var(--line);background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border-radius:var(--radius);padding:16px 18px;
+  }
+  .title h1{font-size:20px;margin:0 0 4px}
+  .title p{margin:0;color:var(--muted);max-width:62ch}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{font-size:12px;font-weight:600;border:1px solid var(--line);color:var(--muted);
+    padding:4px 9px;border-radius:999px;background:#0c1326}
+  .badge.obj{color:var(--accent);border-color:#2b3c6b}
+
+  .grid{display:grid;grid-template-columns:1.55fr .95fr;gap:16px}
+  @media (max-width:960px){.grid{grid-template-columns:1fr}}
+
+  .card{border:1px solid var(--line);background:var(--panel);border-radius:var(--radius);overflow:hidden}
+  .card > h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+    margin:0;padding:11px 14px;border-bottom:1px solid var(--line);background:#0e1730}
+
+  /* ---------- Simulated MMC console ---------- */
+  .console{background:var(--mmc);color:var(--mmc-ink)}
+  .console .winbar{display:flex;align-items:center;gap:8px;background:var(--mmc-head);
+    border-bottom:1px solid var(--mmc-line);padding:7px 10px;font-size:13px;color:#384055}
+  .winbar .dot{width:11px;height:11px;border-radius:50%;background:#cfd3dd;border:1px solid #b6bccb}
+  .winbar .ttl{font-weight:600}
+  .console .body{display:grid;grid-template-columns:268px 1fr;min-height:360px}
+  @media (max-width:560px){.console .body{grid-template-columns:1fr}}
+  .tree{border-right:1px solid var(--mmc-line);padding:8px 6px;overflow:auto}
+  .tree ul{list-style:none;margin:0;padding-left:16px}
+  .tree > ul{padding-left:6px}
+  .node{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:6px;cursor:default}
+  .node .tw{width:14px;text-align:center;color:#6b7280;cursor:pointer;user-select:none}
+  .node .ic{width:16px;text-align:center}
+  .node.click{cursor:pointer}
+  .node.click:hover{background:#e7ecf6}
+  .node.sel{background:var(--mmc-sel);outline:1px solid #9bbcff}
+  .node .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .enf-tag{font-size:11px;color:#0a7a4a;font-weight:700;margin-left:4px}
+  .pane{padding:12px 14px;overflow:auto}
+  .pane .crumbs{font-size:12px;color:#5b6478;margin-bottom:10px}
+  .pane .crumbs b{color:#1b1f27}
+
+  /* GPO link detail */
+  .detail{display:flex;flex-direction:column;gap:12px;max-width:560px}
+  .detail .row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--mmc-line);padding:6px 0}
+  .detail .row .k{color:#5b6478}
+  .chkline{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--mmc-line);
+    border-radius:8px;background:#fff}
+  .chkline input{width:17px;height:17px}
+  .console .btn{font:inherit;font-size:13px;border:1px solid #9aa3b8;background:#fff;color:#1b1f27;
+    padding:6px 12px;border-radius:7px;cursor:pointer}
+  .console .btn:hover{background:#eef2fb}
+  .console .btn.primary{background:#2f6bff;border-color:#2f6bff;color:#fff}
+  .console .btn.primary:hover{background:#2a5fe6}
+  .console .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+
+  /* Security Options table */
+  table.secopts{width:100%;border-collapse:collapse;font-size:13px}
+  table.secopts th,table.secopts td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--mmc-line)}
+  table.secopts thead th{background:var(--mmc-head);position:sticky;top:0}
+  table.secopts tbody tr{cursor:pointer}
+  table.secopts tbody tr:hover{background:#eef2fb}
+  table.secopts tbody tr.sel{background:var(--mmc-sel)}
+  table.secopts td.val{color:#374151;white-space:nowrap}
+  td.val.set{color:#0a7a4a;font-weight:600}
+  .hint{font-size:12px;color:#5b6478;margin-top:8px}
+
+  /* Properties dialog */
+  .modal-back{position:fixed;inset:0;background:rgba(6,10,22,.55);display:none;
+    align-items:center;justify-content:center;padding:16px;z-index:50}
+  .modal-back.show{display:flex}
+  .modal{background:#fff;color:#1b1f27;border:1px solid #b6bccb;border-radius:10px;
+    width:min(440px,96vw);box-shadow:0 18px 50px rgba(0,0,0,.4)}
+  .modal h3{margin:0;font-size:14px;padding:11px 14px;border-bottom:1px solid var(--mmc-line);background:var(--mmc-head)}
+  .modal .mbody{padding:14px}
+  .modal label.def{display:flex;gap:8px;align-items:center;font-weight:600;margin-bottom:12px}
+  .modal fieldset{border:1px solid var(--mmc-line);border-radius:8px;padding:10px 12px;margin:0}
+  .modal fieldset legend{font-size:12px;color:#5b6478;padding:0 4px}
+  .modal .opt{display:flex;align-items:center;gap:8px;padding:4px 0}
+  .modal select{font:inherit;padding:6px 8px;border:1px solid #9aa3b8;border-radius:6px;width:100%}
+  .modal .mfoot{display:flex;justify-content:flex-end;gap:8px;padding:12px 14px;border-top:1px solid var(--mmc-line)}
+  .modal[disabled-look] .ctrl{opacity:.45;pointer-events:none}
+
+  /* ---------- Task / question panel ---------- */
+  .checklist{list-style:none;margin:0;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+  .checklist li{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border:1px solid var(--line);
+    border-radius:var(--radius-sm);background:#0e1730}
+  .checklist li .mark{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;
+    display:grid;place-items:center;font-weight:800;color:var(--muted);font-size:13px}
+  .checklist li.done .mark{border-color:var(--ok);color:var(--ok)}
+  .checklist li .txt small{display:block;color:var(--muted)}
+
+  .qs{padding:10px 14px;display:flex;flex-direction:column;gap:14px}
+  .q{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 12px;background:#0e1730}
+  .q .prompt{font-weight:600;margin-bottom:8px}
+  .q .opt{display:flex;gap:9px;align-items:flex-start;padding:5px 6px;border-radius:6px;cursor:pointer}
+  .q .opt:hover{background:#13203f}
+  .q .opt input{margin-top:3px}
+  .q .fb{font-size:13px;margin-top:7px;min-height:1em}
+  .q.correct{border-color:#1f6b4f}
+  .q.correct .fb{color:var(--ok)}
+  .q.incorrect{border-color:#6b2230}
+  .q.incorrect .fb{color:var(--bad)}
+
+  /* ---------- Submission bar ---------- */
+  .submit{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border-radius:var(--radius);padding:14px 16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .submit .field{display:flex;flex-direction:column;gap:4px}
+  .submit label{font-size:12px;color:var(--muted)}
+  .submit input[type=text]{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:8px;
+    background:#0c1326;color:var(--ink);min-width:220px}
+  .scorepill{font-weight:700;border:1px solid var(--line);border-radius:999px;padding:7px 13px;background:#0c1326}
+  .btn-main{font:inherit;font-weight:700;border:0;border-radius:9px;padding:11px 18px;cursor:pointer;
+    background:var(--accent);color:var(--accent-ink)}
+  .btn-main:disabled{opacity:.5;cursor:not-allowed}
+  .btn-ghost{font:inherit;border:1px solid var(--line);background:transparent;color:var(--ink);
+    padding:10px 14px;border-radius:9px;cursor:pointer}
+  .status{flex:1 1 240px;min-width:220px;font-size:14px;color:var(--muted)}
+  .status.ok{color:var(--ok)}
+  .status.bad{color:var(--bad)}
+  .status a{color:var(--accent)}
+
+  footer.foot{color:var(--muted);font-size:12px;text-align:center;padding:6px 0 2px}
+
+  /* a11y */
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="top">
+    <div class="title">
+      <h1>Enforce Smart Card Logon with Group Policy</h1>
+      <p><strong>Scenario.</strong> You administer the Active Directory domain
+      <code>halcyon.local</code> for <strong>Halcyon Photonics</strong>. After a contractor's
+      reused password let an outsider read prototype waveguide schematics, leadership now requires
+      that every workstation in the <strong>Optical Design Group</strong> accept <em>only</em>
+      smart-card logons, and that pulling the card immediately ends the session. A Group Policy
+      object, <code>ODG-CardLogon-Policy</code>, is already created and linked to the
+      <code>Optical-Design</code> OU on the domain controller <code>HALCYON-DC2</code>, and
+      certificate auto-enrollment is already configured. Finish the hardening.</p>
+    </div>
+    <div class="badges">
+      <span class="badge obj">SY0-701 · Obj 4.6</span>
+      <span class="badge">IAM · MFA</span>
+      <span class="badge">Smart card = “something you have”</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ================= SIMULATED CONSOLE ================= -->
+    <section class="card" aria-label="Group Policy Management console (simulated)">
+      <h2>Group Policy Management — HALCYON-DC2 (simulated)</h2>
+      <div class="console" id="lab">
+        <div class="winbar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="ttl" id="winTitle">Group Policy Management</span>
+        </div>
+        <div class="body">
+          <!-- tree -->
+          <nav class="tree" aria-label="Console tree">
+            <ul>
+              <li>
+                <div class="node"><span class="tw">▾</span><span class="ic">🌐</span><span class="lbl">Group Policy Management</span></div>
+                <ul>
+                  <li>
+                    <div class="node"><span class="tw">▾</span><span class="ic">🏢</span><span class="lbl">Forest: halcyon.local</span></div>
+                    <ul>
+                      <li>
+                        <div class="node"><span class="tw">▾</span><span class="ic">📁</span><span class="lbl">Domains</span></div>
+                        <ul>
+                          <li>
+                            <div class="node"><span class="tw">▾</span><span class="ic">🌳</span><span class="lbl">halcyon.local</span></div>
+                            <ul>
+                              <li>
+                                <div class="node"><span class="tw">▾</span><span class="ic">🗂️</span><span class="lbl">Optical-Design</span></div>
+                                <ul>
+                                  <li>
+                                    <div class="node click" id="gpoNode" role="treeitem" tabindex="0"
+                                         aria-label="ODG-CardLogon-Policy linked GPO">
+                                      <span class="tw" aria-hidden="true">•</span>
+                                      <span class="ic">📜</span>
+                                      <span class="lbl">ODG-CardLogon-Policy</span>
+                                      <span class="enf-tag" id="enfTag" hidden>(Enforced)</span>
+                                    </div>
+                                  </li>
+                                </ul>
+                              </li>
+                            </ul>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </nav>
+
+          <!-- right pane -->
+          <div class="pane" id="pane" aria-live="polite">
+            <!-- default -->
+            <div id="paneWelcome">
+              <p class="hint">Select <strong>ODG-CardLogon-Policy</strong> in the tree to manage the
+              linked GPO.</p>
+            </div>
+
+            <!-- GPO link detail -->
+            <div id="paneLink" hidden>
+              <div class="crumbs">Optical-Design &rsaquo; <b>ODG-CardLogon-Policy</b> (link)</div>
+              <div class="detail">
+                <div class="row"><span class="k">Link enabled</span><span>Yes</span></div>
+                <div class="row"><span class="k">GPO status</span><span>Enabled</span></div>
+                <div class="row"><span class="k">WMI filter</span><span>&lt;none&gt;</span></div>
+                <label class="chkline">
+                  <input type="checkbox" id="enforceChk" />
+                  <span><strong>Enforced</strong> — prevents lower OUs from blocking inheritance or
+                  overriding these settings with a competing GPO.</span>
+                </label>
+                <div class="btnrow">
+                  <button class="btn primary" id="editBtn" type="button">Edit…</button>
+                </div>
+                <p class="hint">“Edit…” opens the Group Policy Management Editor for this object.</p>
+              </div>
+            </div>
+
+            <!-- GP Editor -->
+            <div id="paneEditor" hidden>
+              <div class="crumbs">
+                Computer Configuration &rsaquo; Policies &rsaquo; Windows Settings &rsaquo;
+                Security Settings &rsaquo; Local Policies &rsaquo; <b>Security Options</b>
+              </div>
+              <div class="btnrow" style="margin-bottom:10px">
+                <button class="btn" id="backBtn" type="button">&larr; Back to link</button>
+              </div>
+              <table class="secopts" id="secTable">
+                <thead><tr><th scope="col">Policy</th><th scope="col">Security Setting</th></tr></thead>
+                <tbody id="secBody"><!-- rows injected --></tbody>
+              </table>
+              <p class="hint">Double-click a policy (or select it and press <kbd>Enter</kbd>) to edit
+              its setting.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TASK + QUESTION PANEL ================= -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <section class="card" aria-label="Task checklist">
+        <h2>Tasks</h2>
+        <ul class="checklist" id="checklist" aria-live="polite">
+          <li data-task="enforce"><span class="mark">1</span>
+            <span class="txt">Enforce <code>ODG-CardLogon-Policy</code> on the Optical-Design OU.
+            <small>Right-pane → check <em>Enforced</em>.</small></span></li>
+          <li data-task="require"><span class="mark">2</span>
+            <span class="txt">Set <em>Interactive logon: Require smart card</em> to <strong>Enabled</strong>.
+            <small>Security Options → edit the policy.</small></span></li>
+          <li data-task="removal"><span class="mark">3</span>
+            <span class="txt">Set <em>Interactive logon: Smart card removal behavior</em> to
+            <strong>Force Logoff</strong>.<small>Security Options → edit the policy.</small></span></li>
+        </ul>
+      </section>
+
+      <section class="card" aria-label="Knowledge questions">
+        <h2>Questions</h2>
+        <div class="qs" id="qs"><!-- questions injected --></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= SUBMISSION BAR ================= -->
+  <div class="submit" role="region" aria-label="Submit lab">
+    <div class="field">
+      <label for="hacker">Hacker name (pseudonym — no real names)</label>
+      <input type="text" id="hacker" autocomplete="off" maxlength="40"
+             placeholder="e.g. ph0t0n_admin" />
+    </div>
+    <span class="scorepill" id="scorePill">Score 0 / 6</span>
+    <button class="btn-main" id="submitBtn" type="button">Submit completed lab</button>
+    <button class="btn-ghost" id="resetBtn" type="button">Reset lab</button>
+    <span class="status" id="status" role="status" aria-live="polite">Complete the tasks and questions, then submit.</span>
+  </div>
+
+  <footer class="foot">
+    © 2026 &lt;Author / Institution&gt; · Original clean-room simulation for CompTIA Security+ (SY0-701) ·
+    Assignment <code>splus-smartcard-logon-gpo</code>
+  </footer>
+</div>
+
+<!-- Properties dialog -->
+<div class="modal-back" id="modalBack" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h3 id="modalTitle">Properties</h3>
+    <div class="mbody">
+      <label class="def"><input type="checkbox" id="defChk" /> Define this policy setting</label>
+      <div id="modalBody" class="ctrl"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="okBtn" type="button">OK</button>
+      <button class="btn" id="cancelBtn" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!--
+  ====================== SCREENSHOT CAPTURE ======================
+  §2 of the build spec calls for an INLINED copy of html2canvas. This build was
+  produced in an offline environment, so the minified library could not be
+  fetched. Instead the function below captures the simulated DOM with a native,
+  zero-dependency technique (SVG <foreignObject> serialization → canvas → PNG),
+  with a summary-canvas fallback if a browser taints the canvas. This keeps the
+  file single-file and dependency-free.
+
+  >>> If you prefer html2canvas: paste its minified source here, then set
+      USE_HTML2CANVAS = true in the engine block below. <<<
+  ===============================================================
+-->
+<script>/* (html2canvas paste target — intentionally empty) */</script>
+
+<!-- ====================== ENGINE + CONFIG ====================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- LAB CONFIG (per §11) ---------------- */
+  const CONFIG = {
+    assignmentId: "splus-smartcard-logon-gpo",
+    title: "Enforce Smart Card Logon with Group Policy",
+    objectives: ["4.6"],
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE", // shared across library
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    passThreshold: "all tasks + all questions correct"
+  };
+  const USE_HTML2CANVAS = false; // flip true only if you pasted html2canvas above
+
+  /* ---------------- ANSWER KEY ---------------- */
+  // Targets that satisfy each task (server can re-validate; client is self-reported).
+  const KEY = {
+    requireSmartCard: "Enabled",
+    removalBehavior: "Force Logoff"
+  };
+  const QUESTIONS = [
+    {
+      id:"q1",
+      prompt:"A smart card used for interactive logon primarily provides which authentication factor?",
+      options:[
+        "Something you know",
+        "Something you have",
+        "Something you are",
+        "Somewhere you are"
+      ],
+      answerIndex:1,
+      explain:"A smart card is a physical token the user possesses — the “something you have” factor."
+    },
+    {
+      id:"q2",
+      prompt:"Why set “Smart card removal behavior” to Force Logoff rather than leaving it as No Action?",
+      options:[
+        "It speeds up the logon process for cardholders",
+        "It ends the session when the card is pulled, so an unlocked workstation can’t be reused by someone else",
+        "It allows logon without a card during an outage",
+        "It encrypts the card’s certificate at rest"
+      ],
+      answerIndex:1,
+      explain:"Forcing logoff on removal closes the window where an unattended, unlocked session could be hijacked."
+    },
+    {
+      id:"q3",
+      prompt:"What does marking the GPO link as “Enforced” on the Optical-Design OU accomplish?",
+      options:[
+        "It applies the GPO to users instead of computers",
+        "It disables the GPO until a reboot",
+        "It prevents child OUs from blocking inheritance or overriding these settings with a conflicting GPO",
+        "It converts the GPO into a local security policy"
+      ],
+      answerIndex:2,
+      explain:"Enforced links cannot be overridden by lower-level GPOs and ignore Block Inheritance, guaranteeing the hardening applies."
+    }
+  ];
+
+  // Security Options rows: 2 targets + distractors (factual Windows policy names).
+  const SEC_ROWS = [
+    {id:"renameAdmin", name:"Accounts: Rename administrator account", value:"Administrator", type:"text"},
+    {id:"limitBlank", name:"Accounts: Limit local account use of blank passwords to console logon only", value:"Enabled", type:"static"},
+    {id:"lastUser", name:"Interactive logon: Do not display last signed-in user", value:"Disabled", type:"static"},
+    {id:"require", name:"Interactive logon: Require smart card", value:"Disabled", type:"require"},
+    {id:"removal", name:"Interactive logon: Smart card removal behavior", value:"No Action", type:"removal"},
+    {id:"caching", name:"Interactive logon: Number of previous logons to cache", value:"10 logons", type:"static"},
+    {id:"msgTitle", name:"Interactive logon: Message title for users attempting to log on", value:"Not Defined", type:"static"},
+    {id:"smbSign", name:"Microsoft network client: Digitally sign communications (always)", value:"Disabled", type:"static"}
+  ];
+
+  /* ---------------- STATE ---------------- */
+  const state = { enforced:false, requireSmartCard:"Disabled", removalBehavior:"No Action", answers:{} };
+
+  /* ---------------- ELEMENTS ---------------- */
+  const $ = s => document.querySelector(s);
+  const gpoNode = $("#gpoNode"), enfTag = $("#enfTag");
+  const paneWelcome = $("#paneWelcome"), paneLink = $("#paneLink"), paneEditor = $("#paneEditor");
+  const enforceChk = $("#enforceChk"), editBtn = $("#editBtn"), backBtn = $("#backBtn");
+  const secBody = $("#secBody"), winTitle = $("#winTitle");
+  const modalBack = $("#modalBack"), modalTitle = $("#modalTitle"), modalBody = $("#modalBody");
+  const defChk = $("#defChk"), okBtn = $("#okBtn"), cancelBtn = $("#cancelBtn");
+  const checklist = $("#checklist"), qsWrap = $("#qs"), scorePill = $("#scorePill");
+  const statusEl = $("#status"), submitBtn = $("#submitBtn"), resetBtn = $("#resetBtn"), hackerEl = $("#hacker");
+
+  /* ---------------- NAV ---------------- */
+  function showPane(which){
+    paneWelcome.hidden = which!=="welcome";
+    paneLink.hidden = which!=="link";
+    paneEditor.hidden = which!=="editor";
+    winTitle.textContent = which==="editor"
+      ? "Group Policy Management Editor — ODG-CardLogon-Policy" : "Group Policy Management";
+  }
+  function selectGpo(){ gpoNode.classList.add("sel"); showPane("link"); }
+  gpoNode.addEventListener("click", selectGpo);
+  gpoNode.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();selectGpo();}});
+
+  enforceChk.addEventListener("change", ()=>{
+    state.enforced = enforceChk.checked;
+    enfTag.hidden = !state.enforced;
+    refresh();
+  });
+  editBtn.addEventListener("click", ()=>{ buildSecTable(); showPane("editor"); });
+  backBtn.addEventListener("click", ()=> showPane("link"));
+
+  /* ---------------- SECURITY OPTIONS TABLE ---------------- */
+  function currentValue(row){
+    if(row.type==="require") return state.requireSmartCard;
+    if(row.type==="removal") return state.removalBehavior;
+    return row.value;
+  }
+  function buildSecTable(){
+    secBody.innerHTML = "";
+    SEC_ROWS.forEach(row=>{
+      const tr = document.createElement("tr");
+      tr.tabIndex = 0; tr.dataset.id = row.id;
+      const editable = (row.type==="require"||row.type==="removal");
+      const val = currentValue(row);
+      const setClass = (row.type==="require" && val===KEY.requireSmartCard) ||
+                       (row.type==="removal" && val===KEY.removalBehavior) ? " set" : "";
+      tr.innerHTML = `<td>${row.name}</td><td class="val${setClass}">${val}</td>`;
+      if(editable){
+        tr.addEventListener("dblclick", ()=> openDialog(row));
+        tr.addEventListener("keydown", e=>{ if(e.key==="Enter"){e.preventDefault();openDialog(row);} });
+      }
+      tr.addEventListener("click", ()=>{
+        secBody.querySelectorAll("tr").forEach(r=>r.classList.remove("sel"));
+        tr.classList.add("sel");
+      });
+      secBody.appendChild(tr);
+    });
+  }
+
+  /* ---------------- PROPERTIES DIALOG ---------------- */
+  let activeRow = null, lastFocus = null;
+  function openDialog(row){
+    activeRow = row; lastFocus = document.activeElement;
+    modalTitle.textContent = row.name + " — Properties";
+    if(row.type==="require"){
+      const on = state.requireSmartCard==="Enabled";
+      defChk.checked = (state.requireSmartCard!=="Not Defined");
+      modalBody.innerHTML =
+        `<fieldset><legend>Setting</legend>
+           <label class="opt"><input type="radio" name="rsc" value="Enabled" ${on?"checked":""}> Enabled</label>
+           <label class="opt"><input type="radio" name="rsc" value="Disabled" ${!on?"checked":""}> Disabled</label>
+         </fieldset>`;
+    } else { // removal
+      const opts = ["No Action","Lock Workstation","Force Logoff","Disconnect if a Remote Desktop Services session"];
+      defChk.checked = (state.removalBehavior!=="Not Defined");
+      modalBody.innerHTML =
+        `<fieldset><legend>Behavior</legend>
+           <select id="rmSel">${opts.map(o=>`<option ${o===state.removalBehavior?"selected":""}>${o}</option>`).join("")}</select>
+         </fieldset>`;
+    }
+    modalBack.classList.add("show");
+    okBtn.focus();
+  }
+  function closeDialog(){
+    modalBack.classList.remove("show");
+    if(lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  okBtn.addEventListener("click", ()=>{
+    if(!activeRow) return;
+    if(!defChk.checked){
+      // "Define this policy setting" unchecked => Not Defined
+      if(activeRow.type==="require") state.requireSmartCard="Not Defined";
+      else state.removalBehavior="Not Defined";
+    } else if(activeRow.type==="require"){
+      const v = modalBody.querySelector("input[name=rsc]:checked");
+      state.requireSmartCard = v ? v.value : "Disabled";
+    } else {
+      state.removalBehavior = modalBody.querySelector("#rmSel").value;
+    }
+    closeDialog(); buildSecTable(); refresh();
+  });
+  cancelBtn.addEventListener("click", closeDialog);
+  modalBack.addEventListener("click", e=>{ if(e.target===modalBack) closeDialog(); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape" && modalBack.classList.contains("show")) closeDialog(); });
+
+  /* ---------------- QUESTIONS ---------------- */
+  function buildQuestions(){
+    qsWrap.innerHTML = "";
+    QUESTIONS.forEach((q)=>{
+      const div = document.createElement("div");
+      div.className="q"; div.id="qbox-"+q.id;
+      div.innerHTML = `<div class="prompt">${q.prompt}</div>` +
+        q.options.map((o,i)=>
+          `<label class="opt"><input type="radio" name="${q.id}" value="${i}"> <span>${o}</span></label>`
+        ).join("") + `<div class="fb" id="fb-${q.id}"></div>`;
+      qsWrap.appendChild(div);
+      div.querySelectorAll(`input[name=${q.id}]`).forEach(inp=>{
+        inp.addEventListener("change", ()=>{ state.answers[q.id]=Number(inp.value); gradeQuestion(q); refresh(); });
+      });
+    });
+  }
+  function gradeQuestion(q){
+    const box = $("#qbox-"+q.id), fb = $("#fb-"+q.id);
+    if(state.answers[q.id]===undefined){ box.className="q"; fb.textContent=""; return false; }
+    const correct = state.answers[q.id]===q.answerIndex;
+    box.className = "q "+(correct?"correct":"incorrect");
+    fb.textContent = correct ? "Correct. "+q.explain : "Not quite — reconsider and try again.";
+    return correct;
+  }
+
+  /* ---------------- SCORING / CHECKLIST ---------------- */
+  function taskState(){
+    return {
+      enforce: state.enforced===true,
+      require: state.requireSmartCard===KEY.requireSmartCard,
+      removal: state.removalBehavior===KEY.removalBehavior
+    };
+  }
+  function refresh(){
+    const t = taskState();
+    checklist.querySelectorAll("li").forEach(li=>{
+      const done = t[li.dataset.task];
+      li.classList.toggle("done", !!done);
+      li.querySelector(".mark").textContent = done ? "✓" : li.querySelector(".mark").textContent.replace("✓","");
+    });
+    // restore numbers when not done
+    checklist.querySelectorAll("li").forEach((li,i)=>{ if(!t[li.dataset.task]) li.querySelector(".mark").textContent=String(i+1); });
+
+    let earned = 0; const total = 3 + QUESTIONS.length;
+    Object.values(t).forEach(v=>{ if(v) earned++; });
+    QUESTIONS.forEach(q=>{ if(state.answers[q.id]===q.answerIndex) earned++; });
+    scorePill.textContent = `Score ${earned} / ${total}`;
+    return {earned,total,tasks:t};
+  }
+
+  /* ---------------- SCREENSHOT (zero-dependency) ---------------- */
+  async function captureLab(){
+    const node = $("#lab");
+    try{
+      if(USE_HTML2CANVAS && window.html2canvas){
+        const c = await window.html2canvas(node,{backgroundColor:"#0b1020",scale:1});
+        return c.toDataURL("image/png");
+      }
+      const css = document.getElementById("labStyles").textContent;
+      const rect = node.getBoundingClientRect();
+      const w = Math.max(640, Math.ceil(rect.width));
+      const h = Math.ceil(node.scrollHeight);
+      const clone = node.cloneNode(true);
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+        `<foreignObject x="0" y="0" width="100%" height="100%">`+
+        `<div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style>`+
+        `<div style="width:${w}px;background:#0b1020">${xml}</div></div>`+
+        `</foreignObject></svg>`;
+      const url = URL.createObjectURL(new Blob([svg],{type:"image/svg+xml;charset=utf-8"}));
+      const img = new Image();
+      await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=url; });
+      const canvas = document.createElement("canvas");
+      canvas.width=w; canvas.height=h;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle="#0b1020"; ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img,0,0);
+      URL.revokeObjectURL(url);
+      return canvas.toDataURL("image/png"); // may throw if tainted -> fallback below
+    }catch(err){
+      return summaryCanvas(); // robust fallback so a PNG always exists
+    }
+  }
+  function summaryCanvas(){
+    const r = refresh();
+    const canvas = document.createElement("canvas");
+    canvas.width=720; canvas.height=300;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle="#0b1020"; ctx.fillRect(0,0,720,300);
+    ctx.fillStyle="#e8edf7"; ctx.font="bold 20px system-ui,sans-serif";
+    ctx.fillText("Lab: "+CONFIG.title, 24, 40);
+    ctx.font="14px system-ui,sans-serif"; ctx.fillStyle="#9aa6c2";
+    ctx.fillText("Assignment: "+CONFIG.assignmentId+"  ·  Obj "+CONFIG.objectives.join(", "), 24, 66);
+    const lines = [
+      "Enforced GPO link: "+(r.tasks.enforce?"Yes":"No"),
+      "Require smart card: "+state.requireSmartCard,
+      "Smart card removal behavior: "+state.removalBehavior,
+      "Score: "+r.earned+" / "+r.total
+    ];
+    ctx.fillStyle="#e8edf7"; ctx.font="15px system-ui,sans-serif";
+    lines.forEach((l,i)=> ctx.fillText("• "+l, 24, 110+i*30));
+    return canvas.toDataURL("image/png");
+  }
+
+  /* ---------------- SUBMIT (direct simple POST, §4) ---------------- */
+  function setStatus(msg, kind){ statusEl.textContent=msg; statusEl.className="status"+(kind?(" "+kind):""); }
+
+  async function submit(){
+    const hackerName = (hackerEl.value||"").trim();
+    if(!hackerName){ setStatus("Enter a hacker name (pseudonym) before submitting.","bad"); hackerEl.focus(); return; }
+    if(hackerName.length>40){ setStatus("Hacker name must be 40 characters or fewer.","bad"); return; }
+
+    submitBtn.disabled = true;
+    setStatus("Capturing screenshot…");
+    const r = refresh();
+    const screenshot = await captureLab();
+    setStatus("Submitting to instructor…");
+
+    const payload = {
+      assignmentId: CONFIG.assignmentId,
+      hackerName,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: [
+        { id:"enforce", label:"Enforce ODG-CardLogon-Policy on Optical-Design OU", passed:r.tasks.enforce },
+        { id:"require", label:"Interactive logon: Require smart card = Enabled", passed:r.tasks.require },
+        { id:"removal", label:"Interactive logon: Smart card removal behavior = Force Logoff", passed:r.tasks.removal }
+      ],
+      questions: QUESTIONS.map(q=>({
+        id:q.id, prompt:q.prompt,
+        answer: state.answers[q.id]!==undefined ? q.options[state.answers[q.id]] : null,
+        correct: state.answers[q.id]===q.answerIndex
+      })),
+      score: { earned:r.earned, total:r.total },
+      screenshot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    if(!/^https:\/\//.test(CONFIG.APPS_SCRIPT_URL)){
+      submitBtn.disabled=false;
+      setStatus("Submission endpoint not configured (APPS_SCRIPT_URL). Ask your instructor.","bad");
+      return;
+    }
+
+    try{
+      // Simple request: NO custom headers, default text/plain body -> no CORS preflight.
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const out = await res.json();
+      if(out && out.success){
+        const link = out.docUrl ? ` <a href="${out.docUrl}" target="_blank" rel="noopener">View submission</a>` : "";
+        setStatus(`Submitted — ${r.earned}/${r.total}.${link}`,"ok");
+      }else{
+        submitBtn.disabled=false;
+        setStatus("Server rejected the submission: "+((out&&out.error)||"unknown error")+".","bad");
+      }
+    }catch(err){
+      // Fallback: fire-and-forget (can't read docUrl), e.g. locked-down CORS.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        setStatus(`Submitted (could not read confirmation). Score ${r.earned}/${r.total}. Confirm receipt with your instructor.`,"ok");
+      }catch(e2){
+        submitBtn.disabled=false;
+        setStatus("Network error — submission failed. Check your connection and try again.","bad");
+      }
+    }
+  }
+  submitBtn.addEventListener("click", submit);
+
+  /* ---------------- RESET ---------------- */
+  function reset(){
+    state.enforced=false; state.requireSmartCard="Disabled"; state.removalBehavior="No Action"; state.answers={};
+    enforceChk.checked=false; enfTag.hidden=true; hackerEl.value="";
+    gpoNode.classList.remove("sel");
+    submitBtn.disabled=false;
+    showPane("welcome"); buildSecTable(); buildQuestions(); refresh();
+    setStatus("Lab reset. Complete the tasks and questions, then submit.");
+  }
+  resetBtn.addEventListener("click", reset);
+
+  /* ---------------- INIT ---------------- */
+  buildSecTable(); buildQuestions(); refresh(); showPane("welcome");
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-linux-secondary-group.html",title:"Lab: Add Users to a Secondary Group (Linux) \u2014 Security+ SY0-701"}, NEXT={href:"splus-linux-group-split.html",title:"Lab: Reorganize Linux Groups \u2014 Provisioning & De-provisioning"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

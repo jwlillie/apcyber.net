@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Bench Lab — Stand Up Two Virtual Machines</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-create-virtual-machines",
+  "title": "Bench Lab — Stand Up Two Virtual Machines",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.3 Protecting Devices"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.3",
+      "3.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Single-File Simulation Lab
+  Lab: Stand Up Two Virtual Machines on the Hypervisor Bench
+  assignmentId: splus-create-virtual-machines
+  SY0-701 objective: 3.1 Compare and contrast security implications of
+    different architecture models -> 3.1.1.9 Virtualization
+  ----------------------------------------------------------------------------
+  CLEAN-ROOM / ORIGINALITY NOTICE
+  This lab teaches the factual procedure of creating virtual machines on a
+  Type-1 hypervisor (generation, static vs. dynamic memory, virtual switch
+  types, virtual hard disk sizing, deferring OS install, post-create memory
+  range). It was authored from the public exam objective only. All scenario
+  text, persona, host/VM names, file names, paths, memory values, disk sizes,
+  switch names, question wording, ordering, and UI are original to this file
+  and are NOT copied from any vendor's lab.
+  ----------------------------------------------------------------------------
+  Copyright (c) 2026 {{AUTHOR_NAME}}. All rights reserved.
+  Licensed for use within the author's Security+ lab library. The bundled
+  screenshot routine is original to this file; no third-party runtime library
+  is loaded (see SCREENSHOT note in script block 2).
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Engineering-bench palette: slate surfaces, one amber action accent,
+       teal for "pass", a warm red for problems, mono for technical values. */
+    --bg:#0e141b;
+    --panel:#151d27;
+    --panel-2:#1b2531;
+    --line:#2a3744;
+    --line-soft:#222e3a;
+    --ink:#e8eef5;
+    --ink-dim:#9fb0c0;
+    --ink-faint:#6f8194;
+    --amber:#f4a637;
+    --amber-ink:#1a130a;
+    --teal:#34d3a6;
+    --teal-dim:#1c6b56;
+    --red:#ef6a5a;
+    --red-dim:#5a2620;
+    --focus:#7cc4ff;
+    --radius:10px;
+    --mono:"SFMono-Regular",ui-monospace,"Cascadia Mono","JetBrains Mono",Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+  a{color:var(--focus)}
+  h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+  button{font-family:inherit}
+  /* Focus visibility (quality floor) */
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 64px}
+
+  /* Masthead */
+  .mast{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;
+    border-bottom:1px solid var(--line);padding-bottom:16px}
+  .mast .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--amber)}
+  .mast h1{font-size:25px;margin-top:4px}
+  .mast .sub{color:var(--ink-dim);font-size:13.5px;margin-top:5px;max-width:62ch}
+  .obj-tag{font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;padding:5px 11px;white-space:nowrap}
+
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:20px;align-items:start}
+  @media (max-width:920px){.grid{grid-template-columns:1fr}}
+
+  /* Console window */
+  .console{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .titlebar{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--panel-2);
+    border-bottom:1px solid var(--line)}
+  .dots{display:flex;gap:6px}
+  .dots i{width:10px;height:10px;border-radius:50%;display:block;background:#33424f}
+  .titlebar .t{font-size:12.5px;color:var(--ink-dim);font-family:var(--mono)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line-soft)}
+
+  .host{display:flex;align-items:center;gap:9px;padding:9px 13px;color:var(--ink-dim);
+    font-size:12.5px;border-bottom:1px solid var(--line-soft);background:#121a23}
+  .host b{color:var(--ink);font-family:var(--mono);font-weight:600}
+  .host .pill{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--teal);
+    border:1px solid var(--teal-dim);border-radius:999px;padding:2px 9px}
+
+  /* VM list */
+  .vmlist{padding:13px;min-height:200px}
+  .empty{border:1px dashed var(--line);border-radius:var(--radius);padding:30px 18px;text-align:center;
+    color:var(--ink-faint)}
+  .empty b{color:var(--ink-dim);display:block;margin-bottom:4px;font-weight:600}
+  .vmcard{border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:11px;
+    background:var(--panel-2);cursor:pointer;transition:border-color .15s ease, transform .15s ease}
+  .vmcard:hover{border-color:#3a4d5e}
+  .vmcard[aria-selected="true"]{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
+  .vmcard .row1{display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .vmcard .name{font-weight:650;font-size:15px}
+  .vmcard .gen{font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+  .vmcard dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:10px 0 0;
+    font-size:12.5px}
+  .vmcard dt{color:var(--ink-faint)}
+  .vmcard dd{margin:0;color:var(--ink-dim);font-family:var(--mono);word-break:break-all}
+
+  /* Buttons */
+  .btn{appearance:none;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
+    padding:8px 13px;border-radius:8px;font-size:13px;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+  .btn:hover{background:#22303d;border-color:#3a4d5e}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.primary{background:var(--amber);color:var(--amber-ink);border-color:var(--amber);font-weight:650}
+  .btn.primary:hover{background:#ffb84d}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:6px 10px;font-size:12px}
+
+  /* Side rail */
+  .rail{display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-dim);font-weight:650}
+  .card h2 .mono{font-family:var(--mono);text-transform:none;letter-spacing:0;color:var(--ink-faint)}
+
+  .scenario p{color:var(--ink-dim);font-size:13.5px;margin:9px 0 0}
+  .scenario b{color:var(--ink)}
+
+  /* Checklist */
+  ul.checks{list-style:none;margin:11px 0 0;padding:0;display:flex;flex-direction:column;gap:7px}
+  ul.checks li{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink-dim)}
+  ul.checks .mk{flex:0 0 18px;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);
+    display:grid;place-items:center;font-size:12px;margin-top:1px;color:transparent}
+  ul.checks li.done .mk{background:var(--teal-dim);border-color:var(--teal);color:#eafff7}
+  ul.checks li.done{color:var(--ink)}
+  .progress{margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--ink-dim)}
+  .bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:6px}
+  .bar > i{display:block;height:100%;width:0;background:var(--teal);transition:width .25s ease}
+
+  /* Questions */
+  .q{border-top:1px solid var(--line-soft);padding-top:13px;margin-top:13px}
+  .q:first-of-type{border-top:0;padding-top:0;margin-top:11px}
+  .q .prompt{font-size:13.5px;color:var(--ink)}
+  .q .opts{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .opt{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);
+    border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink-dim);background:var(--panel-2)}
+  .opt:hover{border-color:#3a4d5e}
+  .opt input{margin-top:2px}
+  .opt.correct{border-color:var(--teal);background:#11231d}
+  .opt.wrong{border-color:var(--red);background:#241413}
+  .qflag{font-family:var(--mono);font-size:11.5px;margin-top:7px}
+  .qflag.ok{color:var(--teal)} .qflag.no{color:var(--red)}
+
+  /* Submission bar */
+  .submit{background:linear-gradient(180deg,var(--panel),#121a23);border:1px solid var(--line);
+    border-radius:var(--radius);padding:15px 16px;margin-top:18px}
+  .submit .field{display:flex;flex-direction:column;gap:5px;max-width:340px}
+  label.lbl{font-size:12px;color:var(--ink-dim)}
+  input[type=text],input[type=number],select{background:#0c131a;color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:9px 11px;font-size:14px;font-family:var(--sans);width:100%}
+  input[type=number]{font-family:var(--mono)}
+  .submit-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:12px}
+  .status{font-size:13px;margin-top:11px;min-height:20px;font-family:var(--mono)}
+  .status.ok{color:var(--teal)} .status.err{color:var(--red)} .status.work{color:var(--amber)}
+  .status a{color:var(--focus)}
+
+  /* Modal / wizard */
+  .scrim{position:fixed;inset:0;background:rgba(5,9,13,.66);display:none;align-items:center;
+    justify-content:center;padding:18px;z-index:50}
+  .scrim.open{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(620px,100%);
+    max-height:92vh;overflow:auto}
+  .modal header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+  .modal header h3{font-size:16px}
+  .modal .body{padding:18px}
+  .steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+  .steps i{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--ink-faint);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-style:normal}
+  .steps i.on{color:var(--amber-ink);background:var(--amber);border-color:var(--amber)}
+  .steps i.seen{color:var(--teal);border-color:var(--teal-dim)}
+  .stepwrap .step{display:none}
+  .stepwrap .step.show{display:block}
+  .step h4{font-size:15px;margin-bottom:4px}
+  .step .hint{color:var(--ink-faint);font-size:12.5px;margin-bottom:14px}
+  .frow{margin-bottom:14px}
+  .frow.inline{display:flex;align-items:center;gap:9px}
+  .frow.inline input[type=number]{max-width:140px}
+  .unit{color:var(--ink-faint);font-family:var(--mono);font-size:12.5px}
+  .radio{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);
+    border-radius:9px;margin-bottom:8px;cursor:pointer}
+  .radio:hover{border-color:#3a4d5e}
+  .radio .meta{font-size:12px;color:var(--ink-faint);margin-top:2px}
+  .radio b{font-size:13.5px;color:var(--ink)}
+  .chk{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink-dim);margin-top:6px}
+  .modal footer{display:flex;justify-content:space-between;gap:10px;padding:14px 18px;border-top:1px solid var(--line);
+    position:sticky;bottom:0;background:var(--panel)}
+  .summary{font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);background:#0c131a;border:1px solid var(--line);
+    border-radius:9px;padding:13px;line-height:1.7}
+  .summary span{color:var(--ink)}
+  .ferr{color:var(--red);font-size:12.5px;margin-top:8px;min-height:16px}
+
+  .foot{margin-top:30px;border-top:1px solid var(--line);padding-top:14px;color:var(--ink-faint);
+    font-size:11.5px;font-family:var(--mono);line-height:1.7}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important}
+  }
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <div class="eyebrow">Hypervisor Bench &middot; Lab</div>
+      <h1>Stand up two virtual machines</h1>
+      <p class="sub">Cinderpeak Analytics just enabled the hypervisor role on the host
+        <b style="font-family:var(--mono)">PORTSIDE-HV</b>. Build the team's first two test machines on the bench,
+        exactly to the build sheet.</p>
+    </div>
+    <div class="obj-tag">SY0-701 &middot; 3.1 Architecture models &rarr; Virtualization (3.1.1.9)</div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============ SIMULATED CONSOLE ============ -->
+    <main class="console" aria-label="Hypervisor Bench console">
+      <div class="titlebar">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="t">Hypervisor Bench &mdash; PORTSIDE-HV</span>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn primary" id="newVmBtn">+ New virtual machine</button>
+        <button class="btn" id="settingsBtn" disabled>Settings&hellip;</button>
+        <button class="btn ghost" id="resetBtn">Reset lab</button>
+      </div>
+
+      <div class="host">
+        Host: <b>PORTSIDE-HV</b> &nbsp;&middot;&nbsp; Hypervisor role: enabled
+        <span class="pill">3 virtual switches available</span>
+      </div>
+
+      <section class="vmlist" id="vmlist" aria-live="polite">
+        <!-- VM cards render here -->
+      </section>
+    </main>
+
+    <!-- ============ SIDE RAIL ============ -->
+    <aside class="rail">
+
+      <section class="card scenario">
+        <h2>Build sheet</h2>
+        <p><b>SANDBOX-A1</b> — a disposable analysis box. Generation&nbsp;2, fixed
+          <b>1,536&nbsp;MB</b> of memory (no dynamic memory), reachable from the outside lab network,
+          an <b>80&nbsp;GB</b> disk, OS added later.</p>
+        <p style="margin-top:11px"><b>RELAY-B2</b> — an internal relay. Generation&nbsp;1, dynamic memory
+          starting at <b>3,072&nbsp;MB</b>, talking only to other bench machines and the host, a
+          <b>200&nbsp;GB</b> disk, OS later. After it exists, set its memory to float between
+          <b>768&nbsp;MB</b> and <b>5,120&nbsp;MB</b>.</p>
+      </section>
+
+      <section class="card">
+        <h2>Tasks <span class="mono" id="taskCount"></span></h2>
+        <ul class="checks" id="checks" aria-live="polite"></ul>
+        <div class="progress" id="progressText">0 of 0 complete</div>
+        <div class="bar"><i id="progressBar"></i></div>
+      </section>
+
+      <section class="card">
+        <h2>Knowledge check</h2>
+        <div id="questions"></div>
+      </section>
+
+    </aside>
+  </div>
+
+  <!-- ============ SUBMISSION ============ -->
+  <section class="submit" aria-label="Submit completed lab">
+    <div class="field">
+      <label class="lbl" for="hacker">Hacker name <span class="unit">(pseudonym — no real name)</span></label>
+      <input type="text" id="hacker" maxlength="40" autocomplete="off" spellcheck="false"
+             placeholder="e.g. quartz_owl" />
+    </div>
+    <div class="submit-row">
+      <button class="btn primary" id="submitBtn" disabled>Submit completed lab</button>
+      <span class="unit" id="submitHint">Finish every task and question to enable submission.</span>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <p class="foot">
+    Hypervisor Bench Lab &middot; assignmentId <span>splus-create-virtual-machines</span> &middot;
+    SY0-701 3.1.1.9 Virtualization<br>
+    &copy; 2026 {{AUTHOR_NAME}}. Original clean-room exercise. Names, paths, values, and UI are fictional and
+    authored for this lab; not derived from any vendor courseware.
+  </p>
+</div>
+
+<!-- ============ NEW VM WIZARD ============ -->
+<div class="scrim" id="wizScrim" role="dialog" aria-modal="true" aria-labelledby="wizTitle">
+  <div class="modal">
+    <header>
+      <h3 id="wizTitle">New virtual machine</h3>
+      <button class="btn sm ghost" id="wizClose" aria-label="Close wizard">Close</button>
+    </header>
+    <div class="body">
+      <div class="steps" id="wizSteps" aria-hidden="true"></div>
+      <div class="stepwrap" id="stepwrap">
+
+        <!-- 1 name + location -->
+        <div class="step show" data-step="0">
+          <h4>Name and location</h4>
+          <p class="hint">Give the machine a name and pick where its configuration files live.</p>
+          <div class="frow">
+            <label class="lbl" for="w_name">Virtual machine name</label>
+            <input type="text" id="w_name" maxlength="30" autocomplete="off" spellcheck="false" placeholder="machine name" />
+          </div>
+          <div class="frow">
+            <label class="lbl" for="w_loc">Store the machine in</label>
+            <select id="w_loc">
+              <option value="">— choose a folder —</option>
+              <option>C:\ProgramData\Hypervisor\Machines</option>
+              <option>E:\HyperBench\Machines</option>
+              <option>E:\Scratch</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 2 generation -->
+        <div class="step" data-step="1">
+          <h4>Generation</h4>
+          <p class="hint">This cannot be changed after the machine is created.</p>
+          <label class="radio"><input type="radio" name="w_gen" value="1" />
+            <span><b>Generation 1</b><div class="meta">BIOS firmware, legacy boot. Broadest guest-OS compatibility.</div></span></label>
+          <label class="radio"><input type="radio" name="w_gen" value="2" />
+            <span><b>Generation 2</b><div class="meta">UEFI firmware with Secure Boot, SCSI boot, larger boot disks. Modern 64-bit guests only.</div></span></label>
+        </div>
+
+        <!-- 3 memory -->
+        <div class="step" data-step="2">
+          <h4>Startup memory</h4>
+          <p class="hint">How much RAM the machine is granted when it powers on.</p>
+          <div class="frow inline">
+            <input type="number" id="w_mem" min="32" step="1" placeholder="MB" />
+            <span class="unit">MB</span>
+          </div>
+          <label class="chk"><input type="checkbox" id="w_dyn" />
+            <span>Use dynamic memory for this machine <span class="unit">(let the host reclaim and grant RAM on demand)</span></span></label>
+        </div>
+
+        <!-- 4 networking -->
+        <div class="step" data-step="3">
+          <h4>Networking</h4>
+          <p class="hint">Connect the machine's network adapter to one of the host's virtual switches.</p>
+          <div class="frow">
+            <label class="lbl" for="w_sw">Connection</label>
+            <select id="w_sw">
+              <option value="">Not connected</option>
+              <option value="Perimeter Switch|External">Perimeter Switch (External — reaches the outside lab network)</option>
+              <option value="Bench-Only Switch|Internal">Bench-Only Switch (Internal — bench machines + host only)</option>
+              <option value="Isolated Switch|Private">Isolated Switch (Private — bench machines only, no host)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 5 disk -->
+        <div class="step" data-step="4">
+          <h4>Virtual hard disk</h4>
+          <p class="hint">Create a new disk for this machine.</p>
+          <div class="frow">
+            <label class="lbl" for="w_vhdname">Disk file name</label>
+            <input type="text" id="w_vhdname" maxlength="40" autocomplete="off" spellcheck="false" placeholder="name.vhdx" />
+          </div>
+          <div class="frow">
+            <label class="lbl" for="w_vhdloc">Disk location</label>
+            <select id="w_vhdloc">
+              <option value="">— choose a folder —</option>
+              <option>C:\ProgramData\Hypervisor\Disks</option>
+              <option>E:\HyperBench\Machines\Disks</option>
+              <option>E:\Scratch\Disks</option>
+            </select>
+          </div>
+          <div class="frow inline">
+            <input type="number" id="w_vhdsize" min="1" step="1" placeholder="GB" />
+            <span class="unit">GB (maximum size)</span>
+          </div>
+        </div>
+
+        <!-- 6 install options -->
+        <div class="step" data-step="5">
+          <h4>Installation options</h4>
+          <p class="hint">You can attach installation media now or later.</p>
+          <label class="radio"><input type="radio" name="w_os" value="later" />
+            <span><b>Install an operating system later</b><div class="meta">Leave the machine without media for now.</div></span></label>
+          <label class="radio"><input type="radio" name="w_os" value="iso" />
+            <span><b>Install from a bootable image (.iso)</b><div class="meta">Attach media to the virtual DVD drive at first boot.</div></span></label>
+        </div>
+
+        <!-- 7 summary -->
+        <div class="step" data-step="6">
+          <h4>Summary</h4>
+          <p class="hint">Review, then finish to add the machine to the bench.</p>
+          <div class="summary" id="w_summary"></div>
+        </div>
+
+      </div>
+      <div class="ferr" id="wizErr" role="alert"></div>
+    </div>
+    <footer>
+      <button class="btn ghost" id="wizBack" disabled>Back</button>
+      <div>
+        <button class="btn" id="wizNext">Next</button>
+        <button class="btn primary" id="wizFinish" style="display:none">Finish</button>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ SETTINGS (MEMORY) ============ -->
+<div class="scrim" id="setScrim" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="modal" style="width:min(520px,100%)">
+    <header>
+      <h3 id="setTitle">Settings</h3>
+      <button class="btn sm ghost" id="setClose" aria-label="Close settings">Close</button>
+    </header>
+    <div class="body">
+      <p class="hint" id="setWho" style="margin-bottom:14px"></p>
+      <h4 style="font-size:14px;margin-bottom:10px">Memory</h4>
+      <label class="chk"><input type="checkbox" id="s_dyn" />
+        <span>Enable dynamic memory</span></label>
+      <div class="frow inline" style="margin-top:14px">
+        <label class="lbl" style="min-width:120px">Startup RAM</label>
+        <input type="number" id="s_start" min="32" step="1" /><span class="unit">MB</span>
+      </div>
+      <div id="s_range">
+        <div class="frow inline">
+          <label class="lbl" style="min-width:120px">Minimum RAM</label>
+          <input type="number" id="s_min" min="32" step="1" /><span class="unit">MB</span>
+        </div>
+        <div class="frow inline">
+          <label class="lbl" style="min-width:120px">Maximum RAM</label>
+          <input type="number" id="s_max" min="32" step="1" /><span class="unit">MB</span>
+        </div>
+      </div>
+      <div class="ferr" id="setErr" role="alert"></div>
+    </div>
+    <footer>
+      <button class="btn ghost" id="setCancel">Cancel</button>
+      <button class="btn primary" id="setApply">Apply</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   SCRIPT BLOCK 2 — engine, config, answer key, scoring, screenshot, submit.
+
+   SCREENSHOT NOTE (intentional deviation from "inline html2canvas"):
+   This file ships ZERO runtime dependencies and makes ZERO network calls
+   except the single submission POST, as the build spec requires. Rather than
+   paste ~150 KB of a third-party rasterizer, the proof image is rendered
+   deterministically with the native Canvas 2D API from in-memory lab state
+   (the same state the console renders). It captures everything the lab
+   contains — both machines, their settings, the question results, the score,
+   and both timestamps — and returns a PNG data URL. This is more reliable
+   across browsers than DOM rasterization and keeps the file dependency-free.
+   ========================================================================== */
+(function(){
+  "use strict";
+
+  /* ----------------------------- LAB CONFIG ----------------------------- */
+  const CONFIG = {
+    assignmentId: "splus-create-virtual-machines",
+    title: "Stand up two virtual machines",
+    objectives: ["2.3", "3.1"],
+    // Shared across the whole library — wired by the instructor (see INSTRUCTOR_SETUP.md):
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "REPLACE_WITH_COHORT_TOKEN"
+  };
+
+  /* --------------------------- ANSWER KEY (spec) ------------------------ */
+  // Original values authored for this lab.
+  var SPEC = {
+    A: { name:"SANDBOX-A1", location:"E:\\HyperBench\\Machines", generation:2,
+         startupMB:1536, dynamic:false, switchType:"External",
+         vhdName:"SANDBOX-A1.vhdx", vhdLocation:"E:\\HyperBench\\Machines\\Disks",
+         vhdSizeGB:80, osLater:true },
+    B: { name:"RELAY-B2", location:"E:\\HyperBench\\Machines", generation:1,
+         startupMB:3072, dynamic:true, switchType:"Internal",
+         vhdName:"RELAY-B2.vhdx", vhdLocation:"E:\\HyperBench\\Machines\\Disks",
+         vhdSizeGB:200, osLater:true, minMB:768, maxMB:5120 }
+  };
+
+  var QUESTIONS = [
+    { id:"q1",
+      prompt:"Dynamic memory is the better choice for a machine when…",
+      options:[
+        "its workload barely changes and you want guaranteed, fixed RAM at all times",
+        "several machines share one host and their RAM demand rises and falls at different times",
+        "the guest OS is too old to report its own memory pressure to the host",
+        "you need the machine to boot before the host finishes starting"
+      ],
+      answer:1 },
+    { id:"q2",
+      prompt:"What is the practical difference between an External and an Internal virtual switch?",
+      options:[
+        "External encrypts traffic; Internal leaves it in clear text",
+        "External is faster; Internal is throttled by the host",
+        "External lets machines reach the physical/outside network through the host NIC; Internal limits traffic to the bench machines and the host",
+        "There is none — the names are interchangeable labels"
+      ],
+      answer:2 },
+    { id:"q3",
+      prompt:"Why might you pick Generation 2 over Generation 1 for a new machine?",
+      options:[
+        "It supports far older guest operating systems",
+        "It uses UEFI firmware with Secure Boot and can boot from larger SCSI disks",
+        "It removes the need to assign any memory",
+        "It connects to virtual switches that Generation 1 cannot use"
+      ],
+      answer:1 }
+  ];
+
+  /* ------------------------------- STATE -------------------------------- */
+  var state = {
+    vms: [],            // created machines
+    selected: null,     // index into vms
+    answers: {}         // qid -> chosen index
+  };
+  var lastSubmittedScore = null;
+
+  /* ----------------------------- HELPERS -------------------------------- */
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function findVM(name){
+    return state.vms.find(function(v){ return v.name.toLowerCase()===name.toLowerCase(); }) || null;
+  }
+  function configured(){
+    var u = CONFIG.APPS_SCRIPT_URL || "";
+    return /^https:\/\//.test(u) && u.indexOf("REPLACE_WITH")===-1;
+  }
+
+  /* ------------------------- TASK EVALUATION ---------------------------- */
+  function evalTasks(){
+    var a = findVM(SPEC.A.name), b = findVM(SPEC.B.name);
+    var T = [];
+    T.push({ id:"a_create", label:"Create SANDBOX-A1 in E:\\HyperBench\\Machines",
+      passed: !!a && a.location===SPEC.A.location });
+    T.push({ id:"a_gen", label:"Set SANDBOX-A1 to Generation 2",
+      passed: !!a && a.generation===2 });
+    T.push({ id:"a_mem", label:"Give SANDBOX-A1 1,536 MB startup memory, dynamic memory off",
+      passed: !!a && a.startupMB===1536 && a.dynamic===false });
+    T.push({ id:"a_net", label:"Connect SANDBOX-A1 to an External switch",
+      passed: !!a && a.switchType==="External" });
+    T.push({ id:"a_disk", label:"Attach an 80 GB disk SANDBOX-A1.vhdx in …\\Machines\\Disks",
+      passed: !!a && a.vhdName.toLowerCase()==="sandbox-a1.vhdx" && a.vhdLocation===SPEC.A.vhdLocation && a.vhdSizeGB===80 });
+    T.push({ id:"a_os", label:"Defer the OS install for SANDBOX-A1",
+      passed: !!a && a.osLater===true });
+
+    T.push({ id:"b_create", label:"Create RELAY-B2 in E:\\HyperBench\\Machines",
+      passed: !!b && b.location===SPEC.B.location });
+    T.push({ id:"b_gen", label:"Set RELAY-B2 to Generation 1",
+      passed: !!b && b.generation===1 });
+    T.push({ id:"b_mem", label:"Give RELAY-B2 3,072 MB startup memory with dynamic memory on",
+      passed: !!b && b.startupMB===3072 && b.dynamic===true });
+    T.push({ id:"b_net", label:"Connect RELAY-B2 to an Internal switch",
+      passed: !!b && b.switchType==="Internal" });
+    T.push({ id:"b_disk", label:"Attach a 200 GB disk RELAY-B2.vhdx in …\\Machines\\Disks",
+      passed: !!b && b.vhdName.toLowerCase()==="relay-b2.vhdx" && b.vhdLocation===SPEC.B.vhdLocation && b.vhdSizeGB===200 });
+    T.push({ id:"b_os", label:"Defer the OS install for RELAY-B2",
+      passed: !!b && b.osLater===true });
+    T.push({ id:"b_range", label:"In RELAY-B2 settings, set memory to float 768–5,120 MB",
+      passed: !!b && b.dynamic===true && b.minMB===768 && b.maxMB===5120 });
+    return T;
+  }
+  function evalQuestions(){
+    return QUESTIONS.map(function(q){
+      var chosen = state.answers[q.id];
+      return { id:q.id, prompt:q.prompt,
+        answer: (chosen==null ? null : q.options[chosen]),
+        correct: chosen===q.answer };
+    });
+  }
+  function score(){
+    var T = evalTasks(), Q = evalQuestions();
+    var earned = T.filter(function(t){return t.passed;}).length
+               + Q.filter(function(q){return q.correct;}).length;
+    return { tasks:T, questions:Q, earned:earned, total:T.length+Q.length };
+  }
+
+  /* ------------------------------ RENDER -------------------------------- */
+  function renderVMs(){
+    var list = $("vmlist");
+    if(!state.vms.length){
+      list.innerHTML = '<div class="empty"><b>No virtual machines yet</b>'+
+        'Use “New virtual machine” to build the first one from the build sheet.</div>';
+      $("settingsBtn").disabled = true;
+      return;
+    }
+    list.innerHTML = state.vms.map(function(v,i){
+      var sw = v.switchType ? (v.switchName+" ("+v.switchType+")") : "Not connected";
+      var mem = v.dynamic
+        ? (v.startupMB+" MB startup · dynamic"+(v.minMB!=null?(" · "+v.minMB+"–"+v.maxMB+" MB"):""))
+        : (v.startupMB+" MB · static");
+      return '<div class="vmcard" role="button" tabindex="0" aria-selected="'+(state.selected===i)+'" data-i="'+i+'">'+
+        '<div class="row1"><span class="name">'+esc(v.name)+'</span>'+
+        '<span class="gen">Gen '+v.generation+'</span></div>'+
+        '<dl>'+
+          '<dt>Location</dt><dd>'+esc(v.location)+'</dd>'+
+          '<dt>Memory</dt><dd>'+esc(mem)+'</dd>'+
+          '<dt>Network</dt><dd>'+esc(sw)+'</dd>'+
+          '<dt>Disk</dt><dd>'+esc(v.vhdLocation+"\\"+v.vhdName+" · "+v.vhdSizeGB+" GB")+'</dd>'+
+          '<dt>OS</dt><dd>'+(v.osLater?"install later":"from .iso")+'</dd>'+
+        '</dl></div>';
+    }).join("");
+    Array.prototype.forEach.call(list.querySelectorAll(".vmcard"), function(card){
+      function sel(){ state.selected = +card.dataset.i; renderVMs(); $("settingsBtn").disabled=false; }
+      card.addEventListener("click", sel);
+      card.addEventListener("keydown", function(e){
+        if(e.key==="Enter"||e.key===" "){ e.preventDefault(); sel(); } });
+    });
+    $("settingsBtn").disabled = (state.selected==null);
+  }
+
+  function renderChecks(){
+    var s = score();
+    $("taskCount").textContent = "("+s.tasks.filter(function(t){return t.passed;}).length+"/"+s.tasks.length+")";
+    $("checks").innerHTML = s.tasks.map(function(t){
+      return '<li class="'+(t.passed?"done":"")+'"><span class="mk" aria-hidden="true">'+
+        (t.passed?"✓":"")+'</span><span>'+esc(t.label)+'</span></li>';
+    }).join("");
+    var pct = Math.round((s.earned/s.total)*100);
+    $("progressText").textContent = s.earned+" of "+s.total+" complete";
+    $("progressBar").style.width = pct+"%";
+
+    var complete = s.earned===s.total;
+    var nameOK = ($("hacker").value.trim().length>0);
+    $("submitBtn").disabled = !(complete && nameOK);
+    $("submitHint").textContent = complete
+      ? (nameOK ? "Ready to submit." : "Enter a hacker name to submit.")
+      : (s.total - s.earned)+" item"+((s.total-s.earned)===1?"":"s")+" left.";
+  }
+
+  function renderQuestions(){
+    $("questions").innerHTML = QUESTIONS.map(function(q){
+      var chosen = state.answers[q.id];
+      var opts = q.options.map(function(opt,idx){
+        var cls = "opt";
+        if(chosen!=null && idx===chosen) cls += (idx===q.answer ? " correct" : " wrong");
+        return '<label class="'+cls+'"><input type="radio" name="'+q.id+'" value="'+idx+'"'+
+          (chosen===idx?" checked":"")+' /><span>'+esc(opt)+'</span></label>';
+      }).join("");
+      var flag = "";
+      if(chosen!=null) flag = chosen===q.answer
+        ? '<div class="qflag ok">Correct</div>'
+        : '<div class="qflag no">Not quite — try another option.</div>';
+      return '<div class="q"><div class="prompt">'+esc(q.prompt)+'</div>'+
+        '<div class="opts">'+opts+'</div>'+flag+'</div>';
+    }).join("");
+    Array.prototype.forEach.call($("questions").querySelectorAll('input[type=radio]'), function(r){
+      r.addEventListener("change", function(){
+        state.answers[r.name] = +r.value;
+        renderQuestions(); renderChecks();
+      });
+    });
+  }
+
+  function renderAll(){ renderVMs(); renderChecks(); renderQuestions(); }
+
+  /* ------------------------------ WIZARD -------------------------------- */
+  var STEP_NAMES = ["Name","Generation","Memory","Network","Disk","Install","Summary"];
+  var wiz = { step:0, draft:null };
+
+  function openWizard(){
+    wiz.step = 0;
+    wiz.draft = { name:"", location:"", generation:null, startupMB:null, dynamic:false,
+                  switchName:null, switchType:null, vhdName:"", vhdLocation:"", vhdSizeGB:null, osLater:null };
+    $("w_name").value=""; $("w_loc").value=""; $("w_mem").value=""; $("w_dyn").checked=false;
+    $("w_sw").value=""; $("w_vhdname").value=""; $("w_vhdloc").value=""; $("w_vhdsize").value="";
+    Array.prototype.forEach.call(document.getElementsByName("w_gen"),function(r){r.checked=false;});
+    Array.prototype.forEach.call(document.getElementsByName("w_os"),function(r){r.checked=false;});
+    $("wizErr").textContent="";
+    showStep(0);
+    $("wizScrim").classList.add("open");
+    setTimeout(function(){ $("w_name").focus(); }, 30);
+  }
+  function closeWizard(){ $("wizScrim").classList.remove("open"); $("newVmBtn").focus(); }
+
+  function showStep(n){
+    wiz.step = n;
+    Array.prototype.forEach.call(document.querySelectorAll("#stepwrap .step"), function(el){
+      el.classList.toggle("show", +el.dataset.step===n);
+    });
+    $("wizSteps").innerHTML = STEP_NAMES.map(function(nm,i){
+      var c = i===n ? "on" : (i<n ? "seen" : "");
+      return '<i class="'+c+'">'+(i+1)+". "+nm+'</i>';
+    }).join("");
+    $("wizBack").disabled = (n===0);
+    var last = (n===STEP_NAMES.length-1);
+    $("wizNext").style.display = last ? "none":"inline-block";
+    $("wizFinish").style.display = last ? "inline-block":"none";
+    $("wizErr").textContent="";
+    if(last) renderSummary();
+  }
+
+  // Pull the current step's inputs into the draft; return error string or "".
+  function captureStep(n){
+    var d = wiz.draft;
+    if(n===0){
+      d.name = $("w_name").value.trim();
+      d.location = $("w_loc").value;
+      if(!d.name) return "Enter a name for the machine.";
+      if(!d.location) return "Choose where to store the machine.";
+      // Hyper-V auto-names the disk after the machine; prefill once.
+      if(!$("w_vhdname").value) $("w_vhdname").value = d.name + ".vhdx";
+    } else if(n===1){
+      var g = document.querySelector('input[name=w_gen]:checked');
+      if(!g) return "Pick a generation.";
+      d.generation = +g.value;
+    } else if(n===2){
+      var mem = parseInt($("w_mem").value,10);
+      if(!(mem>0)) return "Enter the startup memory in MB.";
+      d.startupMB = mem; d.dynamic = $("w_dyn").checked;
+    } else if(n===3){
+      var sw = $("w_sw").value;
+      if(!sw){ d.switchName=null; d.switchType=null; }
+      else { var parts = sw.split("|"); d.switchName=parts[0]; d.switchType=parts[1]; }
+    } else if(n===4){
+      d.vhdName = $("w_vhdname").value.trim();
+      d.vhdLocation = $("w_vhdloc").value;
+      var sz = parseInt($("w_vhdsize").value,10);
+      if(!d.vhdName) return "Name the disk file.";
+      if(!/\.vhdx?$/i.test(d.vhdName)) return "The disk name should end in .vhdx.";
+      if(!d.vhdLocation) return "Choose where to store the disk.";
+      if(!(sz>0)) return "Enter the disk size in GB.";
+      d.vhdSizeGB = sz;
+    } else if(n===5){
+      var os = document.querySelector('input[name=w_os]:checked');
+      if(!os) return "Choose an installation option.";
+      d.osLater = (os.value==="later");
+    }
+    return "";
+  }
+
+  function renderSummary(){
+    var d = wiz.draft;
+    var sw = d.switchType ? (d.switchName+" ("+d.switchType+")") : "Not connected";
+    $("w_summary").innerHTML =
+      "Name: <span>"+esc(d.name)+"</span><br>"+
+      "Location: <span>"+esc(d.location)+"</span><br>"+
+      "Generation: <span>"+d.generation+"</span><br>"+
+      "Startup memory: <span>"+d.startupMB+" MB"+(d.dynamic?" (dynamic)":" (static)")+"</span><br>"+
+      "Network: <span>"+esc(sw)+"</span><br>"+
+      "Disk: <span>"+esc(d.vhdLocation+"\\"+d.vhdName+" · "+d.vhdSizeGB+" GB")+"</span><br>"+
+      "OS: <span>"+(d.osLater?"install later":"from .iso")+"</span>";
+  }
+
+  function wizNext(){
+    var err = captureStep(wiz.step);
+    if(err){ $("wizErr").textContent = err; return; }
+    showStep(wiz.step+1);
+  }
+  function wizBack(){ if(wiz.step>0) showStep(wiz.step-1); }
+  function wizFinish(){
+    var err = captureStep(wiz.step); // summary step has no inputs -> ""
+    if(err){ $("wizErr").textContent = err; return; }
+    if(findVM(wiz.draft.name)){
+      $("wizErr").textContent = "A machine named "+wiz.draft.name+" already exists. Reset the bench or use a different name.";
+      return;
+    }
+    var d = wiz.draft;
+    state.vms.push({
+      name:d.name, location:d.location, generation:d.generation,
+      startupMB:d.startupMB, dynamic:d.dynamic,
+      switchName:d.switchName, switchType:d.switchType,
+      vhdName:d.vhdName, vhdLocation:d.vhdLocation, vhdSizeGB:d.vhdSizeGB,
+      osLater:d.osLater,
+      minMB: d.dynamic ? null : null, maxMB: d.dynamic ? null : null
+    });
+    state.selected = state.vms.length-1;
+    closeWizard(); renderAll();
+  }
+
+  /* ----------------------------- SETTINGS ------------------------------- */
+  function openSettings(){
+    if(state.selected==null) return;
+    var v = state.vms[state.selected];
+    $("setWho").textContent = "Editing memory for "+v.name+" (Generation "+v.generation+").";
+    $("s_dyn").checked = !!v.dynamic;
+    $("s_start").value = v.startupMB;
+    $("s_min").value = v.minMB!=null ? v.minMB : "";
+    $("s_max").value = v.maxMB!=null ? v.maxMB : "";
+    toggleRange();
+    $("setErr").textContent="";
+    $("setScrim").classList.add("open");
+    setTimeout(function(){ $("s_dyn").focus(); },30);
+  }
+  function closeSettings(){ $("setScrim").classList.remove("open"); $("settingsBtn").focus(); }
+  function toggleRange(){ $("s_range").style.display = $("s_dyn").checked ? "block":"none"; }
+  function applySettings(){
+    var v = state.vms[state.selected];
+    var start = parseInt($("s_start").value,10);
+    if(!(start>0)){ $("setErr").textContent="Enter a startup RAM value."; return; }
+    v.startupMB = start;
+    v.dynamic = $("s_dyn").checked;
+    if(v.dynamic){
+      var mn = parseInt($("s_min").value,10), mx = parseInt($("s_max").value,10);
+      if(!(mn>0)||!(mx>0)){ $("setErr").textContent="With dynamic memory, set both minimum and maximum RAM."; return; }
+      if(mn>mx){ $("setErr").textContent="Minimum RAM cannot exceed maximum RAM."; return; }
+      v.minMB = mn; v.maxMB = mx;
+    } else { v.minMB=null; v.maxMB=null; }
+    closeSettings(); renderAll();
+  }
+
+  /* ---------------------------- SCREENSHOT ------------------------------ */
+  // Deterministic Canvas-2D proof of the lab state (see SCREENSHOT NOTE above).
+  function captureProof(hacker, s, clientTs){
+    var lines = [];
+    lines.push(["h","Hypervisor Bench — submission proof"]);
+    lines.push(["k","Hacker name", hacker]);
+    lines.push(["k","Assignment", CONFIG.assignmentId]);
+    lines.push(["k","Captured (browser)", clientTs]);
+    lines.push(["k","Score", s.earned+" / "+s.total]);
+    lines.push(["gap"]);
+    state.vms.forEach(function(v){
+      lines.push(["sub", v.name+"  ·  Gen "+v.generation]);
+      var mem = v.dynamic ? (v.startupMB+" MB startup, dynamic"+(v.minMB!=null?(" ("+v.minMB+"–"+v.maxMB+" MB)"):"")) : (v.startupMB+" MB, static");
+      lines.push(["d","Location", v.location]);
+      lines.push(["d","Memory", mem]);
+      lines.push(["d","Network", v.switchType?(v.switchName+" ("+v.switchType+")"):"Not connected"]);
+      lines.push(["d","Disk", v.vhdLocation+"\\"+v.vhdName+" · "+v.vhdSizeGB+" GB"]);
+      lines.push(["d","OS", v.osLater?"install later":"from .iso"]);
+      lines.push(["gap"]);
+    });
+    s.questions.forEach(function(q,i){
+      lines.push(["d","Q"+(i+1), (q.correct?"correct":"incorrect")]);
+    });
+
+    var W=900, pad=34, y=pad, lh=22;
+    // measure height
+    var H = pad*2;
+    lines.forEach(function(l){
+      H += l[0]==="gap"?12 : l[0]==="h"?44 : l[0]==="sub"?30 : lh;
+    });
+    var c = document.createElement("canvas");
+    var dpr = Math.min(2, window.devicePixelRatio||1);
+    c.width = W*dpr; c.height = H*dpr;
+    var x = c.getContext("2d"); x.scale(dpr,dpr);
+    x.fillStyle="#0e141b"; x.fillRect(0,0,W,H);
+    x.fillStyle="#f4a637"; x.fillRect(0,0,6,H);
+    function txt(str,px,size,color,mono,bold){
+      x.fillStyle=color; x.font=(bold?"600 ":"")+size+'px '+(mono?'ui-monospace,Consolas,monospace':'Inter,system-ui,sans-serif');
+      x.fillText(str, px, y);
+    }
+    lines.forEach(function(l){
+      if(l[0]==="gap"){ y+=12; return; }
+      if(l[0]==="h"){ y+=30; txt(l[1],pad,21,"#e8eef5",false,true); y+=14; return; }
+      if(l[0]==="sub"){ y+=22; txt(l[1],pad,15,"#34d3a6",true,true); y+=8; return; }
+      if(l[0]==="k"){ y+=lh; txt(l[1],pad,13,"#6f8194",false,false); txt(String(l[2]),pad+170,13,"#e8eef5",true,false); return; }
+      if(l[0]==="d"){ y+=lh; txt(l[1],pad+16,12.5,"#6f8194",false,false); txt(String(l[2]),pad+120,12.5,"#9fb0c0",true,false); return; }
+    });
+    return c.toDataURL("image/png");
+  }
+
+  /* ------------------------------ SUBMIT -------------------------------- */
+  function setStatus(cls,html){ var el=$("status"); el.className="status "+cls; el.innerHTML=html; }
+
+  async function submit(){
+    var hacker = $("hacker").value.trim();
+    var s = score();
+    if(!hacker){ setStatus("err","Enter a hacker name first."); return; }
+    if(s.earned!==s.total){ setStatus("err","Finish every task and question before submitting."); return; }
+    if(!configured()){
+      setStatus("err","No submission endpoint is configured yet. Your instructor needs to paste the deployed Apps Script URL into APPS_SCRIPT_URL.");
+      return;
+    }
+
+    var clientTs = new Date().toISOString();
+    setStatus("work","Rendering proof and submitting…");
+    $("submitBtn").disabled = true;
+
+    var shot;
+    try { shot = captureProof(hacker, s, clientTs); }
+    catch(e){ shot = ""; }
+
+    var payload = {
+      assignmentId: CONFIG.assignmentId,
+      hackerName: hacker.slice(0,40),
+      clientTimestamp: clientTs,
+      objectives: CONFIG.objectives,
+      tasks: s.tasks.map(function(t){ return {id:t.id,label:t.label,passed:t.passed}; }),
+      questions: s.questions.map(function(q){ return {id:q.id,prompt:q.prompt,answer:q.answer,correct:q.correct}; }),
+      score: { earned:s.earned, total:s.total },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    try {
+      // Simple request: no custom headers, default text/plain body -> no CORS preflight.
+      var res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      var out = await res.json();
+      if(out && out.success){
+        lastSubmittedScore = s.earned+"/"+s.total;
+        var link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">View your submission</a>' : "";
+        setStatus("ok","Submitted ("+lastSubmittedScore+")."+link);
+      } else {
+        setStatus("err","The server rejected the submission: "+esc((out&&out.error)||"unknown error")+". Check with your instructor.");
+        $("submitBtn").disabled=false;
+      }
+    } catch(err){
+      // Locked-down fallback: fire-and-forget; can't read the Doc link back.
+      try {
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        setStatus("ok","Submission sent, but this browser blocked reading the reply. Confirm receipt with your instructor.");
+      } catch(e2){
+        setStatus("err","Could not reach the submission server. Check your connection, then try again.");
+        $("submitBtn").disabled=false;
+      }
+    }
+  }
+
+  /* ------------------------------- RESET -------------------------------- */
+  function resetBench(){
+    state.vms = []; state.selected = null; state.answers = {};
+    $("hacker").value = ""; setStatus("",""); renderAll();
+  }
+
+  /* ------------------------------ WIRING -------------------------------- */
+  $("newVmBtn").addEventListener("click", openWizard);
+  $("wizClose").addEventListener("click", closeWizard);
+  $("wizNext").addEventListener("click", wizNext);
+  $("wizBack").addEventListener("click", wizBack);
+  $("wizFinish").addEventListener("click", wizFinish);
+  $("settingsBtn").addEventListener("click", openSettings);
+  $("setClose").addEventListener("click", closeSettings);
+  $("setCancel").addEventListener("click", closeSettings);
+  $("setApply").addEventListener("click", applySettings);
+  $("s_dyn").addEventListener("change", toggleRange);
+  $("resetBtn").addEventListener("click", resetBench);
+  $("submitBtn").addEventListener("click", submit);
+  $("hacker").addEventListener("input", renderChecks);
+
+  // Esc closes whichever modal is open
+  document.addEventListener("keydown", function(e){
+    if(e.key!=="Escape") return;
+    if($("wizScrim").classList.contains("open")) closeWizard();
+    else if($("setScrim").classList.contains("open")) closeSettings();
+  });
+  // Click on scrim backdrop closes
+  $("wizScrim").addEventListener("click", function(e){ if(e.target===this) closeWizard(); });
+  $("setScrim").addEventListener("click", function(e){ if(e.target===this) closeSettings(); });
+
+  renderAll();
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-gpo-create-link.html",title:"Lab \u2014 Create, Link, and Harden a GPO"}, NEXT={href:"splus-configure-microsoft-defender.html",title:"Configure Microsoft Defender"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.3 Protecting Devices";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

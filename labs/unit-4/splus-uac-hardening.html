@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<!--
+====================================================================
+  Security+ (SY0-701) Single-File Lab Simulation
+  Lab: Harden User Account Control (UAC) via Group Policy
+  assignmentId: splus-uac-hardening
+  Objectives: SY0-701 4.5 (OS security / Group Policy), 2.5 (least
+              privilege & hardening techniques)
+
+  CLEAN-ROOM / ORIGINALITY NOTICE
+  This lab was authored from the public CompTIA SY0-701 objectives
+  and Microsoft's documented UAC Group Policy behavior. The scenario,
+  persona, domain/host names, task wording, and question wording are
+  original. The Windows policy names and their recommended secure
+  values are factual configuration data. No third-party courseware's
+  scenario text, file names, question phrasing, ordering, or
+  screenshots were copied. The console UI is self-rendered markup —
+  no captured product images are used.
+
+  © 2026 <REPLACE: Author / Course Name>. You may use and adapt this
+  file for your own course delivery. Original work; not affiliated
+  with or endorsed by Microsoft, CompTIA, or any courseware vendor.
+  License: MIT (replace with your preferred terms).
+====================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Harden User Account Control (UAC)</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-uac-hardening",
+  "title": "Lab — Harden User Account Control (UAC)",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.3 Protecting Devices"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.5",
+      "4.5"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<style id="appcss">
+  :root{
+    /* Instructional shell accent */
+    --ink:#13212b; --muted:#5c6b75; --line:#d9e0e4; --paper:#f5f7f8;
+    --accent:#0e6b6b; --accent-dk:#0a4f4f; --good:#1d7a3e; --bad:#b3261e;
+    --warn:#8a5a00; --focus:#1565c0;
+    /* Simulated Windows MMC console palette */
+    --win-chrome:#f0f0f0; --win-pane:#ffffff; --win-border:#a6a6a6;
+    --win-line:#e3e3e3; --win-title1:#cfd9e8; --win-title2:#aebfd8;
+    --win-sel:#cce8ff; --win-sel-bd:#99d1ff; --win-text:#1b1b1b;
+    --win-tree:#f7f9fb;
+    --font-ui:"Segoe UI",system-ui,Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:"Cascadia Mono",Consolas,"Courier New",monospace;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms!important;transition-duration:.001ms!important;}
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font-ui); color:var(--ink); background:var(--paper);
+    line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent-dk);}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 64px;}
+
+  /* ---- Header ---- */
+  .lab-head{
+    border:1px solid var(--line);border-radius:12px;background:#fff;
+    padding:16px 18px;margin-bottom:16px;
+  }
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;}
+  .lab-head h1{font-size:22px;margin:.25rem 0 .4rem;line-height:1.2;}
+  .lab-head p{margin:.35rem 0;color:var(--muted);font-size:14.5px;}
+  .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .tag{font-size:12px;background:var(--paper);border:1px solid var(--line);
+    color:var(--accent-dk);padding:3px 9px;border-radius:999px;font-weight:600;}
+
+  /* ---- Layout ---- */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start;}
+  @media (max-width:920px){ .grid{grid-template-columns:1fr;} }
+
+  /* ---- Simulated GPMC console ---- */
+  .console{
+    border:1px solid var(--win-border);border-radius:7px;overflow:hidden;
+    background:var(--win-chrome);box-shadow:0 6px 22px rgba(20,40,60,.10);
+    font-size:13px;color:var(--win-text);
+  }
+  .titlebar{
+    display:flex;align-items:center;gap:8px;
+    background:linear-gradient(var(--win-title1),var(--win-title2));
+    padding:6px 10px;border-bottom:1px solid var(--win-border);
+  }
+  .titlebar .ico{width:14px;height:14px;flex:0 0 auto;}
+  .titlebar .t{font-weight:600;font-size:12.5px;color:#1d2a3a;}
+  .titlebar .winbtns{margin-left:auto;display:flex;gap:6px;}
+  .titlebar .winbtns span{width:12px;height:12px;border:1px solid #8294b3;border-radius:2px;background:#e7eefb;}
+  .menubar{display:flex;gap:16px;padding:5px 12px;background:var(--win-chrome);
+    border-bottom:1px solid var(--win-line);color:#333;font-size:12.5px;}
+  .menubar span{opacity:.85;}
+  .panes{display:grid;grid-template-columns:240px 1fr;min-height:420px;}
+  @media (max-width:520px){ .panes{grid-template-columns:1fr;} }
+
+  .tree{background:var(--win-tree);border-right:1px solid var(--win-line);
+    padding:8px 6px;overflow:auto;}
+  .tree ul{list-style:none;margin:0;padding-left:14px;}
+  .tree > ul{padding-left:4px;}
+  .tnode{display:flex;align-items:center;gap:5px;padding:2px 4px;border-radius:3px;
+    white-space:nowrap;font-size:12.5px;}
+  .tnode .tw{width:10px;color:#7a7a7a;font-size:10px;}
+  .tnode .fi{width:14px;height:14px;flex:0 0 auto;}
+  .tnode.sel{background:var(--win-sel);border:1px solid var(--win-sel-bd);}
+  .tree .leaf{color:#1b1b1b;}
+
+  .listpane{background:var(--win-pane);overflow:auto;}
+  .listhead{display:grid;grid-template-columns:1fr 220px;
+    background:#f3f3f3;border-bottom:1px solid var(--win-line);
+    font-weight:600;font-size:12px;color:#3a3a3a;position:sticky;top:0;}
+  .listhead div{padding:6px 10px;border-right:1px solid var(--win-line);}
+  table.settings{width:100%;border-collapse:collapse;}
+  table.settings tr{border-bottom:1px solid #efefef;}
+  .rowbtn{display:grid;grid-template-columns:1fr 220px;width:100%;text-align:left;
+    background:transparent;border:0;cursor:pointer;font:inherit;color:inherit;}
+  .rowbtn:hover{background:#f3f9ff;}
+  .rowbtn:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;}
+  .rowbtn[aria-pressed="true"]{background:var(--win-sel);}
+  .rowbtn .pol{padding:7px 10px;display:flex;gap:7px;align-items:flex-start;}
+  .rowbtn .pol .gi{width:14px;height:14px;flex:0 0 auto;margin-top:1px;}
+  .rowbtn .val{padding:7px 10px;border-left:1px solid #efefef;color:#333;}
+  .val.ok{color:var(--good);font-weight:600;}
+  .val.nd{color:#8a8a8a;font-style:italic;}
+  .val.set{color:#1b1b1b;}
+
+  /* ---- Dialog ---- */
+  .scrim{position:fixed;inset:0;background:rgba(15,25,35,.42);display:none;
+    align-items:center;justify-content:center;padding:16px;z-index:50;}
+  .scrim.open{display:flex;}
+  .dlg{background:var(--win-chrome);border:1px solid var(--win-border);
+    border-radius:6px;max-width:520px;width:100%;box-shadow:0 18px 50px rgba(0,0,0,.32);
+    font-size:13px;}
+  .dlg .dtitle{background:linear-gradient(var(--win-title1),var(--win-title2));
+    padding:7px 12px;font-weight:600;color:#1d2a3a;border-bottom:1px solid var(--win-border);
+    border-radius:6px 6px 0 0;display:flex;align-items:center;}
+  .dlg .dtitle .x{margin-left:auto;border:1px solid #8294b3;background:#e7eefb;
+    width:20px;height:18px;border-radius:3px;cursor:pointer;line-height:1;font-size:12px;}
+  .dlg .dbody{padding:14px 16px;background:#fff;}
+  .dlg fieldset{border:1px solid var(--win-line);border-radius:4px;margin:0 0 6px;padding:10px 12px;}
+  .dlg legend{font-weight:600;padding:0 6px;font-size:12.5px;}
+  .opt{display:flex;align-items:flex-start;gap:9px;padding:5px 2px;}
+  .opt input{margin-top:2px;}
+  .opt label{cursor:pointer;}
+  .dlg select{width:100%;padding:6px 8px;font:inherit;border:1px solid #b7b7b7;border-radius:3px;}
+  .dhint{font-size:12px;color:var(--muted);margin:2px 0 12px;}
+  .dbtns{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;background:var(--win-chrome);
+    border-top:1px solid var(--win-line);border-radius:0 0 6px 6px;}
+  .btn{font:inherit;border:1px solid #b7b7b7;background:#fafafa;border-radius:4px;
+    padding:6px 16px;cursor:pointer;min-width:78px;}
+  .btn:hover{background:#f0f0f0;}
+  .btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+  .btn.primary{background:var(--accent);border-color:var(--accent-dk);color:#fff;}
+  .btn.primary:hover{background:var(--accent-dk);}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+
+  /* ---- Task / question panel ---- */
+  .panel{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;}
+  .panel h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#fff;
+    background:var(--accent);margin:0;padding:10px 14px;display:flex;align-items:center;gap:8px;}
+  .panel h2 .cnt{margin-left:auto;font-weight:600;background:rgba(255,255,255,.18);
+    padding:2px 9px;border-radius:999px;font-size:12px;letter-spacing:0;}
+  .panel .pbody{padding:12px 14px;}
+  .scenario{font-size:14px;color:#33424c;margin:0 0 12px;}
+  ul.checklist{list-style:none;margin:0;padding:0;}
+  ul.checklist li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px;}
+  ul.checklist li:last-child{border-bottom:0;}
+  .mark{width:20px;height:20px;border-radius:5px;border:1.5px solid #c2ccd2;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;margin-top:1px;}
+  .mark.done{background:var(--good);border-color:var(--good);}
+  li.passed .tlabel{color:#2b3b44;}
+  .tlabel{color:#46555e;}
+  .tlabel b{color:var(--ink);}
+
+  .q{border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin:10px 0;}
+  .q .qp{font-weight:600;font-size:14px;margin:0 0 8px;}
+  .q .qp .qn{color:var(--accent);margin-right:6px;}
+  .q .a{display:flex;gap:9px;align-items:flex-start;padding:5px 0;font-size:13.5px;cursor:pointer;}
+  .q .a input{margin-top:3px;}
+  .q.correct{border-color:#bfe3cb;background:#f4fbf6;}
+  .q.wrong{border-color:#f0c9c6;background:#fdf5f4;}
+  .qfb{font-size:12.5px;margin-top:6px;min-height:1em;}
+  .qfb.ok{color:var(--good);} .qfb.no{color:var(--bad);}
+
+  /* ---- Submission bar ---- */
+  .subbar{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:#fff;
+    padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end;}
+  @media (max-width:700px){ .subbar{grid-template-columns:1fr;} }
+  .field label{display:block;font-size:12.5px;font-weight:600;color:#33424c;margin-bottom:5px;}
+  .field input{width:100%;padding:9px 11px;border:1px solid #c2ccd2;border-radius:7px;font:inherit;}
+  .field input:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus);}
+  .field .hint{font-size:12px;color:var(--muted);margin-top:5px;}
+  .subactions{display:flex;gap:10px;align-items:center;}
+  .progress{font-size:13px;color:var(--muted);}
+  .progress b{color:var(--ink);}
+  .status{margin-top:12px;font-size:13.5px;padding:10px 12px;border-radius:8px;display:none;}
+  .status.show{display:block;}
+  .status.busy{background:#eef5fb;color:#234;border:1px solid #cfe2f3;}
+  .status.ok{background:#eef8f1;color:#14532d;border:1px solid #bfe3cb;}
+  .status.err{background:#fdf2f1;color:#7a1c16;border:1px solid #f0c9c6;}
+  .status a{font-weight:600;}
+  .toolrow{display:flex;justify-content:flex-end;margin:10px 0 2px;}
+  .link{background:none;border:0;color:var(--accent-dk);cursor:pointer;font:inherit;
+    text-decoration:underline;padding:4px;}
+  .link:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+  footer.legal{margin-top:22px;font-size:11.5px;color:#7e8990;text-align:center;line-height:1.6;}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <!-- =============== HEADER =============== -->
+  <header class="lab-head">
+    <div class="eyebrow">CompTIA Security+ &middot; SY0-701 Lab</div>
+    <h1>Harden User Account Control with Group Policy</h1>
+    <p id="scenario" class="scenario"></p>
+    <div class="tags">
+      <span class="tag">Objective 4.5 — OS security / Group Policy</span>
+      <span class="tag">Objective 2.5 — Least privilege &amp; hardening</span>
+      <span class="tag" id="idtag">splus-uac-hardening</span>
+    </div>
+  </header>
+
+  <div class="toolrow">
+    <button type="button" class="link" id="resetBtn">Reset lab</button>
+  </div>
+
+  <div class="grid" id="labArea">
+    <!-- =============== SIMULATED CONSOLE =============== -->
+    <section class="console" aria-label="Group Policy Management Editor (simulated)">
+      <div class="titlebar">
+        <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="2" width="14" height="12" rx="1.5" fill="#5b7fb0"/><rect x="1" y="2" width="14" height="3.2" fill="#3f5f87"/></svg>
+        <span class="t">Group Policy Management Editor — Default Domain Policy</span>
+        <span class="winbtns" aria-hidden="true"><span></span><span></span><span></span></span>
+      </div>
+      <div class="menubar" aria-hidden="true">
+        <span>File</span><span>Action</span><span>View</span><span>Help</span>
+      </div>
+      <div class="panes">
+        <!-- Tree -->
+        <nav class="tree" aria-label="Console tree (display only)">
+          <ul>
+            <li>
+              <div class="tnode"><span class="tw">▾</span>
+                <svg class="fi" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="2" width="14" height="12" rx="1.5" fill="#7a93b8"/></svg>
+                <span>Default Domain Policy [HARBOR-DC1.harbor.internal]</span>
+              </div>
+              <ul>
+                <li>
+                  <div class="tnode"><span class="tw">▾</span><span class="leaf">Computer Configuration</span></div>
+                  <ul>
+                    <li><div class="tnode"><span class="tw">▾</span><span class="leaf">Policies</span></div>
+                      <ul>
+                        <li><div class="tnode"><span class="tw">▾</span><span class="leaf">Windows Settings</span></div>
+                          <ul>
+                            <li><div class="tnode"><span class="tw">▾</span><span class="leaf">Security Settings</span></div>
+                              <ul>
+                                <li><div class="tnode"><span class="tw">▾</span><span class="leaf">Local Policies</span></div>
+                                  <ul>
+                                    <li><div class="tnode"><span class="tw">▾</span><span class="leaf">Audit Policy</span></div></li>
+                                    <li><div class="tnode"><span class="tw">▾</span><span class="leaf">User Rights Assignment</span></div></li>
+                                    <li><div class="tnode sel" aria-current="true"><span class="tw"> </span>
+                                      <svg class="fi" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1" fill="#caa64a"/></svg>
+                                      <span><b>Security Options</b></span></div></li>
+                                  </ul>
+                                </li>
+                              </ul>
+                            </li>
+                          </ul>
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </nav>
+
+        <!-- Settings list -->
+        <div class="listpane">
+          <div class="listhead"><div>Policy</div><div>Security Setting</div></div>
+          <table class="settings"><tbody id="settingsBody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== TASK / QUESTION PANEL =============== -->
+    <div>
+      <section class="panel" style="margin-bottom:16px;">
+        <h2>Configuration tasks <span class="cnt" id="taskCnt">0 / 10</span></h2>
+        <div class="pbody">
+          <p style="margin:0 0 10px;font-size:13px;color:var(--muted);">
+            Double-click a policy in the console (or press Enter on it) to open its
+            properties and set the hardened value. Tasks check off automatically.
+          </p>
+          <ul class="checklist" id="checklist"></ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Knowledge check <span class="cnt" id="qCnt">0 / 4</span></h2>
+        <div class="pbody" id="questions"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- =============== SUBMISSION BAR =============== -->
+  <section class="subbar" aria-label="Submit lab">
+    <div class="field">
+      <label for="hacker">Hacker name (pseudonym)</label>
+      <input id="hacker" type="text" autocomplete="off" maxlength="40"
+             placeholder="e.g., nullroute, harbor-owl, ghostshell"
+             aria-describedby="hackerHint">
+      <div class="hint" id="hackerHint">Use a handle, not your real name. No personal information is collected.</div>
+    </div>
+    <div class="subactions">
+      <span class="progress">Complete: <b id="progText">0 / 14</b></span>
+      <button type="button" class="btn primary" id="submitBtn" disabled>Submit completed lab</button>
+    </div>
+  </section>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+
+  <footer class="legal">
+    Original clean-room simulation built from public CompTIA SY0-701 objectives and documented
+    Windows UAC behavior. Not affiliated with or endorsed by Microsoft, CompTIA, or any courseware vendor.<br>
+    &copy; 2026 &lt;REPLACE: Author / Course Name&gt;. Provided for course use. Policy names and recommended
+    values are factual configuration data.
+  </footer>
+</div>
+
+<!-- =============== PROPERTIES DIALOG =============== -->
+<div class="scrim" id="scrim" role="presentation">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" id="dlg">
+    <div class="dtitle" id="dlgTitle">Policy Properties
+      <button type="button" class="x" id="dlgX" aria-label="Close">✕</button>
+    </div>
+    <div class="dbody" id="dlgBody"><!-- filled dynamically --></div>
+    <div class="dbtns">
+      <button type="button" class="btn primary" id="dlgOk">OK</button>
+      <button type="button" class="btn" id="dlgApply">Apply</button>
+      <button type="button" class="btn" id="dlgCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================================
+     ENGINE + CONFIG + ANSWER KEY
+     ==================================================================== -->
+<script>
+/* ---------------------- LAB CONFIG (per §11) ---------------------- */
+const CONFIG = {
+  assignmentId: "splus-uac-hardening",
+  title: "Harden User Account Control with Group Policy",
+  objectives: ["4.5", "2.5"],
+  scenario:
+    "Northwind Harbor Credit Union runs a single Active Directory forest with the " +
+    "domain harbor.internal. After a phishing incident in which an attacker talked " +
+    "an analyst into approving a silent privilege elevation, the security team wants " +
+    "User Account Control hardened the same way on every domain-joined workstation. " +
+    "You are the endpoint security administrator working on the domain controller " +
+    "HARBOR-DC1. Edit the Default Domain Policy and bring the ten UAC security options " +
+    "into line with the team's hardened baseline.",
+  // Same /exec URL across the whole library; instructor pastes it once.
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  // Per-cohort secret; rotate each term. Must match the Apps Script property.
+  submissionToken: "REPLACE_PER_COHORT_TOKEN",
+  passThreshold: "all 10 policies set to the hardened value AND all 4 questions correct"
+};
+
+/* The ten UAC security options. Policy names + secure values are factual
+   Windows configuration data; task labels are original goal-oriented wording. */
+const SETTINGS = [
+  { id:"aamBuiltin", policy:"User Account Control: Admin Approval Mode for the built-in Administrator account",
+    type:"toggle", target:"Enabled",
+    task:"Force the built-in Administrator account to run in Admin Approval Mode" },
+  { id:"uiaSecure", policy:"User Account Control: Allow UIAccess applications to prompt for elevation without using the secure desktop",
+    type:"toggle", target:"Disabled",
+    task:"Stop accessibility (UIAccess) apps from skipping the secure desktop when they prompt" },
+  { id:"adminBehavior", policy:"User Account Control: Behavior of the elevation prompt for administrators in Admin Approval Mode",
+    type:"choice", target:"Prompt for credentials",
+    options:["Elevate without prompting","Prompt for consent for non-Windows binaries","Prompt for consent",
+             "Prompt for credentials","Prompt for consent on the secure desktop","Prompt for credentials on the secure desktop"],
+    task:"Make administrators re-enter their credentials when they elevate" },
+  { id:"stdBehavior", policy:"User Account Control: Behavior of the elevation prompt for standard users",
+    type:"choice", target:"Automatically deny elevation requests",
+    options:["Automatically deny elevation requests","Prompt for credentials","Prompt for credentials on the secure desktop",
+             "Prompt for consent on the secure desktop"],
+    task:"Block standard users from elevating at all" },
+  { id:"detectInstall", policy:"User Account Control: Detect application installations and prompt for elevation",
+    type:"toggle", target:"Enabled",
+    task:"Detect application installers and trigger an elevation prompt" },
+  { id:"signedOnly", policy:"User Account Control: Only elevate executables that are signed and validated",
+    type:"toggle", target:"Disabled",
+    task:"Leave PKI signature enforcement on elevated executables off the baseline" },
+  { id:"uiaSecureLoc", policy:"User Account Control: Only elevate UIAccess applications that are installed in secure locations",
+    type:"toggle", target:"Enabled",
+    task:"Only elevate accessibility apps launched from protected system paths" },
+  { id:"allAdmins", policy:"User Account Control: Run all administrators in Admin Approval Mode",
+    type:"toggle", target:"Enabled",
+    task:"Run every administrator in Admin Approval Mode" },
+  { id:"secureDesktop", policy:"User Account Control: Switch to the secure desktop when prompting for elevation",
+    type:"toggle", target:"Enabled",
+    task:"Show elevation prompts on the secure desktop" },
+  { id:"virtualize", policy:"User Account Control: Virtualize file and registry write failures to per-user locations",
+    type:"toggle", target:"Enabled",
+    task:"Redirect legacy app write failures to per-user virtual locations" }
+];
+
+/* Original conceptual questions (correct index marked) */
+const QUESTIONS = [
+  { id:"q1", prompt:"Why does switching to the secure desktop during an elevation prompt improve security?",
+    options:[
+      "It isolates the prompt so malware in the user's session cannot spoof or automate the approval",
+      "It makes the elevation prompt appear faster",
+      "It turns UAC off for members of the Administrators group",
+      "It lets standard users elevate without typing a password"],
+    correct:0 },
+  { id:"q2", prompt:"Setting the standard-user elevation prompt to \"Automatically deny elevation requests\" most directly enforces which principle?",
+    options:[
+      "Non-repudiation",
+      "Least privilege",
+      "Defense in depth",
+      "Open design"],
+    correct:1 },
+  { id:"q3", prompt:"What does enabling Admin Approval Mode for the built-in Administrator account actually change?",
+    options:[
+      "It deletes the built-in Administrator account",
+      "It grants the built-in Administrator permanent unrestricted access",
+      "Even the built-in Administrator receives elevation prompts instead of running silently with full rights",
+      "It permanently demotes the built-in Administrator to a standard user"],
+    correct:2 },
+  { id:"q4", prompt:"Choosing \"Prompt for credentials\" instead of \"Prompt for consent\" for administrator elevation is stronger because:",
+    options:[
+      "It removes the prompt entirely",
+      "The administrator must re-enter a username and password, resisting one-click or over-the-shoulder elevation",
+      "It runs every elevated program with reduced privileges",
+      "It signs the administrator out after each elevation"],
+    correct:1 }
+];
+
+/* ---------------------- STATE ---------------------- */
+const state = {
+  values: {},          // setting.id -> current value string ("Not Defined" default)
+  qAnswers: {},        // question.id -> chosen index
+  activeSetting: null, // id of setting open in dialog
+  lastFocus: null
+};
+SETTINGS.forEach(s => state.values[s.id] = "Not Defined");
+
+/* ---------------------- DOM refs ---------------------- */
+const $ = sel => document.querySelector(sel);
+const settingsBody = $("#settingsBody");
+const checklist    = $("#checklist");
+const questionsEl  = $("#questions");
+const scrim = $("#scrim"), dlg = $("#dlg"), dlgBody = $("#dlgBody"), dlgTitle = $("#dlgTitle");
+const statusEl = $("#status"), submitBtn = $("#submitBtn"), hackerInput = $("#hacker");
+
+$("#scenario").textContent = CONFIG.scenario;
+$("#idtag").textContent = CONFIG.assignmentId;
+
+/* ---------------------- RENDER: settings list ---------------------- */
+function gearIcon(){
+  return '<svg class="gi" viewBox="0 0 16 16" aria-hidden="true">' +
+    '<circle cx="8" cy="8" r="3" fill="none" stroke="#6a6a6a" stroke-width="1.4"/>' +
+    '<path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M13 3l-1.5 1.5M4.5 11.5L3 13" stroke="#6a6a6a" stroke-width="1.2"/></svg>';
+}
+function renderSettings(){
+  settingsBody.innerHTML = "";
+  SETTINGS.forEach(s => {
+    const tr = document.createElement("tr");
+    const v = state.values[s.id];
+    const isOk = v === s.target;
+    const valClass = v === "Not Defined" ? "nd" : (isOk ? "ok" : "set");
+    tr.innerHTML =
+      '<td colspan="2" style="padding:0">' +
+        '<button class="rowbtn" type="button" data-id="'+s.id+'" aria-pressed="false">' +
+          '<span class="pol">'+gearIcon()+'<span>'+escapeHtml(s.policy)+'</span></span>' +
+          '<span class="val '+valClass+'">'+escapeHtml(v)+'</span>' +
+        '</button>' +
+      '</td>';
+    settingsBody.appendChild(tr);
+  });
+  settingsBody.querySelectorAll(".rowbtn").forEach(btn => {
+    btn.addEventListener("click", () => openDialog(btn.dataset.id));
+    btn.addEventListener("dblclick", () => openDialog(btn.dataset.id));
+    btn.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDialog(btn.dataset.id); }
+    });
+  });
+}
+
+/* ---------------------- RENDER: checklist ---------------------- */
+function renderChecklist(){
+  checklist.innerHTML = "";
+  SETTINGS.forEach(s => {
+    const passed = state.values[s.id] === s.target;
+    const li = document.createElement("li");
+    if (passed) li.classList.add("passed");
+    li.innerHTML =
+      '<span class="mark '+(passed?"done":"")+'" aria-hidden="true">'+(passed?"✓":"")+'</span>' +
+      '<span class="tlabel">'+escapeHtml(s.task)+
+        ' <b>→ '+escapeHtml(s.target)+'</b></span>';
+    checklist.appendChild(li);
+  });
+}
+
+/* ---------------------- RENDER: questions ---------------------- */
+function renderQuestions(){
+  questionsEl.innerHTML = "";
+  QUESTIONS.forEach((q, qi) => {
+    const box = document.createElement("div");
+    box.className = "q"; box.id = "qbox-"+q.id;
+    let html = '<p class="qp"><span class="qn">Q'+(qi+1)+'.</span>'+escapeHtml(q.prompt)+'</p>';
+    q.options.forEach((opt, oi) => {
+      const oid = q.id+"-"+oi;
+      html += '<label class="a" for="'+oid+'">' +
+        '<input type="radio" id="'+oid+'" name="'+q.id+'" value="'+oi+'">' +
+        '<span>'+escapeHtml(opt)+'</span></label>';
+    });
+    html += '<div class="qfb" id="fb-'+q.id+'" aria-live="polite"></div>';
+    box.innerHTML = html;
+    questionsEl.appendChild(box);
+  });
+  questionsEl.querySelectorAll('input[type=radio]').forEach(r => {
+    r.addEventListener("change", e => {
+      const [qid, oi] = e.target.id.split("-");
+      state.qAnswers[qid] = parseInt(oi, 10);
+      gradeQuestion(qid);
+      refresh();
+    });
+  });
+}
+function gradeQuestion(qid){
+  const q = QUESTIONS.find(x => x.id === qid);
+  const box = $("#qbox-"+qid), fb = $("#fb-"+qid);
+  const chosen = state.qAnswers[qid];
+  box.classList.remove("correct","wrong"); fb.classList.remove("ok","no");
+  if (chosen == null) { fb.textContent = ""; return; }
+  if (chosen === q.correct) { box.classList.add("correct"); fb.classList.add("ok"); fb.textContent = "Correct."; }
+  else { box.classList.add("wrong"); fb.classList.add("no"); fb.textContent = "Not quite — review and try another option."; }
+}
+
+/* ---------------------- DIALOG ---------------------- */
+function openDialog(id){
+  const s = SETTINGS.find(x => x.id === id);
+  if (!s) return;
+  state.activeSetting = id;
+  state.lastFocus = document.activeElement;
+  dlgTitle.firstChild.textContent = "Properties";
+  let body = '<p style="font-weight:600;margin:0 0 4px;">'+escapeHtml(s.policy)+'</p>' +
+             '<p class="dhint">Local Security Setting — choose the value for this policy.</p>';
+  const current = state.values[id];
+  if (s.type === "toggle"){
+    body += '<fieldset><legend>Setting</legend>';
+    ["Not Defined","Enabled","Disabled"].forEach((opt,i) => {
+      const checked = current === opt ? "checked" : "";
+      body += '<div class="opt"><input type="radio" id="d-'+i+'" name="dval" value="'+escapeAttr(opt)+'" '+checked+'>' +
+              '<label for="d-'+i+'">'+escapeHtml(opt)+'</label></div>';
+    });
+    body += '</fieldset>';
+  } else {
+    body += '<fieldset><legend>Setting</legend>' +
+            '<label for="dsel" class="sr">Value</label>' +
+            '<select id="dsel"><option value="Not Defined"'+(current==="Not Defined"?" selected":"")+'>Not Defined</option>';
+    s.options.forEach(opt => {
+      body += '<option value="'+escapeAttr(opt)+'"'+(current===opt?" selected":"")+'>'+escapeHtml(opt)+'</option>';
+    });
+    body += '</select></fieldset>';
+  }
+  dlgBody.innerHTML = body;
+  scrim.classList.add("open");
+  // focus first control
+  const first = dlgBody.querySelector("input,select");
+  if (first) first.focus();
+}
+function readDialogValue(){
+  const s = SETTINGS.find(x => x.id === state.activeSetting);
+  if (s.type === "toggle"){
+    const sel = dlgBody.querySelector('input[name=dval]:checked');
+    return sel ? sel.value : "Not Defined";
+  }
+  return dlgBody.querySelector("#dsel").value;
+}
+function applyDialog(){
+  if (!state.activeSetting) return;
+  state.values[state.activeSetting] = readDialogValue();
+  renderSettings(); renderChecklist(); refresh();
+}
+function closeDialog(){
+  scrim.classList.remove("open");
+  state.activeSetting = null;
+  if (state.lastFocus && state.lastFocus.focus) state.lastFocus.focus();
+}
+$("#dlgOk").addEventListener("click", () => { applyDialog(); closeDialog(); });
+$("#dlgApply").addEventListener("click", applyDialog);
+$("#dlgCancel").addEventListener("click", closeDialog);
+$("#dlgX").addEventListener("click", closeDialog);
+scrim.addEventListener("mousedown", e => { if (e.target === scrim) closeDialog(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && scrim.classList.contains("open")) closeDialog();
+  // simple focus containment inside dialog
+  if (e.key === "Tab" && scrim.classList.contains("open")){
+    const f = dlg.querySelectorAll('button,input,select,[tabindex]:not([tabindex="-1"])');
+    if (!f.length) return;
+    const first = f[0], last = f[f.length-1];
+    if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+});
+
+/* ---------------------- SCORING / PROGRESS ---------------------- */
+function taskResults(){
+  return SETTINGS.map(s => ({ id:s.id, label:s.task, target:s.target,
+    value:state.values[s.id], passed: state.values[s.id] === s.target }));
+}
+function questionResults(){
+  return QUESTIONS.map(q => {
+    const chosen = state.qAnswers[q.id];
+    return { id:q.id, prompt:q.prompt,
+      answer: chosen==null ? "" : q.options[chosen],
+      correct: chosen === q.correct };
+  });
+}
+function refresh(){
+  const t = taskResults(), q = questionResults();
+  const tDone = t.filter(x => x.passed).length;
+  const qDone = q.filter(x => x.correct).length;
+  $("#taskCnt").textContent = tDone + " / " + t.length;
+  $("#qCnt").textContent = qDone + " / " + q.length;
+  const total = t.length + q.length, done = tDone + qDone;
+  $("#progText").textContent = done + " / " + total;
+  const complete = (tDone === t.length) && (qDone === q.length);
+  const named = hackerInput.value.trim().length > 0;
+  submitBtn.disabled = !(complete && named);
+  submitBtn.title = !complete ? "Finish all tasks and questions first"
+                  : !named ? "Enter a hacker name to submit" : "";
+}
+hackerInput.addEventListener("input", refresh);
+
+/* ---------------------- SCREENSHOT (dependency-free) ----------------------
+   Primary: snapshot the simulated DOM via an SVG <foreignObject>.
+   Fallback: draw a Canvas-2D results card. Both return a PNG data URL.   */
+function captureLabArea(){
+  return new Promise(resolve => {
+    const node = document.getElementById("labArea");
+    const rect = node.getBoundingClientRect();
+    const w = Math.min(Math.ceil(rect.width), 1100);
+    const h = Math.ceil(rect.height);
+    let xhtml;
+    try {
+      const clone = node.cloneNode(true);
+      clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+      xhtml = new XMLSerializer().serializeToString(clone);
+    } catch (err) { return resolve(summaryCard(w)); }
+    const css = (document.getElementById("appcss")||{}).textContent || "";
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
+        '<foreignObject x="0" y="0" width="'+w+'" height="'+h+'">' +
+          '<div xmlns="http://www.w3.org/1999/xhtml" style="background:#ffffff;width:'+w+'px;padding:8px;">' +
+            '<style><![CDATA['+css+']]></style>' + xhtml +
+          '</div>' +
+        '</foreignObject></svg>';
+    const img = new Image();
+    let settled = false;
+    const done = (val) => { if (!settled){ settled = true; resolve(val); } };
+    const t = setTimeout(() => done(summaryCard(w)), 2500);
+    img.onload = () => {
+      try {
+        const scale = w > 900 ? 900/w : 1;
+        const cw = Math.round(w*scale), ch = Math.round(h*scale);
+        const c = document.createElement("canvas");
+        c.width = cw; c.height = ch;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,cw,ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        clearTimeout(t); done(c.toDataURL("image/png"));
+      } catch (err) { clearTimeout(t); done(summaryCard(w)); }
+    };
+    img.onerror = () => { clearTimeout(t); done(summaryCard(w)); };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  });
+}
+/* Guaranteed fallback: a clean results card drawn directly to canvas. */
+function summaryCard(){
+  const W = 760, pad = 26, lh = 22;
+  const t = taskResults(), q = questionResults();
+  const rows = t.length + q.length;
+  const H = pad*2 + 110 + rows*lh + 40;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = "#0e6b6b"; ctx.fillRect(0,0,W,8);
+  ctx.fillStyle = "#13212b"; ctx.font = "bold 20px Segoe UI, Arial";
+  ctx.fillText("UAC Hardening Lab — Submission Proof", pad, 44);
+  ctx.font = "13px Segoe UI, Arial"; ctx.fillStyle = "#5c6b75";
+  ctx.fillText("Handle: " + (hackerInput.value.trim()||"(none)") +
+               "    Assignment: " + CONFIG.assignmentId, pad, 70);
+  ctx.fillText("Generated: " + new Date().toLocaleString(), pad, 90);
+  let y = 124; ctx.font = "13px Segoe UI, Arial";
+  const line = (label, ok) => {
+    ctx.fillStyle = ok ? "#1d7a3e" : "#b3261e";
+    ctx.fillText(ok ? "✓" : "✗", pad, y);
+    ctx.fillStyle = "#13212b";
+    const txt = label.length > 92 ? label.slice(0,90)+"…" : label;
+    ctx.fillText(txt, pad+20, y); y += lh;
+  };
+  t.forEach(x => line(x.label + "  → " + x.value, x.passed));
+  q.forEach((x,i) => line("Q"+(i+1)+": " + (x.answer||"(unanswered)"), x.correct));
+  const earned = t.filter(x=>x.passed).length + q.filter(x=>x.correct).length;
+  y += 8; ctx.font = "bold 14px Segoe UI, Arial"; ctx.fillStyle = "#13212b";
+  ctx.fillText("Score: " + earned + " / " + (t.length+q.length), pad, y);
+  return c.toDataURL("image/png");
+}
+
+/* ---------------------- SUBMISSION ---------------------- */
+function setStatus(kind, html){
+  statusEl.className = "status show " + kind;
+  statusEl.innerHTML = html;
+}
+async function submitLab(){
+  const hacker = hackerInput.value.trim();
+  if (!hacker) { setStatus("err","Enter a hacker name before submitting."); hackerInput.focus(); return; }
+  submitBtn.disabled = true;
+  setStatus("busy","Capturing your work and submitting…");
+
+  let screenshot = "";
+  try { screenshot = await captureLabArea(); }
+  catch (e) { screenshot = ""; }
+
+  const tasks = taskResults().map(x => ({ id:x.id, label:x.label, passed:x.passed }));
+  const questions = questionResults().map(x => ({ id:x.id, prompt:x.prompt, answer:x.answer, correct:x.correct }));
+  const earned = tasks.filter(x=>x.passed).length + questions.filter(x=>x.correct).length;
+  const total = tasks.length + questions.length;
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: hacker.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: tasks,
+    questions: questions,
+    score: { earned: earned, total: total },
+    screenshot: screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  // §4 direct-POST rule: simple request, no custom headers (avoids CORS preflight).
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    const out = await res.json();
+    if (out && out.success){
+      const link = out.docUrl
+        ? ' Your proof document: <a href="'+escapeAttr(out.docUrl)+'" target="_blank" rel="noopener">open in Google Drive</a>.'
+        : '';
+      setStatus("ok","Submitted as <b>"+escapeHtml(hacker)+"</b> — score "+earned+"/"+total+"."+link);
+    } else {
+      setStatus("err","The server rejected the submission"+(out&&out.error?(": "+escapeHtml(out.error)):"")+
+        ". Check with your instructor that the lab is active for this cohort.");
+      submitBtn.disabled = false;
+    }
+  } catch (err) {
+    // Fallback: fire-and-forget (cannot read the Doc link in locked-down contexts).
+    try {
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("ok","Submitted as <b>"+escapeHtml(hacker)+"</b> (score "+earned+"/"+total+
+        "). The confirmation link couldn't be read in this browser — please confirm receipt with your instructor.");
+    } catch (e2) {
+      setStatus("err","Submission failed to reach the server. Check your connection and that the submission URL is correct, then try again.");
+      submitBtn.disabled = false;
+    }
+  }
+}
+submitBtn.addEventListener("click", submitLab);
+
+/* ---------------------- RESET ---------------------- */
+$("#resetBtn").addEventListener("click", () => {
+  SETTINGS.forEach(s => state.values[s.id] = "Not Defined");
+  state.qAnswers = {};
+  hackerInput.value = "";
+  statusEl.className = "status";
+  questionsEl.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+  renderSettings(); renderChecklist(); renderQuestions();
+  QUESTIONS.forEach(q => gradeQuestion(q.id));
+  refresh();
+  hackerInput.focus();
+});
+
+/* ---------------------- helpers ---------------------- */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ---------------------- init ---------------------- */
+renderSettings(); renderChecklist(); renderQuestions(); refresh();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-applocker-allowlist.html",title:"Lab \u2014 Application Allowlisting with AppLocker"}, NEXT={href:"splus-update-policy-config.html",title:"Lab \u2014 Tuning the Update Cadence on a Workstation"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.3 Protecting Devices";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

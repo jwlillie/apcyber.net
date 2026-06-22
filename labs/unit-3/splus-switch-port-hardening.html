@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Switch Port Hardening — Lock Down the Access Layer
+  CompTIA Security+ (SY0-701) single-file simulation lab.
+
+  assignmentId : splus-switch-port-hardening
+  objectives   : 3.2.1.8 (Port security), 4.1.2.3 (Switches / hardening
+                 targets), 2.5.11.5 (Disabling ports/protocols)
+
+  Copyright (c) 2026 <AUTHOR NAME>. All rights reserved.
+  Licensed for instructional use within the author's Security+ lab library.
+  Original clean-room work: scenario, persona, device model, port layout,
+  console UI, task and question wording are the author's own expression,
+  built from the public SY0-701 objectives and documented port-security
+  behavior. Not derived from, and not a reskin of, any third-party lab.
+
+  No external runtime dependencies. No localStorage/sessionStorage. The only
+  network call at runtime is the single submission POST to Apps Script.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab: Switch Port Hardening</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-switch-port-hardening",
+  "title": "Lab: Switch Port Hardening",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.2 Protecting Networks: Managerial Controls and Wireless Security"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.5",
+      "3.2",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<style>
+  :root{
+    --bg:#0e1320; --panel:#161d2e; --panel-2:#1d2638; --edge:#2b3650;
+    --ink:#e8edf7; --ink-dim:#9aa7c2; --ink-faint:#6b7794;
+    --brand:#4ea1ff; --brand-ink:#0a1322;
+    --ok:#3ad29f; --ok-bg:#10271f; --warn:#ffcd5b; --bad:#ff6b7a; --bad-bg:#2a1620;
+    --up:#67b7ff; --shut:#5a657f; --locked:#3ad29f;
+    --focus:#ffd54a;
+    --radius:12px; --radius-sm:8px;
+    --font:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--font);
+    line-height:1.5; padding:18px; -webkit-text-size-adjust:100%;
+  }
+  a{color:var(--brand)}
+  h1,h2,h3{line-height:1.25;margin:0 0 .4em}
+  h1{font-size:1.35rem}
+  h2{font-size:1.05rem;letter-spacing:.2px}
+  h3{font-size:.95rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.6px}
+  p{margin:.3em 0}
+  small{color:var(--ink-faint)}
+  .wrap{max-width:1100px;margin:0 auto;display:grid;gap:16px}
+
+  header.app-head{
+    display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+    border:1px solid var(--edge);background:linear-gradient(180deg,#172033,#131a29);
+    border-radius:var(--radius);padding:14px 16px;
+  }
+  .logo{
+    width:40px;height:40px;border-radius:9px;flex:0 0 auto;
+    background:radial-gradient(120% 120% at 30% 20%,#6fb6ff,#2b6bd6);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-family:var(--mono);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+  }
+  .head-meta{display:flex;flex-direction:column}
+  .pill{
+    font:600 .72rem/1 var(--mono);padding:4px 8px;border-radius:999px;
+    border:1px solid var(--edge);color:var(--ink-dim);background:var(--panel-2);
+    white-space:nowrap;
+  }
+  .obj-tags{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+
+  .grid-2{display:grid;grid-template-columns:1.45fr 1fr;gap:16px;align-items:start}
+  @media (max-width:880px){.grid-2{grid-template-columns:1fr}}
+
+  .card{border:1px solid var(--edge);background:var(--panel);border-radius:var(--radius);padding:16px}
+  .card + .card{margin-top:0}
+
+  /* ---- Switch console ---- */
+  .console{padding:0;overflow:hidden}
+  .console-bar{
+    display:flex;align-items:center;gap:10px;padding:12px 14px;
+    background:var(--panel-2);border-bottom:1px solid var(--edge);
+  }
+  .console-bar .model{font:700 .95rem/1 var(--mono);color:var(--ink)}
+  .console-bar .ip{margin-left:auto;font:500 .8rem/1 var(--mono);color:var(--ink-faint)}
+  .console-body{padding:14px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 12px;font-size:.82rem;color:var(--ink-dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.25)}
+  .dot.up{background:var(--up)} .dot.shut{background:var(--shut)} .dot.locked{background:var(--locked)} .dot.err{background:var(--bad)}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .count{font:600 .8rem/1 var(--mono);color:var(--ink-dim);margin-left:auto}
+
+  .ports{
+    display:grid;grid-template-columns:repeat(8,1fr);gap:8px;
+  }
+  @media (max-width:620px){.ports{grid-template-columns:repeat(4,1fr)}}
+  .port{
+    position:relative;border:1px solid var(--edge);background:var(--panel-2);
+    border-radius:var(--radius-sm);padding:8px 4px 6px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    color:var(--ink);font:inherit;text-align:center;
+    transition:transform .08s ease,border-color .12s ease,background .12s ease;
+  }
+  @media (prefers-reduced-motion:reduce){.port{transition:none}}
+  .port:hover{border-color:var(--brand)}
+  .port:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .port[aria-pressed="true"]{border-color:var(--brand);box-shadow:inset 0 0 0 2px var(--brand);background:#1a2740}
+  .port .num{font:700 .82rem/1 var(--mono)}
+  .port .jack{
+    width:30px;height:20px;border-radius:3px;border:1px solid rgba(255,255,255,.3);
+    background:repeating-linear-gradient(90deg,#0c1322 0 3px,transparent 3px 6px);
+    position:relative;
+  }
+  .port .jack::after{content:"";position:absolute;left:4px;right:4px;top:3px;height:4px;border-radius:2px;background:var(--shut)}
+  .port.s-up .jack::after{background:var(--up)}
+  .port.s-locked .jack::after{background:var(--locked)}
+  .port.s-err .jack::after{background:var(--bad)}
+  .port .st{font:600 .62rem/1 var(--mono);letter-spacing:.4px;text-transform:uppercase;color:var(--ink-faint)}
+  .port.s-up .st{color:var(--up)} .port.s-locked .st{color:var(--locked)} .port.s-err .st{color:var(--bad)}
+  .port .role{position:absolute;top:4px;right:5px;font:700 .56rem/1 var(--mono);color:var(--ink-faint)}
+  .port .role.used{color:var(--warn)}
+
+  /* ---- Config editor ---- */
+  .field{margin:10px 0}
+  .field > label{display:block;font:600 .8rem/1.2 var(--font);color:var(--ink-dim);margin-bottom:5px}
+  .seg{display:inline-flex;border:1px solid var(--edge);border-radius:999px;overflow:hidden;background:var(--panel-2)}
+  .seg button{
+    appearance:none;border:0;background:transparent;color:var(--ink-dim);
+    font:600 .82rem/1 var(--font);padding:8px 14px;cursor:pointer;
+  }
+  .seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+  .seg button:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+  select,input[type=text]{
+    width:100%;background:var(--panel-2);color:var(--ink);border:1px solid var(--edge);
+    border-radius:var(--radius-sm);padding:9px 10px;font:500 .9rem/1.2 var(--font);
+  }
+  select:disabled{opacity:.5}
+  select:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+  .lockrow{display:flex;align-items:center;gap:10px}
+  .switch{position:relative;width:46px;height:26px;flex:0 0 auto}
+  .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+  .switch .track{position:absolute;inset:0;background:var(--edge);border-radius:999px;transition:background .12s}
+  .switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .12s}
+  .switch input:checked + .track{background:var(--ok)}
+  .switch input:checked + .track + .knob{left:23px}
+  .switch input:focus-visible + .track{outline:3px solid var(--focus);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){.switch .track,.switch .knob{transition:none}}
+
+  .btn{
+    appearance:none;border:1px solid var(--edge);background:var(--panel-2);color:var(--ink);
+    font:600 .85rem/1 var(--font);padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;
+  }
+  .btn:hover{border-color:var(--brand)}
+  .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .editor-hint{font-size:.8rem;color:var(--ink-faint);margin-top:4px}
+
+  /* ---- Checklist / questions ---- */
+  ul.checks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  ul.checks li{display:flex;gap:10px;align-items:flex-start;font-size:.9rem}
+  .mark{flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:800 .8rem/1 var(--mono);margin-top:1px}
+  .mark.ok{background:var(--ok-bg);color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+  .mark.no{background:var(--bad-bg);color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad)}
+  .ctr{color:var(--ink-faint);font-family:var(--mono);font-size:.82rem}
+
+  .q{border-top:1px solid var(--edge);padding-top:12px;margin-top:12px}
+  .q:first-of-type{border-top:0;margin-top:0;padding-top:0}
+  .q .prompt{font-size:.9rem;margin-bottom:8px}
+  .opt{display:flex;gap:9px;align-items:flex-start;padding:7px 9px;border:1px solid var(--edge);border-radius:var(--radius-sm);margin:6px 0;cursor:pointer;font-size:.88rem}
+  .opt:hover{border-color:var(--brand)}
+  .opt input{margin-top:3px}
+  .opt:focus-within{outline:3px solid var(--focus);outline-offset:1px}
+  .q.graded.right{}
+  .q.graded .opt.chosen.right{border-color:var(--ok);background:var(--ok-bg)}
+  .q.graded .opt.chosen.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .q-fb{font-size:.82rem;margin-top:6px;display:none}
+  .q.graded .q-fb{display:block}
+  .q.graded.right .q-fb{color:var(--ok)}
+  .q.graded.wrong .q-fb{color:var(--bad)}
+
+  /* ---- Submit bar ---- */
+  .submit-bar{
+    border:1px solid var(--edge);background:linear-gradient(180deg,#172033,#131a29);
+    border-radius:var(--radius);padding:14px 16px;display:grid;gap:12px;
+  }
+  .submit-row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+  .submit-row .field{margin:0;flex:1 1 220px;min-width:200px}
+  .status{font-size:.88rem;min-height:1.2em}
+  .status.ok{color:var(--ok)} .status.bad{color:var(--bad)} .status.work{color:var(--warn)}
+  .scorebadge{font:700 .85rem/1 var(--mono);padding:8px 12px;border-radius:999px;border:1px solid var(--edge);background:var(--panel-2);white-space:nowrap}
+  .scorebadge.pass{color:var(--ok);border-color:var(--ok)}
+  .doclink{font-size:.85rem;word-break:break-all}
+  footer{color:var(--ink-faint);font-size:.78rem;text-align:center;padding:6px 0 2px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .brief table{border-collapse:collapse;margin:8px 0;font-size:.84rem}
+  .brief th,.brief td{border:1px solid var(--edge);padding:5px 10px;text-align:left;font-family:var(--mono)}
+  .brief th{color:var(--ink-dim);background:var(--panel-2)}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap" id="labRoot">
+
+  <header class="app-head">
+    <div class="logo" aria-hidden="true">AX</div>
+    <div class="head-meta">
+      <h1>Switch Port Hardening</h1>
+      <small>Avenir AX&#8209;2400 Managed Switch &middot; IDF&#8209;3 access layer</small>
+    </div>
+    <div class="obj-tags" aria-label="SY0-701 objectives">
+      <span class="pill">SY0&#8209;701 3.2.1.8</span>
+      <span class="pill">4.1.2.3</span>
+      <span class="pill">2.5.11.5</span>
+    </div>
+  </header>
+
+  <section class="card brief" aria-labelledby="briefH">
+    <h2 id="briefH">Scenario</h2>
+    <p>You are the on&#8209;call security analyst for <strong>Cedar &amp; Pine Outfitters</strong>, a regional
+      outdoor retailer. During a quarterly access&#8209;layer review you reach the
+      <strong>Avenir AX&#8209;2400</strong> switch in the third&#8209;floor wiring closet (IDF&#8209;3). Inventory shows
+      that most of its 24 access ports have nothing plugged in, and none of the live ports enforce
+      port security. An auditor flagged the open jacks as a way for an unauthorized device to reach the
+      internal VLAN. Your job is to harden the switch.</p>
+
+    <p>The asset record lists the live ports. <strong>Everything not in this list is unused</strong>:</p>
+    <table>
+      <thead><tr><th scope="col">Live (in&#8209;use) ports</th></tr></thead>
+      <tbody><tr><td id="usedList">&hellip;</td></tr></tbody>
+    </table>
+
+    <h3 style="margin-top:14px">Your tasks</h3>
+    <ol style="margin:.2em 0 0;padding-left:1.2em;font-size:.92rem">
+      <li><strong>Administratively disable every unused port</strong> so no one can patch into a dead jack.</li>
+      <li>On each <strong>live</strong> port, enable <strong>Port Lock</strong> and set
+        <strong>Address learning&nbsp;=&nbsp;Static</strong> and <strong>Violation response&nbsp;=&nbsp;Drop</strong>.
+        Live ports must stay <strong>enabled</strong>.</li>
+      <li>Answer the three review questions.</li>
+    </ol>
+    <p class="editor-hint">Tip: select several ports at once (a port range) and apply one configuration to all of them.</p>
+  </section>
+
+  <div class="grid-2">
+
+    <!-- ===== LEFT: switch console ===== -->
+    <section class="card console" aria-labelledby="consoleH">
+      <div class="console-bar">
+        <span class="model">AX&#8209;2400</span>
+        <span class="pill" id="fwPill">fw 3.4.1&#8209;b</span>
+        <span class="ip">mgmt 10.42.3.2</span>
+      </div>
+      <div class="console-body">
+        <h2 id="consoleH" class="sr-only">Port panel</h2>
+        <div class="legend" aria-hidden="true">
+          <span><i class="dot up"></i> Enabled (unsecured)</span>
+          <span><i class="dot locked"></i> Enabled + secured</span>
+          <span><i class="dot shut"></i> Shut down</span>
+          <span><i class="dot err"></i> Misconfigured</span>
+        </div>
+
+        <div class="toolbar">
+          <button class="btn ghost" type="button" id="selAll">Select all</button>
+          <button class="btn ghost" type="button" id="selClear">Clear selection</button>
+          <span class="count" id="selCount" aria-live="polite">0 selected</span>
+        </div>
+
+        <div class="ports" id="ports" role="group" aria-label="Switch ports — activate a port to add or remove it from the selection"></div>
+      </div>
+    </section>
+
+    <!-- ===== RIGHT column ===== -->
+    <div style="display:grid;gap:16px">
+
+      <section class="card" aria-labelledby="editH">
+        <h2 id="editH">Configure selected port(s)</h2>
+        <p class="editor-hint" id="editTarget">No ports selected.</p>
+
+        <div class="field" role="group" aria-labelledby="adminLbl">
+          <label id="adminLbl">Administrative state</label>
+          <div class="seg" id="adminSeg">
+            <button type="button" data-v="enabled" aria-pressed="true">Enabled</button>
+            <button type="button" data-v="disabled" aria-pressed="false">Disabled (shut)</button>
+          </div>
+        </div>
+
+        <div class="field lockrow">
+          <span class="switch">
+            <input type="checkbox" id="lockChk" aria-describedby="lockHint">
+            <span class="track" aria-hidden="true"></span><span class="knob" aria-hidden="true"></span>
+          </span>
+          <label for="lockChk" style="margin:0">Port Lock (port security)</label>
+        </div>
+        <p id="lockHint" class="editor-hint">When locked, only learned MAC addresses may use the port.</p>
+
+        <div class="field">
+          <label for="learnSel">Address learning</label>
+          <select id="learnSel">
+            <option value="dynamic">Dynamic — relearn on every link</option>
+            <option value="sticky">Sticky — learn and save to config</option>
+            <option value="static">Static — lock to currently learned MACs</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="violSel">Violation response</label>
+          <select id="violSel">
+            <option value="log">Drop &amp; log — drop frames, raise an alert</option>
+            <option value="drop">Drop — silently drop unauthorized frames</option>
+            <option value="disable">Disable port — shut the interface down</option>
+          </select>
+        </div>
+
+        <button class="btn primary" type="button" id="applyBtn" disabled>Apply to selected</button>
+      </section>
+
+      <section class="card" aria-labelledby="checkH">
+        <h2 id="checkH">Task progress</h2>
+        <ul class="checks" id="checks" aria-live="polite"></ul>
+      </section>
+
+    </div>
+  </div>
+
+  <section class="card" aria-labelledby="quizH">
+    <h2 id="quizH">Review questions</h2>
+    <div id="quiz"></div>
+  </section>
+
+  <!-- ===== Submission bar ===== -->
+  <section class="submit-bar" aria-labelledby="subH">
+    <h2 id="subH" class="sr-only">Submit completed lab</h2>
+    <div class="submit-row">
+      <div class="field">
+        <label for="hacker">Hacker name (pseudonym — no real names)</label>
+        <input type="text" id="hacker" maxlength="40" autocomplete="off" spellcheck="false"
+               placeholder="e.g. copper-lynx-12" aria-describedby="hackerHint">
+      </div>
+      <span class="scorebadge" id="scoreBadge" aria-live="polite">Score 0 / 5</span>
+      <button class="btn primary" type="button" id="submitBtn">Submit completed lab</button>
+      <button class="btn ghost" type="button" id="resetBtn">Reset lab</button>
+    </div>
+    <p id="hackerHint" class="editor-hint">Hacker name identifies your submission to the instructor. Keep personal information out of it.</p>
+    <p class="status" id="status" role="status" aria-live="assertive"></p>
+    <p class="doclink" id="docLink"></p>
+  </section>
+
+  <footer>
+    &copy; 2026 &lt;AUTHOR NAME&gt; &middot; Original clean&#8209;room lab for Security+ (SY0&#8209;701) &middot;
+    assignmentId <span style="font-family:var(--mono)">splus&#8209;switch&#8209;port&#8209;hardening</span>
+  </footer>
+</div>
+
+<script>
+/* ===========================================================================
+   ENGINE + LAB CONFIG + ANSWER KEY
+   ===========================================================================*/
+(function(){
+  "use strict";
+
+  /* ---------- LAB CONFIG (per §11) ----------------------------------------*/
+  const CONFIG = {
+    assignmentId: "splus-switch-port-hardening",
+    title: "Switch Port Hardening — Lock Down the Access Layer",
+    objectives: ["2.5", "3.2", "4.1"],
+    portCount: 24,
+    // Original port layout (NOT the source lab's GE-numbering):
+    usedPorts: [2,5,6,7,11,12,18,19,20],
+    // Required security profile for live ports:
+    required: { admin:"enabled", lock:true, learning:"static", violation:"drop" },
+    // ---- instructor fills these two before deploying ----
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "PASTE_COHORT_TOKEN",
+    SUBMISSION_TOKEN: "PASTE_PER_COHORT_TOKEN_HERE",
+    nameMax: 40,
+    pngMaxBytes: 1_800_000
+  };
+
+  /* ---------- ANSWER KEY (questions) --------------------------------------*/
+  const QUESTIONS = [
+    {
+      id:"q1",
+      prompt:"A live port is configured with Port Lock and a static address table. An unauthorized laptop is plugged in. You want the switch to silently drop the laptop's frames while keeping the port up for the authorized device. Which violation response does that?",
+      options:[
+        {k:"a", t:"Disable port"},
+        {k:"b", t:"Drop"},
+        {k:"c", t:"Drop & log"},
+        {k:"d", t:"Reset the MAC table"}
+      ],
+      correct:"b",
+      feedback:{
+        right:"Correct — \u201cDrop\u201d discards unauthorized frames without taking the interface down.",
+        wrong:"Not quite. \u201cDisable port\u201d would knock the authorized device offline too; \u201cDrop\u201d quietly discards only the unauthorized frames."
+      }
+    },
+    {
+      id:"q2",
+      prompt:"What is the primary security benefit of administratively disabling switch ports that have nothing connected?",
+      options:[
+        {k:"a", t:"It increases the available PoE power budget"},
+        {k:"b", t:"It speeds up spanning-tree convergence"},
+        {k:"c", t:"It reduces the attack surface by stopping rogue devices from getting network access through an open jack"},
+        {k:"d", t:"It encrypts traffic on the remaining ports"}
+      ],
+      correct:"c",
+      feedback:{
+        right:"Correct — a shut, unused port is one fewer entry point for an unauthorized device.",
+        wrong:"The point is attack-surface reduction: a disabled jack can't be used to reach the internal network."
+      }
+    },
+    {
+      id:"q3",
+      prompt:"With Address learning set to Static (a \u201cclassic lock\u201d), how does the port decide which MAC addresses are allowed?",
+      options:[
+        {k:"a", t:"It permits any MAC address indefinitely"},
+        {k:"b", t:"It locks the port to the MAC addresses present when learning was enabled and blocks all others"},
+        {k:"c", t:"It rotates the allowed MAC list every 30 seconds"},
+        {k:"d", t:"It allows any MAC in the same VLAN"}
+      ],
+      correct:"b",
+      feedback:{
+        right:"Correct — static learning fixes the allowed set to what was learned at lock time.",
+        wrong:"Static learning pins the port to the MACs learned at lock time and rejects anything new."
+      }
+    }
+  ];
+
+  /* ---------- in-memory state (no storage APIs) ---------------------------*/
+  const usedSet = new Set(CONFIG.usedPorts);
+  const ports = {};            // n -> {used,admin,lock,learning,violation}
+  function freshPort(n){
+    return { used:usedSet.has(n), admin:"enabled", lock:false, learning:"dynamic", violation:"disable" };
+  }
+  function resetState(){
+    for(let n=1;n<=CONFIG.portCount;n++) ports[n]=freshPort(n);
+  }
+  resetState();
+
+  const selected = new Set();
+  const answers  = {};         // qid -> chosen key
+  let   graded   = false;
+  let   submitting = false;
+
+  /* ---------- element refs ------------------------------------------------*/
+  const $ = (id)=>document.getElementById(id);
+  const portsEl=$("ports"), checksEl=$("checks"), quizEl=$("quiz");
+  const selCountEl=$("selCount"), editTargetEl=$("editTarget");
+  const adminSeg=$("adminSeg"), lockChk=$("lockChk"), learnSel=$("learnSel"),
+        violSel=$("violSel"), applyBtn=$("applyBtn");
+  const statusEl=$("status"), docLinkEl=$("docLink"), scoreBadge=$("scoreBadge"),
+        hackerEl=$("hacker"), submitBtn=$("submitBtn");
+
+  /* ---------- render scenario list ----------------------------------------*/
+  $("usedList").textContent = CONFIG.usedPorts.map(n=>"P"+n).join(", ");
+
+  /* ---------- build port grid ---------------------------------------------*/
+  function portStatusClass(p){
+    if(p.admin==="disabled") return "s-shut";
+    if(p.used){
+      const ok = p.lock && p.learning===CONFIG.required.learning && p.violation===CONFIG.required.violation;
+      return ok ? "s-locked" : "s-up";
+    }
+    // unused but still enabled => not yet hardened (a "to-do", shown as up)
+    return "s-up";
+  }
+  function statusText(p){
+    if(p.admin==="disabled") return "shut";
+    if(p.used) return portStatusClass(p)==="s-locked" ? "secured" : "open";
+    return "open";
+  }
+  function buildPorts(){
+    portsEl.innerHTML="";
+    for(let n=1;n<=CONFIG.portCount;n++){
+      const p=ports[n];
+      const b=document.createElement("button");
+      b.type="button"; b.className="port "+portStatusClass(p);
+      b.setAttribute("aria-pressed", selected.has(n)?"true":"false");
+      b.dataset.port=n;
+      const role = p.used ? '<span class="role used" aria-hidden="true">LIVE</span>' : '';
+      b.innerHTML = role +
+        '<span class="num">P'+n+'</span>'+
+        '<span class="jack" aria-hidden="true"></span>'+
+        '<span class="st">'+statusText(p)+'</span>';
+      b.setAttribute("aria-label", labelFor(n));
+      b.addEventListener("click", ()=>toggleSelect(n));
+      portsEl.appendChild(b);
+    }
+  }
+  function labelFor(n){
+    const p=ports[n];
+    let s = "Port P"+n+(p.used?" (live)":" (unused)")+", "+
+            (p.admin==="disabled"?"shut down":"enabled");
+    if(p.admin==="enabled" && p.lock) s+=", locked, "+p.learning+" learning, violation "+p.violation;
+    s += selected.has(n) ? ", selected" : "";
+    return s;
+  }
+  function refreshPort(n){
+    const b=portsEl.querySelector('.port[data-port="'+n+'"]');
+    if(!b) return;
+    const p=ports[n];
+    b.className="port "+portStatusClass(p);
+    b.setAttribute("aria-pressed", selected.has(n)?"true":"false");
+    b.querySelector(".st").textContent=statusText(p);
+    b.setAttribute("aria-label", labelFor(n));
+  }
+
+  /* ---------- selection ---------------------------------------------------*/
+  function toggleSelect(n){
+    if(selected.has(n)) selected.delete(n); else selected.add(n);
+    refreshPort(n); syncEditor();
+  }
+  $("selAll").addEventListener("click",()=>{
+    for(let n=1;n<=CONFIG.portCount;n++) selected.add(n);
+    for(let n=1;n<=CONFIG.portCount;n++) refreshPort(n);
+    syncEditor();
+  });
+  $("selClear").addEventListener("click",()=>{
+    const was=[...selected]; selected.clear();
+    was.forEach(refreshPort); syncEditor();
+  });
+
+  /* ---------- editor panel ------------------------------------------------*/
+  let editAdmin="enabled";
+  function setAdmin(v){
+    editAdmin=v;
+    [...adminSeg.children].forEach(btn=>btn.setAttribute("aria-pressed", btn.dataset.v===v?"true":"false"));
+    const disabled = (v==="disabled");
+    lockChk.disabled=disabled; learnSel.disabled=disabled||!lockChk.checked; violSel.disabled=disabled||!lockChk.checked;
+  }
+  adminSeg.addEventListener("click",(e)=>{
+    const btn=e.target.closest("button[data-v]"); if(btn) setAdmin(btn.dataset.v);
+  });
+  lockChk.addEventListener("change",()=>{
+    const off = !lockChk.checked || editAdmin==="disabled";
+    learnSel.disabled=off; violSel.disabled=off;
+  });
+
+  function syncEditor(){
+    const n=selected.size;
+    selCountEl.textContent = n+" selected";
+    applyBtn.disabled = (n===0);
+    if(n===0){ editTargetEl.textContent="No ports selected."; return; }
+    const list=[...selected].sort((a,b)=>a-b).map(x=>"P"+x);
+    editTargetEl.textContent = "Editing "+list.join(", ");
+    // Pre-fill editor from a single selected port for convenience
+    if(n===1){
+      const p=ports[[...selected][0]];
+      setAdmin(p.admin); lockChk.checked=p.lock;
+      learnSel.value=p.learning; violSel.value=p.violation;
+      const off=!p.lock||p.admin==="disabled"; learnSel.disabled=off; violSel.disabled=off;
+    }
+  }
+
+  applyBtn.addEventListener("click",()=>{
+    if(selected.size===0) return;
+    selected.forEach(n=>{
+      const p=ports[n];
+      p.admin=editAdmin;
+      if(editAdmin==="disabled"){ p.lock=false; p.learning="dynamic"; p.violation="disable"; }
+      else { p.lock=lockChk.checked;
+             p.learning = lockChk.checked ? learnSel.value : "dynamic";
+             p.violation= lockChk.checked ? violSel.value  : "disable"; }
+      refreshPort(n);
+    });
+    flash(statusEl,"work","Applied configuration to "+selected.size+" port(s).");
+    evaluate();
+  });
+
+  /* ---------- evaluation / checklist --------------------------------------*/
+  function unusedDone(){
+    let done=0,total=0;
+    for(let n=1;n<=CONFIG.portCount;n++){ if(!ports[n].used){ total++; if(ports[n].admin==="disabled") done++; } }
+    return {done,total};
+  }
+  function usedSecured(){
+    let done=0; const total=CONFIG.usedPorts.length;
+    CONFIG.usedPorts.forEach(n=>{
+      const p=ports[n];
+      if(p.admin==="enabled" && p.lock && p.learning===CONFIG.required.learning && p.violation===CONFIG.required.violation) done++;
+    });
+    return {done,total};
+  }
+  function questionScore(){
+    let c=0; QUESTIONS.forEach(q=>{ if(answers[q.id]===q.correct) c++; });
+    return {done:c,total:QUESTIONS.length};
+  }
+
+  function evaluate(){
+    const u=unusedDone(), s=usedSecured(), q=questionScore();
+    const taskRows=[
+      {label:"All unused ports shut down", done:u.done, total:u.total, pass:u.done===u.total},
+      {label:"Live ports locked (static learning, drop on violation, still enabled)", done:s.done, total:s.total, pass:s.done===s.total}
+    ];
+    checksEl.innerHTML="";
+    taskRows.forEach(r=>{
+      const li=document.createElement("li");
+      li.innerHTML='<span class="mark '+(r.pass?"ok":"no")+'" aria-hidden="true">'+(r.pass?"\u2713":"\u2715")+'</span>'+
+        '<span>'+r.label+' <span class="ctr">'+r.done+'/'+r.total+'</span></span>';
+      checksEl.appendChild(li);
+    });
+    const qli=document.createElement("li");
+    const qpass=q.done===q.total;
+    qli.innerHTML='<span class="mark '+(qpass?"ok":"no")+'" aria-hidden="true">'+(qpass?"\u2713":"\u2715")+'</span>'+
+      '<span>Review questions correct <span class="ctr">'+q.done+'/'+q.total+'</span></span>';
+    checksEl.appendChild(qli);
+
+    const tasksPassed = taskRows.filter(r=>r.pass).length;
+    const earned = tasksPassed + q.done;
+    const total  = taskRows.length + q.total;          // 2 + 3 = 5
+    const allPass = (earned===total);
+    scoreBadge.textContent = "Score "+earned+" / "+total;
+    scoreBadge.classList.toggle("pass", allPass);
+    return {taskRows, q, earned, total, allPass};
+  }
+
+  /* ---------- quiz --------------------------------------------------------*/
+  function buildQuiz(){
+    quizEl.innerHTML="";
+    QUESTIONS.forEach((q,i)=>{
+      const wrap=document.createElement("fieldset");
+      wrap.className="q"; wrap.id="qwrap-"+q.id;
+      wrap.style.border="0"; wrap.style.padding="0"; wrap.style.margin="0";
+      const lg=document.createElement("legend"); lg.className="prompt";
+      lg.textContent=(i+1)+". "+q.prompt; wrap.appendChild(lg);
+      q.options.forEach(o=>{
+        const id="opt-"+q.id+"-"+o.k;
+        const lab=document.createElement("label"); lab.className="opt"; lab.htmlFor=id;
+        lab.dataset.q=q.id; lab.dataset.k=o.k;
+        lab.innerHTML='<input type="radio" id="'+id+'" name="'+q.id+'" value="'+o.k+'"> <span>'+o.t+'</span>';
+        wrap.appendChild(lab);
+      });
+      const fb=document.createElement("p"); fb.className="q-fb"; fb.id="fb-"+q.id; wrap.appendChild(fb);
+      quizEl.appendChild(wrap);
+    });
+    quizEl.addEventListener("change",(e)=>{
+      const r=e.target; if(r&&r.name&&r.type==="radio"){ answers[r.name]=r.value; if(graded) regrade(); evaluate(); }
+    });
+  }
+  function regrade(){
+    QUESTIONS.forEach(q=>{
+      const wrap=$("qwrap-"+q.id); const fb=$("fb-"+q.id);
+      wrap.classList.remove("graded","right","wrong");
+      wrap.querySelectorAll(".opt").forEach(o=>o.classList.remove("chosen","right","wrong"));
+      const chosen=answers[q.id];
+      if(chosen===undefined) return;
+      wrap.classList.add("graded");
+      const ok=chosen===q.correct;
+      wrap.classList.add(ok?"right":"wrong");
+      fb.textContent = ok ? q.feedback.right : q.feedback.wrong;
+      wrap.querySelectorAll(".opt").forEach(o=>{
+        if(o.dataset.k===chosen){ o.classList.add("chosen"); o.classList.add(ok?"right":"wrong"); }
+      });
+    });
+  }
+
+  /* ===========================================================================
+     SCREENSHOT CAPTURE  (dependency-free; see header note)
+     ---------------------------------------------------------------------------
+     The build spec calls for an inlined html2canvas. This implementation
+     captures the simulated DOM via SVG <foreignObject> -> <canvas> -> PNG with
+     ZERO external dependencies. To swap in html2canvas instead: paste the
+     minified library above this IIFE and replace the body of captureLabPNG()
+     with:  return (await html2canvas(node,{scale:1})).toDataURL('image/png');
+     ===========================================================================*/
+  function collectCSS(){
+    let css="";
+    document.querySelectorAll("style").forEach(s=>{ css += s.textContent + "\n"; });
+    return css;
+  }
+  async function captureLabPNG(node){
+    const rect=node.getBoundingClientRect();
+    const w=Math.min(Math.ceil(rect.width), 1100);
+    const h=Math.ceil(node.scrollHeight);
+    const clone=node.cloneNode(true);
+    // strip selection outlines/focus that would look odd in the proof image
+    clone.querySelectorAll('[aria-pressed]').forEach(e=>e.setAttribute('aria-pressed','false'));
+    const xhtml=new XMLSerializer().serializeToString(clone);
+    const css=collectCSS();
+    // foreignObject won't inherit :root custom props when rendered as an image,
+    // so declare the palette inline on the capture wrapper.
+    const VARS="--bg:#0e1320;--panel:#161d2e;--panel-2:#1d2638;--edge:#2b3650;"+
+      "--ink:#e8edf7;--ink-dim:#9aa7c2;--ink-faint:#6b7794;--brand:#4ea1ff;--brand-ink:#0a1322;"+
+      "--ok:#3ad29f;--ok-bg:#10271f;--warn:#ffcd5b;--bad:#ff6b7a;--bad-bg:#2a1620;"+
+      "--up:#67b7ff;--shut:#5a657f;--locked:#3ad29f;--focus:#ffd54a;--radius:12px;--radius-sm:8px;"+
+      "--font:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--mono:ui-monospace,Consolas,monospace;";
+    const svg=
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject width="100%" height="100%">'+
+      '<div xmlns="http://www.w3.org/1999/xhtml" style="'+VARS+'background:#0e1320;color:#e8edf7;padding:18px;width:'+w+'px;font-family:system-ui,sans-serif">'+
+      '<style><![CDATA['+css+']]></style>'+ xhtml +
+      '</div></foreignObject></svg>';
+    const url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+    const img=new Image(); img.width=w; img.height=h;
+    const png=await new Promise((resolve,reject)=>{
+      img.onload=()=>{
+        try{
+          const c=document.createElement("canvas");
+          c.width=w; c.height=h;
+          const ctx=c.getContext("2d");
+          ctx.fillStyle="#0e1320"; ctx.fillRect(0,0,w,h);
+          ctx.drawImage(img,0,0,w,h);
+          resolve(c.toDataURL("image/png"));
+        }catch(err){ reject(err); }
+      };
+      img.onerror=()=>reject(new Error("render failed"));
+      img.src=url;
+    });
+    return png;
+  }
+
+  /* ===========================================================================
+     SUBMISSION (direct simple-request POST per §4)
+     ===========================================================================*/
+  function flash(el,kind,msg){ el.className="status "+kind; el.textContent=msg; }
+
+  function buildPayload(state, screenshot){
+    const u=unusedDone(), s=usedSecured();
+    return {
+      assignmentId: CONFIG.assignmentId,
+      hackerName: hackerEl.value.trim().slice(0,CONFIG.nameMax),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: [
+        { id:"shutdown-unused", label:"Disable all unused access ports ("+u.done+"/"+u.total+")", passed:(u.done===u.total) },
+        { id:"secure-used", label:"Lock live ports: static learning + drop on violation, kept enabled ("+s.done+"/"+s.total+")", passed:(s.done===s.total) }
+      ],
+      questions: QUESTIONS.map(q=>({
+        id:q.id, prompt:q.prompt,
+        answer:(answers[q.id]!==undefined ? labelOf(q,answers[q.id]) : null),
+        correct: answers[q.id]===q.correct
+      })),
+      score: { earned: state.earned, total: state.total },
+      screenshot: screenshot,
+      submissionToken: CONFIG.SUBMISSION_TOKEN
+    };
+  }
+  function labelOf(q,k){ const o=q.options.find(x=>x.k===k); return o?o.t:k; }
+
+  async function submit(){
+    if(submitting) return;
+    docLinkEl.textContent="";
+    const name=hackerEl.value.trim();
+    if(!name){ flash(statusEl,"bad","Enter a hacker handle before submitting."); hackerEl.focus(); return; }
+
+    graded=true; regrade();
+    const state=evaluate();
+
+    if(!state.allPass){
+      const go=window.confirm("You haven't met every requirement yet (current score "+state.earned+"/"+state.total+"). Submit anyway?");
+      if(!go){ flash(statusEl,"work","Submission cancelled — keep going."); return; }
+    }
+
+    if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      flash(statusEl,"work","Local check complete — score "+state.earned+"/"+state.total+". (Instructor: set APPS_SCRIPT_URL to enable Drive submission.)");
+      return;
+    }
+
+    submitting=true; submitBtn.disabled=true;
+    flash(statusEl,"work","Capturing screenshot\u2026");
+    let shot="";
+    try{ shot=await captureLabPNG($("labRoot")); }
+    catch(err){ shot=""; }
+
+    if(shot && shot.length>CONFIG.pngMaxBytes){
+      // best-effort downscale by re-capturing nothing fancy: just drop it if oversized
+      shot = shot.slice(0,0); // omit oversized image rather than fail the POST
+    }
+
+    const payload=buildPayload(state, shot);
+    flash(statusEl,"work","Submitting to instructor\u2026");
+
+    try{
+      // SIMPLE REQUEST: no custom headers, default text/plain => no CORS preflight
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+      const out=await res.json();
+      if(out && out.success){
+        flash(statusEl,"ok","Submitted. Score "+state.earned+"/"+state.total+" recorded.");
+        if(out.docUrl){
+          const a=document.createElement("a"); a.href=out.docUrl; a.target="_blank"; a.rel="noopener";
+          a.textContent="View your submission document";
+          docLinkEl.appendChild(a);
+        }
+      }else{
+        flash(statusEl,"bad","Submission rejected: "+((out&&out.error)||"unknown error")+". Check with your instructor.");
+      }
+    }catch(err){
+      // Fallback: fire-and-forget (can't read docUrl) for locked-down contexts.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+        flash(statusEl,"work","Submission sent, but the response couldn't be read. Confirm receipt with your instructor.");
+      }catch(e2){
+        flash(statusEl,"bad","Could not reach the submission server. Check your connection or contact your instructor.");
+      }
+    }finally{
+      submitting=false; submitBtn.disabled=false;
+    }
+  }
+  submitBtn.addEventListener("click",submit);
+
+  /* ---------- reset -------------------------------------------------------*/
+  $("resetBtn").addEventListener("click",()=>{
+    if(!window.confirm("Reset the whole lab? All port changes and answers will be cleared.")) return;
+    resetState(); selected.clear(); graded=false;
+    for(const k in answers) delete answers[k];
+    hackerEl.value=""; docLinkEl.textContent=""; flash(statusEl,"","");
+    buildPorts(); buildQuiz(); setAdmin("enabled"); lockChk.checked=false;
+    learnSel.value="dynamic"; violSel.value="disable"; learnSel.disabled=true; violSel.disabled=true;
+    syncEditor(); evaluate();
+  });
+
+  /* ---------- init --------------------------------------------------------*/
+  buildPorts(); buildQuiz(); setAdmin("enabled");
+  learnSel.value="dynamic"; violSel.value="disable"; learnSel.disabled=true; violSel.disabled=true;
+  syncEditor(); evaluate();
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-switch-hardening.html",title:"Lab \u2014 Harden a Factory-Default Access Switch"}, NEXT={href:"splus-mac-acl-switch.html",title:"Restrict Devices with a MAC-Based ACL"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.2 Protecting Networks: Managerial Controls and Wireless Security";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

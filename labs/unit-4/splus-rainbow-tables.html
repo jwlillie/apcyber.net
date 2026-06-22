@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Hashfall — Rainbow Table Hash Recovery</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-rainbow-tables",
+  "title": "Hashfall — Rainbow Table Hash Recovery",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "1.4",
+      "2.4"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Hashfall — Rainbow Table Hash Recovery   (assignmentId: splus-rainbow-tables)
+  A browser-based CompTIA Security+ (SY0-701) simulation lab.
+  SY0-701 objectives: 1.4.5 Hashing, 1.4.6 Salting, 2.4.6 Password attacks
+
+  Copyright (c) 2026 {{AUTHOR_NAME}}. All rights reserved.
+  Licensed to the author's institution for instructional use.
+  Released under the MIT License (replace this notice with your own terms).
+
+  CLEAN-ROOM NOTICE: This lab was built from the public SY0-701 objectives and
+  the documented behavior of rainbow-table tooling (rtgen / rtsort / rcrack).
+  All scenario text, personas, host names, file paths, hash values, plaintext
+  values, task wording, and question wording are original to this file and are
+  not copied from any vendor's lab. The command names rtgen/rtsort/rcrack are
+  factual tool names; everything else is invented for this simulation.
+  ============================================================================
+-->
+<style id="labcss">
+  :root{
+    --ink:#0e1116;          /* deepest background        */
+    --panel:#161c26;        /* card / panel surface      */
+    --panel-2:#1c2430;      /* raised surface            */
+    --line:#2a3340;         /* hairline borders          */
+    --text:#cdd7e3;         /* primary UI text           */
+    --muted:#74808f;        /* secondary text            */
+    --phos:#6ee7a8;         /* terminal phosphor (green) */
+    --amber:#f5b945;        /* accent / prompts / focus  */
+    --violet:#b794f6;       /* rainbow-table motif        */
+    --cyan:#5fd0e6;         /* table / sort motif        */
+    --rose:#ff6f8a;         /* errors / failed checks    */
+    --ok:#6ee7a8;
+    --radius:10px;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #19222f 0%, transparent 60%),
+      var(--ink);
+    color:var(--text); font-family:var(--sans);
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding:18px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ---- top bar / brand ---- */
+  .lab-top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin-bottom:14px}
+  .brand{display:flex;flex-direction:column;gap:6px}
+  .brand h1{
+    margin:0;font-size:26px;letter-spacing:.22em;font-weight:800;
+    text-transform:uppercase;
+  }
+  .brand h1 .fall{color:var(--amber)}
+  .tagline{color:var(--muted);font-size:12.5px;letter-spacing:.04em}
+  .rainbow{
+    height:3px;border-radius:3px;width:200px;
+    background:linear-gradient(90deg,var(--rose),var(--amber),var(--ok),var(--cyan),var(--violet));
+  }
+  .obj{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .obj .tag{
+    font-family:var(--mono);font-size:11px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px;
+    background:var(--panel);
+  }
+  .obj .tag b{color:var(--text);font-weight:600}
+  .reset{
+    font:600 13px/1 var(--sans);color:var(--text);
+    background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;padding:9px 13px;cursor:pointer;
+  }
+  .reset:hover{border-color:var(--muted)}
+
+  /* ---- layout ---- */
+  .lab{display:grid;grid-template-columns:1.25fr .9fr;gap:16px;align-items:start}
+  @media (max-width:900px){.lab{grid-template-columns:1fr}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;
+  }
+  .card-h{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 14px;border-bottom:1px solid var(--line);
+    font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  }
+  .card-h .dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}
+  .card-b{padding:14px}
+
+  /* ---- terminal ---- */
+  .term-chrome{
+    display:flex;align-items:center;gap:8px;
+    padding:10px 13px;background:var(--panel-2);border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:12.5px;color:var(--muted);
+  }
+  .lights{display:flex;gap:6px;margin-right:4px}
+  .lights i{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .lights i:nth-child(1){background:#ff5f57}
+  .lights i:nth-child(2){background:#febc2e}
+  .lights i:nth-child(3){background:#28c840}
+  .term{
+    font-family:var(--mono);font-size:13px;line-height:1.55;
+    background:#0a0d12;color:var(--text);
+    padding:13px 14px;height:340px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
+  }
+  .term .ln{display:block}
+  .term .pmt{color:var(--amber)}
+  .term .path{color:var(--cyan)}
+  .term .out{color:var(--text)}
+  .term .dim{color:var(--muted)}
+  .term .good{color:var(--phos)}
+  .term .bad{color:var(--rose)}
+  .term .rb{color:var(--violet)}
+  .term .reveal{color:var(--phos);font-weight:600}
+  .term .hashv{color:var(--muted)}
+
+  .term-input{display:flex;align-items:center;gap:8px;
+    background:#0a0d12;border-top:1px solid var(--line);padding:10px 12px}
+  .term-input .pmt{font-family:var(--mono);font-size:13px;color:var(--amber);flex:none}
+  .term-input input{
+    flex:1;background:transparent;border:none;outline:none;
+    font-family:var(--mono);font-size:13px;color:var(--text);
+  }
+  .term-input input::placeholder{color:#465160}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;padding:12px 14px;border-top:1px solid var(--line);background:var(--panel)}
+  .chips .lbl{width:100%;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .chip{
+    font-family:var(--mono);font-size:11.5px;color:var(--text);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:7px;
+    padding:6px 9px;cursor:pointer;text-align:left;
+  }
+  .chip:hover{border-color:var(--amber);color:var(--amber)}
+  .chip .n{color:var(--muted);margin-right:6px}
+
+  /* ---- brief / scenario ---- */
+  .scn{font-size:13.5px;color:var(--text)}
+  .scn p{margin:0 0 10px}
+  .scn .who{color:var(--amber);font-weight:600}
+  .policy{margin:8px 0 0;padding:11px 12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px}
+  .policy h4{margin:0 0 7px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .policy ul{margin:0;padding-left:18px;font-size:13px}
+  .policy li{margin:3px 0}
+  .policy code{font-family:var(--mono);color:var(--cyan);font-size:12.5px}
+
+  /* ---- task checklist ---- */
+  ul.tasks{list-style:none;margin:0;padding:0}
+  ul.tasks li{
+    display:flex;gap:10px;align-items:flex-start;
+    padding:9px 0;border-bottom:1px solid var(--line);
+  }
+  ul.tasks li:last-child{border-bottom:none}
+  .box{
+    flex:none;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);
+    display:grid;place-items:center;font-size:12px;color:var(--ink);margin-top:1px;
+    transition:background .18s ease,border-color .18s ease;
+  }
+  li.done .box{background:var(--ok);border-color:var(--ok)}
+  li.done .box::after{content:"\2713";font-weight:800}
+  .task-txt{font-size:13px}
+  .task-txt b{display:block;font-weight:600}
+  .task-txt span{color:var(--muted);font-family:var(--mono);font-size:11.5px}
+  li.done .task-txt b{color:var(--phos)}
+
+  /* ---- questions ---- */
+  .q{padding:12px 0;border-bottom:1px solid var(--line)}
+  .q:last-of-type{border-bottom:none}
+  .q .qhead{display:flex;gap:8px;align-items:baseline}
+  .q .qno{font-family:var(--mono);color:var(--amber);font-size:12px;flex:none}
+  .q .qobj{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .q .prompt{font-size:13.5px;margin:0 0 9px}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{display:flex;gap:9px;align-items:flex-start;font-size:13px;cursor:pointer;
+    padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2)}
+  .opt:hover{border-color:var(--muted)}
+  .opt input{margin-top:3px;accent-color:var(--amber)}
+  .q input[type=text]{
+    width:100%;font-family:var(--mono);font-size:13px;color:var(--text);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:9px 10px;outline:none;
+  }
+  .q input[type=text]:focus{border-color:var(--amber)}
+  .fb{font-size:12px;margin-top:7px;min-height:16px}
+  .fb.ok{color:var(--ok)}
+  .fb.no{color:var(--rose)}
+
+  /* ---- submit bar ---- */
+  .submit{padding:14px}
+  .score{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px}
+  .score .bar{flex:1;height:8px;border-radius:999px;background:var(--panel-2);overflow:hidden;border:1px solid var(--line)}
+  .score .fill{height:100%;width:0;background:linear-gradient(90deg,var(--amber),var(--ok));transition:width .35s ease}
+  .score .pct{font-family:var(--mono);color:var(--text);min-width:64px;text-align:right}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:11px}
+  .field label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .field input{
+    font-family:var(--mono);font-size:14px;color:var(--text);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:11px 12px;outline:none;
+  }
+  .field input:focus{border-color:var(--amber)}
+  .field .hint{font-size:11.5px;color:var(--muted)}
+  .go{
+    width:100%;font:700 14px/1 var(--sans);color:var(--ink);
+    background:var(--amber);border:none;border-radius:9px;padding:13px;cursor:pointer;
+    letter-spacing:.02em;
+  }
+  .go:hover{filter:brightness(1.06)}
+  .go:disabled{background:var(--panel-2);color:var(--muted);cursor:not-allowed}
+  .status{margin-top:11px;font-size:13px;min-height:18px}
+  .status.ok{color:var(--ok)}
+  .status.no{color:var(--rose)}
+  .status.work{color:var(--amber)}
+  .status a{color:var(--cyan)}
+
+  footer{margin-top:16px;text-align:center;color:var(--muted);font-size:11.5px;line-height:1.6}
+
+  /* focus visibility */
+  a:focus-visible,button:focus-visible,input:focus-visible,.opt:focus-within{
+    outline:2px solid var(--amber);outline-offset:2px;
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <div class="lab-top">
+    <div class="brand">
+      <h1>HASH<span class="fall">FALL</span></h1>
+      <div class="rainbow" aria-hidden="true"></div>
+      <div class="tagline">Rainbow-table hash recovery &middot; incident workbench</div>
+    </div>
+    <div class="obj" aria-label="Mapped exam objectives">
+      <span class="tag"><b>1.4.5</b> Hashing</span>
+      <span class="tag"><b>1.4.6</b> Salting</span>
+      <span class="tag"><b>2.4.6</b> Password attacks</span>
+    </div>
+    <button class="reset" id="resetBtn" type="button">Reset lab</button>
+  </div>
+
+  <main class="lab" id="captureArea">
+    <!-- LEFT: terminal workbench -->
+    <section class="card" aria-label="Analyst terminal">
+      <div class="term-chrome">
+        <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+        analyst@workstation: ~/cases/larkspur
+      </div>
+      <div class="term" id="term" role="log" aria-live="polite" aria-label="Terminal output"></div>
+      <form class="term-input" id="cmdForm" autocomplete="off">
+        <span class="pmt" aria-hidden="true">analyst@ws:~/cases/larkspur$</span>
+        <label for="cmd" class="visually-hidden" style="position:absolute;left:-9999px">Type a command</label>
+        <input id="cmd" name="cmd" type="text" placeholder="type a command, then press Enter  (try: help)" spellcheck="false">
+      </form>
+      <div class="chips" aria-label="Insert a step command">
+        <span class="lbl">Step commands &mdash; tap to insert, then press Enter</span>
+        <button class="chip" type="button" data-cmd="cat /opt/rcrack/charsets.def"><span class="n">1</span>cat /opt/rcrack/charsets.def</button>
+        <button class="chip" type="button" data-cmd="cat hashes.lst"><span class="n">2</span>cat hashes.lst</button>
+        <button class="chip" type="button" data-cmd="rtgen md5 mixalpha-numeric-symbol 1 12 0 2400 8000000 0"><span class="n">3</span>rtgen md5 &hellip;</button>
+        <button class="chip" type="button" data-cmd="rtgen sha1 mixalpha-numeric-symbol 1 12 0 2400 8000000 0"><span class="n">4</span>rtgen sha1 &hellip;</button>
+        <button class="chip" type="button" data-cmd="rtsort ."><span class="n">5</span>rtsort .</button>
+        <button class="chip" type="button" data-cmd="rcrack . -l hashes.lst"><span class="n">6</span>rcrack . -l hashes.lst</button>
+      </div>
+    </section>
+
+    <!-- RIGHT: brief + tasks + questions + submit -->
+    <aside style="display:flex;flex-direction:column;gap:16px">
+
+      <div class="card">
+        <div class="card-h"><span class="dot"></span>Incident brief</div>
+        <div class="card-b scn">
+          <p>Larkspur Forums, a hobby site many staff reused passwords on, was
+          breached. Its leaked credential dump reached <span class="who">Tarnhelm
+          Logistics</span>, where you work as a security analyst. Your job: find
+          out which Tarnhelm-relevant passwords can be recovered from the dump's
+          hashes so the owners can be forced to rotate them.</p>
+          <p>The dump in <code style="font-family:var(--mono);color:var(--cyan)">~/cases/larkspur/hashes.lst</code>
+          holds five unsalted MD5 and SHA-1 hashes. Build rainbow tables, sort
+          them, and run the cracker.</p>
+          <div class="policy">
+            <h4>Tarnhelm password policy</h4>
+            <ul>
+              <li>At least <b>12</b> characters long.</li>
+              <li>Includes both upper- and lower-case letters.</li>
+              <li>Contains at least one of: <code>! " # $ % &amp; _ ' * @</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="dot"></span>Task progress</div>
+        <div class="card-b">
+          <ul class="tasks" id="taskList" role="list"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="dot"></span>Lab questions</div>
+        <div class="card-b" id="questions"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="dot"></span>Submit completed lab</div>
+        <div class="submit">
+          <div class="score">
+            <div class="bar"><div class="fill" id="scoreFill"></div></div>
+            <div class="pct" id="scorePct">0 / 11</div>
+          </div>
+          <div class="field">
+            <label for="hacker">Hacker name (pseudonym &mdash; no real names)</label>
+            <input id="hacker" type="text" maxlength="32" placeholder="e.g. nightowl_42" spellcheck="false">
+            <span class="hint">Use a handle, not your real name. This is all the instructor sees.</span>
+          </div>
+          <button class="go" id="submitBtn" type="button" disabled>Submit completed lab</button>
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <footer>
+    Hashfall &mdash; Rainbow Table Hash Recovery &middot; SY0-701 objectives 1.4.5 / 1.4.6 / 2.4.6<br>
+    &copy; 2026 {{AUTHOR_NAME}}. Original clean-room simulation. Command names are factual; all scenario content is the author's own.
+  </footer>
+</div>
+
+<script>
+/* ===========================================================================
+   ENGINE + CONFIG + ANSWER KEY  (single inline block, no external runtime deps)
+   =========================================================================== */
+(function(){
+  "use strict";
+
+  /* ---------------------------- LAB CONFIG -------------------------------- */
+  const CONFIG = {
+    assignmentId: "splus-rainbow-tables",
+    title: "Rainbow Table Hash Recovery",
+    objectives: ["1.4", "2.4"],
+    // Set these two during instructor setup (see INSTRUCTOR_SETUP.md):
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+  };
+
+  /* ----------------- Original simulated filesystem content ---------------- */
+  const CHARSETS_DEF =
+`# rcrack charset definitions      (/opt/rcrack/charsets.def)
+# name                      = characters used to build chains
+loweralpha                  = [abcdefghijklmnopqrstuvwxyz]
+mixalpha                    = [a-zA-Z]
+numeric                     = [0123456789]
+loweralpha-numeric          = [a-z0-9]
+mixalpha-numeric            = [a-zA-Z0-9]
+mixalpha-numeric-symbol     = [a-zA-Z0-9 ! " # $ % & _ ' * @]   # matches policy symbols`;
+
+  // Each hash is the REAL md5/sha1 of its plaintext (verifiable on purpose).
+  // cracked=false means the plaintext is longer than the 1-12 table coverage.
+  const HASHES = [
+    {user:"jdoe",    algo:"md5",  hash:"ada5e4d95ff0bb404a26a8389d63f2b8",                pw:"spring2024",          cracked:true },
+    {user:"asmith",  algo:"sha1", hash:"0d19046b336b308c4e0cf6196d64f5273311f590",        pw:"Larkspur!2",          cracked:true },
+    {user:"bwong",   algo:"md5",  hash:"ebc65dccd2b25bddde3fb0d6c125481a",                pw:"Hunter$2000",         cracked:true },
+    {user:"kpatel",  algo:"sha1", hash:"00b932f0dcf2579f6205c101e868be58fe021ac3",        pw:"moonlit",             cracked:true },
+    {user:"rgarcia", algo:"md5",  hash:"70d388e1064bba653ca70ac707372874",                pw:"C0rrectHorseStaple$", cracked:false}
+  ];
+
+  /* ------------------------------- TASKS ---------------------------------- */
+  const TASKS = [
+    {id:"charset",  label:"Inspect the available charsets",     cmd:"cat /opt/rcrack/charsets.def"},
+    {id:"inspect",  label:"Read the leaked hash file",          cmd:"cat hashes.lst"},
+    {id:"gen_md5",  label:"Generate an MD5 rainbow table",      cmd:"rtgen md5 \u2026"},
+    {id:"gen_sha1", label:"Generate a SHA-1 rainbow table",     cmd:"rtgen sha1 \u2026"},
+    {id:"sort",     label:"Sort the tables for lookup",         cmd:"rtsort ."},
+    {id:"crack",    label:"Recover the hashes",                 cmd:"rcrack . -l hashes.lst"}
+  ];
+
+  /* --------------------------- QUESTIONS / KEY ---------------------------- */
+  // Answer key is intentionally inspectable (client-side, formative). For a
+  // trustworthy score, re-validate server-side (see apps-script.gs / §7).
+  const QUESTIONS = [
+    { id:"q1", obj:"1.4.6", type:"mc",
+      prompt:"These hashes were stored as the bare digest of each password. Which single control would have made a precomputed rainbow-table lookup fail?",
+      options:[
+        "Use a longer hash output (e.g. SHA-512 instead of MD5)",
+        "Add a unique random salt to each password before hashing",
+        "Store the hashes in a database rather than a flat file",
+        "Require users to include uppercase letters"
+      ], answer:1 },
+    { id:"q2", obj:"2.4.6", type:"mc",
+      prompt:"A rainbow table is fundamentally a tradeoff of one resource for another. Which?",
+      options:[
+        "Network bandwidth in exchange for CPU time",
+        "Accuracy in exchange for speed",
+        "Disk/storage space in exchange for cracking time",
+        "Memory in exchange for stronger hashes"
+      ], answer:2 },
+    { id:"q3", obj:"2.4.6", type:"text",
+      prompt:"Which command must run on a freshly generated table before rcrack can look hashes up in it? (one word)",
+      answer:["rtsort"] },
+    { id:"q4", obj:"1.4.5", type:"text",
+      prompt:"Of the five stored hashes, how many did rcrack successfully recover? (a number)",
+      answer:["4","four"] },
+    { id:"q5", obj:"1.4.6", type:"mc",
+      prompt:"Of the passwords rcrack recovered, how many satisfy the Tarnhelm policy (\u226512 chars, upper+lower, and a listed symbol)?",
+      options:["0","2","4","5"], answer:0 }
+  ];
+
+  const TOTAL = TASKS.length + QUESTIONS.length; // 11
+
+  /* ------------------------------ STATE ----------------------------------- */
+  const state = {
+    gen:{md5:false, sha1:false},
+    sorted:false,
+    cracked:false,
+    tasks:Object.fromEntries(TASKS.map(t=>[t.id,false])),
+    answers:{},      // qid -> raw answer
+    correct:{}       // qid -> bool
+  };
+
+  /* ------------------------------ HELPERS --------------------------------- */
+  const $  = s=>document.querySelector(s);
+  const el = (t,c)=>{const e=document.createElement(t); if(c) e.className=c; return e;};
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const term = $("#term");
+
+  function write(html, cls){
+    const line = el("span","ln"+(cls?" "+cls:""));
+    line.innerHTML = html;
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+    return line;
+  }
+  const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+  function echoPrompt(cmd){
+    write('<span class="pmt">analyst@ws</span>:<span class="path">~/cases/larkspur</span>$ '+esc(cmd));
+  }
+
+  function shortHash(h){ return h.slice(0,6)+"\u2026"; }
+
+  /* --------------------------- COMMAND ENGINE ----------------------------- */
+  function handle(raw){
+    const cmd = raw.trim();
+    if(!cmd) return;
+    echoPrompt(cmd);
+    const parts = cmd.split(/\s+/);
+    const c = parts[0];
+
+    if(c==="help"){
+      write("Available commands in this lab:", "dim");
+      write("  cat &lt;file&gt;            view a file (try charsets.def or hashes.lst)","dim");
+      write("  ls                     list this directory","dim");
+      write("  rtgen &lt;algo&gt; ...       generate a rainbow table (algo = md5 or sha1)","dim");
+      write("  rtsort .               sort generated tables for fast lookup","dim");
+      write("  rcrack . -l hashes.lst recover hashes using the sorted tables","dim");
+      write("  clear                  clear the screen","dim");
+      return;
+    }
+    if(c==="clear"){ term.innerHTML=""; return; }
+
+    if(c==="pwd"){ write("/home/analyst/cases/larkspur","out"); return; }
+
+    if(c==="ls"){
+      const files=["hashes.lst","notes.md"];
+      if(state.gen.md5)  files.push("md5_mixalpha-numeric-symbol#1-12_0_2400x8000000_0.rt");
+      if(state.gen.sha1) files.push("sha1_mixalpha-numeric-symbol#1-12_0_2400x8000000_0.rt");
+      write(files.join("   "),"out");
+      return;
+    }
+
+    if(c==="cat"){
+      const f=(parts[1]||"");
+      if(/charsets\.def$/.test(f)){
+        CHARSETS_DEF.split("\n").forEach(l=>write(esc(l),"out"));
+        complete("charset");
+      } else if(/(^|\/)hashes\.lst$/.test(f)){
+        write("# user:algorithm:hash   (Larkspur dump, unsalted)","dim");
+        HASHES.forEach(h=>write(esc(h.user)+":"+esc(h.algo)+":"+'<span class="hashv">'+esc(h.hash)+"</span>","out"));
+        complete("inspect");
+      } else if(f==="notes.md"){
+        write("Larkspur dump received 2026-06-12. Hashes are unsalted.","out");
+        write("Build tables over policy keyspace (len 1-12), then rcrack.","out");
+      } else if(!f){
+        write("cat: missing file name. Try: cat hashes.lst","bad");
+      } else {
+        write("cat: "+esc(f)+": No such file. Try 'ls' to see what's here.","bad");
+      }
+      return;
+    }
+
+    if(c==="rtgen"){
+      const algo=(parts[1]||"").toLowerCase();
+      if(algo!=="md5" && algo!=="sha1"){
+        write("rtgen: first argument must be the hash algorithm: md5 or sha1.","bad");
+        write("       e.g. rtgen md5 mixalpha-numeric-symbol 1 12 0 2400 8000000 0","dim");
+        return;
+      }
+      const fn = algo+"_mixalpha-numeric-symbol#1-12_0_2400x8000000_0.rt";
+      write("rtgen: building "+algo+" table over charset 'mixalpha-numeric-symbol', length 1\u201312","out");
+      write("  chain length 2400  &middot;  chain count 8000000  &middot;  table index 0","dim");
+      write("  generating chains  [<span class=\"rb\">################</span>]  8000000/8000000","out");
+      write("  wrote <span class=\"path\">"+fn+"</span>  (61.0 MB)","good");
+      state.gen[algo]=true;
+      complete(algo==="md5"?"gen_md5":"gen_sha1");
+      return;
+    }
+
+    if(c==="rtsort"){
+      if(!state.gen.md5 && !state.gen.sha1){
+        write("rtsort: no .rt tables found in this directory. Run rtgen first.","bad");
+        return;
+      }
+      ["md5","sha1"].forEach(a=>{
+        if(state.gen[a]){
+          write("rtsort: "+a+"_mixalpha-numeric-symbol#1-12_0_2400x8000000_0.rt","out");
+          write("  loading 8000000 chains \u00b7 sorting by end-point \u00b7 done","dim");
+        }
+      });
+      if(state.gen.md5 && state.gen.sha1){
+        state.sorted=true;
+        write("rtsort: both tables sorted in place.","good");
+        complete("sort");
+      } else {
+        write("rtsort: sorted 1 table. Generate the other algorithm too before cracking the full file.","dim");
+      }
+      return;
+    }
+
+    if(c==="rcrack"){
+      if(!(state.gen.md5 && state.gen.sha1)){
+        write("rcrack: need both an md5 and a sha1 table to cover this file. Run rtgen for each.","bad");
+        return;
+      }
+      if(!state.sorted){
+        write("rcrack: tables are not sorted. Run 'rtsort .' first.","bad");
+        return;
+      }
+      const single = parts.indexOf("-h")>=0 ? parts[parts.indexOf("-h")+1] : null;
+      doCrack(single);
+      return;
+    }
+
+    write(esc(c)+": command not found. Type 'help' for the commands this lab uses.","bad");
+  }
+
+  function doCrack(singleHash){
+    write("rcrack: loading sorted tables from .","out");
+    write("  2 tables \u00b7 16,000,000 chains loaded","dim");
+    const targets = singleHash ? HASHES.filter(h=>h.hash===singleHash) : HASHES;
+    if(singleHash && targets.length===0){
+      write("rcrack: hash not present in hashes.lst.","bad");
+      return;
+    }
+    write("recovering "+targets.length+" hash"+(targets.length>1?"es":"")+" \u2026","out");
+    let i=0;
+    const step=()=>{
+      if(i>=targets.length){ finishCrack(singleHash); return; }
+      const h=targets[i++];
+      const head = "  "+h.user.padEnd(9)+h.algo.padEnd(5)+shortHash(h.hash)+"  ->  ";
+      if(h.cracked){
+        revealLine(head, h.pw);
+      } else {
+        write(esc(head)+'<span class="bad">&lt;not found &mdash; outside table keyspace&gt;</span>',"out");
+      }
+      if(reduceMotion){ step(); } else { setTimeout(step, 240); }
+    };
+    step();
+  }
+
+  function revealLine(head, plain){
+    if(reduceMotion){
+      write(esc(head)+'<span class="reveal">'+esc(plain)+"</span>","out");
+      return;
+    }
+    const line = write(esc(head)+'<span class="reveal"></span>',"out");
+    const span = line.querySelector(".reveal");
+    let k=0;
+    const tick=()=>{
+      span.textContent = plain.slice(0,k) + (k<plain.length ? "\u2588" : "");
+      term.scrollTop = term.scrollHeight;
+      if(k++ < plain.length) setTimeout(tick, 45);
+      else span.textContent = plain;
+    };
+    tick();
+  }
+
+  function finishCrack(singleHash){
+    if(singleHash) return;
+    const got = HASHES.filter(h=>h.cracked).length;
+    write("","");
+    write("recovered <span class=\"good\">"+got+"</span> of "+HASHES.length+
+          "  &middot;  1 password exceeded the 1\u201312 table keyspace","out");
+    state.cracked=true;
+    complete("crack");
+  }
+
+  /* ------------------------- TASK COMPLETION ------------------------------ */
+  function complete(id){
+    if(state.tasks[id]) return;
+    state.tasks[id]=true;
+    renderTasks();
+    updateScore();
+  }
+
+  function renderTasks(){
+    const ul=$("#taskList"); ul.innerHTML="";
+    TASKS.forEach(t=>{
+      const li=el("li", state.tasks[t.id]?"done":"");
+      li.setAttribute("role","listitem");
+      const box=el("span","box"); box.setAttribute("aria-hidden","true");
+      const txt=el("span","task-txt");
+      txt.innerHTML="<b>"+t.label+"</b><span>"+esc(t.cmd)+"</span>";
+      li.append(box,txt);
+      ul.appendChild(li);
+    });
+  }
+
+  /* --------------------------- QUESTIONS UI ------------------------------- */
+  function renderQuestions(){
+    const root=$("#questions"); root.innerHTML="";
+    QUESTIONS.forEach((q,idx)=>{
+      const wrap=el("div","q");
+      const head=el("div","qhead");
+      head.innerHTML='<span class="qno">Q'+(idx+1)+'</span>'+
+                     '<span class="qobj">obj '+q.obj+'</span>';
+      const p=el("p","prompt"); p.textContent=q.prompt;
+      wrap.append(head,p);
+
+      if(q.type==="mc"){
+        const opts=el("div","opts");
+        q.options.forEach((o,oi)=>{
+          const lab=el("label","opt");
+          const r=el("input"); r.type="radio"; r.name=q.id; r.value=oi;
+          r.addEventListener("change",()=>{ state.answers[q.id]=oi; checkQuestion(q,wrap); });
+          const sp=el("span"); sp.textContent=o;
+          lab.append(r,sp); opts.appendChild(lab);
+        });
+        wrap.appendChild(opts);
+      } else {
+        const inp=el("input"); inp.type="text"; inp.setAttribute("aria-label",q.prompt);
+        inp.placeholder="type your answer";
+        inp.addEventListener("input",()=>{ state.answers[q.id]=inp.value; checkQuestion(q,wrap); });
+        wrap.appendChild(inp);
+      }
+      const fb=el("div","fb"); fb.dataset.for=q.id;
+      wrap.appendChild(fb);
+      root.appendChild(wrap);
+    });
+  }
+
+  function isCorrect(q){
+    const a=state.answers[q.id];
+    if(q.type==="mc") return a===q.answer;
+    if(a==null) return false;
+    const norm=String(a).trim().toLowerCase();
+    return q.answer.some(x=>String(x).toLowerCase()===norm);
+  }
+
+  function checkQuestion(q, wrap){
+    const ok=isCorrect(q);
+    state.correct[q.id]=ok;
+    const fb=wrap.querySelector(".fb");
+    if(state.answers[q.id]==null || state.answers[q.id]===""){
+      fb.textContent=""; fb.className="fb";
+    } else if(ok){
+      fb.textContent="Correct."; fb.className="fb ok";
+    } else {
+      fb.textContent="Not quite \u2014 review the result in the terminal and try again."; fb.className="fb no";
+    }
+    updateScore();
+  }
+
+  /* ------------------------------ SCORING --------------------------------- */
+  function earned(){
+    const t=TASKS.filter(x=>state.tasks[x.id]).length;
+    const q=QUESTIONS.filter(x=>state.correct[x.id]).length;
+    return {t,q,total:t+q};
+  }
+  function updateScore(){
+    const {total}=earned();
+    $("#scoreFill").style.width=(total/TOTAL*100)+"%";
+    $("#scorePct").textContent=total+" / "+TOTAL;
+    const ready = total===TOTAL && $("#hacker").value.trim().length>0;
+    const btn=$("#submitBtn");
+    btn.disabled = $("#hacker").value.trim().length===0;
+    btn.textContent = total===TOTAL ? "Submit completed lab" : "Submit lab ("+total+"/"+TOTAL+")";
+  }
+
+  /* --------------------------- SCREENSHOT --------------------------------- *
+   * Self-contained capture via SVG <foreignObject>. No CDN, no library to
+   * inline. It serializes the lab DOM, embeds the page CSS, rasterizes to a
+   * canvas and exports a PNG data URL. Captures only the simulated DOM, which
+   * is all the lab contains.  --- SWAP POINT ---  If you prefer html2canvas,
+   * paste its minified source above and replace this function body with:
+   *   const canvas = await html2canvas(node, {scale:2}); return canvas.toDataURL('image/png');
+   * ----------------------------------------------------------------------- */
+  async function captureScreenshot(node){
+    const w=node.offsetWidth, h=node.offsetHeight;
+    const css=document.getElementById("labcss").textContent;
+    const clone=node.cloneNode(true);
+    // Persist live input values into attributes so they appear in the capture.
+    const liveInputs=node.querySelectorAll("input");
+    const cloneInputs=clone.querySelectorAll("input");
+    liveInputs.forEach((src,i)=>{
+      const dst=cloneInputs[i]; if(!dst) return;
+      if(src.type==="radio"||src.type==="checkbox"){ if(src.checked) dst.setAttribute("checked",""); }
+      else dst.setAttribute("value", src.value);
+    });
+    const xml=new XMLSerializer().serializeToString(clone);
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+              '<foreignObject width="100%" height="100%">'+
+              '<div xmlns="http://www.w3.org/1999/xhtml" style="background:#0e1116">'+
+              '<style>'+css+'</style>'+xml+'</div>'+
+              '</foreignObject></svg>';
+    const img=new Image();
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error("render")); 
+      img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg); });
+    const scale=Math.min(2, 1400/Math.max(w,1));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.round(w*scale); canvas.height=Math.round(h*scale);
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#0e1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.setTransform(scale,0,0,scale,0,0);
+    ctx.drawImage(img,0,0);
+    return canvas.toDataURL("image/png");
+  }
+
+  /* --------------------------- SUBMISSION --------------------------------- */
+  async function submit(){
+    const status=$("#status");
+    const name=$("#hacker").value.trim();
+    if(!name){ status.className="status no"; status.textContent="Enter a hacker name first."; return; }
+
+    const btn=$("#submitBtn"); btn.disabled=true;
+    status.className="status work"; status.textContent="Capturing your work\u2026";
+
+    let shot="";
+    try{ shot=await captureScreenshot($("#captureArea")); }
+    catch(e){ shot=""; /* proceed without screenshot if capture is blocked */ }
+
+    const sc=earned();
+    const payload={
+      assignmentId: CONFIG.assignmentId,
+      hackerName: name.slice(0,32),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(t=>({id:t.id, label:t.label, passed:!!state.tasks[t.id]})),
+      questions: QUESTIONS.map(q=>({
+        id:q.id, prompt:q.prompt,
+        answer: q.type==="mc" ? (state.answers[q.id]!=null?q.options[state.answers[q.id]]:"") : (state.answers[q.id]||""),
+        correct: !!state.correct[q.id]
+      })),
+      score: {earned: sc.total, total: TOTAL},
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      status.className="status no";
+      status.textContent="Submission endpoint isn't configured. Ask your instructor to set APPS_SCRIPT_URL.";
+      btn.disabled=false; return;
+    }
+
+    status.textContent="Submitting to the instructor\u2026";
+    try{
+      // Simple request: no custom headers -> default text/plain -> no CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+      const out=await res.json();
+      if(out && out.success){
+        status.className="status ok";
+        status.innerHTML="Submitted. Score "+sc.total+"/"+TOTAL+"."+
+          (out.docUrl? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">View your submission &raquo;</a>':"");
+      } else {
+        status.className="status no";
+        status.textContent="Submission rejected: "+((out&&out.error)||"unknown error")+". Check with your instructor.";
+        btn.disabled=false;
+      }
+    } catch(err){
+      // Fallback: fire-and-forget if the response can't be read in a locked context.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+        status.className="status ok";
+        status.textContent="Sent (could not read confirmation). Confirm receipt with your instructor.";
+      }catch(e2){
+        status.className="status no";
+        status.textContent="Network error \u2014 submission did not send. Check your connection and retry.";
+        btn.disabled=false;
+      }
+    }
+  }
+
+  /* ------------------------------- RESET ---------------------------------- */
+  function reset(){
+    state.gen={md5:false,sha1:false}; state.sorted=false; state.cracked=false;
+    TASKS.forEach(t=>state.tasks[t.id]=false);
+    state.answers={}; state.correct={};
+    term.innerHTML="";
+    $("#hacker").value="";
+    $("#status").textContent=""; $("#status").className="status";
+    renderTasks(); renderQuestions(); updateScore(); banner();
+    $("#cmd").focus();
+  }
+
+  function banner(){
+    write('Hashfall workbench &mdash; <span class="rb">rainbow-table</span> recovery for the Larkspur dump.',"dim");
+    write("Type <span class=\"good\">help</span> for commands, or use the step buttons below. Start with step 1.","dim");
+    write("","");
+  }
+
+  /* ------------------------------- WIRING --------------------------------- */
+  $("#cmdForm").addEventListener("submit",e=>{
+    e.preventDefault();
+    const inp=$("#cmd"); handle(inp.value); inp.value="";
+  });
+  document.querySelectorAll(".chip").forEach(b=>{
+    b.addEventListener("click",()=>{ const i=$("#cmd"); i.value=b.dataset.cmd; i.focus(); });
+  });
+  $("#hacker").addEventListener("input",updateScore);
+  $("#submitBtn").addEventListener("click",submit);
+  $("#resetBtn").addEventListener("click",reset);
+
+  renderTasks(); renderQuestions(); updateScore(); banner();
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-ad-user-provisioning.html",title:"Provision Active Directory User Accounts \u2014 Security+ Lab"}, NEXT={href:"splus-password-audit-jtr.html",title:"Password-Strength Audit Lab \u2014 Northwind Diagnostics"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

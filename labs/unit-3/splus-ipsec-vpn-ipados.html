@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex">
+<title>Lab — Configure an IPSec VPN (iPadOS)</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-ipsec-vpn-ipados",
+  "title": "Lab — Configure an IPSec VPN (iPadOS)",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.2 Protecting Networks: Managerial Controls and Wireless Security"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "3.2"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Single-File Simulation Lab
+  Assignment: splus-ipsec-vpn-ipados — Configure an IPSec remote-access VPN on iPadOS
+  Objectives: 3.2.2.1 (Virtual private network), 3.2.2.2 (Remote access)
+
+  Copyright (c) 2026 — REPLACE WITH AUTHOR NAME.
+  Licensed for instructional use. This lab is an original, clean-room work built
+  from the public SY0-701 objectives and the documented behavior of iOS/iPadOS
+  VPN configuration. All scenario text, persona, file names, addresses, account
+  names, secrets and question wording are original to this file and are not
+  copied from any third-party lab. The UI is self-drawn (no captured product
+  screenshots). You may relicense your own copy.
+  ============================================================================
+-->
+<style>
+  /* ---- Lab console theme (the security-admin "desk") -------------------- */
+  :root {
+    --bg: #0b1220;
+    --bg-grid: #0e1729;
+    --panel: #131d31;
+    --panel-2: #1a2540;
+    --line: #28355a;
+    --ink: #e8eefb;
+    --muted: #93a4c6;
+    --accent: #2bd4ee;
+    --accent-2: #6ee7c7;
+    --ok: #36d399;
+    --bad: #fb7185;
+    --warn: #f6c453;
+    --mono: ui-monospace, "SF Mono", "Menlo", "Cascadia Code", Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    /* ---- iPadOS device tokens (kept accurate + disciplined) ------------- */
+    --ios-bg: #f2f2f7;
+    --ios-cell: #ffffff;
+    --ios-sep: rgba(60,60,67,0.29);
+    --ios-label: #1c1c1e;
+    --ios-second: rgba(60,60,67,0.6);
+    --ios-tint: #007aff;
+    --ios-green: #34c759;
+    --ios-red: #ff3b30;
+    --ios-chev: rgba(60,60,67,0.3);
+    --ios-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(43,212,238,0.08), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(110,231,199,0.06), transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg-grid));
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 18px 64px; }
+
+  /* Masthead */
+  .mast { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .mast .badge {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--bg); background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    padding: 6px 10px; border-radius: 999px; font-weight: 700; white-space: nowrap;
+  }
+  .mast h1 { font-size: clamp(18px, 2.4vw, 24px); margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  .mast .obj { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(340px, 460px); gap: 22px; align-items: start; }
+  @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ---------- iPad device ------------------------------------------------ */
+  .device-stage { display: flex; justify-content: center; }
+  .ipad {
+    width: 100%; max-width: 430px;
+    background: #0a0e16;
+    border-radius: 34px;
+    padding: 12px;
+    box-shadow: 0 30px 70px rgba(0,0,0,.55), inset 0 0 0 2px #232a3a, 0 0 0 1px #000;
+  }
+  .ipad .screen-host {
+    background: var(--ios-bg);
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    height: 660px;
+    display: flex; flex-direction: column;
+    font-family: var(--ios-font);
+    color: var(--ios-label);
+  }
+  @media (max-width: 420px) { .ipad .screen-host { height: 600px; } }
+
+  /* iOS status bar */
+  .statusbar {
+    height: 30px; flex: 0 0 30px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--ios-label);
+    background: var(--ios-bg);
+  }
+  .statusbar .right { display: flex; align-items: center; gap: 6px; }
+  .vpn-pill {
+    display: none; font-size: 10px; font-weight: 700; letter-spacing: .02em;
+    color: #fff; background: var(--ios-tint); border-radius: 4px; padding: 1px 5px;
+  }
+  .vpn-pill.on { display: inline-block; }
+  .sb-glyph { font-size: 12px; }
+
+  /* iOS nav bar */
+  .navbar {
+    flex: 0 0 auto; background: var(--ios-bg);
+    border-bottom: .5px solid var(--ios-sep);
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 6px 10px 10px; gap: 6px;
+  }
+  .navbar .nav-left, .navbar .nav-right { display: flex; align-items: center; }
+  .navbar .nav-right { justify-content: flex-end; }
+  .navbar .title { text-align: center; font-size: 17px; font-weight: 600; }
+  .btn-link {
+    appearance: none; background: none; border: 0; color: var(--ios-tint);
+    font: inherit; font-size: 17px; cursor: pointer; padding: 4px 6px; border-radius: 8px;
+    display: inline-flex; align-items: center; gap: 2px;
+  }
+  .btn-link:disabled { color: var(--ios-second); opacity: .5; cursor: default; }
+  .btn-link .chev-back { font-size: 20px; line-height: 1; margin-right: -2px; }
+
+  /* Scroll area for settings content */
+  .ios-scroll { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 24px; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .search {
+    margin: 10px 16px 14px; background: rgba(118,118,128,0.12); border-radius: 10px;
+    display: flex; align-items: center; gap: 6px; padding: 7px 10px; color: var(--ios-second);
+    font-size: 15px;
+  }
+
+  .grp-head, .grp-foot {
+    font-size: 12.5px; color: var(--ios-second); padding: 6px 16px; line-height: 1.35;
+  }
+  .grp-head { text-transform: uppercase; letter-spacing: .02em; padding-bottom: 6px; }
+  .grp-foot { padding-top: 8px; }
+
+  .group {
+    background: var(--ios-cell);
+    margin: 0 16px 18px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: .5px solid rgba(60,60,67,0.12);
+  }
+  .row {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 11px 14px; min-height: 46px;
+    background: var(--ios-cell); border: 0; text-align: left;
+    font: inherit; color: var(--ios-label); cursor: pointer;
+    position: relative;
+  }
+  .row + .row { border-top: .5px solid var(--ios-sep); }
+  .row.static { cursor: default; }
+  .row .icon {
+    width: 30px; height: 30px; border-radius: 7px; flex: 0 0 30px;
+    display: grid; place-items: center; color: #fff; font-size: 16px;
+  }
+  .row .label { flex: 1 1 auto; font-size: 16px; }
+  .row .value { color: var(--ios-second); font-size: 16px; max-width: 55%; text-align: right;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .chev { color: var(--ios-chev); font-size: 18px; font-weight: 600; margin-left: 2px; }
+  .row:not(.static):active { background: rgba(0,0,0,0.05); }
+
+  .ico-blue { background: #0a84ff; }
+  .ico-green { background: #34c759; }
+  .ico-gray { background: #8e8e93; }
+  .ico-purple { background: #5e5ce6; }
+  .ico-teal { background: #30b0c7; }
+  .ico-red { background: #ff3b30; }
+  .ico-orange { background: #ff9500; }
+
+  /* form (Add VPN Configuration) */
+  .field {
+    display: flex; align-items: center; gap: 10px; padding: 9px 14px; min-height: 46px;
+    border-top: .5px solid var(--ios-sep);
+  }
+  .field:first-child { border-top: 0; }
+  .field .flabel { width: 116px; flex: 0 0 116px; font-size: 16px; color: var(--ios-label); }
+  .field input[type="text"], .field input[type="password"] {
+    flex: 1 1 auto; border: 0; outline: 0; font: inherit; font-size: 16px;
+    color: var(--ios-label); background: transparent; min-width: 0;
+  }
+  .field input::placeholder { color: var(--ios-second); }
+  .field .type-pick {
+    margin-left: auto; display: flex; align-items: center; gap: 4px;
+    color: var(--ios-second); font-size: 16px;
+  }
+  .seg {
+    display: flex; gap: 0; background: rgba(118,118,128,0.12); border-radius: 9px; padding: 2px; margin-left: auto;
+  }
+  .seg button {
+    appearance: none; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 600;
+    padding: 5px 12px; border-radius: 7px; color: var(--ios-label); cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.18); }
+
+  /* iOS switch */
+  .switch {
+    appearance: none; position: relative; width: 51px; height: 31px; border-radius: 999px;
+    background: rgba(120,120,128,0.28); border: 0; cursor: pointer; flex: 0 0 51px; transition: background .18s ease;
+    margin-left: auto;
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .18s ease;
+  }
+  .switch[aria-checked="true"] { background: var(--ios-green); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); }
+
+  .status-line { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ios-second); }
+  .dot.on { background: var(--ios-green); }
+
+  .empty-note { color: var(--ios-second); font-size: 14px; padding: 14px 16px; }
+
+  /* auth sheet */
+  .sheet-scrim {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.32); display: none;
+    align-items: flex-end; justify-content: center; z-index: 5;
+  }
+  .sheet-scrim.open { display: flex; }
+  .sheet {
+    width: 100%; background: var(--ios-bg); border-radius: 16px 16px 0 0; padding: 16px;
+    animation: rise .22s ease;
+  }
+  @keyframes rise { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+  .sheet h3 { margin: 2px 0 4px; font-size: 17px; }
+  .sheet p { margin: 0 0 12px; font-size: 13px; color: var(--ios-second); }
+  .sheet .grp { background: #fff; border-radius: 10px; padding: 0 12px; margin-bottom: 10px; }
+  .sheet .grp .field { border-top: .5px solid var(--ios-sep); }
+  .sheet-err { color: var(--ios-red); font-size: 13px; min-height: 16px; margin: 0 2px 8px; }
+  .sheet-actions { display: flex; gap: 10px; }
+  .sheet-actions .pri, .sheet-actions .sec {
+    flex: 1; appearance: none; border: 0; border-radius: 12px; padding: 12px; font: inherit; font-size: 16px;
+    font-weight: 600; cursor: pointer;
+  }
+  .sheet-actions .pri { background: var(--ios-tint); color: #fff; }
+  .sheet-actions .sec { background: rgba(118,118,128,0.14); color: var(--ios-tint); }
+
+  /* ---------- Lab panel (console side) ----------------------------------- */
+  .panel {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--line); border-radius: 16px; padding: 18px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.35);
+  }
+  .panel + .panel { margin-top: 16px; }
+  .panel h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .14em; color: var(--accent);
+    margin: 0 0 10px; font-family: var(--mono); font-weight: 700;
+  }
+  .brief p { margin: 0 0 10px; color: #cdd8ef; font-size: 14.5px; }
+  .brief .who { color: var(--muted); font-size: 13px; }
+  .params {
+    width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13.5px;
+  }
+  .params th, .params td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  .params th { color: var(--muted); font-weight: 600; width: 130px; }
+  .params td { font-family: var(--mono); color: var(--ink); }
+  .params .secret { color: var(--accent-2); }
+
+  ol.tasks { list-style: none; counter-reset: t; margin: 0; padding: 0; }
+  ol.tasks li {
+    display: flex; align-items: flex-start; gap: 11px; padding: 9px 0; border-bottom: 1px solid var(--line);
+  }
+  ol.tasks li:last-child { border-bottom: 0; }
+  .check {
+    flex: 0 0 22px; width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--line);
+    display: grid; place-items: center; font-size: 13px; color: transparent; margin-top: 1px;
+    transition: all .18s ease;
+  }
+  li.done .check { background: var(--ok); border-color: var(--ok); color: #04130d; }
+  li.done .ttext { color: var(--muted); }
+  .ttext { font-size: 14px; color: #dbe5fb; }
+
+  .q { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .q:last-child { border-bottom: 0; }
+  .q .prompt { font-size: 14px; color: #e6edfb; margin: 0 0 9px; }
+  .q .opts { display: grid; gap: 7px; }
+  .opt {
+    display: flex; gap: 9px; align-items: flex-start; width: 100%; text-align: left;
+    background: rgba(255,255,255,0.02); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 10px; padding: 9px 11px; font: inherit; font-size: 13.5px; cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .opt:hover { border-color: var(--accent); }
+  .opt .key {
+    flex: 0 0 20px; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--muted);
+    font-size: 11px; font-weight: 700; display: grid; place-items: center; color: var(--muted);
+  }
+  .opt.correct { border-color: var(--ok); background: rgba(54,211,153,0.12); }
+  .opt.correct .key { background: var(--ok); border-color: var(--ok); color: #04130d; }
+  .opt.wrong { border-color: var(--bad); background: rgba(251,113,133,0.12); }
+  .opt.wrong .key { background: var(--bad); border-color: var(--bad); color: #2a0610; }
+  .opt[aria-disabled="true"] { cursor: default; }
+  .q .verdict { font-size: 12.5px; margin: 7px 2px 0; min-height: 15px; }
+  .verdict.ok { color: var(--ok); }
+  .verdict.bad { color: var(--bad); }
+
+  /* submission bar */
+  .submit-grp { display: grid; gap: 12px; }
+  .scorebar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(43,212,238,0.06); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px;
+  }
+  .scorebar .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-family: var(--mono); }
+  .scorebar .val { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .scorebar .val.pass { color: var(--ok); }
+
+  label.hn { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .hn-input {
+    width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 10px; padding: 11px 12px; font: inherit; font-size: 15px; font-family: var(--mono);
+  }
+  .hn-input::placeholder { color: #5e6e8e; }
+  .hint { font-size: 11.5px; color: #6f80a3; margin-top: 5px; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    appearance: none; border: 0; border-radius: 11px; padding: 12px 16px; font: inherit; font-size: 14.5px;
+    font-weight: 700; cursor: pointer; flex: 1 1 auto;
+  }
+  .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #04222a; }
+  .btn.primary:disabled { filter: grayscale(.6) brightness(.8); cursor: not-allowed; }
+  .btn.ghost { background: rgba(255,255,255,0.04); color: var(--ink); border: 1px solid var(--line); flex: 0 0 auto; }
+  .btn.primary[aria-busy="true"] { opacity: .8; cursor: progress; }
+
+  .status {
+    font-size: 13.5px; border-radius: 11px; padding: 11px 13px; display: none; line-height: 1.4;
+    border: 1px solid var(--line);
+  }
+  .status.show { display: block; }
+  .status.ok { background: rgba(54,211,153,0.1); border-color: rgba(54,211,153,0.4); color: #b6f3da; }
+  .status.err { background: rgba(251,113,133,0.1); border-color: rgba(251,113,133,0.4); color: #ffd0d8; }
+  .status.info { background: rgba(246,196,83,0.08); border-color: rgba(246,196,83,0.35); color: #ffe6ad; }
+  .status a { color: var(--accent); font-weight: 700; }
+
+  footer.legal { margin-top: 22px; color: #51618a; font-size: 11.5px; line-height: 1.6; font-family: var(--mono); }
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible, input:focus-visible, [role="switch"]:focus-visible, .opt:focus-visible, .row:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px;
+  }
+  .ipad button:focus-visible, .ipad [role="switch"]:focus-visible, .ipad input:focus-visible { outline-color: var(--ios-tint); }
+
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap" id="lab-root">
+
+  <header class="mast">
+    <span class="badge">SY0-701 LAB</span>
+    <h1>Configure an IPSec Remote-Access VPN (iPadOS)</h1>
+    <span class="obj" aria-label="Objectives">obj 3.2.2.1 · 3.2.2.2</span>
+  </header>
+
+  <div class="grid">
+
+    <!-- ================= DEVICE SIMULATION ================= -->
+    <div class="device-stage">
+      <div class="ipad" role="group" aria-label="Simulated iPad running iPadOS Settings">
+        <div class="screen-host">
+
+          <!-- status bar -->
+          <div class="statusbar" aria-hidden="true">
+            <span>9:41</span>
+            <span class="right">
+              <span class="vpn-pill" id="vpnPill">VPN</span>
+              <span class="sb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 19.4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z"/><path d="M5.6 13.3l1.8 1.8a6.6 6.6 0 0 1 9.2 0l1.8-1.8a9.1 9.1 0 0 0-12.8 0z"/><path d="M2 9.7l1.8 1.8a13 13 0 0 1 16.4 0L22 9.7a15.6 15.6 0 0 0-20 0z" opacity=".85"/></svg></span><span class="sb-glyph" aria-hidden="true"><svg viewBox="0 0 26 14" width="24" height="13"><rect x="1" y="2.5" width="20" height="9" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="2.6" y="4.1" width="15" height="5.8" rx="1.2" fill="currentColor"/><rect x="22.4" y="5" width="2.2" height="4" rx="1" fill="currentColor"/></svg></span><span class="sb-glyph">100%</span>
+            </span>
+          </div>
+
+          <!-- nav bar -->
+          <div class="navbar">
+            <div class="nav-left">
+              <button class="btn-link" id="backBtn" type="button" hidden>
+                <span class="chev-back" aria-hidden="true">‹</span><span id="backLabel">Settings</span>
+              </button>
+            </div>
+            <div class="title" id="navTitle">Settings</div>
+            <div class="nav-right">
+              <button class="btn-link" id="formDone" type="button" hidden>Done</button>
+              <button class="btn-link" id="formCancel" type="button" hidden>Cancel</button>
+            </div>
+          </div>
+
+          <div class="ios-scroll" id="iosScroll">
+
+            <!-- HOME -->
+            <section class="screen active" id="screen-home" aria-label="Settings">
+              <div class="search" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg> Search</div>
+              <div class="group">
+                <div class="row static"><span class="icon ico-green" aria-hidden="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 19.4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z"/><path d="M5.6 13.3l1.8 1.8a6.6 6.6 0 0 1 9.2 0l1.8-1.8a9.1 9.1 0 0 0-12.8 0z"/><path d="M2 9.7l1.8 1.8a13 13 0 0 1 16.4 0L22 9.7a15.6 15.6 0 0 0-20 0z" opacity=".85"/></svg></span><span class="label">Wi-Fi</span><span class="value">CedarCove-5G</span><span class="chev">›</span></div>
+                <div class="row static"><span class="icon ico-blue" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M8 7.5L16 16l-4 3.5v-15L16 8 8 16.5"/></svg></span><span class="label">Bluetooth</span><span class="value">On</span><span class="chev">›</span></div>
+              </div>
+              <div class="group">
+                <button class="row" type="button" data-go="general"><span class="icon ico-gray" aria-hidden="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/><path d="M19.4 13.5l1.7 1.3-1.6 2.8-2-.8a6.6 6.6 0 0 1-1.5.9L15.6 20h-3.2l-.4-2.1a6.6 6.6 0 0 1-1.5-.9l-2 .8L4.9 15l1.7-1.3a6.7 6.7 0 0 1 0-1.7L4.9 10.7l1.6-2.8 2 .8c.5-.4 1-.7 1.5-.9L10.4 6h3.2l.4 2.1c.5.2 1 .5 1.5.9l2-.8 1.6 2.8-1.7 1.3c.1.6.1 1.1 0 1.7z" opacity=".55"/></svg></span><span class="label">General</span><span class="chev">›</span></button>
+                <div class="row static"><span class="icon ico-blue" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg></span><span class="label">Display &amp; Brightness</span><span class="chev">›</span></div>
+                <div class="row static"><span class="icon ico-red" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="4.4" r="2"/><path d="M3.6 8.2c2.6.8 5.4 1.2 8.4 1.2s5.8-.4 8.4-1.2l-.6-1.9c-2.4.8-5 1.1-7.8 1.1s-5.4-.3-7.8-1.1l-.6 1.9zM9.3 10l-1 9.8 1.9.2.9-6.5h1.8l.9 6.5 1.9-.2-1-9.8z"/></svg></span><span class="label">Accessibility</span><span class="chev">›</span></div>
+              </div>
+            </section>
+
+            <!-- GENERAL -->
+            <section class="screen" id="screen-general" aria-label="General">
+              <div class="group" style="margin-top:12px">
+                <div class="row static"><span class="label">About</span><span class="chev">›</span></div>
+                <div class="row static"><span class="label">Software Update</span><span class="chev">›</span></div>
+              </div>
+              <div class="group">
+                <button class="row" type="button" data-go="vpnmgmt"><span class="label">VPN &amp; Device Management</span><span class="value" id="genVpnState">Not Connected</span><span class="chev">›</span></button>
+              </div>
+              <p class="grp-foot">Remote-access connections appear under VPN &amp; Device Management.</p>
+            </section>
+
+            <!-- VPN & DEVICE MANAGEMENT -->
+            <section class="screen" id="screen-vpnmgmt" aria-label="VPN and Device Management">
+              <p class="grp-head" style="margin-top:12px">VPN</p>
+              <div class="group">
+                <button class="row" type="button" data-go="vpnlist"><span class="label">VPN</span><span class="value status-line"><span class="dot" id="mgmtDot"></span><span id="mgmtStatus">Not Connected</span></span><span class="chev">›</span></button>
+              </div>
+              <p class="grp-head">DEVICE MANAGEMENT</p>
+              <div class="group">
+                <div class="row static"><span class="label">Work Profile — Meridian Field Services</span><span class="chev">›</span></div>
+              </div>
+            </section>
+
+            <!-- VPN LIST -->
+            <section class="screen" id="screen-vpnlist" aria-label="VPN">
+              <!-- status toggle, only when a config exists -->
+              <div id="statusGroup" hidden>
+                <div class="group" style="margin-top:12px">
+                  <div class="row static">
+                    <span class="label">Status</span>
+                    <span class="value status-line" style="max-width:none"><span class="dot" id="listDot"></span><span id="listStatus">Not Connected</span></span>
+                    <button class="switch" id="vpnSwitch" role="switch" aria-checked="false" aria-label="VPN connection"></button>
+                  </div>
+                </div>
+                <p class="grp-head">VPN CONFIGURATIONS</p>
+              </div>
+
+              <div class="group" id="configGroup" style="margin-top:12px">
+                <div class="empty-note" id="noConfigs">No VPN configurations yet. Add one to get started.</div>
+                <!-- saved config row injected here -->
+              </div>
+
+              <div class="group">
+                <button class="row" type="button" id="addVpnBtn"><span class="label" style="color:var(--ios-tint)">Add VPN Configuration…</span></button>
+              </div>
+            </section>
+
+            <!-- ADD VPN FORM -->
+            <section class="screen" id="screen-addvpn" aria-label="Add VPN Configuration">
+              <p class="grp-head" style="margin-top:12px">VPN TYPE</p>
+              <div class="group">
+                <div class="field">
+                  <span class="flabel">Type</span>
+                  <div class="seg" role="group" aria-label="VPN type">
+                    <button type="button" data-type="IKEv2" aria-pressed="false">IKEv2</button>
+                    <button type="button" data-type="IPSec" aria-pressed="true">IPSec</button>
+                    <button type="button" data-type="L2TP" aria-pressed="false">L2TP</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="group">
+                <div class="field"><span class="flabel">Description</span><input type="text" id="f-desc" placeholder="Required" autocomplete="off" spellcheck="false" /></div>
+                <div class="field"><span class="flabel">Server</span><input type="text" id="f-server" placeholder="Required" autocomplete="off" spellcheck="false" inputmode="url" /></div>
+                <div class="field"><span class="flabel">Account</span><input type="text" id="f-account" placeholder="Required" autocomplete="off" spellcheck="false" /></div>
+                <div class="field"><span class="flabel">Password</span><input type="password" id="f-password" placeholder="Ask Every Time" autocomplete="off" /></div>
+              </div>
+
+              <p class="grp-head">AUTHENTICATION</p>
+              <div class="group">
+                <div class="field"><span class="flabel">Use Certificate</span>
+                  <button class="switch" id="f-usecert" role="switch" aria-checked="false" aria-label="Use certificate"></button>
+                </div>
+                <div class="field"><span class="flabel">Group Name</span><input type="text" id="f-group" placeholder="Optional" autocomplete="off" spellcheck="false" /></div>
+                <div class="field" id="secretField"><span class="flabel">Secret</span><input type="password" id="f-secret" placeholder="Required" autocomplete="off" /></div>
+              </div>
+              <p class="grp-foot" id="formHint">Enter the values your administrator gave you. The Secret is the IPSec pre-shared key.</p>
+            </section>
+
+          </div><!-- /ios-scroll -->
+
+          <!-- auth sheet -->
+          <div class="sheet-scrim" id="authScrim" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+            <div class="sheet">
+              <h3 id="authTitle">Authentication</h3>
+              <p>Enter the password for account <strong id="authAccount">—</strong> to connect.</p>
+              <div class="grp">
+                <div class="field"><span class="flabel">Password</span><input type="password" id="authPw" autocomplete="off" /></div>
+              </div>
+              <p class="sheet-err" id="authErr" role="alert"></p>
+              <div class="sheet-actions">
+                <button class="sec" type="button" id="authCancel">Cancel</button>
+                <button class="pri" type="button" id="authConnect">Connect</button>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /screen-host -->
+      </div><!-- /ipad -->
+    </div>
+
+    <!-- ================= LAB PANEL ================= -->
+    <div>
+      <section class="panel brief" aria-labelledby="brief-h">
+        <h2 id="brief-h">Scenario</h2>
+        <p>You are the security administrator at <strong>Meridian Field Services</strong>, a small surveying firm.
+           You have stood up a remote-access <strong>IPSec VPN</strong> on the company's edge security appliance so
+           field crews can reach internal resources from the road.</p>
+        <p>Tonight you are working from home over your own Wi-Fi, and you need to configure your company iPad to use
+           the new VPN. The tablet is already on your home network.</p>
+        <p class="who">Add the configuration under <strong>Settings › General › VPN &amp; Device Management › VPN</strong>, then connect and confirm.</p>
+        <table class="params" aria-label="Configuration values to enter">
+          <tr><th>Type</th><td>IPSec</td></tr>
+          <tr><th>Description</th><td>MeridianRemote</td></tr>
+          <tr><th>Server</th><td>203.0.113.47</td></tr>
+          <tr><th>Account</th><td>tquinn</td></tr>
+          <tr><th>Secret (PSK)</th><td class="secret">Tunnel#Cove72</td></tr>
+        </table>
+        <p class="who" style="margin-top:10px">When you switch the VPN on, authenticate with the account password
+           for <strong>tquinn</strong>: <span style="font-family:var(--mono);color:var(--accent-2)">Gr@nite7Vault</span></p>
+      </section>
+
+      <section class="panel" aria-labelledby="tasks-h">
+        <h2 id="tasks-h">Tasks</h2>
+        <ol class="tasks" id="taskList">
+          <li data-task="t1"><span class="check" aria-hidden="true">✓</span><span class="ttext">Create the IPSec VPN configuration with the correct Description, Server, Account, and Secret.</span></li>
+          <li data-task="t2"><span class="check" aria-hidden="true">✓</span><span class="ttext">Switch the VPN on and authenticate with the account password.</span></li>
+          <li data-task="t3"><span class="check" aria-hidden="true">✓</span><span class="ttext">Confirm the connection status shows <strong>Connected</strong>.</span></li>
+        </ol>
+      </section>
+
+      <section class="panel" aria-labelledby="q-h">
+        <h2 id="q-h">Knowledge check</h2>
+        <div id="questions"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="sub-h">
+        <h2 id="sub-h">Submit your lab</h2>
+        <div class="submit-grp">
+          <div class="scorebar">
+            <span class="lbl">Score</span>
+            <span class="val" id="scoreVal">0 / 6</span>
+          </div>
+          <div>
+            <label class="hn" for="hackerName">Hacker name (pseudonym)</label>
+            <input class="hn-input" id="hackerName" type="text" maxlength="40" placeholder="e.g. tunnel_owl_14" autocomplete="off" spellcheck="false" />
+            <p class="hint">Use a handle, not your real name — keep personal info out of the system.</p>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="submitBtn" type="button" disabled>Submit completed lab</button>
+            <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+          </div>
+          <div class="status" id="subStatus" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="legal">
+    Configure an IPSec Remote-Access VPN (iPadOS) — assignment <code>splus-ipsec-vpn-ipados</code> ·
+    SY0-701 objectives 3.2.2.1, 3.2.2.2.<br>
+    © 2026 REPLACE WITH AUTHOR NAME. Original clean-room instructional simulation; not affiliated with or copied
+    from any vendor lab. Apple, iPad, and iPadOS are trademarks of Apple Inc., used here nominatively to describe
+    the platform being taught.
+  </footer>
+</div>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 1 — screenshot/proof renderer (dependency-free).
+     If you paste a real minified html2canvas build into the slot below, the
+     engine will prefer it for literal DOM rasterization; otherwise it falls
+     back to the built-in canvas evidence renderer (always works, never taints).
+     ========================================================================= -->
+<script>
+/* === OPTIONAL: paste minified html2canvas here to enable DOM rasterization ===
+   (left empty on purpose so this file stays a true zero-dependency single file)
+   === end optional html2canvas slot === */
+</script>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, logic, capture, submission.
+     ========================================================================= -->
+<script>
+(function () {
+  "use strict";
+
+  /* ----------------------------- LAB CONFIG ------------------------------ */
+  const CONFIG = {
+    assignmentId: "splus-ipsec-vpn-ipados",
+    title: "Configure an IPSec Remote-Access VPN (iPadOS)",
+    objectives: ["3.2"],
+    // The deployed Apps Script /exec URL (same across the whole library).
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    // Per-cohort shared secret; must match the Script Property on the server.
+    submissionToken: "REPLACE_WITH_PER_COHORT_TOKEN"
+  };
+
+  /* ----------------------------- ANSWER KEY ------------------------------ */
+  // Original values for THIS lab. (Client-side keys are inspectable — see notes.)
+  var KEY = {
+    type: "IPSec",
+    description: "MeridianRemote",   // matched case-insensitively, trimmed
+    server: "203.0.113.47",          // matched exactly (trimmed)
+    account: "tquinn",               // matched case-insensitively, trimmed
+    secret: "Tunnel#Cove72",         // matched exactly (case-sensitive)
+    accountPassword: "Gr@nite7Vault" // matched exactly (case-sensitive)
+  };
+
+  var QUESTIONS = [
+    {
+      id: "q1",
+      prompt: "This configuration proves the tunnel's identity with a value you and the gateway both hold, instead of a certificate. Which field carries that value, and what is the credential called?",
+      options: [
+        { k: "A", text: "The Account field — it is a one-time passcode." },
+        { k: "B", text: "The Secret field — it is a pre-shared key (PSK)." },
+        { k: "C", text: "The Password field — it is a session cookie." },
+        { k: "D", text: "The Server field — it is the gateway's X.509 certificate." }
+      ],
+      answer: "B",
+      why: "IPSec with a shared secret uses the Secret field as a pre-shared key for tunnel authentication."
+    },
+    {
+      id: "q2",
+      prompt: "You are joining over untrusted home Wi-Fi. What does the IPSec tunnel primarily provide for your traffic across that network?",
+      options: [
+        { k: "A", text: "Physical security for the office router." },
+        { k: "B", text: "Confidentiality and integrity of data in transit." },
+        { k: "C", text: "Faster download speeds than the local link." },
+        { k: "D", text: "A reduction in the data your carrier bills you for." }
+      ],
+      answer: "B",
+      why: "A VPN encrypts and integrity-protects traffic so it can cross an untrusted network safely."
+    },
+    {
+      id: "q3",
+      prompt: "At which layer does IPSec operate to secure this remote-access connection?",
+      options: [
+        { k: "A", text: "The application layer, the same place HTTPS/TLS sits." },
+        { k: "B", text: "The network (IP) layer." },
+        { k: "C", text: "The physical layer." },
+        { k: "D", text: "Only the local data-link layer, never beyond the LAN." }
+      ],
+      answer: "B",
+      why: "IPSec secures traffic at the network/IP layer, protecting all IP traffic regardless of application."
+    }
+  ];
+
+  /* ----------------------------- STATE ----------------------------------- */
+  var state = {
+    screen: "home",
+    type: "IPSec",
+    useCert: false,
+    config: null,        // { description, server, account, secret }
+    connected: false,
+    tasks: { t1: false, t2: false, t3: false },
+    answers: { q1: null, q2: null, q3: null }
+  };
+
+  var TASK_TOTAL = 3, Q_TOTAL = QUESTIONS.length, GRAND_TOTAL = TASK_TOTAL + Q_TOTAL;
+
+  /* ----------------------------- HELPERS --------------------------------- */
+  var $ = function (sel, ctx) { return (ctx || document).querySelector(sel); };
+  function norm(s) { return (s == null ? "" : String(s)).trim(); }
+  function eq(a, b) { return norm(a) === norm(b); }
+  function eqi(a, b) { return norm(a).toLowerCase() === norm(b).toLowerCase(); }
+
+  /* ----------------------------- NAVIGATION ------------------------------ */
+  var SCREENS = {
+    home:    { title: "Settings",                 back: null,        backLabel: "" },
+    general: { title: "General",                  back: "home",      backLabel: "Settings" },
+    vpnmgmt: { title: "VPN & Device Management",   back: "general",   backLabel: "General" },
+    vpnlist: { title: "VPN",                       back: "vpnmgmt",   backLabel: "Back" },
+    addvpn:  { title: "Add Configuration",         back: "vpnlist",   backLabel: "Cancel", isForm: true }
+  };
+
+  function show(screen) {
+    state.screen = screen;
+    Object.keys(SCREENS).forEach(function (s) {
+      var el = $("#screen-" + s);
+      if (el) el.classList.toggle("active", s === screen);
+    });
+    var meta = SCREENS[screen];
+    $("#navTitle").textContent = meta.title;
+
+    var back = $("#backBtn"), formDone = $("#formDone"), formCancel = $("#formCancel");
+    if (meta.isForm) {
+      back.hidden = true; formCancel.hidden = false; formDone.hidden = false;
+    } else {
+      formCancel.hidden = true; formDone.hidden = true;
+      if (meta.back) { back.hidden = false; $("#backLabel").textContent = meta.backLabel; }
+      else { back.hidden = true; }
+    }
+    $("#iosScroll").scrollTop = 0;
+  }
+
+  /* ----------------------------- FORM ------------------------------------ */
+  function selectType(t) {
+    state.type = t;
+    document.querySelectorAll('.seg [data-type]').forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-type") === t));
+    });
+    // For non-IPSec types iOS hides the Secret/PSK; keep it simple but plausible.
+    $("#secretField").style.display = (t === "L2TP" || t === "IPSec") ? "" : "none";
+  }
+
+  function openForm() {
+    // fresh form each time
+    $("#f-desc").value = ""; $("#f-server").value = ""; $("#f-account").value = "";
+    $("#f-password").value = ""; $("#f-group").value = ""; $("#f-secret").value = "";
+    selectType("IPSec");
+    state.useCert = false;
+    $("#f-usecert").setAttribute("aria-checked", "false");
+    show("addvpn");
+    setTimeout(function () { $("#f-desc").focus(); }, 30);
+  }
+
+  function saveForm() {
+    var desc = $("#f-desc").value, server = $("#f-server").value,
+        account = $("#f-account").value, secret = $("#f-secret").value;
+
+    // iOS requires Description + Server + Account; for IPSec also a Secret unless cert.
+    var missing = [];
+    if (!norm(desc)) missing.push("Description");
+    if (!norm(server)) missing.push("Server");
+    if (!norm(account)) missing.push("Account");
+    if (!state.useCert && (state.type === "IPSec" || state.type === "L2TP") && !norm(secret)) missing.push("Secret");
+
+    var hint = $("#formHint");
+    if (missing.length) {
+      hint.style.color = "var(--ios-red)";
+      hint.textContent = "Fill in the required field" + (missing.length > 1 ? "s" : "") + ": " + missing.join(", ") + ".";
+      return;
+    }
+    hint.style.color = "";
+    hint.textContent = "Enter the values your administrator gave you. The Secret is the IPSec pre-shared key.";
+
+    state.config = {
+      type: state.type,
+      description: norm(desc),
+      server: norm(server),
+      account: norm(account),
+      secret: secret  // keep raw (case-sensitive compare)
+    };
+    state.connected = false;
+    renderConfig();
+    evaluate();
+    show("vpnlist");
+  }
+
+  function renderConfig() {
+    var grp = $("#configGroup");
+    var existing = $("#savedRow");
+    if (existing) existing.remove();
+    var noCfg = $("#noConfigs");
+
+    if (state.config) {
+      noCfg.hidden = true;
+      $("#statusGroup").hidden = false;
+      var row = document.createElement("div");
+      row.className = "row static";
+      row.id = "savedRow";
+      row.innerHTML =
+        '<span class="label">' + escapeHtml(state.config.description) + '</span>' +
+        '<span class="value">' + escapeHtml(state.config.server) + '</span>';
+      grp.appendChild(row);
+    } else {
+      noCfg.hidden = false;
+      $("#statusGroup").hidden = true;
+    }
+    refreshStatusUI();
+  }
+
+  function refreshStatusUI() {
+    var on = state.connected;
+    // list screen
+    $("#listStatus").textContent = on ? "Connected" : "Not Connected";
+    $("#listDot").classList.toggle("on", on);
+    $("#vpnSwitch").setAttribute("aria-checked", String(on));
+    // mgmt screen
+    $("#mgmtStatus").textContent = on ? "Connected" : "Not Connected";
+    $("#mgmtDot").classList.toggle("on", on);
+    // general screen + status bar pill
+    $("#genVpnState").textContent = on ? "Connected" : "Not Connected";
+    $("#vpnPill").classList.toggle("on", on);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  /* ----------------------------- CONNECT FLOW ---------------------------- */
+  function toggleVpn() {
+    if (!state.config) return;
+    if (state.connected) {           // turn OFF, no auth needed
+      state.connected = false;
+      refreshStatusUI();
+      evaluate();
+      return;
+    }
+    // turn ON -> ask for the account password
+    $("#authAccount").textContent = state.config.account;
+    $("#authPw").value = "";
+    $("#authErr").textContent = "";
+    $("#authScrim").classList.add("open");
+    setTimeout(function () { $("#authPw").focus(); }, 30);
+  }
+
+  function attemptConnect() {
+    var pw = $("#authPw").value;
+    if (!norm(pw)) { $("#authErr").textContent = "Enter the account password."; return; }
+    if (pw === KEY.accountPassword) {
+      state.connected = true;
+      closeAuth();
+      refreshStatusUI();
+      evaluate();
+    } else {
+      $("#authErr").textContent = "That password was not accepted. Check it and try again.";
+      $("#authPw").select();
+    }
+  }
+
+  function closeAuth() { $("#authScrim").classList.remove("open"); }
+
+  /* ----------------------------- QUESTIONS ------------------------------- */
+  function buildQuestions() {
+    var host = $("#questions");
+    QUESTIONS.forEach(function (q) {
+      var wrap = document.createElement("div");
+      wrap.className = "q";
+      var p = document.createElement("p");
+      p.className = "prompt";
+      p.id = "prompt-" + q.id;
+      p.textContent = q.prompt;
+      wrap.appendChild(p);
+
+      var opts = document.createElement("div");
+      opts.className = "opts";
+      opts.setAttribute("role", "radiogroup");
+      opts.setAttribute("aria-labelledby", "prompt-" + q.id);
+
+      q.options.forEach(function (o) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "opt";
+        btn.setAttribute("role", "radio");
+        btn.setAttribute("aria-checked", "false");
+        btn.dataset.q = q.id; btn.dataset.k = o.k;
+        btn.innerHTML = '<span class="key" aria-hidden="true">' + o.k + "</span><span>" + escapeHtml(o.text) + "</span>";
+        btn.addEventListener("click", function () { answer(q, o.k); });
+        opts.appendChild(btn);
+      });
+      wrap.appendChild(opts);
+
+      var v = document.createElement("p");
+      v.className = "verdict"; v.id = "verdict-" + q.id; v.setAttribute("aria-live", "polite");
+      wrap.appendChild(v);
+
+      host.appendChild(wrap);
+    });
+  }
+
+  function answer(q, k) {
+    if (state.answers[q.id]) return;  // lock after first selection
+    state.answers[q.id] = k;
+    var correct = (k === q.answer);
+    document.querySelectorAll('.opt[data-q="' + q.id + '"]').forEach(function (b) {
+      b.setAttribute("aria-disabled", "true");
+      b.setAttribute("aria-checked", String(b.dataset.k === k));
+      if (b.dataset.k === k) b.classList.add(correct ? "correct" : "wrong");
+      if (!correct && b.dataset.k === q.answer) b.classList.add("correct");
+    });
+    var v = $("#verdict-" + q.id);
+    v.className = "verdict " + (correct ? "ok" : "bad");
+    v.textContent = (correct ? "Correct — " : "Not quite. ") + q.why;
+    evaluate();
+  }
+
+  /* ----------------------------- EVALUATION ------------------------------ */
+  function tasksPassing() {
+    var c = state.config;
+    var t1 = !!c &&
+      eqi(c.type, KEY.type) &&
+      eqi(c.description, KEY.description) &&
+      eq(c.server, KEY.server) &&
+      eqi(c.account, KEY.account) &&
+      c.secret === KEY.secret;
+    var t2 = state.connected;      // switched on + authenticated
+    var t3 = state.connected;      // status shows Connected
+    state.tasks = { t1: t1, t2: t2, t3: t3 };
+    return state.tasks;
+  }
+
+  function evaluate() {
+    var t = tasksPassing();
+    document.querySelectorAll('#taskList li').forEach(function (li) {
+      li.classList.toggle("done", !!t[li.dataset.task]);
+    });
+
+    var earnedTasks = (t.t1 ? 1 : 0) + (t.t2 ? 1 : 0) + (t.t3 ? 1 : 0);
+    var earnedQ = QUESTIONS.reduce(function (n, q) {
+      return n + (state.answers[q.id] === q.answer ? 1 : 0);
+    }, 0);
+    var earned = earnedTasks + earnedQ;
+
+    var sv = $("#scoreVal");
+    sv.textContent = earned + " / " + GRAND_TOTAL;
+    var pass = (earned === GRAND_TOTAL);
+    sv.classList.toggle("pass", pass);
+
+    var allAnswered = QUESTIONS.every(function (q) { return !!state.answers[q.id]; });
+    $("#submitBtn").disabled = !(t.t1 && t.t2 && t.t3 && allAnswered);
+
+    return { earned: earned, total: GRAND_TOTAL, pass: pass };
+  }
+
+  /* ----------------------------- PROOF IMAGE ----------------------------- */
+  // Self-rendered PNG of the lab's state. No external deps; never taints canvas.
+  function drawEvidence() {
+    var W = 760, pad = 28, ratio = Math.min(2, window.devicePixelRatio || 1);
+    // measure height dynamically
+    var lines = [];
+    var H = 0;
+    // pre-compute rough height
+    var baseH = 92 /*header*/ + 150 /*device card*/ + 30 + TASK_TOTAL * 34 + 40 + Q_TOTAL * 34 + 70 + 40;
+    H = baseH;
+
+    var cv = document.createElement("canvas");
+    cv.width = W * ratio; cv.height = H * ratio;
+    var x = cv.getContext("2d");
+    x.scale(ratio, ratio);
+
+    function rr(px, py, w, h, r) {
+      x.beginPath();
+      x.moveTo(px + r, py);
+      x.arcTo(px + w, py, px + w, py + h, r);
+      x.arcTo(px + w, py + h, px, py + h, r);
+      x.arcTo(px, py + h, px, py, r);
+      x.arcTo(px, py, px + w, py, r);
+      x.closePath();
+    }
+
+    // bg
+    x.fillStyle = "#0b1220"; x.fillRect(0, 0, W, H);
+    // header accent
+    x.fillStyle = "#2bd4ee"; x.fillRect(0, 0, W, 6);
+
+    var ev = evaluate();
+    var t = state.tasks;
+
+    // header text
+    x.fillStyle = "#e8eefb";
+    x.font = "700 22px -apple-system, Segoe UI, Roboto, sans-serif";
+    x.fillText("Security+ Lab — IPSec Remote-Access VPN", pad, 44);
+    x.fillStyle = "#93a4c6";
+    x.font = "13px ui-monospace, Menlo, Consolas, monospace";
+    x.fillText("obj " + CONFIG.objectives.join(" · ") + "   ·   " + CONFIG.assignmentId, pad, 66);
+
+    var hacker = norm($("#hackerName").value) || "(unnamed)";
+    var ts = new Date().toLocaleString();
+    x.fillText("hacker: " + hacker + "    " + ts, pad, 84);
+
+    // device status card
+    var cardY = 100, cardH = 132;
+    x.fillStyle = "#131d31"; rr(pad, cardY, W - pad * 2, cardH, 14); x.fill();
+    x.strokeStyle = "#28355a"; x.lineWidth = 1; rr(pad, cardY, W - pad * 2, cardH, 14); x.stroke();
+
+    x.fillStyle = "#93a4c6"; x.font = "12px ui-monospace, Menlo, monospace";
+    x.fillText("iPad · Settings › General › VPN", pad + 18, cardY + 26);
+    x.fillStyle = "#e8eefb"; x.font = "700 18px -apple-system, Segoe UI, sans-serif";
+    x.fillText(state.config ? state.config.description : "(no configuration)", pad + 18, cardY + 52);
+    x.fillStyle = "#cdd8ef"; x.font = "14px ui-monospace, Menlo, monospace";
+    if (state.config) {
+      x.fillText("server " + state.config.server + "   account " + state.config.account, pad + 18, cardY + 76);
+    }
+    // status pill
+    var on = state.connected;
+    x.fillStyle = on ? "#36d399" : "#5e6e8e";
+    rr(pad + 18, cardY + 92, 140, 26, 13); x.fill();
+    x.fillStyle = on ? "#04130d" : "#0b1220";
+    x.font = "700 13px -apple-system, Segoe UI, sans-serif";
+    x.fillText(on ? "● Connected" : "● Not connected", pad + 30, cardY + 110);
+
+    // tasks
+    var y = cardY + cardH + 36;
+    x.fillStyle = "#2bd4ee"; x.font = "700 12px ui-monospace, Menlo, monospace";
+    x.fillText("TASKS", pad, y); y += 22;
+    var taskDefs = [
+      ["t1", "Create the IPSec configuration with correct values"],
+      ["t2", "Switch the VPN on and authenticate"],
+      ["t3", "Confirm status shows Connected"]
+    ];
+    taskDefs.forEach(function (d) {
+      var ok = !!t[d[0]];
+      x.fillStyle = ok ? "#36d399" : "#5e6e8e";
+      rr(pad, y - 13, 18, 18, 5); x.fill();
+      if (ok) { x.fillStyle = "#04130d"; x.font = "700 13px sans-serif"; x.fillText("✓", pad + 4, y + 1); }
+      x.fillStyle = "#dbe5fb"; x.font = "14px -apple-system, Segoe UI, sans-serif";
+      x.fillText(d[1], pad + 28, y); y += 30;
+    });
+
+    // questions
+    y += 10;
+    x.fillStyle = "#2bd4ee"; x.font = "700 12px ui-monospace, Menlo, monospace";
+    x.fillText("KNOWLEDGE CHECK", pad, y); y += 22;
+    QUESTIONS.forEach(function (q, i) {
+      var picked = state.answers[q.id], ok = picked === q.answer;
+      x.fillStyle = ok ? "#36d399" : "#fb7185";
+      rr(pad, y - 13, 18, 18, 5); x.fill();
+      x.fillStyle = ok ? "#04130d" : "#2a0610"; x.font = "700 13px sans-serif";
+      x.fillText(ok ? "✓" : "✗", pad + 4, y + 1);
+      x.fillStyle = "#dbe5fb"; x.font = "14px -apple-system, Segoe UI, sans-serif";
+      x.fillText("Q" + (i + 1) + "  answered " + (picked || "—") + " · correct " + q.answer, pad + 28, y);
+      y += 30;
+    });
+
+    // score footer
+    y += 14;
+    x.strokeStyle = "#28355a"; x.beginPath(); x.moveTo(pad, y - 18); x.lineTo(W - pad, y - 18); x.stroke();
+    x.fillStyle = ev.pass ? "#36d399" : "#e8eefb";
+    x.font = "700 20px ui-monospace, Menlo, monospace";
+    x.fillText("Score  " + ev.earned + " / " + ev.total + (ev.pass ? "   PASS" : ""), pad, y + 8);
+    x.fillStyle = "#51618a"; x.font = "11px ui-monospace, Menlo, monospace";
+    x.fillText("© 2026 instructional simulation · proof rendered client-side", pad, y + 30);
+
+    return cv.toDataURL("image/png");
+  }
+
+  async function captureProof() {
+    var area = document.getElementById("lab-root");
+    if (typeof window.html2canvas === "function") {
+      try {
+        var c = await window.html2canvas(area, {
+          backgroundColor: "#0b1220",
+          scale: Math.min(2, window.devicePixelRatio || 1),
+          logging: false
+        });
+        return c.toDataURL("image/png");
+      } catch (e) { /* fall through to built-in renderer */ }
+    }
+    return drawEvidence();
+  }
+
+  /* ----------------------------- SUBMISSION ------------------------------ */
+  function buildPayload(screenshot) {
+    var t = state.tasks;
+    return {
+      assignmentId: CONFIG.assignmentId,
+      hackerName: norm($("#hackerName").value).slice(0, 40),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: [
+        { id: "t1", label: "Create the IPSec VPN configuration with correct values", passed: !!t.t1 },
+        { id: "t2", label: "Switch the VPN on and authenticate", passed: !!t.t2 },
+        { id: "t3", label: "Confirm status shows Connected", passed: !!t.t3 }
+      ],
+      questions: QUESTIONS.map(function (q) {
+        var picked = state.answers[q.id];
+        return { id: q.id, prompt: q.prompt, answer: picked, correct: picked === q.answer };
+      }),
+      score: (function () {
+        var ev = evaluate();
+        return { earned: ev.earned, total: ev.total };
+      })(),
+      screenshot: screenshot,
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  function setStatus(kind, html) {
+    var el = $("#subStatus");
+    el.className = "status show " + kind;
+    el.innerHTML = html;
+  }
+
+  async function submit() {
+    var btn = $("#submitBtn");
+    var name = norm($("#hackerName").value);
+    if (!name) { setStatus("err", "Enter a hacker name before submitting."); $("#hackerName").focus(); return; }
+
+    if (CONFIG.APPS_SCRIPT_URL.indexOf("http") !== 0) {
+      setStatus("err", "This lab has not been wired up yet: the instructor needs to set <code>APPS_SCRIPT_URL</code>. Your work is complete, but it can't be submitted from here.");
+      return;
+    }
+
+    btn.setAttribute("aria-busy", "true"); btn.disabled = true;
+    setStatus("info", "Building your proof and submitting…");
+
+    var shot;
+    try { shot = await captureProof(); }
+    catch (e) { shot = ""; }
+
+    var payload = buildPayload(shot);
+
+    try {
+      // Simple request: no custom headers, text/plain body -> no CORS preflight.
+      var res = await fetch(CONFIG.APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+      var out = await res.json();
+      if (out && out.success) {
+        var link = out.docUrl ? ' <a href="' + out.docUrl + '" target="_blank" rel="noopener">Open your submission</a>.' : "";
+        setStatus("ok", "Submitted. Your instructor has received the lab." + link);
+      } else {
+        setStatus("err", "The server rejected the submission" + (out && out.error ? ": " + escapeHtml(out.error) : ".") + " Tell your instructor if this persists.");
+        btn.disabled = false;
+      }
+    } catch (e) {
+      // Locked-down context: fire-and-forget so the doc still gets created.
+      try {
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+        setStatus("info", "Submission sent, but the confirmation couldn't be read back in this browser. Confirm with your instructor that it arrived.");
+      } catch (e2) {
+        setStatus("err", "Couldn't reach the submission server. Check your internet connection and try again.");
+        btn.disabled = false;
+      }
+    } finally {
+      btn.removeAttribute("aria-busy");
+    }
+  }
+
+  /* ----------------------------- RESET ----------------------------------- */
+  function resetLab() {
+    state = {
+      screen: "home", type: "IPSec", useCert: false, config: null, connected: false,
+      tasks: { t1: false, t2: false, t3: false }, answers: { q1: null, q2: null, q3: null }
+    };
+    // rebuild questions
+    $("#questions").innerHTML = "";
+    buildQuestions();
+    renderConfig();
+    selectType("IPSec");
+    $("#f-usecert").setAttribute("aria-checked", "false");
+    var s = $("#subStatus"); s.className = "status"; s.innerHTML = "";
+    $("#hackerName").value = "";
+    show("home");
+    evaluate();
+  }
+
+  /* ----------------------------- WIRING ---------------------------------- */
+  function init() {
+    buildQuestions();
+    renderConfig();
+
+    // navigation rows
+    document.querySelectorAll("[data-go]").forEach(function (r) {
+      r.addEventListener("click", function () { show(r.getAttribute("data-go")); });
+    });
+    $("#backBtn").addEventListener("click", function () {
+      var meta = SCREENS[state.screen]; if (meta && meta.back) show(meta.back);
+    });
+    $("#addVpnBtn").addEventListener("click", openForm);
+
+    // form controls
+    document.querySelectorAll(".seg [data-type]").forEach(function (b) {
+      b.addEventListener("click", function () { selectType(b.getAttribute("data-type")); });
+    });
+    $("#f-usecert").addEventListener("click", function () {
+      state.useCert = !state.useCert;
+      this.setAttribute("aria-checked", String(state.useCert));
+      $("#secretField").style.opacity = state.useCert ? ".4" : "1";
+      $("#f-secret").disabled = state.useCert;
+    });
+    $("#formDone").addEventListener("click", saveForm);
+    $("#formCancel").addEventListener("click", function () { show("vpnlist"); });
+
+    // connect flow
+    var sw = $("#vpnSwitch");
+    sw.addEventListener("click", toggleVpn);
+    sw.addEventListener("keydown", function (e) {
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleVpn(); }
+    });
+    $("#authConnect").addEventListener("click", attemptConnect);
+    $("#authCancel").addEventListener("click", closeAuth);
+    $("#authPw").addEventListener("keydown", function (e) { if (e.key === "Enter") attemptConnect(); });
+    $("#authScrim").addEventListener("click", function (e) { if (e.target === this) closeAuth(); });
+
+    // submission
+    $("#submitBtn").addEventListener("click", submit);
+    $("#resetBtn").addEventListener("click", resetLab);
+    $("#hackerName").addEventListener("input", function () { /* no-op; gate is on tasks+questions */ });
+
+    show("home");
+    evaluate();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-switch-secure-access.html",title:"Secure Switch Access (Hardening)"}, NEXT={href:"splus-ra-vpn-pfsense.html",title:"Stand Up a Remote-Access VPN \u2014 Tidewater Edge Console"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.2 Protecting Networks: Managerial Controls and Wireless Security";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

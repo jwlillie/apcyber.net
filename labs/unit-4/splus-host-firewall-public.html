@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Host Firewall Lab — Protect the Public Profile</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-host-firewall-public",
+  "title": "Host Firewall Lab — Protect the Public Profile",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.3 Protecting Devices"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.5",
+      "4.5"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Lab Simulation
+  Title:        Host Firewall: Protect the Public Profile
+  assignmentId: splus-host-firewall-public
+  Objectives:   2.5 (mitigation techniques — host-based firewall / allow list)
+                4.5 (modify enterprise capabilities — firewall rules per scenario)
+  ----------------------------------------------------------------------------
+  Clean-room original work. Built from the public CompTIA SY0-701 objectives and
+  the documented behavior of a host firewall. Scenario, persona, service/app
+  names, paths, values, and question wording are original and are NOT taken from
+  any third-party lab.
+
+  Copyright (c) 2026 [Author / Instructor Name]. All rights reserved.
+  Licensed for use within the author's own Security+ course. Replace this notice
+  with your own before distribution.
+  ============================================================================
+-->
+<style>
+  /* ---- Design tokens --------------------------------------------------- */
+  :root{
+    --ink:#0f1620;        /* deep slate console chrome      */
+    --ink-2:#16202d;      /* raised slate panel             */
+    --surface:#eef2f7;    /* light content background       */
+    --card:#ffffff;
+    --line:#d6deea;
+    --line-strong:#bcc7d6;
+    --text:#16202d;
+    --muted:#5b6675;
+    --accent:#0e9f6e;     /* "protected / on" emerald       */
+    --accent-ink:#06624a;
+    --warn:#b45309;       /* "off / caution" amber          */
+    --warn-bg:#fdf4e7;
+    --danger:#c0392b;     /* "blocked" red                  */
+    --good-bg:#e9f7f1;
+    --ring:#1f7ae0;       /* focus ring                     */
+    --radius:10px;
+    --shadow:0 1px 2px rgba(16,22,32,.06), 0 8px 24px rgba(16,22,32,.07);
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 90% -10%, #dfe7f1 0%, transparent 60%),
+      var(--surface);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:24px 16px 64px;
+  }
+
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---- Masthead -------------------------------------------------------- */
+  .masthead{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .crest{
+    width:42px;height:42px;flex:none;
+  }
+  .masthead h1{
+    font-size:clamp(1.15rem,2.4vw,1.5rem);
+    margin:0;letter-spacing:-.01em;font-weight:680;
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted);margin:0 0 2px;
+  }
+  .obj-tags{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+  .tag{
+    font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;
+    background:var(--ink);color:#cfe3ff;border-radius:999px;
+    padding:3px 10px;white-space:nowrap;
+  }
+
+  /* ---- Layout ---------------------------------------------------------- */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .panel{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;
+  }
+  .panel > header{
+    padding:12px 16px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+    background:linear-gradient(180deg,#fbfcfe,#f3f6fb);
+  }
+  .panel > header h2{font-size:.95rem;margin:0;font-weight:660}
+  .panel > header .sub{font-size:.78rem;color:var(--muted);margin-left:auto}
+  .panel .body{padding:16px}
+
+  /* ---- Console (the simulated app) ------------------------------------- */
+  .console{
+    background:var(--ink);border-radius:var(--radius);overflow:hidden;
+    border:1px solid #0a0f16;box-shadow:var(--shadow);
+  }
+  .console .titlebar{
+    display:flex;align-items:center;gap:8px;padding:9px 12px;
+    background:var(--ink-2);border-bottom:1px solid #0a0f16;color:#9fb0c4;
+    font-size:.78rem;font-family:var(--mono);letter-spacing:.02em;
+  }
+  .dot{width:10px;height:10px;border-radius:50%;background:#37465a}
+  .console .screen{padding:16px;color:#dde6f1}
+
+  .scenario{
+    font-size:.86rem;color:#aab8c9;background:#0b1119;border:1px solid #1d2a3a;
+    border-radius:8px;padding:11px 13px;margin:0 0 16px;
+  }
+  .scenario b{color:#e7eef6}
+
+  .profiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:520px){.profiles{grid-template-columns:1fr}}
+  .profile{
+    background:#0b1119;border:1px solid #1d2a3a;border-radius:9px;padding:12px;
+  }
+  .profile .pname{font-size:.82rem;color:#c7d2e0;font-weight:620}
+  .profile .pmeta{font-size:.72rem;color:#7e8ea0;margin-top:2px}
+  .profile.is-active{border-color:#2b6fb0;box-shadow:0 0 0 1px #2b6fb0 inset}
+  .profile.is-active .pname::after{
+    content:"connected";margin-left:8px;font-family:var(--mono);
+    font-size:.62rem;letter-spacing:.08em;color:#7fb2ff;text-transform:uppercase;
+  }
+  .switchrow{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .state-label{font-family:var(--mono);font-size:.74rem;letter-spacing:.06em}
+  .state-on{color:#46d39a}
+  .state-off{color:#f0b154}
+
+  /* role=switch toggle */
+  .switch{
+    appearance:none;border:0;cursor:pointer;width:46px;height:26px;flex:none;
+    border-radius:999px;background:#3a4658;position:relative;
+    transition:background .18s ease;padding:0;
+  }
+  .switch::after{
+    content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;
+    border-radius:50%;background:#fff;transition:transform .18s ease;
+  }
+  .switch[aria-checked="true"]{background:var(--accent)}
+  .switch[aria-checked="true"]::after{transform:translateX(20px)}
+
+  .pub-warning{
+    margin-top:14px;display:flex;gap:10px;align-items:flex-start;
+    background:#2a1c0c;border:1px solid #5b3c12;border-radius:8px;
+    padding:10px 12px;color:#f3c98a;font-size:.82rem;
+  }
+  .pub-warning[hidden]{display:none}
+  .pub-warning svg{flex:none;margin-top:1px}
+
+  /* ---- Allowed apps table --------------------------------------------- */
+  .allow-head{
+    display:flex;align-items:baseline;gap:8px;margin:18px 0 8px;
+  }
+  .allow-head h3{font-size:.84rem;margin:0;color:#c7d2e0;font-weight:620}
+  .allow-head span{font-size:.74rem;color:#7e8ea0}
+
+  table.allow{width:100%;border-collapse:collapse;font-size:.84rem}
+  table.allow thead th{
+    text-align:center;font-weight:600;color:#8da0b4;font-size:.72rem;
+    letter-spacing:.04em;padding:6px 4px;border-bottom:1px solid #233244;
+    text-transform:uppercase;
+  }
+  table.allow thead th:first-child{text-align:left;padding-left:6px}
+  table.allow td{padding:8px 4px;border-bottom:1px solid #16202d;text-align:center}
+  table.allow td:first-child{text-align:left;padding-left:6px}
+  .appname{color:#e2eaf3;font-weight:560}
+  .appkind{
+    font-family:var(--mono);font-size:.64rem;letter-spacing:.06em;color:#7fb2ff;
+    background:#10243d;border:1px solid #1d3a5c;border-radius:6px;
+    padding:1px 6px;margin-left:8px;text-transform:uppercase;
+  }
+  .appkind.svc{color:#7fe3c2;background:#0c2a22;border-color:#194e3e}
+
+  /* native checkbox, restyled accessibly */
+  .allow input[type=checkbox]{
+    appearance:none;width:18px;height:18px;border:1.5px solid #46566b;
+    border-radius:5px;background:#0b1119;cursor:pointer;position:relative;
+    vertical-align:middle;margin:0;
+  }
+  .allow input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+  .allow input[type=checkbox]:checked::after{
+    content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;
+    border:solid #04261c;border-width:0 2px 2px 0;transform:rotate(40deg);
+  }
+  .allow input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
+
+  /* ---- Lab task panel -------------------------------------------------- */
+  .checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .checklist li{
+    display:flex;gap:10px;align-items:flex-start;font-size:.88rem;
+    padding:9px 11px;border:1px solid var(--line);border-radius:8px;
+    background:#fbfdff;transition:border-color .15s,background .15s;
+  }
+  .checklist li.done{border-color:var(--accent);background:var(--good-bg)}
+  .check-mark{
+    width:20px;height:20px;flex:none;border-radius:50%;border:1.5px solid var(--line-strong);
+    display:grid;place-items:center;margin-top:1px;color:transparent;font-size:.7rem;
+  }
+  .checklist li.done .check-mark{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .qblock{margin-top:8px}
+  .qcard{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
+  .qcard.correct{border-color:var(--accent);background:var(--good-bg)}
+  .qprompt{font-size:.88rem;font-weight:560;margin:0 0 8px}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{display:flex;gap:9px;align-items:center;font-size:.86rem;cursor:pointer;
+    padding:5px 7px;border-radius:6px}
+  .opt:hover{background:#f1f5fb}
+  .opt input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+  .qstatus{font-size:.76rem;margin-top:7px;font-family:var(--mono);letter-spacing:.03em}
+  .qstatus.ok{color:var(--accent-ink)}
+  .qstatus.no{color:var(--danger)}
+
+  /* ---- Submission bar -------------------------------------------------- */
+  .submit{
+    margin-top:18px;border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--card);box-shadow:var(--shadow);padding:16px;
+  }
+  .scoreline{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;
+  }
+  .scorepill{
+    font-family:var(--mono);font-size:.84rem;letter-spacing:.03em;
+    background:var(--ink);color:#cfe3ff;border-radius:999px;padding:5px 14px;
+  }
+  .scorepill.pass{background:var(--accent);color:#04261c}
+  .pass-note{font-size:.82rem;color:var(--muted)}
+
+  .field{display:flex;flex-direction:column;gap:5px;max-width:340px;margin-bottom:12px}
+  .field label{font-size:.8rem;font-weight:560}
+  .field .hint{font-size:.74rem;color:var(--muted)}
+  .field input{
+    border:1px solid var(--line-strong);border-radius:8px;padding:9px 11px;
+    font-size:.92rem;font-family:var(--mono);background:#fbfdff;
+  }
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button.btn{
+    font:inherit;font-weight:600;font-size:.88rem;cursor:pointer;border-radius:8px;
+    padding:10px 16px;border:1px solid transparent;
+  }
+  .btn-primary{background:var(--accent);color:#04261c}
+  .btn-primary:hover{filter:brightness(1.04)}
+  .btn-primary:disabled{background:#aebfce;color:#eef2f7;cursor:not-allowed}
+  .btn-ghost{background:transparent;border-color:var(--line-strong);color:var(--text)}
+  .btn-ghost:hover{background:#f1f5fb}
+
+  .status{margin-top:12px;font-size:.86rem;min-height:1.2em}
+  .status .box{border-radius:8px;padding:11px 13px;border:1px solid}
+  .status .ok{background:var(--good-bg);border-color:var(--accent);color:var(--accent-ink)}
+  .status .err{background:#fdecea;border-color:var(--danger);color:#7a221a}
+  .status .work{background:#eef4fc;border-color:#9fc3f0;color:#1c4f8f}
+  .status a{color:var(--accent-ink);font-weight:600}
+
+  .footer-note{
+    margin-top:22px;font-size:.74rem;color:var(--muted);text-align:center;
+    line-height:1.6;
+  }
+  .footer-note code{font-family:var(--mono);background:#e3e9f1;padding:1px 5px;border-radius:4px}
+
+  /* focus visibility everywhere */
+  a:focus-visible,button:focus-visible,input:focus-visible,.switch:focus-visible,
+  .opt input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--ring);outline-offset:2px;border-radius:6px;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important}
+  }
+  .visually-hidden{
+    position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <svg class="crest" viewBox="0 0 48 48" aria-hidden="true" id="crest">
+      <path id="crest-shield" d="M24 3 7 9v13c0 11 7 18 17 23 10-5 17-12 17-23V9L24 3z"
+            fill="#16202d" stroke="#0e9f6e" stroke-width="2"/>
+      <path id="crest-mark" d="M16 24l6 6 11-12" fill="none" stroke="#0e9f6e"
+            stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+            opacity="0"/>
+    </svg>
+    <div>
+      <p class="eyebrow">Security+ SY0-701 · Lab</p>
+      <h1>Host Firewall: Protect the Public Profile</h1>
+    </div>
+    <div class="obj-tags" aria-label="Mapped exam objectives">
+      <span class="tag">Obj 2.5</span>
+      <span class="tag">Obj 4.5</span>
+    </div>
+  </header>
+
+  <!-- Everything inside #labArea is what gets captured on submit -->
+  <div id="labArea">
+  <div class="grid">
+
+    <!-- ===== Simulated console ===== -->
+    <section class="console" aria-label="Endpoint firewall console (simulated)">
+      <div class="titlebar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span style="margin-left:8px">Endpoint Defense Center — Halcyon&nbsp;X14</span>
+      </div>
+      <div class="screen">
+
+        <p class="scenario">
+          <b>Brief.</b> You provisioned a refurbished Windows 11 ultrabook
+          (<b>Halcyon&nbsp;X14</b>) for field auditor <b>Mara Quill</b> at
+          Brightwater Logistics. The host firewall is on for the office network
+          but <b>off for the Public profile</b>. Mara works this month from hotel
+          and co-working Wi-Fi. Turn on the Public profile and allow only the
+          apps she needs across untrusted networks.
+        </p>
+
+        <!-- Network profiles -->
+        <div class="profiles" role="group" aria-label="Network profiles">
+          <div class="profile">
+            <div class="pname">Domain</div>
+            <div class="pmeta">brightwater.lan</div>
+            <div class="switchrow">
+              <button class="switch" id="sw-domain" role="switch"
+                      aria-checked="true" aria-label="Firewall for Domain profile"></button>
+              <span class="state-label state-on" id="lbl-domain">ON</span>
+            </div>
+          </div>
+          <div class="profile">
+            <div class="pname">Private</div>
+            <div class="pmeta">home / trusted</div>
+            <div class="switchrow">
+              <button class="switch" id="sw-private" role="switch"
+                      aria-checked="true" aria-label="Firewall for Private profile"></button>
+              <span class="state-label state-on" id="lbl-private">ON</span>
+            </div>
+          </div>
+          <div class="profile is-active">
+            <div class="pname">Public</div>
+            <div class="pmeta">airport / hotel Wi-Fi</div>
+            <div class="switchrow">
+              <button class="switch" id="sw-public" role="switch"
+                      aria-checked="false" aria-label="Firewall for Public profile"></button>
+              <span class="state-label state-off" id="lbl-public">OFF</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pub-warning" id="pubWarning">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2 1 21h22L12 2z" fill="none" stroke="#f3c98a" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M12 9v5" stroke="#f3c98a" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="17.5" r="1.2" fill="#f3c98a"/>
+          </svg>
+          <span>The firewall is disabled for the Public profile. This device is
+          currently exposed on untrusted networks.</span>
+        </div>
+
+        <!-- Allowed apps -->
+        <div class="allow-head">
+          <h3>Allowed apps &amp; services</h3>
+          <span>Tick a profile box to permit the item through the firewall on that profile.</span>
+        </div>
+        <table class="allow">
+          <thead>
+            <tr>
+              <th scope="col">App or service</th>
+              <th scope="col">Domain</th>
+              <th scope="col">Private</th>
+              <th scope="col">Public</th>
+            </tr>
+          </thead>
+          <tbody id="allowBody"><!-- rows injected --></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Task / question panel ===== -->
+    <section class="panel" aria-label="Lab tasks and questions">
+      <header><h2>Your tasks</h2><span class="sub">auto-checked</span></header>
+      <div class="body">
+        <ul class="checklist" id="taskList"><!-- tasks injected --></ul>
+
+        <div class="qblock">
+          <header style="border:0;padding:14px 0 6px">
+            <h2 style="font-size:.92rem;margin:0">Knowledge check</h2>
+          </header>
+          <div id="questionList"><!-- questions injected --></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  </div><!-- /#labArea -->
+
+  <!-- ===== Submission ===== -->
+  <section class="submit" aria-label="Submit your lab">
+    <div class="scoreline">
+      <span class="scorepill" id="scorePill">Score 0 / 7</span>
+      <span class="pass-note" id="passNote">Complete all tasks and answer all questions correctly to pass.</span>
+    </div>
+
+    <div class="field">
+      <label for="hackerName">Hacker name (pseudonym — no real names)</label>
+      <input id="hackerName" type="text" maxlength="40" autocomplete="off"
+             placeholder="e.g. nullroute" aria-describedby="nameHint" />
+      <span class="hint" id="nameHint">Used to label your submission. Keep personal info out of the system.</span>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="submitBtn" disabled>Submit completed lab</button>
+      <button class="btn btn-ghost" id="resetBtn" type="button">Reset lab</button>
+    </div>
+
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <p class="footer-note">
+    assignmentId <code>splus-host-firewall-public</code> · objectives 2.5, 4.5 ·
+    Client-side scoring is self-reported; the instructor's script can re-score
+    server-side. © 2026 [Author / Instructor Name]. Clean-room original work.
+  </p>
+
+</div>
+
+<script>
+/* ============================================================================
+   LAB CONFIG + ANSWER KEY  (the only per-lab edits live in this block)
+   ========================================================================== */
+const CONFIG = {
+  assignmentId: "splus-host-firewall-public",
+  title: "Host Firewall: Protect the Public Profile",
+  objectives: ["2.5", "4.5"],
+
+  // Deployed Apps Script Web App /exec URL (shared across the library).
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+
+  // Per-cohort shared secret; must match the Script Property on the server.
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+
+  // Initial firewall state per profile.
+  profiles: { domain: true, private: true, public: false },
+
+  // Allowed-apps table. `req` rows must be ticked for Public to pass.
+  // Original names/values — not copied from any vendor lab.
+  apps: [
+    { id:"svc-backup",  label:"Onsite Backup Agent", kind:"service",
+      domain:true,  private:true,  public:false, req:true  },
+    { id:"app-ledger",  label:"LedgerSync 4",        kind:"app",
+      domain:true,  private:false, public:false, req:true  },
+    { id:"app-fleet",   label:"FleetTrace",          kind:"app",
+      domain:true,  private:true,  public:false, req:true  },
+    // distractors — should be left as-is
+    { id:"app-mail",    label:"Mail and Calendar",   kind:"app",
+      domain:true,  private:true,  public:true,  req:false },
+    { id:"app-remote",  label:"Remote Assistance",   kind:"app",
+      domain:true,  private:false, public:false, req:false },
+    { id:"svc-disco",   label:"Network Discovery",   kind:"service",
+      domain:true,  private:true,  public:false, req:false }
+  ],
+
+  tasks: [
+    { id:"public-on",  label:"Turn on the firewall for the Public profile." },
+    { id:"allow-svc",  label:"Allow the Onsite Backup Agent service on the Public profile." },
+    { id:"allow-ledger",label:"Allow LedgerSync 4 on the Public profile." },
+    { id:"allow-fleet",label:"Allow FleetTrace on the Public profile." }
+  ],
+
+  questions: [
+    { id:"q1",
+      prompt:"Mara connects the laptop to a hotel Wi-Fi network. Which firewall profile governs that connection?",
+      options:["Domain","Private","Public","No profile applies"],
+      answer:"Public" },
+    { id:"q2",
+      prompt:"Permitting only named programs through the firewall while blocking everything else best describes which approach?",
+      options:["Block list","Allow list","Port forwarding","Address translation"],
+      answer:"Allow list" },
+    { id:"q3",
+      prompt:"FleetTrace is allowed on Domain but its Public box is unchecked. On hotel Wi-Fi, inbound traffic to FleetTrace will be:",
+      options:["Allowed","Blocked","Logged but allowed","Allowed after a prompt"],
+      answer:"Blocked" }
+  ]
+};
+
+/* ============================================================================
+   ENGINE
+   ========================================================================== */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+// in-memory state (no localStorage / sessionStorage)
+const state = {
+  profiles: { ...CONFIG.profiles },
+  apps: CONFIG.apps.map(a => ({ ...a })),
+  answers: {}                       // questionId -> chosen option
+};
+
+/* ---- Render allowed-apps rows ---------------------------------------- */
+function renderApps(){
+  const body = $("#allowBody");
+  body.innerHTML = "";
+  state.apps.forEach(app => {
+    const tr = document.createElement("tr");
+    const kindClass = app.kind === "service" ? "appkind svc" : "appkind";
+    const kindText  = app.kind === "service" ? "Service" : "App";
+    tr.innerHTML = `
+      <td>
+        <span class="appname">${app.label}</span>
+        <span class="${kindClass}">${kindText}</span>
+      </td>
+      ${["domain","private","public"].map(p => `
+        <td>
+          <input type="checkbox" data-app="${app.id}" data-prof="${p}"
+                 ${app[p] ? "checked" : ""}
+                 aria-label="${app.label} on ${p[0].toUpperCase()+p.slice(1)} profile" />
+        </td>`).join("")}
+    `;
+    body.appendChild(tr);
+  });
+  $$("#allowBody input[type=checkbox]").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const a = state.apps.find(x => x.id === cb.dataset.app);
+      a[cb.dataset.prof] = cb.checked;
+      evaluate();
+    });
+  });
+}
+
+/* ---- Profile toggles -------------------------------------------------- */
+function wireSwitch(id, key){
+  const sw  = $("#"+id);
+  const lbl = $("#lbl-"+key);
+  const sync = () => {
+    const on = state.profiles[key];
+    sw.setAttribute("aria-checked", String(on));
+    lbl.textContent = on ? "ON" : "OFF";
+    lbl.className = "state-label " + (on ? "state-on" : "state-off");
+  };
+  sw.addEventListener("click", () => {
+    state.profiles[key] = !state.profiles[key];
+    sync();
+    if (key === "public") $("#pubWarning").hidden = state.profiles.public;
+    evaluate();
+  });
+  sw.addEventListener("keydown", e => {
+    if (e.key === " " || e.key === "Enter"){ e.preventDefault(); sw.click(); }
+  });
+  sync();
+}
+
+/* ---- Render tasks & questions ---------------------------------------- */
+function renderTasks(){
+  const ul = $("#taskList");
+  ul.innerHTML = "";
+  CONFIG.tasks.forEach(t => {
+    const li = document.createElement("li");
+    li.id = "task-" + t.id;
+    li.innerHTML = `<span class="check-mark" aria-hidden="true">✓</span>
+                    <span>${t.label}</span>`;
+    ul.appendChild(li);
+  });
+}
+
+function renderQuestions(){
+  const wrap = $("#questionList");
+  wrap.innerHTML = "";
+  CONFIG.questions.forEach((q, i) => {
+    const card = document.createElement("div");
+    card.className = "qcard";
+    card.id = "q-" + q.id;
+    const opts = q.options.map(o => `
+      <label class="opt">
+        <input type="radio" name="${q.id}" value="${o}" />
+        <span>${o}</span>
+      </label>`).join("");
+    card.innerHTML = `
+      <p class="qprompt">${i+1}. ${q.prompt}</p>
+      <div class="opts">${opts}</div>
+      <div class="qstatus" id="qs-${q.id}"></div>`;
+    wrap.appendChild(card);
+  });
+  $$('#questionList input[type=radio]').forEach(r => {
+    r.addEventListener("change", () => {
+      state.answers[r.name] = r.value;
+      evaluate();
+    });
+  });
+}
+
+/* ---- Scoring / evaluation -------------------------------------------- */
+function taskPassed(id){
+  switch(id){
+    case "public-on":   return state.profiles.public === true;
+    case "allow-svc":   return appPub("svc-backup");
+    case "allow-ledger":return appPub("app-ledger");
+    case "allow-fleet": return appPub("app-fleet");
+  }
+  return false;
+}
+function appPub(id){ const a = state.apps.find(x=>x.id===id); return !!(a && a.public); }
+
+function evaluate(){
+  // tasks
+  const taskResults = CONFIG.tasks.map(t => {
+    const passed = taskPassed(t.id);
+    $("#task-"+t.id).classList.toggle("done", passed);
+    return { id:t.id, label:t.label, passed };
+  });
+  // questions
+  const qResults = CONFIG.questions.map(q => {
+    const chosen = state.answers[q.id] || null;
+    const correct = chosen === q.answer;
+    const card = $("#q-"+q.id);
+    const stat = $("#qs-"+q.id);
+    card.classList.toggle("correct", correct);
+    if (!chosen){ stat.textContent = ""; stat.className = "qstatus"; }
+    else if (correct){ stat.textContent = "Correct"; stat.className = "qstatus ok"; }
+    else { stat.textContent = "Not quite — reconsider which profile/behavior applies."; stat.className = "qstatus no"; }
+    return { id:q.id, prompt:q.prompt, answer:chosen, correct };
+  });
+
+  const earned = taskResults.filter(t=>t.passed).length + qResults.filter(q=>q.correct).length;
+  const total  = CONFIG.tasks.length + CONFIG.questions.length;
+  const pass   = earned === total;
+
+  const pill = $("#scorePill");
+  pill.textContent = `Score ${earned} / ${total}`;
+  pill.classList.toggle("pass", pass);
+  $("#passNote").textContent = pass
+    ? "All tasks complete and every question correct — you can submit."
+    : "Complete all tasks and answer all questions correctly to pass.";
+
+  // signature crest fills in when Public is protected + all targets allowed
+  const protectedNow = taskResults.every(t => t.passed);
+  $("#crest-mark").setAttribute("opacity", protectedNow ? "1" : "0");
+  $("#crest-shield").setAttribute("fill", protectedNow ? "#0e3a2c" : "#16202d");
+
+  return { taskResults, qResults, earned, total, pass };
+}
+
+/* ---- Screenshot of the lab area (dependency-free) --------------------
+   Primary: serialize #labArea into an SVG <foreignObject>, rasterize to a
+   canvas, export PNG. No external library, no CDN. If anything fails (some
+   browsers restrict foreignObject rasterization), fall back to a clean
+   hand-drawn canvas summary so a submission always carries a PNG.
+   Swap in real html2canvas here later if you want pixel-perfect fidelity.   */
+async function captureLabImage(){
+  try { return await domToPng(); }
+  catch (e){ console.warn("DOM capture failed, using summary card:", e); return summaryCard(); }
+}
+
+async function domToPng(){
+  const node = $("#labArea");
+  // reflect live input state into attributes so the clone shows it
+  $$("input[type=checkbox]", node).forEach(cb =>
+    cb.checked ? cb.setAttribute("checked","") : cb.removeAttribute("checked"));
+  $$("input[type=radio]", node).forEach(r =>
+    r.checked ? r.setAttribute("checked","") : r.removeAttribute("checked"));
+  $$(".switch", node).forEach(s =>
+    s.setAttribute("aria-checked", s.getAttribute("aria-checked")));
+
+  const rect = node.getBoundingClientRect();
+  const w = Math.max(1, Math.ceil(rect.width));
+  const h = Math.max(1, Math.ceil(node.scrollHeight));
+
+  let css = "";
+  for (const sheet of document.styleSheets){
+    try { for (const rule of sheet.cssRules) css += rule.cssText + "\n"; }
+    catch(_) { /* cross-origin sheet — skip */ }
+  }
+
+  const clone = node.cloneNode(true);
+  const xml = new XMLSerializer().serializeToString(clone);
+
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
+      `<foreignObject x="0" y="0" width="100%" height="100%">` +
+        `<div xmlns="http://www.w3.org/1999/xhtml" ` +
+             `style="width:${w}px;background:#eef2f7;font-family:system-ui,sans-serif">` +
+          `<style>${css}</style>${xml}` +
+        `</div>` +
+      `</foreignObject>` +
+    `</svg>`;
+
+  const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  const img = new Image();
+  img.width = w; img.height = h;
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error("foreignObject image load failed"));
+    img.src = url;
+  });
+
+  const canvas = document.createElement("canvas");
+  const scale = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = w * scale; canvas.height = h * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#eef2f7"; ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/png");      // throws if tainted -> caught by caller
+}
+
+function summaryCard(){
+  const r = evaluate();
+  const W = 760, H = 520;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  x.fillStyle = "#0f1620"; x.fillRect(0,0,W,H);
+  x.fillStyle = "#0e9f6e"; x.fillRect(0,0,W,8);
+  x.fillStyle = "#e7eef6"; x.font = "700 24px system-ui,sans-serif";
+  x.fillText("Host Firewall Lab — submission summary", 28, 52);
+  x.fillStyle = "#9fb0c4"; x.font = "14px ui-monospace,monospace";
+  x.fillText("assignmentId: " + CONFIG.assignmentId, 28, 80);
+  x.fillText("hacker: " + ($("#hackerName").value || "(unnamed)"), 28, 102);
+  x.fillText("score: " + r.earned + " / " + r.total + (r.pass ? "  PASS" : ""), 28, 124);
+  x.fillStyle = "#c7d2e0"; x.font = "600 15px system-ui,sans-serif";
+  x.fillText("Tasks", 28, 162);
+  x.font = "14px system-ui,sans-serif";
+  r.taskResults.forEach((t,i) => {
+    x.fillStyle = t.passed ? "#46d39a" : "#f0b154";
+    x.fillText((t.passed ? "✓ " : "• ") + t.label, 40, 188 + i*24);
+  });
+  let y = 188 + r.taskResults.length*24 + 24;
+  x.fillStyle = "#c7d2e0"; x.font = "600 15px system-ui,sans-serif";
+  x.fillText("Questions", 28, y); y += 26; x.font = "14px system-ui,sans-serif";
+  r.qResults.forEach((q,i) => {
+    x.fillStyle = q.correct ? "#46d39a" : "#e08b8b";
+    x.fillText((q.correct ? "✓ " : "✗ ") + "Q"+(i+1)+": "+(q.answer||"(blank)"), 40, y + i*24);
+  });
+  return c.toDataURL("image/png");
+}
+
+/* ---- Submit ----------------------------------------------------------- */
+function setStatus(kind, html){
+  $("#status").innerHTML = `<div class="box ${kind}">${html}</div>`;
+}
+
+async function submitLab(){
+  const btn  = $("#submitBtn");
+  const name = $("#hackerName").value.trim();
+  if (!name){ setStatus("err","Enter a hacker name before submitting."); return; }
+  if (CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("err","This lab has no Apps Script URL configured yet. Ask your instructor to set <code>APPS_SCRIPT_URL</code>."); return;
+  }
+
+  btn.disabled = true;
+  setStatus("work","Capturing your work and submitting…");
+
+  const r = evaluate();
+  let shot;
+  try { shot = await captureLabImage(); }
+  catch(_) { shot = summaryCard(); }
+
+  const payload = {
+    assignmentId:    CONFIG.assignmentId,
+    hackerName:      name.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives:      CONFIG.objectives,
+    tasks:           r.taskResults.map(t => ({ id:t.id, label:t.label, passed:t.passed })),
+    questions:       r.qResults.map(q => ({ id:q.id, prompt:q.prompt, answer:q.answer, correct:q.correct })),
+    score:           { earned:r.earned, total:r.total },
+    screenshot:      shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  // Simple request: no custom headers, text/plain body → no CORS preflight.
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    const out = await res.json();
+    if (out && out.success){
+      const link = out.docUrl
+        ? ` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission document</a>.`
+        : "";
+      setStatus("ok", `Submitted as <b>${name}</b> — score ${r.earned}/${r.total}.${link}`);
+    } else {
+      setStatus("err", "The server rejected the submission" +
+        (out && out.error ? `: ${out.error}` : ".") + " Check with your instructor.");
+      btn.disabled = false;
+    }
+  } catch (err) {
+    // Locked-down context: fire-and-forget, can't read the response.
+    try {
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      setStatus("ok", `Submission sent for <b>${name}</b> (score ${r.earned}/${r.total}). ` +
+        "The confirmation link couldn't be read in this browser — confirm receipt with your instructor.");
+    } catch (e2) {
+      setStatus("err", "Could not reach the submission server. Check your connection and try again.");
+      btn.disabled = false;
+    }
+  }
+}
+
+/* ---- Reset ------------------------------------------------------------ */
+function resetLab(){
+  state.profiles = { ...CONFIG.profiles };
+  state.apps = CONFIG.apps.map(a => ({ ...a }));
+  state.answers = {};
+  renderApps();
+  ["domain","private","public"].forEach(k => {
+    const sw = $("#sw-"+k), lbl = $("#lbl-"+k), on = state.profiles[k];
+    sw.setAttribute("aria-checked", String(on));
+    lbl.textContent = on ? "ON" : "OFF";
+    lbl.className = "state-label " + (on ? "state-on" : "state-off");
+  });
+  $("#pubWarning").hidden = state.profiles.public;
+  $$('#questionList input[type=radio]').forEach(r => { r.checked = false; });
+  $("#status").innerHTML = "";
+  evaluate();
+}
+
+/* ---- Init ------------------------------------------------------------- */
+function init(){
+  renderApps();
+  renderTasks();
+  renderQuestions();
+  wireSwitch("sw-domain","domain");
+  wireSwitch("sw-private","private");
+  wireSwitch("sw-public","public");
+  $("#pubWarning").hidden = state.profiles.public;
+
+  const nameInput = $("#hackerName");
+  const submitBtn = $("#submitBtn");
+  nameInput.addEventListener("input", () => {
+    submitBtn.disabled = nameInput.value.trim().length === 0;
+  });
+  submitBtn.addEventListener("click", submitLab);
+  $("#resetBtn").addEventListener("click", resetLab);
+
+  evaluate();
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-dep-config.html",title:"Data Execution Prevention (DEP) Configuration"}, NEXT={href:"splus-applocker-allowlist.html",title:"Lab \u2014 Application Allowlisting with AppLocker"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.3 Protecting Devices";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

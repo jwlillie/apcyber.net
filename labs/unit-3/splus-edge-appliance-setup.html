@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>AegisWall Console — Edge Appliance Setup Lab</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-edge-appliance-setup",
+  "title": "AegisWall Console — Edge Appliance Setup Lab",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.4 Protecting Networks: Firewalls"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "3.2"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+================================================================================
+  Security+ (SY0-701) Single-File Simulation Lab
+  Lab: Edge Security Appliance — Initial Setup
+  assignmentId: splus-edge-appliance-setup
+  SY0-701 objective(s): 3.2 (Apply security principles to secure enterprise
+                        infrastructure — network appliances / firewall types)
+
+  ORIGINALITY / IP NOTICE
+  -----------------------
+  This lab is an original, clean-room work built from the public CompTIA
+  SY0-701 objective and the publicly documented behavior of generic network
+  firewall appliances (the System > General DNS settings and Interfaces > WAN
+  static-IP + gateway pattern common to pfSense, OPNsense, and similar BSD/Linux
+  edge firewalls). The procedure being taught is factual. All expression here —
+  the "AegisWall" product name and UI, the scenario, persona, company, IP
+  addresses, hostnames, gateway names, passwords, task wording, and question
+  wording — is original to this author and is NOT copied from any vendor's lab.
+  IP addresses use the RFC 5737 documentation ranges (198.51.100.0/24,
+  203.0.113.0/24) and RFC 1918 private space on purpose.
+
+  Copyright (c) 2026 [Course Author / Instructor of Record].
+  Licensed for use within this instructor's CompTIA Security+ course only.
+  All rights reserved. Not affiliated with or endorsed by CompTIA, Netgate,
+  the pfSense project, or any other vendor.
+
+  Screenshot note: capture uses an in-house SVG <foreignObject> -> canvas
+  routine (see captureScreenshot). No html2canvas, no CDN, no runtime network
+  calls except the single submission POST. This keeps the file dependency-free.
+================================================================================
+-->
+<style>
+  :root{
+    --bg:#0e1620;
+    --panel:#16212e;
+    --panel-2:#1d2a3a;
+    --panel-3:#22344a;
+    --line:#2a3a4d;
+    --ink:#e6edf3;
+    --muted:#8da2b5;
+    --accent:#f5a623;       /* amber signal */
+    --accent-2:#34d3c4;     /* cyan link / active */
+    --ok:#46d369;
+    --bad:#ff6b6b;
+    --warn:#ffcf5c;
+    --radius:10px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    --shadow:0 8px 28px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.5}
+  a{color:var(--accent-2)}
+  h1,h2,h3{margin:0;font-weight:700;letter-spacing:.2px}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px}
+  .grid{display:grid;grid-template-columns:1.7fr 1fr;gap:18px;align-items:start}
+  @media (max-width:920px){.grid{grid-template-columns:1fr}}
+
+  /* ---- Console (the simulated appliance) ---- */
+  .console{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:var(--shadow)}
+  .topbar{display:flex;align-items:center;gap:12px;padding:12px 16px;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px}
+  .brand .mark{width:26px;height:26px;flex:0 0 26px}
+  .brand small{display:block;font-weight:500;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+  .topbar .who{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .body{display:grid;grid-template-columns:198px 1fr;min-height:430px}
+  @media (max-width:560px){.body{grid-template-columns:1fr}}
+  nav.side{background:var(--panel-2);border-right:1px solid var(--line);padding:10px}
+  nav.side .group{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);
+    margin:14px 8px 6px}
+  nav.side .group:first-child{margin-top:4px}
+  nav.side button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;
+    background:transparent;color:var(--ink);padding:9px 10px;border-radius:8px;cursor:pointer;
+    font-size:14px;font-family:var(--sans)}
+  nav.side button:hover{background:var(--panel-3)}
+  nav.side button[aria-current="true"]{background:var(--panel-3);box-shadow:inset 3px 0 0 var(--accent)}
+  nav.side .dot{width:7px;height:7px;border-radius:50%;background:var(--line);flex:0 0 7px}
+  nav.side button[aria-current="true"] .dot{background:var(--accent)}
+  .view{padding:18px 20px;min-width:0}
+  .view h2{font-size:18px;margin-bottom:2px}
+  .view .crumb{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:14px}
+
+  /* link-status signature element */
+  .linkmap{display:flex;align-items:center;gap:0;margin:6px 0 18px;font-family:var(--mono);font-size:12px}
+  .node{padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);text-align:center;min-width:96px}
+  .node b{display:block;color:var(--ink)}
+  .node span{color:var(--muted);font-size:11px}
+  .pipe{flex:1;height:3px;position:relative;background:var(--line);margin:0 6px;border-radius:3px;min-width:46px}
+  .pipe.up{background:linear-gradient(90deg,var(--accent-2),var(--ok))}
+  .pipe .pulse{position:absolute;top:-2.5px;left:0;width:8px;height:8px;border-radius:50%;background:var(--ok);opacity:0}
+  .pipe.up .pulse{opacity:1;animation:flow 1.6s linear infinite}
+  @keyframes flow{from{left:0}to{left:calc(100% - 8px)}}
+  @media (prefers-reduced-motion:reduce){.pipe .pulse{animation:none}}
+  .badge{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .badge.up{color:var(--ok);border-color:rgba(70,211,105,.5)}
+  .badge.down{color:var(--bad);border-color:rgba(255,107,107,.45)}
+
+  /* form bits */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:560px){.row2{grid-template-columns:1fr}}
+  input[type=text],input[type=password],select{
+    width:100%;background:#0c141d;border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:9px 11px;font-family:var(--mono);font-size:13px}
+  input:focus,select:focus,button:focus-visible,.tgl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  select{font-family:var(--sans)}
+  .inline-ip{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:end}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+
+  .tgl{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+  .tgl input{position:absolute;opacity:0;width:0;height:0}
+  .tgl .track{width:42px;height:23px;background:var(--line);border-radius:999px;position:relative;transition:background .15s}
+  .tgl .knob{position:absolute;top:2px;left:2px;width:19px;height:19px;background:#fff;border-radius:50%;transition:left .15s}
+  .tgl input:checked + .track{background:var(--ok)}
+  .tgl input:checked + .track .knob{left:21px}
+
+  .btn{appearance:none;border:1px solid var(--line);background:var(--panel-3);color:var(--ink);
+    padding:9px 15px;border-radius:8px;font-size:14px;cursor:pointer;font-family:var(--sans)}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#1a1205;border-color:var(--accent);font-weight:700}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+
+  table.gw{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  table.gw th,table.gw td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line)}
+  table.gw th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+  table.gw td{font-family:var(--mono)}
+  .pill{font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--accent);color:var(--accent)}
+
+  .gw-form{margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:8px;background:#0c141d}
+  .gw-form[hidden]{display:none}
+
+  .toast{margin-top:10px;font-size:13px;border-radius:8px;padding:9px 12px;display:none}
+  .toast.show{display:block}
+  .toast.ok{background:rgba(70,211,105,.12);border:1px solid rgba(70,211,105,.45);color:#bdf3cd}
+  .toast.bad{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.4);color:#ffc9c9}
+
+  /* ---- Sign-in overlay ---- */
+  .overlay{position:fixed;inset:0;background:rgba(6,10,15,.82);display:flex;align-items:center;
+    justify-content:center;padding:18px;z-index:50}
+  .overlay[hidden]{display:none}
+  .login{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+  .login h2{font-size:17px;display:flex;align-items:center;gap:10px}
+  .login p{color:var(--muted);font-size:13px;margin:6px 0 16px}
+
+  /* ---- Lab panel (right column) ---- */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 16px 18px;box-shadow:var(--shadow)}
+  .panel + .panel{margin-top:16px}
+  .panel h3{font-size:13px;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);margin-bottom:10px}
+  .scenario{font-size:13.5px;color:var(--ink)}
+  .scenario .obj{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--muted);
+    border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin-top:10px}
+
+  ul.checklist{list-style:none;margin:0;padding:0}
+  ul.checklist li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  ul.checklist li:last-child{border-bottom:0}
+  .chk{flex:0 0 18px;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);
+    display:grid;place-items:center;font-size:12px;color:transparent;margin-top:1px}
+  .chk.done{background:var(--ok);border-color:var(--ok);color:#06210f}
+  li.done .ctext{color:var(--muted)}
+
+  .q{padding:11px 0;border-bottom:1px solid var(--line)}
+  .q:last-of-type{border-bottom:0}
+  .q .prompt{font-size:13.5px;margin-bottom:8px}
+  .q .opt{display:block;font-size:13px;color:var(--ink);padding:6px 8px;border-radius:7px;cursor:pointer}
+  .q .opt:hover{background:var(--panel-2)}
+  .q .opt input{margin-right:8px}
+  .q.correct{box-shadow:inset 3px 0 0 var(--ok)}
+  .q.wrong{box-shadow:inset 3px 0 0 var(--bad)}
+  .q .verdict{font-size:12px;margin-top:6px;font-family:var(--mono)}
+  .q.correct .verdict{color:var(--ok)}
+  .q.wrong .verdict{color:var(--bad)}
+
+  .submit-bar{display:flex;flex-direction:column;gap:10px}
+  .submit-bar .name-row{display:grid;grid-template-columns:1fr;gap:8px}
+  .scorebox{font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .scorebox b{color:var(--ink)}
+  .status{font-size:13px;min-height:18px}
+  .status.ok{color:var(--ok)} .status.bad{color:var(--bad)} .status.busy{color:var(--warn)}
+  .foot{color:var(--muted);font-size:11px;text-align:center;margin:20px 0 6px;line-height:1.6}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+
+<div class="wrap">
+  <div class="grid">
+
+    <!-- ============== SIMULATED APPLIANCE CONSOLE ============== -->
+    <main class="console" id="labArea" aria-label="AegisWall appliance console">
+      <div class="topbar">
+        <div class="brand">
+          <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M16 2 4 7v8c0 7 5 12 12 15 7-3 12-8 12-15V7L16 2Z"
+                  fill="none" stroke="var(--accent)" stroke-width="2"/>
+            <path d="M16 9v14M9 16h14" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div>AegisWall NG<small>Edge Firewall Console</small></div>
+        </div>
+        <div class="who" id="whoami" aria-live="polite">not signed in</div>
+      </div>
+
+      <div class="body">
+        <nav class="side" aria-label="Console sections">
+          <div class="group">Status</div>
+          <button data-view="dashboard" aria-current="true"><span class="dot"></span>Dashboard</button>
+          <div class="group">System</div>
+          <button data-view="general"><span class="dot"></span>General — DNS</button>
+          <div class="group">Interfaces</div>
+          <button data-view="wan"><span class="dot"></span>WAN</button>
+        </nav>
+
+        <section class="view" id="view" aria-live="polite">
+          <!-- views injected by JS -->
+        </section>
+      </div>
+    </main>
+
+    <!-- ============== LAB SIDEBAR ============== -->
+    <aside>
+      <div class="panel">
+        <h3>Scenario</h3>
+        <div class="scenario" id="scenario"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Task checklist</h3>
+        <ul class="checklist" id="checklist"></ul>
+      </div>
+
+      <div class="panel">
+        <h3>Knowledge check</h3>
+        <div id="questions"></div>
+        <div class="btn-row">
+          <button class="btn" id="checkAnswers">Check answers</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Submit completed lab</h3>
+        <div class="submit-bar">
+          <div class="name-row">
+            <label class="visually-hidden" for="hackerName">Hacker name (pseudonym)</label>
+            <input type="text" id="hackerName" maxlength="40"
+                   placeholder="Enter your hacker name (no real names)" autocomplete="off" />
+          </div>
+          <div class="scorebox" id="scoreBox">Tasks 0/5 · Questions 0/3</div>
+          <div class="btn-row">
+            <button class="btn primary" id="submitBtn">Submit completed lab</button>
+            <button class="btn ghost" id="resetBtn">Reset lab</button>
+          </div>
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <p class="foot">
+    AegisWall NG is a fictional training appliance. Original clean-room lab for CompTIA Security+
+    (SY0-701) objective 3.2.<br>
+    © 2026 Course Author. Not affiliated with or endorsed by CompTIA or any firewall vendor.
+  </p>
+</div>
+
+<!-- ============== SIGN-IN OVERLAY ============== -->
+<div class="overlay" id="loginOverlay">
+  <div class="login" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <h2 id="loginTitle">
+      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 2 4 7v8c0 7 5 12 12 15 7-3 12-8 12-15V7L16 2Z" fill="none" stroke="var(--accent)" stroke-width="2"/>
+      </svg>
+      AegisWall sign-in
+    </h2>
+    <p>Authenticate to the edge appliance management interface.</p>
+    <div class="field">
+      <label for="liUrl">Management URL</label>
+      <input type="text" id="liUrl" placeholder="https://10.40.12.1" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="liUser">Username</label>
+      <input type="text" id="liUser" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="liPass">Password</label>
+      <input type="password" id="liPass" autocomplete="off" />
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" id="loginBtn" style="width:100%">Sign in</button>
+    </div>
+    <div class="toast bad" id="loginToast" role="alert"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   LAB CONFIG  (per §11 of the build prompt) — edit per activity
+   ----------------------------------------------------------------------------
+   All values below are ORIGINAL to this lab (not any vendor's lab values).
+============================================================================ */
+const CONFIG = {
+  assignmentId: "splus-edge-appliance-setup",
+  title: "Edge Security Appliance — Initial Setup",
+  objectives: ["3.2"],                 // SY0-701: secure enterprise infrastructure
+  version: "1.0.0",
+
+  // Instructor fills this with the deployed Apps Script /exec URL (same across library).
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "REPLACE_PER_COHORT_TOKEN",
+
+  // --- ANSWER KEY (client-side; inspectable — formative scoring, see §7) ---
+  signin: { url: "10.40.12.1", user: "netadmin", pass: "Riv3rStone!47" },
+  dns: {
+    primaryIp: "198.51.100.23", primaryHost: "RESOLVER-EDGE-A",
+    secondaryIp: "198.51.100.24", secondaryHost: "RESOLVER-EDGE-B"
+  },
+  wan: {
+    ip: "203.0.113.58", prefix: "24",
+    gwName: "EdgeUplinkGW", gwIp: "203.0.113.1"
+  }
+};
+
+/* ============================================================================
+   IN-MEMORY STATE (no localStorage / sessionStorage per §2)
+============================================================================ */
+const state = {
+  signedIn: false,
+  currentView: "dashboard",
+  dns: { primaryIp:"", primaryHost:"", secondaryIp:"", secondaryHost:"" },
+  wan: { enabled:false, type:"dhcp", ip:"", prefix:"", gatewayName:"" },
+  gateways: [],            // {name, ip, isDefault}
+  answers: {},             // qid -> chosen value
+  graded: false
+};
+
+/* ---------------- helpers ---------------- */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const norm = (v) => (v||"").trim();
+const eqCI = (a,b) => norm(a).toLowerCase() === norm(b).toLowerCase();
+const stripScheme = (u) => norm(u).replace(/^https?:\/\//i,"").replace(/\/+$/,"");
+
+/* ---------------- scenario + questions content (original wording) -------- */
+const SCENARIO_HTML = `
+  Marlowe &amp; Finch Outfitters is opening a branch office and you are the security
+  analyst standing up its internet edge. A new <b>AegisWall NG</b> firewall appliance
+  is racked and reachable on the management network. Bring it online: point it at the
+  branch's DNS resolvers, give the WAN interface a static public address, and define the
+  upstream default gateway so traffic can leave the site.
+  <span class="obj">SY0-701 · objective 3.2 — secure enterprise infrastructure</span>
+`;
+
+const QUESTIONS = [
+  {
+    id: "q1",
+    prompt: "The WAN interface is given a static address with no DHCP. Why must a default gateway also be configured for that interface?",
+    options: [
+      { v:"a", t:"It assigns IP addresses to internal client devices." },
+      { v:"b", t:"It provides the next-hop route to destinations outside the WAN subnet." },
+      { v:"c", t:"It encrypts traffic leaving the firewall." },
+      { v:"d", t:"It resolves hostnames into IP addresses." }
+    ],
+    answer: "b",
+    why: "A statically addressed interface only knows its directly connected subnet; the default gateway is the next hop for everything else."
+  },
+  {
+    id: "q2",
+    prompt: "The WAN address 203.0.113.58 is configured with a /24 prefix. How many usable host addresses does that subnet provide?",
+    options: [
+      { v:"a", t:"24" },
+      { v:"b", t:"256" },
+      { v:"c", t:"254" },
+      { v:"d", t:"126" }
+    ],
+    answer: "c",
+    why: "/24 = 256 total addresses, minus the network and broadcast addresses = 254 usable hosts."
+  },
+  {
+    id: "q3",
+    prompt: "You configure two DNS resolvers instead of one. Which infrastructure security principle does this primarily support?",
+    options: [
+      { v:"a", t:"Confidentiality of resolver queries." },
+      { v:"b", t:"Non-repudiation of DNS responses." },
+      { v:"c", t:"Availability through redundancy if one resolver fails." },
+      { v:"d", t:"Least privilege on the firewall." }
+    ],
+    answer: "c",
+    why: "A second resolver removes a single point of failure — that is availability via redundancy."
+  }
+];
+
+/* ---------------- task definitions (pass conditions over sim state) ------ */
+const TASKS = [
+  { id:"signin", label:"Sign in to the AegisWall console with the correct URL, username, and password",
+    test: () => state.signedIn },
+  { id:"dns", label:"Set both DNS resolvers and their hostnames (System → General)",
+    test: () => eqCI(state.dns.primaryIp, CONFIG.dns.primaryIp)
+              && eqCI(state.dns.primaryHost, CONFIG.dns.primaryHost)
+              && eqCI(state.dns.secondaryIp, CONFIG.dns.secondaryIp)
+              && eqCI(state.dns.secondaryHost, CONFIG.dns.secondaryHost) },
+  { id:"wanEnable", label:"Enable the WAN interface (Interfaces → WAN)",
+    test: () => state.wan.enabled },
+  { id:"wanIp", label:"Give WAN a static IPv4 address of 203.0.113.58 /24",
+    test: () => state.wan.type === "static"
+              && eqCI(state.wan.ip, CONFIG.wan.ip)
+              && state.wan.prefix === CONFIG.wan.prefix },
+  { id:"gateway", label:"Create and select the default gateway EdgeUplinkGW (203.0.113.1)",
+    test: () => {
+      const gw = state.gateways.find(g => eqCI(g.name, CONFIG.wan.gwName));
+      return !!gw && gw.isDefault && eqCI(gw.ip, CONFIG.wan.gwIp)
+             && eqCI(state.wan.gatewayName, CONFIG.wan.gwName);
+    } }
+];
+
+/* ============================================================================
+   VIEW RENDERING (the simulated appliance pages)
+============================================================================ */
+function render(){
+  $("#scenario").innerHTML = SCENARIO_HTML;
+  renderView();
+  renderChecklist();
+  renderQuestions();
+  updateScore();
+}
+
+function renderView(){
+  const v = $("#view");
+  const allTasks = TASKS.every(t => t.test());
+  if(state.currentView === "dashboard"){
+    const wanUp = state.wan.enabled && state.wan.type==="static" && state.wan.ip;
+    const dnsOk = state.dns.primaryIp && state.dns.secondaryIp;
+    v.innerHTML = `
+      <h2>Dashboard</h2>
+      <div class="crumb">Status / System overview</div>
+      <div class="linkmap" aria-label="WAN uplink status">
+        <div class="node"><b>AegisWall</b><span>edge firewall</span></div>
+        <div class="pipe ${wanUp ? 'up':''}"><span class="pulse"></span></div>
+        <div class="node"><b>Uplink</b><span>${wanUp ? state.wan.gatewayName||'gateway' : 'no route'}</span></div>
+        <div class="pipe ${wanUp ? 'up':''}"><span class="pulse"></span></div>
+        <div class="node"><b>Internet</b><span>${wanUp?'reachable':'unreachable'}</span></div>
+      </div>
+      <table class="gw">
+        <tr><th>Item</th><th>Value</th><th>State</th></tr>
+        <tr><td>WAN interface</td><td>${state.wan.enabled?'enabled':'disabled'}</td>
+            <td><span class="badge ${state.wan.enabled?'up':'down'}">${state.wan.enabled?'UP':'DOWN'}</span></td></tr>
+        <tr><td>WAN IPv4</td><td>${state.wan.type==='static' && state.wan.ip ? state.wan.ip+'/'+(state.wan.prefix||'?') : '—'}</td>
+            <td><span class="badge ${wanUp?'up':'down'}">${wanUp?'OK':'—'}</span></td></tr>
+        <tr><td>Default gateway</td><td>${state.wan.gatewayName||'—'}</td>
+            <td><span class="badge ${state.wan.gatewayName?'up':'down'}">${state.wan.gatewayName?'SET':'—'}</span></td></tr>
+        <tr><td>DNS resolvers</td><td>${dnsOk? state.dns.primaryIp+', '+state.dns.secondaryIp : '—'}</td>
+            <td><span class="badge ${dnsOk?'up':'down'}">${dnsOk?'OK':'—'}</span></td></tr>
+      </table>
+      <p class="hint" style="margin-top:14px">${allTasks
+        ? 'All systems configured. The edge appliance is ready to submit.'
+        : 'Work through System → General and Interfaces → WAN to bring the appliance online.'}</p>
+    `;
+  }
+
+  if(state.currentView === "general"){
+    v.innerHTML = `
+      <h2>General settings</h2>
+      <div class="crumb">System / General / DNS resolvers</div>
+      <p class="hint" style="margin-bottom:14px">Define the DNS servers the appliance and its
+        clients will use, each with a friendly hostname label.</p>
+      <div class="row2">
+        <div class="field">
+          <label for="dns1ip">Primary DNS server (IPv4)</label>
+          <input type="text" id="dns1ip" placeholder="0.0.0.0" value="${state.dns.primaryIp}">
+        </div>
+        <div class="field">
+          <label for="dns1host">Primary DNS hostname</label>
+          <input type="text" id="dns1host" placeholder="RESOLVER-…" value="${state.dns.primaryHost}">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="dns2ip">Secondary DNS server (IPv4)</label>
+          <input type="text" id="dns2ip" placeholder="0.0.0.0" value="${state.dns.secondaryIp}">
+        </div>
+        <div class="field">
+          <label for="dns2host">Secondary DNS hostname</label>
+          <input type="text" id="dns2host" placeholder="RESOLVER-…" value="${state.dns.secondaryHost}">
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn primary" id="saveDns">Save DNS settings</button></div>
+      <div class="toast" id="dnsToast" role="alert"></div>
+    `;
+    $("#saveDns").addEventListener("click", saveDns);
+  }
+
+  if(state.currentView === "wan"){
+    const gw = state.gateways;
+    v.innerHTML = `
+      <h2>WAN interface</h2>
+      <div class="crumb">Interfaces / WAN / IPv4 configuration</div>
+
+      <div class="field">
+        <label class="tgl">
+          <input type="checkbox" id="wanEnable" ${state.wan.enabled?'checked':''}>
+          <span class="track"><span class="knob"></span></span>
+          <span>Enable interface</span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label for="wanType">IPv4 configuration type</label>
+        <select id="wanType">
+          <option value="dhcp" ${state.wan.type==='dhcp'?'selected':''}>DHCP</option>
+          <option value="static" ${state.wan.type==='static'?'selected':''}>Static IPv4</option>
+        </select>
+      </div>
+
+      <div id="staticBlock" ${state.wan.type==='static'?'':'hidden'}>
+        <div class="field">
+          <label for="wanIp">Static IPv4 address</label>
+          <div class="inline-ip">
+            <input type="text" id="wanIp" placeholder="0.0.0.0" value="${state.wan.ip}">
+            <select id="wanPrefix" aria-label="Subnet prefix length">
+              ${Array.from({length:33},(_,i)=>i).map(p=>`<option value="${p}" ${String(p)===state.wan.prefix?'selected':''}>/${p}</option>`).join('')}
+            </select>
+          </div>
+          <div class="hint">Use the documentation-range public address assigned to this branch.</div>
+        </div>
+
+        <div class="field">
+          <label for="wanGw">Upstream gateway</label>
+          <select id="wanGw">
+            <option value="">— none selected —</option>
+            ${gw.map(g=>`<option value="${g.name}" ${state.wan.gatewayName===g.name?'selected':''}>${g.name} (${g.ip})${g.isDefault?' · default':''}</option>`).join('')}
+          </select>
+          <div class="btn-row"><button class="btn" id="addGwBtn" type="button">+ Add a new gateway</button></div>
+        </div>
+
+        <div class="gw-form" id="gwForm" hidden>
+          <div class="field">
+            <label class="tgl">
+              <input type="checkbox" id="gwDefault" checked>
+              <span class="track"><span class="knob"></span></span>
+              <span>Use as default gateway</span>
+            </label>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="gwName">Gateway name</label>
+              <input type="text" id="gwName" placeholder="EdgeUplink…"></div>
+            <div class="field"><label for="gwIp">Gateway IPv4 address</label>
+              <input type="text" id="gwIp" placeholder="0.0.0.0"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="saveGw" type="button">Save gateway</button>
+            <button class="btn ghost" id="cancelGw" type="button">Cancel</button>
+          </div>
+          <div class="toast" id="gwToast" role="alert"></div>
+        </div>
+
+        ${gw.length ? `<table class="gw"><tr><th>Name</th><th>IPv4</th><th>Type</th></tr>
+          ${gw.map(g=>`<tr><td>${g.name}</td><td>${g.ip}</td><td>${g.isDefault?'<span class="pill">default</span>':'static'}</td></tr>`).join('')}
+          </table>` : ''}
+      </div>
+
+      <div class="btn-row" style="margin-top:14px"><button class="btn primary" id="saveWan">Save WAN configuration</button></div>
+      <div class="toast" id="wanToast" role="alert"></div>
+    `;
+    wireWanView();
+  }
+
+  // sync nav highlight
+  $$('nav.side button').forEach(b => b.setAttribute('aria-current', String(b.dataset.view===state.currentView)));
+}
+
+/* ---------------- view actions ---------------- */
+function toast(el, ok, msg){
+  if(!el) return;
+  el.className = "toast " + (ok?"ok":"bad") + " show";
+  el.textContent = msg;
+}
+
+function saveDns(){
+  state.dns.primaryIp   = norm($("#dns1ip").value);
+  state.dns.primaryHost = norm($("#dns1host").value);
+  state.dns.secondaryIp = norm($("#dns2ip").value);
+  state.dns.secondaryHost = norm($("#dns2host").value);
+  const t = $("#dnsToast");
+  const ok = TASKS.find(t=>t.id==="dns").test();
+  if(ok) toast(t,true,"DNS resolvers saved. Both servers and hostnames accepted.");
+  else {
+    const missing = [];
+    if(!state.dns.primaryIp||!state.dns.secondaryIp) missing.push("both server addresses");
+    if(!state.dns.primaryHost||!state.dns.secondaryHost) missing.push("both hostnames");
+    toast(t,false, missing.length
+      ? "Saved, but the lab expects "+missing.join(" and ")+" filled with the assigned values."
+      : "Saved, but one or more values don't match the branch's assigned resolvers. Re-check the addresses and hostnames.");
+  }
+  afterChange();
+}
+
+function wireWanView(){
+  $("#wanEnable").addEventListener("change", e=>{ state.wan.enabled = e.target.checked; afterChange(); });
+  $("#wanType").addEventListener("change", e=>{
+    state.wan.type = e.target.value;
+    $("#staticBlock").hidden = (e.target.value !== "static");
+  });
+  $("#addGwBtn").addEventListener("click", ()=>{ $("#gwForm").hidden = false; $("#gwName").focus(); });
+  $("#cancelGw").addEventListener("click", ()=>{ $("#gwForm").hidden = true; });
+  $("#saveGw").addEventListener("click", ()=>{
+    const name = norm($("#gwName").value), ip = norm($("#gwIp").value), def = $("#gwDefault").checked;
+    const t = $("#gwToast");
+    if(!name || !ip){ toast(t,false,"Enter both a gateway name and an IPv4 address."); return; }
+    if(def) state.gateways.forEach(g=>g.isDefault=false);
+    const existing = state.gateways.find(g=>eqCI(g.name,name));
+    if(existing){ existing.ip=ip; existing.isDefault=def; }
+    else state.gateways.push({name, ip, isDefault:def});
+    state.wan.gatewayName = name;     // auto-select the new gateway
+    renderView();                      // re-render to show table + selection
+    toast($("#gwToast"),true,"Gateway saved and selected for WAN.");
+    afterChange();
+  });
+  // keep WAN field edits in state as the user types
+  $("#wanGw").addEventListener("change", e=> state.wan.gatewayName = e.target.value);
+  $("#saveWan").addEventListener("click", ()=>{
+    state.wan.ip = norm($("#wanIp")?.value || "");
+    state.wan.prefix = $("#wanPrefix") ? $("#wanPrefix").value : "";
+    state.wan.gatewayName = $("#wanGw") ? $("#wanGw").value : state.wan.gatewayName;
+    const t = $("#wanToast");
+    const probs = [];
+    if(!state.wan.enabled) probs.push("enable the interface");
+    if(state.wan.type!=="static") probs.push("set the configuration type to Static IPv4");
+    if(state.wan.type==="static" && !state.wan.ip) probs.push("enter the static IPv4 address");
+    if(state.wan.type==="static" && !state.wan.gatewayName) probs.push("select an upstream gateway");
+    const ok = TASKS.find(t=>t.id==="wanIp").test() && TASKS.find(t=>t.id==="gateway").test() && state.wan.enabled;
+    if(ok) toast(t,true,"WAN configuration saved. Static address and default gateway are active.");
+    else toast(t,false, probs.length
+      ? "Saved as-is. To complete the task: "+probs.join("; ")+"."
+      : "Saved, but the address, prefix, or gateway doesn't match the branch assignment. Re-check the values.");
+    afterChange();
+  });
+}
+
+function afterChange(){
+  renderView();          // refresh dashboard/wan tables
+  renderChecklist();
+  updateScore();
+}
+
+/* ============================================================================
+   CHECKLIST + QUESTIONS + SCORE
+============================================================================ */
+function renderChecklist(){
+  const ul = $("#checklist");
+  ul.innerHTML = TASKS.map(t=>{
+    const done = t.test();
+    return `<li class="${done?'done':''}">
+      <span class="chk ${done?'done':''}" aria-hidden="true">✓</span>
+      <span class="ctext">${t.label}</span>
+    </li>`;
+  }).join("");
+}
+
+function renderQuestions(){
+  const box = $("#questions");
+  box.innerHTML = QUESTIONS.map(q=>`
+    <div class="q" id="qbox-${q.id}">
+      <div class="prompt">${q.prompt}</div>
+      ${q.options.map(o=>`
+        <label class="opt">
+          <input type="radio" name="${q.id}" value="${o.v}" ${state.answers[q.id]===o.v?'checked':''}>
+          ${o.t}
+        </label>`).join("")}
+      <div class="verdict" id="verdict-${q.id}"></div>
+    </div>`).join("");
+  $$('#questions input[type=radio]').forEach(r=>{
+    r.addEventListener("change", e=>{ state.answers[e.target.name]=e.target.value; });
+  });
+}
+
+function gradeQuestions(){
+  state.graded = true;
+  QUESTIONS.forEach(q=>{
+    const box = $("#qbox-"+q.id), verdict = $("#verdict-"+q.id);
+    const chosen = state.answers[q.id];
+    box.classList.remove("correct","wrong");
+    if(chosen == null){ verdict.textContent = "No answer selected."; verdict.style.color="var(--muted)"; return; }
+    if(chosen === q.answer){ box.classList.add("correct"); verdict.textContent = "Correct — "+q.why; }
+    else { box.classList.add("wrong"); verdict.textContent = "Not quite. Reconsider and try again."; }
+  });
+  updateScore();
+}
+
+function questionsCorrect(){ return QUESTIONS.filter(q=>state.answers[q.id]===q.answer).length; }
+function tasksDone(){ return TASKS.filter(t=>t.test()).length; }
+
+function updateScore(){
+  $("#scoreBox").innerHTML = `Tasks <b>${tasksDone()}/${TASKS.length}</b> · Questions <b>${questionsCorrect()}/${QUESTIONS.length}</b>`;
+}
+
+/* ============================================================================
+   SCREENSHOT — clean-room SVG <foreignObject> -> canvas (no html2canvas / no CDN)
+   Captures the simulated DOM only (which is all the lab contains, per §9).
+============================================================================ */
+async function captureScreenshot(node){
+  try{
+    // 1) reflect live form state onto attributes so the clone shows current values
+    $$("input, select, textarea", node).forEach(el=>{
+      if(el.type === "checkbox" || el.type === "radio"){
+        if(el.checked) el.setAttribute("checked",""); else el.removeAttribute("checked");
+      } else if(el.tagName === "SELECT"){
+        Array.from(el.options).forEach(o=> o.selected ? o.setAttribute("selected","") : o.removeAttribute("selected"));
+      } else {
+        el.setAttribute("value", el.value);
+      }
+    });
+
+    const rect = node.getBoundingClientRect();
+    const scale = Math.min(1, 1000 / Math.max(1, rect.width));   // cap width ~1000px
+    const w = Math.max(1, Math.round(rect.width));
+    const h = Math.max(1, Math.round(rect.height));
+
+    const clone = node.cloneNode(true);
+    const css = $$("style").map(s=>s.textContent).join("\n");
+    const xhtml = new XMLSerializer().serializeToString(clone);
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+      `<foreignObject x="0" y="0" width="${w}" height="${h}">`+
+      `<div xmlns="http://www.w3.org/1999/xhtml" style="background:#0e1620;width:${w}px">`+
+      `<style>${css}</style>${xhtml}</div></foreignObject></svg>`;
+
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    const img = await new Promise((res,rej)=>{
+      const im = new Image();
+      im.onload = ()=>res(im); im.onerror = rej; im.src = url;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(w*scale); canvas.height = Math.round(h*scale);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#0e1620"; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png");
+  }catch(err){
+    // Fallback: a small labelled PNG so submission still carries evidence.
+    const c = document.createElement("canvas"); c.width=560; c.height=120;
+    const x = c.getContext("2d");
+    x.fillStyle="#16212e"; x.fillRect(0,0,560,120);
+    x.fillStyle="#f5a623"; x.font="bold 16px sans-serif";
+    x.fillText("AegisWall lab — "+CONFIG.assignmentId, 16, 36);
+    x.fillStyle="#e6edf3"; x.font="13px sans-serif";
+    x.fillText("Screenshot capture unavailable in this browser.", 16, 64);
+    x.fillText("Tasks "+tasksDone()+"/"+TASKS.length+" · Questions "+questionsCorrect()+"/"+QUESTIONS.length, 16, 86);
+    return c.toDataURL("image/png");
+  }
+}
+
+/* ============================================================================
+   SUBMISSION — direct simple POST to Apps Script (no headers => no preflight)
+============================================================================ */
+async function submitLab(){
+  const name = norm($("#hackerName").value);
+  const status = $("#status");
+  if(!name){ status.className="status bad"; status.textContent="Enter a hacker name before submitting."; return; }
+
+  status.className="status busy"; status.textContent="Capturing screenshot and submitting…";
+
+  const screenshot = await captureScreenshot($("#labArea"));
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: name.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t=>({ id:t.id, label:t.label, passed:t.test() })),
+    questions: QUESTIONS.map(q=>({
+      id:q.id, prompt:q.prompt,
+      answer: state.answers[q.id] || null,
+      correct: state.answers[q.id] === q.answer
+    })),
+    score: { earned: tasksDone() + questionsCorrect(), total: TASKS.length + QUESTIONS.length },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  // Demo / unconfigured guard so the lab is testable before deployment.
+  if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0){
+    status.className="status bad";
+    status.textContent="Submission endpoint isn't configured yet. Ask your instructor to set APPS_SCRIPT_URL. (Your work is complete: "
+      + payload.score.earned + "/" + payload.score.total + ".)";
+    return;
+  }
+
+  try{
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:"POST",
+      body: JSON.stringify(payload)   // NO custom headers; text/plain avoids CORS preflight
+    });
+    const out = await res.json();
+    if(out && out.success){
+      status.className="status ok";
+      status.innerHTML = "Submitted. " + (out.docUrl ? `<a href="${out.docUrl}" target="_blank" rel="noopener">View your submission record</a>.` : "Confirmed.");
+    } else {
+      status.className="status bad";
+      status.textContent = "Submission rejected: " + ((out && out.error) || "unknown error") + ". Check with your instructor.";
+    }
+  } catch(err){
+    // Locked-down context: fire-and-forget; can't read docUrl.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      status.className="status ok";
+      status.textContent = "Submitted (delivery confirmation unavailable in this browser). Confirm receipt with your instructor.";
+    } catch(e2){
+      status.className="status bad";
+      status.textContent = "Couldn't reach the submission service. Check your connection and try again.";
+    }
+  }
+}
+
+/* ============================================================================
+   SIGN-IN + WIRING + RESET
+============================================================================ */
+function tryLogin(){
+  const url=$("#liUrl").value, user=$("#liUser").value, pass=$("#liPass").value;
+  const t=$("#loginToast");
+  const okUrl  = eqCI(stripScheme(url), CONFIG.signin.url);
+  const okUser = norm(user) === CONFIG.signin.user;     // case-sensitive
+  const okPass = pass === CONFIG.signin.pass;            // case-sensitive
+  if(okUrl && okUser && okPass){
+    state.signedIn = true;
+    $("#loginOverlay").hidden = true;
+    $("#whoami").textContent = CONFIG.signin.user + "@" + CONFIG.signin.url;
+    afterChange();
+  } else {
+    const wrong=[]; if(!okUrl)wrong.push("URL"); if(!okUser)wrong.push("username"); if(!okPass)wrong.push("password");
+    t.className="toast bad show";
+    t.textContent = "Sign-in failed — check the " + wrong.join(", ") + ". These fields are case-sensitive.";
+  }
+}
+
+function resetLab(){
+  Object.assign(state, {
+    signedIn:false, currentView:"dashboard",
+    dns:{primaryIp:"",primaryHost:"",secondaryIp:"",secondaryHost:""},
+    wan:{enabled:false,type:"dhcp",ip:"",prefix:"",gatewayName:""},
+    gateways:[], answers:{}, graded:false
+  });
+  $("#hackerName").value="";
+  $("#status").textContent=""; $("#status").className="status";
+  $("#liUrl").value=""; $("#liUser").value=""; $("#liPass").value=""; $("#loginToast").className="toast bad";
+  $("#whoami").textContent="not signed in";
+  $("#loginOverlay").hidden=false;
+  render();
+}
+
+function init(){
+  render();
+  $$('nav.side button').forEach(b=> b.addEventListener("click", ()=>{
+    if(!state.signedIn){ return; }
+    state.currentView = b.dataset.view; renderView();
+  }));
+  $("#loginBtn").addEventListener("click", tryLogin);
+  $("#liPass").addEventListener("keydown", e=>{ if(e.key==="Enter") tryLogin(); });
+  $("#checkAnswers").addEventListener("click", gradeQuestions);
+  $("#submitBtn").addEventListener("click", submitLab);
+  $("#resetBtn").addEventListener("click", resetLab);
+  $("#liUrl").focus();
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-std-acl-block-hosts.html",title:"Standard ACL: Block Source Hosts"}, NEXT={href:"splus-perimeter-firewall.html",title:"Lab: Publish a DMZ Web Server Through the Perimeter Firewall"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.4 Protecting Networks: Firewalls";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

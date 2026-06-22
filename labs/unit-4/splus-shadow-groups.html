@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Shadow Groups Lab — Helmsman Directory Console</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-shadow-groups",
+  "title": "Shadow Groups Lab — Helmsman Directory Console",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Beacon Freight Logistics — "Shadow Groups" directory lab
+  Security+ SY0-701 single-file simulation lab.
+
+  assignmentId : splus-shadow-groups
+  objectives   : 4.6.1 (provisioning accounts), 4.6.2 (permission assignments),
+                 4.6.8.3 (role-based access control)
+
+  Original clean-room work. Built from the public CompTIA SY0-701 objectives and
+  the documented behavior of directory administration tools. It is NOT derived
+  from, and does not copy the wording, scenario, names, paths, values, ordering,
+  questions, or screenshots of any vendor's lab. All UI is self-drawn.
+
+  Copyright (c) 2026  [REPLACE: Instructor / Author name or institution].
+  All rights reserved.  (Swap in your own license here, e.g. CC BY-NC 4.0.)
+
+  Screenshot note: this file does NOT bundle html2canvas. It uses an original,
+  dependency-free capture routine (SVG <foreignObject> -> <canvas> -> PNG) that
+  snapshots the simulated DOM. If you prefer html2canvas for richer fidelity,
+  drop its minified source into a <script> tag and replace captureLabArea()'s
+  body with a call to html2canvas(captureRoot).then(c => c.toDataURL('image/png')).
+  ============================================================================
+-->
+<style id="labStyles">
+/* ---- Design tokens : a freight / harbor operations console -------------- */
+:root{
+  --ink:#0e1622;          /* deepest slate-navy (page) */
+  --console:#13202f;      /* console body */
+  --panel:#172636;        /* raised panels */
+  --panel-2:#1d3144;      /* hover / rows */
+  --line:#27425b;         /* hairlines */
+  --line-soft:#1f3147;    /* soft hairlines */
+  --text:#e8eef6;
+  --muted:#90a6bd;
+  --faint:#5f7891;
+  --amber:#f4b740;        /* harbor signal light (accent) */
+  --amber-dim:#a9842f;
+  --teal:#33c9a6;         /* in-sync / pass */
+  --teal-dim:#1d6e5c;
+  --danger:#ff7a6b;
+  --focus:#7cc5ff;
+  --radius:10px;
+  --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Liberation Mono",monospace;
+  --ui:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(244,183,64,.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(51,201,166,.06), transparent 55%),
+    var(--ink);
+  color:var(--text);
+  font-family:var(--ui);
+  font-size:15px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  padding:18px;
+}
+.wrap{max-width:1180px;margin:0 auto}
+
+/* ---- masthead ---------------------------------------------------------- */
+.masthead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin:2px 4px 16px}
+.lab-kicker{
+  font:600 11px/1 var(--mono);
+  letter-spacing:.22em;text-transform:uppercase;color:var(--amber);
+  border:1px solid var(--amber-dim);border-radius:999px;padding:6px 10px;
+}
+.lab-title{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0}
+.lab-title b{color:var(--amber);font-weight:700}
+.lab-obj{margin-left:auto;font:600 11px/1.6 var(--mono);color:var(--faint);text-align:right}
+.lab-obj span{color:var(--muted)}
+
+/* ---- layout grid ------------------------------------------------------- */
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){ .grid{grid-template-columns:1fr} }
+
+/* ---- console window ---------------------------------------------------- */
+.console{
+  background:linear-gradient(180deg,var(--console),#101b28);
+  border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+  box-shadow:0 18px 50px -24px #000, inset 0 1px 0 rgba(255,255,255,.03);
+}
+.titlebar{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;background:#0e1a26;border-bottom:1px solid var(--line);
+}
+.dots{display:flex;gap:6px}
+.dots i{width:11px;height:11px;border-radius:50%;display:block;opacity:.85}
+.dots i:nth-child(1){background:#e05a52}.dots i:nth-child(2){background:#e6b34a}.dots i:nth-child(3){background:#3fb573}
+.titlebar .name{font:600 12.5px/1 var(--mono);color:var(--muted);letter-spacing:.02em}
+.titlebar .name b{color:var(--text)}
+.titlebar .scope{margin-left:auto;font:600 11px/1 var(--mono);color:var(--faint)}
+
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--line);background:#101d2b}
+.tbtn{
+  appearance:none;cursor:pointer;font:600 12.5px/1 var(--ui);
+  color:var(--text);background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:8px 11px;display:inline-flex;align-items:center;gap:7px;
+  transition:background .12s,border-color .12s,transform .05s;
+}
+.tbtn:hover{background:var(--panel-2);border-color:var(--line-soft)}
+.tbtn:active{transform:translateY(1px)}
+.tbtn:disabled{opacity:.4;cursor:not-allowed}
+.tbtn .ic{width:15px;height:15px;display:block;color:var(--amber)}
+.tbtn.ghost{background:transparent}
+.tbtn.warn .ic{color:var(--muted)}
+
+/* ---- explorer body ----------------------------------------------------- */
+.explorer{display:grid;grid-template-columns:230px 1fr;min-height:330px}
+@media (max-width:560px){ .explorer{grid-template-columns:1fr;min-height:0} }
+.tree{border-right:1px solid var(--line);padding:8px 6px;background:#101c29}
+@media (max-width:560px){ .tree{border-right:0;border-bottom:1px solid var(--line)} }
+.tree h4,.content h4{
+  margin:2px 6px 8px;font:600 10px/1 var(--mono);letter-spacing:.18em;
+  text-transform:uppercase;color:var(--faint)
+}
+.tnode{display:flex;align-items:center;gap:2px;padding-left:calc(var(--d,0)*14px)}
+.tw{
+  appearance:none;background:none;border:0;cursor:pointer;color:var(--muted);
+  width:18px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px
+}
+.tw:hover{background:var(--panel-2);color:var(--text)}
+.tw[hidden]{visibility:hidden}
+.tw svg{width:10px;height:10px;transition:transform .12s}
+.tw[aria-expanded="true"] svg{transform:rotate(90deg)}
+.tsel{
+  appearance:none;flex:1;text-align:left;background:none;border:0;cursor:pointer;
+  color:var(--text);font:500 13.5px/1 var(--ui);padding:6px 8px;border-radius:6px;
+  display:flex;align-items:center;gap:8px;min-width:0;
+}
+.tsel:hover{background:var(--panel-2)}
+.tsel.active{background:rgba(244,183,64,.14);box-shadow:inset 0 0 0 1px var(--amber-dim);color:#fff}
+.tsel .ic{width:15px;height:15px;flex:0 0 auto}
+.tsel .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ic.dom{color:#7fb2e8}.ic.ou{color:var(--amber)}
+
+.content{padding:10px 12px;min-width:0}
+.crumb{font:600 11px/1.5 var(--mono);color:var(--faint);margin:0 2px 8px}
+.crumb b{color:var(--muted)}
+.objtable{width:100%;border-collapse:collapse;font-size:13.5px}
+.objtable th{
+  text-align:left;font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);padding:6px 8px;border-bottom:1px solid var(--line)
+}
+.objrow{cursor:pointer}
+.objrow td{padding:8px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.objrow:hover td{background:var(--panel)}
+.objrow.sel td{background:rgba(124,197,255,.12);box-shadow:inset 2px 0 0 var(--focus)}
+.objrow .nm{display:flex;align-items:center;gap:9px;min-width:0}
+.objrow .nm .ic{width:16px;height:16px;flex:0 0 auto}
+.objrow .nm .ic.user{color:#9fc0dc}.objrow .nm .ic.grp{color:var(--teal)}.objrow .nm .ic.oufold{color:var(--amber)}
+.objrow .nm .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.objrow .sub{color:var(--faint);font:500 12px/1 var(--mono)}
+.tag{font:600 10.5px/1 var(--mono);padding:3px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.glob{color:var(--amber);border-color:var(--amber-dim)}
+.tag.sec{color:var(--teal);border-color:var(--teal-dim)}
+.empty{color:var(--faint);font-style:italic;padding:18px 8px}
+.hint-inline{margin-top:10px;font:500 12px/1.5 var(--ui);color:var(--faint)}
+
+/* ---- lab panel --------------------------------------------------------- */
+.side{display:flex;flex-direction:column;gap:14px}
+.card{
+  background:linear-gradient(180deg,var(--panel),#142231);
+  border:1px solid var(--line);border-radius:var(--radius);padding:14px 15px;
+  box-shadow:0 14px 40px -28px #000;
+}
+.card h3{margin:0 0 8px;font-size:13px;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+.card h3 .pin{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px rgba(244,183,64,.15)}
+.scenario p{margin:0 0 8px;color:#d2deeb;font-size:13.5px}
+.scenario p:last-child{margin-bottom:0}
+.scenario code{font:600 12.5px/1 var(--mono);color:var(--amber);background:rgba(244,183,64,.08);padding:2px 6px;border-radius:5px}
+
+/* shadow-sync chips : the signature element */
+.sync{display:flex;flex-direction:column;gap:9px}
+.chip{display:flex;align-items:center;gap:10px}
+.chip .dept{font:600 12.5px/1 var(--ui);width:78px;flex:0 0 auto}
+.chip .bar{position:relative;flex:1;height:9px;border-radius:999px;background:#0e1925;overflow:hidden;border:1px solid var(--line-soft)}
+.chip .fill{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--amber-dim),var(--amber));transition:width .35s ease,background .35s}
+.chip.done .fill{background:linear-gradient(90deg,var(--teal-dim),var(--teal))}
+.chip .cnt{font:600 11px/1 var(--mono);color:var(--muted);width:54px;text-align:right;flex:0 0 auto}
+.chip.done .cnt{color:var(--teal)}
+
+/* task checklist */
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.tasks li{display:flex;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line-soft)}
+.tasks li:last-child{border-bottom:0}
+.box{
+  width:19px;height:19px;flex:0 0 auto;border-radius:6px;border:1.5px solid var(--line-soft);
+  display:flex;align-items:center;justify-content:center;margin-top:1px;transition:.18s
+}
+.box svg{width:12px;height:12px;color:#fff;opacity:0;transform:scale(.4);transition:.18s}
+.tasks li.pass .box{background:var(--teal);border-color:var(--teal)}
+.tasks li.pass .box svg{opacity:1;transform:none}
+.tasks .t-main{font-size:13px}
+.tasks .t-main code{font:600 12px/1 var(--mono);color:var(--amber)}
+.tasks li.pass .t-main{color:#bfe9dd}
+.tasks .t-hint{display:block;color:var(--danger);font-size:11.5px;margin-top:3px}
+.tasks li.pass .t-hint{display:none}
+
+/* questions */
+.q{border-bottom:1px solid var(--line-soft);padding:10px 2px}
+.q:last-of-type{border-bottom:0}
+.q .ask{font-size:13px;margin:0 0 8px}
+.q .ask .n{font:700 11px/1 var(--mono);color:var(--amber);margin-right:6px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;gap:9px;align-items:flex-start;cursor:pointer;font-size:12.8px;color:#cfdcea;
+  padding:7px 9px;border:1px solid var(--line-soft);border-radius:8px;transition:.12s}
+.opt:hover{background:var(--panel-2)}
+.opt input{margin-top:2px;accent-color:var(--amber)}
+.opt.correct{border-color:var(--teal-dim);background:rgba(51,201,166,.08)}
+.opt.wrong{border-color:var(--danger);background:rgba(255,122,107,.08)}
+.qmark{font:600 11px/1 var(--mono);margin-top:6px}
+.qmark.ok{color:var(--teal)}.qmark.no{color:var(--danger)}
+
+/* score + submit */
+.scorebar{display:flex;align-items:center;gap:12px}
+.ring{--p:0;width:54px;height:54px;flex:0 0 auto;border-radius:50%;
+  background:conic-gradient(var(--amber) calc(var(--p)*1%), #0e1925 0);
+  display:flex;align-items:center;justify-content:center}
+.ring.done{background:conic-gradient(var(--teal) 100%,#0e1925 0)}
+.ring i{width:42px;height:42px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;
+  font:700 13px/1 var(--mono)}
+.scoremeta{font-size:12.5px;color:var(--muted)}
+.scoremeta b{color:var(--text);font-size:14px}
+
+.subwrap{display:flex;flex-direction:column;gap:10px}
+.field label{display:block;font:600 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 6px}
+.field input{width:100%;background:#0e1925;border:1px solid var(--line);border-radius:8px;color:var(--text);
+  font:500 14px/1 var(--ui);padding:11px 12px}
+.field input::placeholder{color:var(--faint)}
+.field small{display:block;color:var(--faint);font-size:11px;margin-top:5px}
+.submit{
+  appearance:none;cursor:pointer;width:100%;border:0;border-radius:9px;padding:13px;
+  font:700 14px/1 var(--ui);color:#10202b;background:linear-gradient(180deg,#ffd06a,var(--amber));
+  transition:filter .12s,transform .05s
+}
+.submit:hover{filter:brightness(1.05)}
+.submit:active{transform:translateY(1px)}
+.submit:disabled{filter:grayscale(.5) brightness(.8);cursor:not-allowed}
+.status{font-size:12.5px;min-height:18px;line-height:1.5}
+.status a{color:var(--focus)}
+.status.ok{color:var(--teal)}.status.err{color:var(--danger)}.status.busy{color:var(--amber)}
+
+.footer{margin:18px 4px 4px;color:var(--faint);font-size:11px;font-family:var(--mono);text-align:center}
+.footer b{color:var(--muted)}
+
+/* ---- modals ------------------------------------------------------------ */
+.scrim{position:fixed;inset:0;background:rgba(6,11,18,.72);display:none;align-items:center;justify-content:center;padding:18px;z-index:40}
+.scrim.show{display:flex}
+.modal{
+  width:100%;max-width:440px;background:linear-gradient(180deg,#1a2a3b,#142130);
+  border:1px solid var(--line-soft);border-radius:12px;box-shadow:0 30px 80px -30px #000;
+  max-height:90vh;display:flex;flex-direction:column;overflow:hidden
+}
+.modal.wide{max-width:520px}
+.mhead{display:flex;align-items:center;gap:9px;padding:13px 15px;border-bottom:1px solid var(--line)}
+.mhead .ic{width:17px;height:17px;color:var(--amber)}
+.mhead h3{margin:0;font-size:14px}
+.mhead .x{margin-left:auto;appearance:none;background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:4px 6px;border-radius:6px}
+.mhead .x:hover{background:var(--panel-2);color:var(--text)}
+.mbody{padding:15px;overflow:auto}
+.mfoot{display:flex;gap:9px;justify-content:flex-end;padding:13px 15px;border-top:1px solid var(--line)}
+.mfield{margin-bottom:14px}
+.mfield > label{display:block;font:600 11px/1 var(--mono);letter-spacing:.06em;color:var(--muted);margin-bottom:7px}
+.mfield input[type=text]{width:100%;background:#0e1925;border:1px solid var(--line);border-radius:8px;color:var(--text);font:500 14px/1 var(--ui);padding:10px 11px}
+.radio-set{display:flex;flex-direction:column;gap:7px}
+.radio{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:#d2deeb;cursor:pointer;
+  padding:9px 11px;border:1px solid var(--line-soft);border-radius:8px}
+.radio:hover{background:var(--panel-2)}
+.radio input{margin-top:2px;accent-color:var(--amber)}
+.radio .rt{font-weight:600}
+.radio .rd{display:block;color:var(--faint);font-size:11.5px;margin-top:2px}
+.createin{font:600 12px/1 var(--mono);color:var(--muted);background:#0e1925;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.createin b{color:var(--amber)}
+.btn{appearance:none;cursor:pointer;font:600 13px/1 var(--ui);border-radius:8px;padding:10px 14px;border:1px solid var(--line)}
+.btn.sec{background:transparent;color:var(--muted)}
+.btn.sec:hover{background:var(--panel-2);color:var(--text)}
+.btn.pri{background:linear-gradient(180deg,#ffd06a,var(--amber));color:#10202b;border-color:transparent;font-weight:700}
+.btn.pri:hover{filter:brightness(1.05)}
+.merr{color:var(--danger);font-size:12px;min-height:16px;margin-top:-4px}
+
+.search{width:100%;background:#0e1925;border:1px solid var(--line);border-radius:8px;color:var(--text);
+  font:500 13px/1 var(--ui);padding:9px 11px;margin-bottom:10px}
+.picklist{display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px}
+.pickgrp{font:600 9.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--faint);padding:9px 6px 5px}
+.pick{display:flex;gap:10px;align-items:center;font-size:13px;color:#d2deeb;cursor:pointer;padding:7px 8px;border-radius:6px}
+.pick:hover{background:var(--panel-2)}
+.pick input{accent-color:var(--teal)}
+.pick .uid{margin-left:auto;font:500 11.5px/1 var(--mono);color:var(--faint)}
+.memlist{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.memrow{display:flex;align-items:center;gap:9px;font-size:13px;padding:6px 2px}
+.memrow .ic{width:15px;height:15px;color:#9fc0dc}
+.memrow .uid{margin-left:auto;font:500 11.5px/1 var(--mono);color:var(--faint)}
+.gmeta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+
+/* focus visibility everywhere */
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important;animation:none !important}
+}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="lab-kicker">SY0-701 Lab</span>
+    <h1 class="lab-title">Shadow Groups for <b>Beacon Freight Logistics</b></h1>
+    <div class="lab-obj">Objectives<br><span>4.6.1 &nbsp;4.6.2 &nbsp;4.6.8.3</span></div>
+  </header>
+
+  <!-- Everything inside captureRoot is what the screenshot snapshots -->
+  <div id="captureRoot" class="grid">
+
+    <!-- ===================== SIMULATED CONSOLE ===================== -->
+    <section class="console" aria-label="Helmsman Directory Console">
+      <div class="titlebar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="name">Helmsman Directory Console — <b>HQ-DCA01</b></span>
+        <span class="scope" id="connScope">beaconfreight.lan</span>
+      </div>
+
+      <div class="toolbar" role="toolbar" aria-label="Directory actions">
+        <button class="tbtn" id="btnNewGroup" type="button">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.4"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M18 7v6M21 10h-6"/></svg>
+          New group
+        </button>
+        <button class="tbtn" id="btnProps" type="button" disabled>
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+          Properties
+        </button>
+        <button class="tbtn" id="btnMembers" type="button" disabled>
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="9" r="3"/><path d="M2.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8" r="2.5"/><path d="M15 19a5 5 0 0 1 7-4.6"/></svg>
+          Members
+        </button>
+        <button class="tbtn ghost warn" id="btnReset" type="button" style="margin-left:auto">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6"/><path d="M20 12a8 8 0 1 0-2.3 5.6"/></svg>
+          Reset lab
+        </button>
+      </div>
+
+      <div class="explorer">
+        <nav class="tree" aria-label="Directory tree">
+          <h4>Console root</h4>
+          <div id="treeRoot"></div>
+        </nav>
+        <div class="content">
+          <h4>Details</h4>
+          <p class="crumb" id="crumb"></p>
+          <div id="contentPane"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== LAB PANEL ===================== -->
+    <aside class="side">
+
+      <div class="card scenario">
+        <h3><span class="pin"></span> Your assignment</h3>
+        <p>You're the directory administrator at <b>Beacon Freight Logistics</b>, an on-prem
+           Windows shop. The domain <code>beaconfreight.lan</code> is run from the controller
+           <code>HQ-DCA01</code>.</p>
+        <p>You're rolling out <b>shadow groups</b> for role-based access: one
+           <b>global security group</b> per department, whose members mirror everyone in that
+           department's organizational unit — <i>including its sub-OUs</i>. Resource permissions
+           will later be assigned to these groups, never to the OUs themselves.</p>
+        <p>Create each group <i>inside</i> its department OU, give it the matching name, then add
+           every user from that OU and its sub-OUs. Leave out anyone from <code>Corporate</code>.</p>
+      </div>
+
+      <div class="card">
+        <h3><span class="pin"></span> Shadow sync</h3>
+        <div class="sync" id="syncChips"></div>
+      </div>
+
+      <div class="card">
+        <h3><span class="pin"></span> Tasks</h3>
+        <ul class="tasks" id="taskList"></ul>
+      </div>
+
+      <div class="card">
+        <h3><span class="pin"></span> Knowledge check</h3>
+        <div id="questions"></div>
+      </div>
+
+      <div class="card">
+        <h3><span class="pin"></span> Submit completed lab</h3>
+        <div class="scorebar" style="margin-bottom:14px">
+          <div class="ring" id="ring"><i id="ringText">0/9</i></div>
+          <div class="scoremeta">
+            <b id="scoreLine">0 of 9 complete</b><br>
+            <span id="passLine">Finish all tasks and questions to pass.</span>
+          </div>
+        </div>
+        <div class="subwrap">
+          <div class="field">
+            <label for="hacker">Hacker name (pseudonym)</label>
+            <input id="hacker" type="text" maxlength="40" autocomplete="off" spellcheck="false"
+                   placeholder="e.g. saltwind_op" />
+            <small>No real names — keep it anonymous. Your instructor maps it on their roster.</small>
+          </div>
+          <button class="submit" id="btnSubmit" type="button">Submit completed lab</button>
+          <p class="status" id="status" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <p class="footer">
+    Helmsman Directory Console — teaching simulation. &nbsp;<b>assignmentId:</b> splus-shadow-groups
+    &nbsp;·&nbsp; SY0-701 4.6.1 / 4.6.2 / 4.6.8.3 &nbsp;·&nbsp; © 2026 [Author]. Clean-room original.
+  </p>
+</div>
+
+<!-- ===================== MODAL: NEW GROUP ===================== -->
+<div class="scrim" id="mNew" role="dialog" aria-modal="true" aria-labelledby="mNewTitle">
+  <div class="modal">
+    <div class="mhead">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.4"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M18 7v6M21 10h-6"/></svg>
+      <h3 id="mNewTitle">New object — Group</h3>
+      <button class="x" type="button" data-close aria-label="Close">×</button>
+    </div>
+    <div class="mbody">
+      <div class="mfield">
+        <label>Create in</label>
+        <div class="createin" id="createIn">Select an organizational unit first.</div>
+      </div>
+      <div class="mfield">
+        <label for="gName">Group name</label>
+        <input id="gName" type="text" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Department-Staff" />
+      </div>
+      <div class="mfield">
+        <label>Group scope</label>
+        <div class="radio-set" role="radiogroup" aria-label="Group scope">
+          <label class="radio"><input type="radio" name="scope" value="Domain local"><span><span class="rt">Domain local</span><span class="rd">Assigns permissions within this domain; can't be granted in trusting domains.</span></span></label>
+          <label class="radio"><input type="radio" name="scope" value="Global" checked><span><span class="rt">Global</span><span class="rd">Holds members from this domain; can be nested and granted access across the forest.</span></span></label>
+          <label class="radio"><input type="radio" name="scope" value="Universal"><span><span class="rt">Universal</span><span class="rd">Forest-wide membership; heavier replication footprint.</span></span></label>
+        </div>
+      </div>
+      <div class="mfield">
+        <label>Group type</label>
+        <div class="radio-set" role="radiogroup" aria-label="Group type">
+          <label class="radio"><input type="radio" name="gtype" value="Security" checked><span><span class="rt">Security</span><span class="rd">A security principal — can be granted resource permissions.</span></span></label>
+          <label class="radio"><input type="radio" name="gtype" value="Distribution"><span><span class="rt">Distribution</span><span class="rd">Email lists only — cannot be used to assign permissions.</span></span></label>
+        </div>
+      </div>
+      <p class="merr" id="newErr"></p>
+    </div>
+    <div class="mfoot">
+      <button class="btn sec" type="button" data-close>Cancel</button>
+      <button class="btn pri" type="button" id="createGroup">Create group</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: GROUP PROPERTIES ===================== -->
+<div class="scrim" id="mProps" role="dialog" aria-modal="true" aria-labelledby="mPropsTitle">
+  <div class="modal">
+    <div class="mhead">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="9" r="3"/><path d="M2.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8" r="2.5"/></svg>
+      <h3 id="mPropsTitle">Group properties</h3>
+      <button class="x" type="button" data-close aria-label="Close">×</button>
+    </div>
+    <div class="mbody">
+      <div class="gmeta" id="gmeta"></div>
+      <label style="display:block;font:600 11px/1 var(--mono);letter-spacing:.06em;color:var(--muted);margin-bottom:9px">Members</label>
+      <div class="memlist" id="memList"></div>
+      <button class="btn sec" type="button" id="editMembers" style="width:100%">Edit members…</button>
+    </div>
+    <div class="mfoot">
+      <button class="btn pri" type="button" data-close>Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: SELECT USERS ===================== -->
+<div class="scrim" id="mPick" role="dialog" aria-modal="true" aria-labelledby="mPickTitle">
+  <div class="modal wide">
+    <div class="mhead">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      <h3 id="mPickTitle">Select users to add</h3>
+      <button class="x" type="button" data-close aria-label="Close">×</button>
+    </div>
+    <div class="mbody">
+      <input class="search" id="pickSearch" type="text" placeholder="Filter by name or username…" autocomplete="off" />
+      <div class="picklist" id="pickList"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn sec" type="button" data-close>Cancel</button>
+      <button class="btn pri" type="button" id="applyMembers">Apply members</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ===========================================================================
+   LAB CONFIG  (the only per-lab edits in the library, per the build prompt)
+   =========================================================================== */
+const CONFIG = {
+  assignmentId: "splus-shadow-groups",
+  title: "Shadow Groups for Beacon Freight Logistics",
+  objectives: ["4.6"],
+  // Same /exec URL across the whole library. Replace before a cohort runs.
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  // Per-cohort secret, validated server-side. Rotate each cohort.
+  submissionToken: "REPLACE_WITH_COHORT_TOKEN"
+};
+
+/* ---- Directory model (original values) --------------------------------- */
+const USERS = {
+  panand:    { name:"Priya Anand" },
+  mhale:     { name:"Marcus Hale" },
+  dpryce:    { name:"Devon Pryce" },
+  lostrowski:{ name:"Lena Ostrowski" },
+  treyes:    { name:"Tomas Reyes" },
+  amori:     { name:"Aiko Mori" },
+  gbello:    { name:"Grant Bello" },
+  rcalloway: { name:"Renee Calloway" },
+  hfoss:     { name:"Henry Foss" },
+  slindgren: { name:"Sasha Lindgren" },
+  iricci:    { name:"Isabel Ricci" },   // Corporate — decoy, do NOT add
+  jvoss:     { name:"Jan Voss" }        // Corporate — decoy, do NOT add
+};
+
+// id -> container metadata. ids double as the "located in" key for groups.
+const CONTAINERS = {
+  "domain":                   { label:"beaconfreight.lan", kind:"domain", depth:0, parent:null, children:["ou:Dispatch","ou:Warehouse","ou:Billing","ou:Corporate"], users:[] },
+  "ou:Dispatch":              { label:"Dispatch",   kind:"ou", depth:1, parent:"domain",        children:["ou:Dispatch/Night Shift"], users:["panand","mhale"] },
+  "ou:Dispatch/Night Shift":  { label:"Night Shift",kind:"ou", depth:2, parent:"ou:Dispatch",   children:[], users:["dpryce","lostrowski"] },
+  "ou:Warehouse":             { label:"Warehouse",  kind:"ou", depth:1, parent:"domain",        children:["ou:Warehouse/Receiving"], users:["treyes","amori"] },
+  "ou:Warehouse/Receiving":   { label:"Receiving",  kind:"ou", depth:2, parent:"ou:Warehouse",  children:[], users:["gbello"] },
+  "ou:Billing":               { label:"Billing",    kind:"ou", depth:1, parent:"domain",        children:[], users:["rcalloway","hfoss","slindgren"] },
+  "ou:Corporate":             { label:"Corporate",  kind:"ou", depth:1, parent:"domain",        children:[], users:["iricci","jvoss"] }
+};
+
+// path label for a container (for breadcrumbs / picker grouping)
+function pathLabel(id){
+  const parts=[]; let cur=id;
+  while(cur && cur!=="domain"){ parts.unshift(CONTAINERS[cur].label); cur=CONTAINERS[cur].parent; }
+  return parts.length ? "beaconfreight.lan / "+parts.join(" / ") : "beaconfreight.lan";
+}
+// all users that belong to a container INCLUDING its sub-OUs
+function usersUnder(id){
+  let out = [...CONTAINERS[id].users];
+  for(const c of CONTAINERS[id].children) out = out.concat(usersUnder(c));
+  return out;
+}
+
+/* ---- Tasks + answer key (server should re-validate for real grading) ---- */
+const REQUIRED = {
+  "ou:Dispatch":  { name:"Dispatch-Staff",  members:usersUnder("ou:Dispatch")  },
+  "ou:Warehouse": { name:"Warehouse-Staff", members:usersUnder("ou:Warehouse") },
+  "ou:Billing":   { name:"Billing-Staff",   members:usersUnder("ou:Billing")   }
+};
+
+const TASKS = [
+  { id:"grp-dispatch",  label:'Create a <b>global security</b> group <code>Dispatch-Staff</code> in the <b>Dispatch</b> OU' },
+  { id:"mem-dispatch",  label:'Add all Dispatch members (incl. <b>Night Shift</b>) to <code>Dispatch-Staff</code>' },
+  { id:"grp-warehouse", label:'Create a <b>global security</b> group <code>Warehouse-Staff</code> in the <b>Warehouse</b> OU' },
+  { id:"mem-warehouse", label:'Add all Warehouse members (incl. <b>Receiving</b>) to <code>Warehouse-Staff</code>' },
+  { id:"grp-billing",   label:'Create a <b>global security</b> group <code>Billing-Staff</code> in the <b>Billing</b> OU' },
+  { id:"mem-billing",   label:'Add all Billing members to <code>Billing-Staff</code>' }
+];
+
+const QUESTIONS = [
+  {
+    id:"q1",
+    prompt:"A department group will be granted permissions to resources in this single domain, and you may later nest it inside other groups. Which group scope fits?",
+    options:["Domain local","Global","Universal","Built-in local"],
+    answer:"Global"
+  },
+  {
+    id:"q2",
+    prompt:"To be usable for assigning file and folder permissions, a group must be created as which type?",
+    options:["Distribution","Security","Dynamic","Primary"],
+    answer:"Security"
+  },
+  {
+    id:"q3",
+    prompt:"Why mirror an OU's people into a security group instead of assigning permissions to the OU directly?",
+    options:[
+      "An OU isn't a security principal, so permissions can't be granted to it — a group can.",
+      "OUs may only contain computer objects, never users.",
+      "Groups replicate between controllers but OUs do not.",
+      "OU membership is cleared every time a user signs out."
+    ],
+    answer:"An OU isn't a security principal, so permissions can't be granted to it — a group can."
+  }
+];
+
+/* ===========================================================================
+   STATE
+   =========================================================================== */
+let groups = [];                 // {id, name, scope, type, container, members:Set}
+let selectedContainer = "domain";
+let selectedObject = null;       // {kind:'group'|'user', id}
+let expanded = new Set(["domain","ou:Dispatch","ou:Warehouse","ou:Billing","ou:Corporate"]);
+let answers = {};                // qid -> chosen string
+let gid = 1;
+
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const setEq = (set, arr)=> set.size===arr.length && arr.every(x=>set.has(x));
+
+/* ---- SVG glyphs --------------------------------------------------------- */
+const SVG = {
+  caret:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg>',
+  dom:'<svg class="ic dom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+  ou:'<svg class="ic ou" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  oufold:'<svg class="ic oufold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  user:'<svg class="ic user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',
+  grp:'<svg class="ic grp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="9" r="3"/><path d="M2.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8" r="2.5"/><path d="M15 19a5 5 0 0 1 7-4.6"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg>'
+};
+
+/* ===========================================================================
+   RENDER : TREE
+   =========================================================================== */
+function renderTree(){
+  const root = $("#treeRoot");
+  root.innerHTML = "";
+  (function walk(id){
+    const c = CONTAINERS[id];
+    const row = document.createElement("div");
+    row.className = "tnode";
+    row.style.setProperty("--d", c.depth);
+    const hasKids = c.children.length>0;
+    const open = expanded.has(id);
+
+    const tw = document.createElement("button");
+    tw.className="tw"; tw.type="button";
+    tw.innerHTML = SVG.caret;
+    tw.setAttribute("aria-expanded", open ? "true":"false");
+    tw.setAttribute("aria-label", open?"Collapse":"Expand");
+    if(!hasKids) tw.hidden = true;
+    tw.addEventListener("click", e=>{ e.stopPropagation();
+      if(expanded.has(id)) expanded.delete(id); else expanded.add(id);
+      renderTree();
+    });
+
+    const sel = document.createElement("button");
+    sel.className = "tsel" + (selectedContainer===id ? " active":"");
+    sel.type="button";
+    sel.innerHTML = (c.kind==="domain"?SVG.dom:SVG.ou) + `<span class="lbl">${esc(c.label)}</span>`;
+    sel.setAttribute("aria-pressed", selectedContainer===id ? "true":"false");
+    sel.addEventListener("click", ()=>{ selectedContainer=id; selectedObject=null; renderAll(); });
+
+    row.appendChild(tw); row.appendChild(sel);
+    root.appendChild(row);
+
+    if(open) c.children.forEach(walk);
+  })("domain");
+}
+
+/* ===========================================================================
+   RENDER : CONTENT PANE
+   =========================================================================== */
+function renderContent(){
+  const c = CONTAINERS[selectedContainer];
+  $("#crumb").innerHTML = "Located in &nbsp;<b>"+esc(pathLabel(selectedContainer))+"</b>";
+  const pane = $("#contentPane");
+
+  const childOUs = c.children.map(id=>({kind:"ou", id, label:CONTAINERS[id].label}));
+  const localUsers = c.users.map(uid=>({kind:"user", id:uid}));
+  const localGroups = groups.filter(g=>g.container===selectedContainer);
+
+  if(!childOUs.length && !localUsers.length && !localGroups.length){
+    pane.innerHTML = '<p class="empty">This container is empty. Use “New group” to create one here.</p>';
+    return;
+  }
+
+  let rows = "";
+  for(const o of childOUs){
+    rows += `<tr class="objrow" data-kind="ou" data-id="${esc(o.id)}">
+      <td><span class="nm">${SVG.oufold}<span class="txt">${esc(o.label)}</span></span></td>
+      <td class="sub">Organizational Unit</td><td></td></tr>`;
+  }
+  for(const g of localGroups){
+    const sel = selectedObject && selectedObject.kind==="group" && selectedObject.id===g.id ? " sel":"";
+    rows += `<tr class="objrow${sel}" data-kind="group" data-id="${esc(g.id)}">
+      <td><span class="nm">${SVG.grp}<span class="txt">${esc(g.name)}</span></span></td>
+      <td class="sub">Security group · ${esc(g.members.size)} member${g.members.size===1?"":"s"}</td>
+      <td><span class="tag ${g.scope==='Global'?'glob':''}">${esc(g.scope)}</span>
+          <span class="tag ${g.type==='Security'?'sec':''}">${esc(g.type)}</span></td></tr>`;
+  }
+  for(const u of localUsers){
+    rows += `<tr class="objrow" data-kind="user" data-id="${esc(u.id)}">
+      <td><span class="nm">${SVG.user}<span class="txt">${esc(USERS[u.id].name)}</span></span></td>
+      <td class="sub">User</td><td class="sub">${esc(u.id)}</td></tr>`;
+  }
+
+  pane.innerHTML = `<table class="objtable"><thead><tr><th>Name</th><th>Type</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="hint-inline">Tip: select an OU, then <b>New group</b>. Double-click a group to edit its members.</p>`;
+
+  $$(".objrow", pane).forEach(tr=>{
+    const kind = tr.dataset.kind, id = tr.dataset.id;
+    tr.addEventListener("click", ()=>{
+      if(kind==="ou"){ selectedContainer=id; selectedObject=null; expanded.add(id); renderAll(); return; }
+      if(kind==="group"){ selectedObject={kind:"group", id}; renderAll(); }
+    });
+    if(kind==="group"){
+      tr.addEventListener("dblclick", ()=>{ selectedObject={kind:"group", id}; openProps(); });
+    }
+  });
+}
+
+/* ===========================================================================
+   RENDER : LAB PANEL (sync chips, tasks, questions, score)
+   =========================================================================== */
+function evalTasks(){
+  const res = {};
+  for(const ou of Object.keys(REQUIRED)){
+    const req = REQUIRED[ou];
+    const g = groups.find(x=>x.container===ou && x.name.trim().toLowerCase()===req.name.toLowerCase());
+    const made = !!g && g.scope==="Global" && g.type==="Security";
+
+    // group-creation task
+    let gp = { passed:made, hint:"" };
+    if(!made){
+      const wrongPlace = groups.find(x=>x.name.trim().toLowerCase()===req.name.toLowerCase() && x.container!==ou);
+      const wrongAttr  = groups.find(x=>x.container===ou && x.name.trim().toLowerCase()===req.name.toLowerCase());
+      if(wrongPlace) gp.hint = "A group named "+req.name+" exists, but not inside the "+CONTAINERS[ou].label+" OU.";
+      else if(wrongAttr) gp.hint = "Set this group's scope to Global and type to Security.";
+      else gp.hint = "Not created yet — make it inside the "+CONTAINERS[ou].label+" OU.";
+    }
+
+    // membership task (only meaningful once the group is correctly made)
+    let mp = { passed:false, hint:"" };
+    if(made){
+      const have = g.members;
+      if(setEq(have, req.members)) mp.passed = true;
+      else{
+        const missing = req.members.filter(u=>!have.has(u));
+        const extra = [...have].filter(u=>!req.members.includes(u));
+        const bits = [];
+        if(missing.length) bits.push("add "+missing.map(u=>USERS[u].name).join(", "));
+        if(extra.length)   bits.push("remove "+extra.map(u=>USERS[u].name).join(", "));
+        mp.hint = "Membership must mirror the OU — "+bits.join("; ")+".";
+      }
+    } else {
+      mp.hint = "Create the group first.";
+    }
+
+    res[ou] = { group:gp, member:mp, g };
+  }
+  return res;
+}
+
+function renderSync(ev){
+  const wrap = $("#syncChips"); wrap.innerHTML="";
+  for(const ou of Object.keys(REQUIRED)){
+    const req = REQUIRED[ou];
+    const g = ev[ou].g;
+    const have = g ? [...g.members].filter(u=>req.members.includes(u)).length : 0;
+    const total = req.members.length;
+    const done = ev[ou].group.passed && ev[ou].member.passed;
+    const pct = Math.round((have/total)*100);
+    const chip = document.createElement("div");
+    chip.className = "chip"+(done?" done":"");
+    chip.innerHTML = `<span class="dept">${esc(CONTAINERS[ou].label)}</span>
+      <span class="bar"><span class="fill" style="width:${done?100:pct}%"></span></span>
+      <span class="cnt">${have}/${total}${done?" ✓":""}</span>`;
+    wrap.appendChild(chip);
+  }
+}
+
+function renderTasks(ev){
+  const list = $("#taskList"); list.innerHTML="";
+  const flat = flattenTasks(ev);
+  for(const t of TASKS){
+    const st = flat[t.id];
+    const li = document.createElement("li");
+    if(st.passed) li.className="pass";
+    li.innerHTML = `<span class="box">${SVG.check}</span>
+      <span><span class="t-main">${t.label}</span>
+      ${st.hint?`<span class="t-hint">${esc(st.hint)}</span>`:""}</span>`;
+    list.appendChild(li);
+  }
+}
+
+function flattenTasks(ev){
+  return {
+    "grp-dispatch":  ev["ou:Dispatch"].group,
+    "mem-dispatch":  ev["ou:Dispatch"].member,
+    "grp-warehouse": ev["ou:Warehouse"].group,
+    "mem-warehouse": ev["ou:Warehouse"].member,
+    "grp-billing":   ev["ou:Billing"].group,
+    "mem-billing":   ev["ou:Billing"].member
+  };
+}
+
+function renderQuestions(){
+  const box = $("#questions"); box.innerHTML="";
+  QUESTIONS.forEach((q,i)=>{
+    const div = document.createElement("div");
+    div.className="q";
+    const chosen = answers[q.id];
+    const answered = chosen!==undefined;
+    const correct = answered && chosen===q.answer;
+    let opts = "";
+    q.options.forEach((o,oi)=>{
+      let cls="opt";
+      if(answered && o===chosen) cls += correct?" correct":" wrong";
+      if(answered && !correct && o===q.answer) cls += " correct";
+      opts += `<label class="${cls}">
+        <input type="radio" name="${q.id}" value="${esc(o)}" ${o===chosen?"checked":""}>
+        <span>${esc(o)}</span></label>`;
+    });
+    div.innerHTML = `<p class="ask"><span class="n">Q${i+1}</span>${esc(q.prompt)}</p>
+      <div class="opts">${opts}</div>
+      ${answered?`<p class="qmark ${correct?'ok':'no'}">${correct?'Correct.':'Not quite — the highlighted option is right.'}</p>`:""}`;
+    box.appendChild(div);
+    $$('input[type=radio]',div).forEach(r=>r.addEventListener("change",()=>{
+      answers[q.id]=r.value; renderQuestions(); renderScore();
+    }));
+  });
+}
+
+function tally(){
+  const ev = evalTasks();
+  const flat = flattenTasks(ev);
+  const tPass = TASKS.filter(t=>flat[t.id].passed).length;
+  const qPass = QUESTIONS.filter(q=>answers[q.id]===q.answer).length;
+  const total = TASKS.length + QUESTIONS.length;
+  return { ev, flat, earned:tPass+qPass, total, tPass, qPass, allPass:(tPass===TASKS.length && qPass===QUESTIONS.length) };
+}
+
+function renderScore(){
+  const t = tally();
+  const pct = Math.round((t.earned/t.total)*100);
+  const ring = $("#ring");
+  ring.style.setProperty("--p", pct);
+  ring.classList.toggle("done", t.allPass);
+  $("#ringText").textContent = t.earned+"/"+t.total;
+  $("#scoreLine").textContent = t.earned+" of "+t.total+" complete";
+  $("#passLine").textContent = t.allPass
+    ? "All tasks and questions correct — ready to submit."
+    : (t.total - t.earned)+" item"+((t.total-t.earned)===1?"":"s")+" left to pass.";
+}
+
+/* ===========================================================================
+   RENDER ALL + toolbar state
+   =========================================================================== */
+function renderAll(){
+  renderTree();
+  renderContent();
+  const ev = evalTasks();
+  renderSync(ev);
+  renderTasks(ev);
+  renderScore();
+  const hasGroupSel = selectedObject && selectedObject.kind==="group";
+  $("#btnProps").disabled = !hasGroupSel;
+  $("#btnMembers").disabled = !hasGroupSel;
+  $("#connScope").textContent = pathLabel(selectedContainer);
+}
+
+/* ===========================================================================
+   MODALS
+   =========================================================================== */
+function openModal(id){
+  const m = $(id); m.classList.add("show");
+  const f = m.querySelector("input,button.btn.pri,button.btn"); if(f) setTimeout(()=>f.focus(),30);
+}
+function closeModal(el){ el.classList.remove("show"); }
+$$("[data-close]").forEach(b=>b.addEventListener("click", e=>closeModal(e.target.closest(".scrim"))));
+$$(".scrim").forEach(s=>s.addEventListener("mousedown", e=>{ if(e.target===s) closeModal(s); }));
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") $$(".scrim.show").forEach(closeModal); });
+
+/* ---- New group ---------------------------------------------------------- */
+$("#btnNewGroup").addEventListener("click", ()=>{
+  const c = CONTAINERS[selectedContainer];
+  $("#newErr").textContent="";
+  $("#gName").value="";
+  $$('input[name=scope]').forEach(r=>r.checked = (r.value==="Global"));
+  $$('input[name=gtype]').forEach(r=>r.checked = (r.value==="Security"));
+  if(c.kind!=="ou"){
+    $("#createIn").innerHTML = '<span style="color:var(--danger)">No OU selected — pick a department OU in the tree, then reopen.</span>';
+  } else {
+    $("#createIn").innerHTML = "In <b>"+esc(c.label)+"</b> OU &nbsp;—&nbsp; "+esc(pathLabel(selectedContainer));
+  }
+  openModal("#mNew");
+});
+
+$("#createGroup").addEventListener("click", ()=>{
+  const c = CONTAINERS[selectedContainer];
+  const err = $("#newErr");
+  if(c.kind!=="ou"){ err.textContent="Select a department OU in the tree before creating a group."; return; }
+  const name = $("#gName").value.trim();
+  if(!name){ err.textContent="Enter a group name."; return; }
+  if(/[\\/\[\]:;|=,+*?<>"@]/.test(name)){ err.textContent="That name contains characters AD won't allow."; return; }
+  if(groups.some(g=>g.container===selectedContainer && g.name.toLowerCase()===name.toLowerCase())){
+    err.textContent="A group with that name already exists in this OU."; return;
+  }
+  const scope = ($('input[name=scope]:checked')||{}).value || "Global";
+  const type  = ($('input[name=gtype]:checked')||{}).value || "Security";
+  const g = { id:"g"+(gid++), name, scope, type, container:selectedContainer, members:new Set() };
+  groups.push(g);
+  selectedObject = { kind:"group", id:g.id };
+  closeModal($("#mNew"));
+  renderAll();
+});
+
+/* ---- Properties --------------------------------------------------------- */
+function currentGroup(){ return selectedObject && selectedObject.kind==="group" ? groups.find(g=>g.id===selectedObject.id) : null; }
+
+function openProps(){
+  const g = currentGroup(); if(!g) return;
+  $("#mPropsTitle").textContent = g.name+" — properties";
+  $("#gmeta").innerHTML =
+    `<span class="tag ${g.scope==='Global'?'glob':''}">Scope: ${esc(g.scope)}</span>
+     <span class="tag ${g.type==='Security'?'sec':''}">Type: ${esc(g.type)}</span>
+     <span class="tag">In: ${esc(CONTAINERS[g.container].label)} OU</span>`;
+  renderMemList();
+  openModal("#mProps");
+}
+function renderMemList(){
+  const g = currentGroup(); const box=$("#memList");
+  if(!g.members.size){ box.innerHTML='<p class="empty" style="padding:6px 2px">No members yet. Use “Edit members…”.</p>'; return; }
+  box.innerHTML = [...g.members].map(uid=>
+    `<div class="memrow">${SVG.user}<span>${esc(USERS[uid].name)}</span><span class="uid">${esc(uid)}</span></div>`
+  ).join("");
+}
+$("#btnProps").addEventListener("click", openProps);
+$("#editMembers").addEventListener("click", ()=>{ closeModal($("#mProps")); openPicker(); });
+
+/* ---- Member picker ------------------------------------------------------ */
+$("#btnMembers").addEventListener("click", openPicker);
+function openPicker(){
+  const g = currentGroup(); if(!g) return;
+  $("#mPickTitle").textContent = "Members of "+g.name;
+  $("#pickSearch").value="";
+  buildPickList(g, "");
+  openModal("#mPick");
+}
+function buildPickList(g, filter){
+  const list=$("#pickList"); list.innerHTML="";
+  const f = filter.trim().toLowerCase();
+  // group users by their home container, domain order
+  const order = ["ou:Dispatch","ou:Dispatch/Night Shift","ou:Warehouse","ou:Warehouse/Receiving","ou:Billing","ou:Corporate"];
+  for(const cid of order){
+    const us = CONTAINERS[cid].users.filter(uid=>{
+      if(!f) return true;
+      return USERS[uid].name.toLowerCase().includes(f) || uid.includes(f);
+    });
+    if(!us.length) continue;
+    const head=document.createElement("div"); head.className="pickgrp"; head.textContent=pathLabel(cid).replace("beaconfreight.lan / ",""); 
+    list.appendChild(head);
+    for(const uid of us){
+      const lab=document.createElement("label"); lab.className="pick";
+      lab.innerHTML = `<input type="checkbox" value="${esc(uid)}" ${g.members.has(uid)?"checked":""}>
+        ${SVG.user}<span>${esc(USERS[uid].name)}</span><span class="uid">${esc(uid)}</span>`;
+      list.appendChild(lab);
+    }
+  }
+  if(!list.children.length) list.innerHTML='<p class="empty" style="padding:10px">No users match that filter.</p>';
+}
+$("#pickSearch").addEventListener("input", e=>{ const g=currentGroup(); if(g) buildPickList(g, e.target.value); });
+$("#applyMembers").addEventListener("click", ()=>{
+  const g = currentGroup(); if(!g){ closeModal($("#mPick")); return; }
+  const checked = $$('#pickList input[type=checkbox]:checked').map(c=>c.value);
+  // preserve any selections currently filtered out of view
+  const visible = new Set($$('#pickList input[type=checkbox]').map(c=>c.value));
+  const kept = [...g.members].filter(u=>!visible.has(u));
+  g.members = new Set([...kept, ...checked]);
+  closeModal($("#mPick"));
+  renderAll();
+});
+
+/* ---- Reset -------------------------------------------------------------- */
+$("#btnReset").addEventListener("click", ()=>{
+  groups=[]; selectedContainer="domain"; selectedObject=null; answers={}; gid=1;
+  expanded=new Set(["domain","ou:Dispatch","ou:Warehouse","ou:Billing","ou:Corporate"]);
+  $("#status").textContent=""; $("#status").className="status";
+  renderQuestions(); renderAll();
+});
+
+/* ===========================================================================
+   SCREENSHOT  (original, dependency-free: DOM -> SVG <foreignObject> -> PNG)
+   Swap in html2canvas here if you prefer richer fidelity (see header note).
+   =========================================================================== */
+function inlineFormState(orig, clone){
+  const o = orig.querySelectorAll("input,textarea,select");
+  const c = clone.querySelectorAll("input,textarea,select");
+  for(let i=0;i<o.length;i++){
+    const a=o[i], b=c[i]; if(!b) continue;
+    if(a.type==="checkbox"||a.type==="radio"){ if(a.checked) b.setAttribute("checked","checked"); else b.removeAttribute("checked"); }
+    else b.setAttribute("value", a.value);
+  }
+}
+function captureLabArea(){
+  const target = document.getElementById("captureRoot");
+  const rect = target.getBoundingClientRect();
+  const w = Math.max(1, Math.ceil(rect.width));
+  const h = Math.max(1, Math.ceil(rect.height));
+  const css = document.getElementById("labStyles").textContent;
+  const bg = getComputedStyle(document.body).backgroundColor || "#0e1622";
+
+  const clone = target.cloneNode(true);
+  inlineFormState(target, clone);
+  let xhtml;
+  try { xhtml = new XMLSerializer().serializeToString(clone); }
+  catch(e){ return fallbackShot(w,h,bg); }
+
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+      `<foreignObject x="0" y="0" width="${w}" height="${h}">`+
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:${bg};padding:0">`+
+          `<style>${css}</style>${xhtml}`+
+        `</div>`+
+      `</foreignObject></svg>`;
+
+  return new Promise(resolve=>{
+    const blob = new Blob([svg], {type:"image/svg+xml;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const scale = Math.min(2, window.devicePixelRatio||1);
+        const cv = document.createElement("canvas");
+        cv.width = w*scale; cv.height = h*scale;
+        const ctx = cv.getContext("2d");
+        ctx.scale(scale,scale);
+        ctx.fillStyle = bg; ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img,0,0);
+        URL.revokeObjectURL(url);
+        resolve(cv.toDataURL("image/png"));
+      }catch(e){ URL.revokeObjectURL(url); resolve(fallbackShot(w,h,bg)); }
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); resolve(fallbackShot(w,h,bg)); };
+    img.src = url;
+  });
+}
+// minimal text-summary PNG if the DOM snapshot can't be produced
+function fallbackShot(w,h,bg){
+  const cv=document.createElement("canvas"); cv.width=Math.min(w,800); cv.height=200;
+  const ctx=cv.getContext("2d");
+  ctx.fillStyle=bg; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle="#f4b740"; ctx.font="bold 16px system-ui";
+  ctx.fillText("Shadow Groups Lab — submission", 18, 34);
+  ctx.fillStyle="#e8eef6"; ctx.font="13px system-ui";
+  const t=tally();
+  ctx.fillText("assignmentId: "+CONFIG.assignmentId, 18, 64);
+  ctx.fillText("Score: "+t.earned+"/"+t.total+(t.allPass?"  (PASS)":""), 18, 88);
+  ctx.fillText("Captured "+new Date().toLocaleString(), 18, 112);
+  ctx.fillText("(visual snapshot unavailable in this browser)", 18, 136);
+  return cv.toDataURL("image/png");
+}
+
+/* ===========================================================================
+   SUBMIT
+   =========================================================================== */
+function buildPayload(shot){
+  const t = tally();
+  const flat = t.flat;
+  return {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: $("#hacker").value.trim(),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(tk=>({ id:tk.id, label:tk.label.replace(/<[^>]+>/g,""), passed: !!flat[tk.id].passed })),
+    questions: QUESTIONS.map(q=>({ id:q.id, prompt:q.prompt, answer: answers[q.id]||"", correct: answers[q.id]===q.answer })),
+    score: { earned: t.earned, total: t.total },
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+}
+
+function setStatus(msg, cls){ const s=$("#status"); s.innerHTML=msg; s.className="status"+(cls?" "+cls:""); }
+
+$("#btnSubmit").addEventListener("click", async ()=>{
+  const name = $("#hacker").value.trim();
+  if(!name){ setStatus("Enter a hacker name before submitting.", "err"); $("#hacker").focus(); return; }
+
+  const t = tally();
+  const btn = $("#btnSubmit"); btn.disabled=true;
+  setStatus("Capturing your work…", "busy");
+
+  let shot="";
+  try { shot = await captureLabArea(); } catch(e){ shot=""; }
+
+  const payload = buildPayload(shot);
+
+  // Not configured yet → don't pretend to send; report the local result.
+  if(CONFIG.APPS_SCRIPT_URL.includes("REPLACE_WITH") || CONFIG.submissionToken.includes("REPLACE_WITH")){
+    btn.disabled=false;
+    setStatus("Submission endpoint isn't set yet. Local result: <b>"+t.earned+"/"+t.total+"</b>"+
+      (t.allPass?" — pass.":" — keep going.")+" Ask your instructor to configure the lab URL.", t.allPass?"ok":"err");
+    return;
+  }
+
+  setStatus("Submitting to your instructor…", "busy");
+  try{
+    // simple request: no custom headers, text/plain body → no CORS preflight
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ` <a href="${out.docUrl}" target="_blank" rel="noopener">View your submission</a>.` : "";
+      setStatus("Submitted — recorded "+t.earned+"/"+t.total+"."+link, "ok");
+    } else {
+      setStatus("Server rejected the submission"+(out&&out.error?": "+esc(out.error):"")+". Check with your instructor.", "err");
+      btn.disabled=false;
+    }
+  }catch(e){
+    // fallback: fire-and-forget (can't read the Doc link)
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("Sent, but the confirmation couldn't be read in this browser. Confirm receipt with your instructor.", "ok");
+    }catch(e2){
+      setStatus("Couldn't reach the submission server. Check your connection and try again.", "err");
+      btn.disabled=false;
+    }
+  }
+});
+
+/* ===========================================================================
+   BOOT
+   =========================================================================== */
+renderQuestions();
+renderAll();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-account-rename.html",title:"Rename and Relocate a Linux User Account"}, NEXT={href:"splus-gpo-create-link.html",title:"Lab \u2014 Create, Link, and Harden a GPO"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

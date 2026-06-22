@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>WaveCore Controller — RF Hardening Lab</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-rogue-ap-hardening",
+  "title": "WaveCore Controller — RF Hardening Lab",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.5 Detecting Network Attacks"
+    ],
+    "skills": [
+      "3.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.2",
+      "2.4",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  Security+ SY0-701 Simulation Lab — "Wireless Self-Healing & Rogue AP Hardening"
+  assignmentId: splus-rogue-ap-hardening
+  Objectives: 2.2.8.1 (Unsecure networks: Wireless), 2.4.3.3 (Network attacks: Wireless),
+              4.1.3.1 (Wireless installation considerations: site surveys / heat maps)
+
+  Copyright (c) 2026 — Lab author. All rights reserved.
+  Original clean-room work built from the public CompTIA SY0-701 objectives.
+  Licensed to the author's institution for instructional use. Not derived from,
+  and not affiliated with, any third-party courseware vendor. "Aerocrest",
+  "WaveCore", "Caldera Robotics", and all device names, paths, and values herein
+  are fictitious and original to this lab.
+
+  Self-contained: no external runtime dependencies, no CDN, no localStorage.
+  The only network call at runtime is the single submission POST to Apps Script.
+-->
+<style id="lab-styles">
+  :root{
+    --ink:#0E1320;          /* deep console background       */
+    --surface:#161D2E;      /* panel surface                 */
+    --surface-2:#1C2540;    /* raised control                */
+    --line:rgba(255,255,255,.09);
+    --line-strong:rgba(255,255,255,.18);
+    --text:#E6ECF5;
+    --muted:#8A97AD;
+    --signal:#45E0C8;       /* phosphor cyan — the signature accent */
+    --signal-dim:#2C9A8A;
+    --warn:#F2B441;         /* over-power / attention        */
+    --danger:#FF6B6B;       /* rogue / fail                  */
+    --ok:#7FE3A1;           /* pass                          */
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #16203a 0%, transparent 60%),
+      var(--ink);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:22px 16px 64px;
+  }
+  .wrap{max-width:1060px;margin:0 auto}
+
+  /* ---- header / signature spectrum strip ---- */
+  header.console-head{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:18px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .mark{
+    width:38px;height:38px;border-radius:9px;flex:none;
+    background:linear-gradient(155deg,var(--signal) 0%,var(--signal-dim) 100%);
+    position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.12), 0 6px 18px rgba(69,224,200,.25);
+  }
+  .brand .mark::before{
+    content:"";position:absolute;inset:9px;border-radius:50%;
+    border:2px solid rgba(14,19,32,.85);border-right-color:transparent;border-bottom-color:transparent;
+  }
+  .brand .mark::after{
+    content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;
+    background:var(--ink);transform:translate(-50%,-50%);
+  }
+  .brand h1{font-size:15px;letter-spacing:.02em;margin:0;font-weight:650}
+  .brand .sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+  .session{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+  .session b{color:var(--signal);font-weight:600}
+
+  .spectrum{
+    height:46px;border:1px solid var(--line);border-radius:var(--r);
+    background:linear-gradient(180deg,#0c1426,#0a0f1c);
+    display:flex;align-items:flex-end;gap:3px;padding:6px 8px;overflow:hidden;margin-bottom:18px;
+    position:relative;
+  }
+  .spectrum .bar{flex:1;background:var(--signal-dim);border-radius:2px 2px 0 0;
+    transition:height .5s ease, background .5s ease;opacity:.85}
+  .spectrum[data-calm="true"] .bar{background:var(--signal)}
+  .spectrum .tag{
+    position:absolute;right:10px;top:6px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  }
+  .spectrum[data-calm="true"] .tag{color:var(--signal)}
+
+  /* ---- scenario ---- */
+  .scenario{
+    border:1px solid var(--line);border-left:3px solid var(--signal);
+    background:rgba(69,224,200,.04);border-radius:8px;padding:13px 16px;margin-bottom:20px;font-size:14px;
+  }
+  .scenario h2{font-size:12px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;
+    color:var(--signal);margin:0 0 6px}
+  .scenario p{margin:0 0 8px}
+  .scenario p:last-child{margin-bottom:0}
+
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .panel > .ph{
+    display:flex;align-items:center;gap:8px;padding:11px 15px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);
+  }
+  .panel > .ph .num{font-family:var(--mono);font-size:11px;color:var(--signal);
+    border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px}
+  .panel > .ph h3{font-size:13.5px;margin:0;font-weight:600;letter-spacing:.01em}
+  .panel .pb{padding:14px 15px}
+
+  .field{margin-bottom:15px}
+  .field:last-child{margin-bottom:0}
+  .field > label{display:block;font-size:13px;margin-bottom:6px;color:var(--text)}
+  .field .hint{font-size:11.5px;color:var(--muted);margin-top:5px}
+
+  select,input[type=number],input[type=text]{
+    width:100%;background:var(--surface-2);color:var(--text);
+    border:1px solid var(--line-strong);border-radius:8px;padding:9px 10px;
+    font-family:var(--mono);font-size:13px;
+  }
+  select:focus-visible,input:focus-visible,button:focus-visible,
+  .switch:focus-within{outline:2px solid var(--signal);outline-offset:2px}
+  .unit-row{display:flex;align-items:center;gap:8px}
+  .unit-row input{max-width:120px}
+  .unit-row .u{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+  /* toggle switch */
+  .switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13px}
+  .switch input{position:absolute;opacity:0;width:0;height:0}
+  .track{width:42px;height:24px;border-radius:999px;background:var(--surface-2);
+    border:1px solid var(--line-strong);position:relative;transition:.18s;flex:none}
+  .track::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+    background:var(--muted);transition:.18s}
+  .switch input:checked + .track{background:rgba(69,224,200,.25);border-color:var(--signal)}
+  .switch input:checked + .track::after{transform:translateX(18px);background:var(--signal)}
+
+  /* AP power table */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line-strong);font-weight:500}
+  tbody td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  td.apname{font-family:var(--mono)}
+  td .ext{font-family:var(--mono);font-size:11.5px}
+  td select{padding:6px 8px;font-size:12px}
+  .badge-bleed{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;
+    padding:1px 6px;border-radius:5px;border:1px solid;text-transform:uppercase;margin-left:6px}
+  .badge-bleed.hi{color:var(--warn);border-color:rgba(242,180,65,.5);background:rgba(242,180,65,.08)}
+  .badge-bleed.lo{color:var(--muted);border-color:var(--line);background:transparent}
+
+  /* exhibit / survey */
+  .exhibit{margin-top:14px}
+  .exhibit summary{cursor:pointer;font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--signal);padding:8px 0}
+  .floorplan{border:1px solid var(--line);border-radius:8px;background:#0c1426;padding:12px;margin-top:6px}
+  .floorplan svg{width:100%;height:auto;display:block}
+  .survey-note{font-size:12px;color:var(--muted);margin-top:8px}
+
+  /* progress / checklist */
+  .checklist li{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);
+    font-size:12.5px;list-style:none}
+  .checklist{margin:0;padding:0}
+  .checklist li:last-child{border-bottom:none}
+  .dot{width:16px;height:16px;border-radius:50%;flex:none;margin-top:1px;border:1.5px solid var(--line-strong);
+    position:relative;transition:.15s}
+  .dot[data-pass="true"]{background:var(--ok);border-color:var(--ok)}
+  .dot[data-pass="true"]::after{content:"";position:absolute;left:4.5px;top:1.5px;width:4px;height:8px;
+    border:solid var(--ink);border-width:0 2px 2px 0;transform:rotate(45deg)}
+  .checklist .lbl{flex:1}
+  .checklist .why{display:block;color:var(--warn);font-size:11px;margin-top:2px}
+  .dot[data-pass="true"] ~ .lbl .why{display:none}
+
+  .score{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;
+    display:flex;justify-content:space-between;align-items:center}
+  .score b{color:var(--text);font-size:13px}
+  .meter{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:8px}
+  .meter > i{display:block;height:100%;background:linear-gradient(90deg,var(--signal-dim),var(--signal));
+    width:0;transition:width .35s ease}
+
+  /* questions */
+  .q{border-top:1px solid var(--line);padding-top:13px;margin-top:13px}
+  .q:first-child{border-top:none;margin-top:0;padding-top:0}
+  .q .p{font-size:13px;margin-bottom:8px}
+  .q .opts{display:flex;flex-direction:column;gap:7px}
+  .opt{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;cursor:pointer;
+    border:1px solid var(--line);border-radius:8px;padding:8px 10px;transition:.12s}
+  .opt:hover{border-color:var(--line-strong)}
+  .opt input{margin-top:2px;accent-color:var(--signal)}
+  .opt.correct{border-color:var(--ok);background:rgba(127,227,161,.07)}
+  .opt.wrong{border-color:var(--danger);background:rgba(255,107,107,.07)}
+
+  /* submission bar */
+  .submitbar{margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+    padding:15px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end}
+  @media(max-width:620px){.submitbar{grid-template-columns:1fr}}
+  .submitbar .namewrap label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;
+    font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase}
+  .actions{display:flex;gap:10px}
+  button{font-family:var(--sans);font-size:13px;font-weight:600;border-radius:9px;cursor:pointer;
+    border:1px solid var(--line-strong);padding:10px 16px;background:var(--surface-2);color:var(--text);transition:.12s}
+  button.primary{background:linear-gradient(155deg,var(--signal),var(--signal-dim));color:#062019;border:none}
+  button.primary:disabled{filter:grayscale(.7) brightness(.6);cursor:not-allowed}
+  button.ghost:hover{border-color:var(--signal);color:var(--signal)}
+  .status{grid-column:1/-1;font-size:13px;min-height:1px}
+  .status .box{border-radius:8px;padding:11px 13px;border:1px solid}
+  .status .ok{border-color:var(--ok);background:rgba(127,227,161,.08);color:var(--ok)}
+  .status .err{border-color:var(--danger);background:rgba(255,107,107,.08);color:#ffb3b3}
+  .status .info{border-color:var(--line-strong);background:var(--surface-2);color:var(--muted)}
+  .status a{color:var(--signal);font-weight:600}
+
+  footer.legal{margin-top:26px;font-size:11px;color:var(--muted);text-align:center;line-height:1.6}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  @media(prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="console-head">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"></div>
+      <div>
+        <h1>Aerocrest WaveCore™ Wireless Controller</h1>
+        <div class="sub">RF Operations Console · Cluster WC-04</div>
+      </div>
+    </div>
+    <div class="session">
+      operator <b>wlanadmin</b><br>node · CALDERA-HQ · Aspen Hall
+    </div>
+  </header>
+
+  <div class="spectrum" id="spectrum" data-calm="false" aria-hidden="true">
+    <span class="tag" id="spectrumTag">RF: UNMANAGED</span>
+  </div>
+
+  <section class="scenario" aria-label="Scenario">
+    <h2>Work order WC-2231</h2>
+    <p><strong>Caldera Robotics</strong> runs a single-floor engineering office, <em>Aspen Hall</em>,
+    served by six WaveCore access points. A walk-test last week showed strong Wi-Fi spilling into the
+    public parking lot, and the floor team has reported an unknown access point appearing and
+    disappearing near the loading dock.</p>
+    <p>You are signed in to the WaveCore console as <strong>wlanadmin</strong>. Turn on the controller's
+    self-healing and monitoring features so the cluster can spot rogue radios on its own, balance client
+    load, and stop broadcasting beyond the building. Use the <strong>site-survey exhibit</strong> to decide
+    which radios are leaking signal and dial them back.</p>
+  </section>
+
+  <!-- ===== Everything inside #lab-capture is what the screenshot records ===== -->
+  <div id="lab-capture">
+  <div class="grid">
+
+    <!-- LEFT: the simulated controller -->
+    <div>
+
+      <!-- Self-healing -->
+      <section class="panel" aria-labelledby="ph-heal">
+        <div class="ph"><span class="num">A</span><h3 id="ph-heal">Self-Healing</h3></div>
+        <div class="pb">
+          <div class="field">
+            <label class="switch" for="autoPower">
+              <input type="checkbox" id="autoPower">
+              <span class="track" aria-hidden="true"></span>
+              <span>Automatic radio-power adjustment</span>
+            </label>
+            <div class="hint">Let the controller raise or lower AP transmit power on its own to keep
+              coverage steady when interference appears.</div>
+          </div>
+          <div class="field">
+            <label for="chan24">2.4 GHz channel-selection method</label>
+            <select id="chan24" aria-describedby="chanHint">
+              <option value="">— select —</option>
+              <option value="manual">Manual (fixed channel)</option>
+              <option value="bgscan">Background-scan optimization</option>
+              <option value="boot">Optimize at boot only</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="chan5">5 GHz channel-selection method</label>
+            <select id="chan5">
+              <option value="">— select —</option>
+              <option value="manual">Manual (fixed channel)</option>
+              <option value="bgscan">Background-scan optimization</option>
+              <option value="boot">Optimize at boot only</option>
+            </select>
+            <div class="hint" id="chanHint">Background-scan optimization lets each radio re-pick its
+              channel from what the scans observe.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Background scanning -->
+      <section class="panel" aria-labelledby="ph-scan" style="margin-top:18px">
+        <div class="ph"><span class="num">B</span><h3 id="ph-scan">Background Scanning</h3></div>
+        <div class="pb">
+          <div class="field">
+            <label class="switch" for="bgEnable">
+              <input type="checkbox" id="bgEnable">
+              <span class="track" aria-hidden="true"></span>
+              <span>Enable background scanning on all radios</span>
+            </label>
+            <div class="hint">Feeds rogue-AP detection, AP location, and self-healing.</div>
+          </div>
+          <div class="field">
+            <label for="bgInterval">Scan interval</label>
+            <div class="unit-row">
+              <input type="number" id="bgInterval" min="5" max="600" step="5" placeholder="0">
+              <span class="u">seconds, every radio</span>
+            </div>
+            <div class="hint">Set how often each radio steps off-channel to listen.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Load + band balancing -->
+      <section class="panel" aria-labelledby="ph-bal" style="margin-top:18px">
+        <div class="ph"><span class="num">C</span><h3 id="ph-bal">Client Distribution</h3></div>
+        <div class="pb">
+          <div class="field">
+            <label for="loadThresh">Load-balancing threshold</label>
+            <div class="unit-row">
+              <input type="number" id="loadThresh" min="0" max="100" step="1" placeholder="0">
+              <span class="u">dB difference between radios</span>
+            </div>
+            <div class="hint">A client is steered to a neighbour radio once the signal gap reaches this value.</div>
+          </div>
+          <div class="field">
+            <label for="bandPct">Maximum clients on the 2.4 GHz band</label>
+            <div class="unit-row">
+              <input type="number" id="bandPct" min="0" max="100" step="1" placeholder="0">
+              <span class="u">percent</span>
+            </div>
+            <div class="hint">Caps how much of the cluster's client load may sit on 2.4 GHz so the band
+              does not get crowded.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AP transmit power -->
+      <section class="panel" aria-labelledby="ph-tx" style="margin-top:18px">
+        <div class="ph"><span class="num">D</span><h3 id="ph-tx">Aspen Hall — AP Transmit Power</h3></div>
+        <div class="pb">
+          <p class="hint" style="margin-top:0">Open the site-survey exhibit below, then reduce transmit
+            power to <strong>−3 dB</strong> on the radios whose signal leaks past the exterior wall. Leave
+            the others at full power.</p>
+          <table aria-label="Access point transmit power">
+            <thead>
+              <tr><th scope="col">Access point</th><th scope="col">Location</th><th scope="col">TX power</th></tr>
+            </thead>
+            <tbody id="apRows"><!-- rows injected --></tbody>
+          </table>
+
+          <details class="exhibit">
+            <summary>▸ Site-survey exhibit — Aspen Hall walk-test</summary>
+            <div class="floorplan">
+              <!-- original self-drawn heat strip; not a captured image -->
+              <svg viewBox="0 0 560 200" role="img" aria-label="Aspen Hall floorplan with measured signal leakage at the exterior wall for each access point">
+                <defs>
+                  <linearGradient id="bleed" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#F2B441" stop-opacity="0.55"/>
+                    <stop offset="1" stop-color="#F2B441" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <!-- building footprint -->
+                <rect x="40" y="40" width="480" height="110" rx="8" fill="#0f1830" stroke="rgba(255,255,255,.22)"/>
+                <text x="48" y="34" fill="#8A97AD" font-family="monospace" font-size="11">ASPEN HALL — interior</text>
+                <!-- exterior wall (south) toward parking lot -->
+                <line x1="40" y1="150" x2="520" y2="150" stroke="#FF6B6B" stroke-width="2"/>
+                <text x="430" y="172" fill="#FF6B6B" font-family="monospace" font-size="10">exterior wall ▸ parking lot</text>
+                <!-- AP markers + leakage plumes for the three over-powered radios -->
+                <!-- A2 leaks -->
+                <ellipse cx="170" cy="150" rx="46" ry="30" fill="url(#bleed)"/>
+                <!-- A4 leaks -->
+                <ellipse cx="320" cy="150" rx="50" ry="34" fill="url(#bleed)"/>
+                <!-- A5 leaks -->
+                <ellipse cx="400" cy="150" rx="44" ry="28" fill="url(#bleed)"/>
+                <!-- AP dots -->
+                <g font-family="monospace" font-size="10" fill="#E6ECF5">
+                  <circle cx="95"  cy="80" r="6" fill="#2C9A8A"/><text x="86" y="68">A1</text>
+                  <circle cx="170" cy="95" r="6" fill="#F2B441"/><text x="161" y="83">A2</text>
+                  <circle cx="245" cy="78" r="6" fill="#2C9A8A"/><text x="236" y="66">A3</text>
+                  <circle cx="320" cy="98" r="6" fill="#F2B441"/><text x="311" y="86">A4</text>
+                  <circle cx="400" cy="96" r="6" fill="#F2B441"/><text x="391" y="84">A5</text>
+                  <circle cx="470" cy="80" r="6" fill="#2C9A8A"/><text x="461" y="68">A6</text>
+                </g>
+              </svg>
+              <p class="survey-note">Measured signal at the exterior monitoring point on the parking-lot
+              side. A reading stronger (less negative) than <strong>−60 dBm</strong> means the radio is
+              broadcasting well past the building and should be turned down. Amber radios above show
+              measurable leakage; the table lists exact readings.</p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT: progress + questions -->
+    <div>
+      <section class="panel" aria-labelledby="ph-prog">
+        <div class="ph"><span class="num">✓</span><h3 id="ph-prog">Task Progress</h3></div>
+        <div class="pb">
+          <ul class="checklist" id="checklist" aria-live="polite"></ul>
+          <div class="score">
+            <span>Score</span><b id="scoreText">0 / 0</b>
+          </div>
+          <div class="meter"><i id="meterFill"></i></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="ph-q" style="margin-top:18px">
+        <div class="ph"><span class="num">?</span><h3 id="ph-q">Knowledge Check</h3></div>
+        <div class="pb" id="questions"><!-- questions injected --></div>
+      </section>
+    </div>
+
+  </div>
+  </div><!-- /#lab-capture -->
+
+  <!-- SUBMISSION BAR (outside the screenshot region) -->
+  <div class="submitbar">
+    <div class="namewrap">
+      <label for="hackerName">Hacker name (pseudonym — no real names)</label>
+      <input type="text" id="hackerName" maxlength="40" autocomplete="off" placeholder="e.g. nullroute">
+    </div>
+    <div class="actions">
+      <button type="button" class="ghost" id="resetBtn">Reset lab</button>
+      <button type="button" class="primary" id="submitBtn" disabled>Submit completed lab</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <footer class="legal">
+    Aerocrest WaveCore™ is a fictitious training environment. © 2026 lab author — all rights reserved.
+    Original work built from public CompTIA Security+ SY0-701 objectives; not affiliated with any
+    courseware vendor.<br>SY0-701 objectives exercised: 2.2.8.1 · 2.4.3.3 · 4.1.3.1
+  </footer>
+
+</div>
+
+<script>
+/* =====================================================================
+   ENGINE  —  config, answer key, live evaluation, screenshot, submit
+   ===================================================================== */
+
+/* ---------- LAB CONFIG (per §11) ---------- */
+const CONFIG = {
+  assignmentId: "splus-rogue-ap-hardening",
+  title: "Wireless Self-Healing & Rogue AP Hardening",
+  objectives: ["2.2", "2.4", "4.1"],
+
+  // ▼▼ Instructor fills these once for the whole library ▼▼
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+
+  // pass threshold: all tasks pass AND all questions correct
+  passThreshold: "all",
+
+  // AP roster (original names/values). exteriorDbm = measured leak at the
+  // parking-lot monitoring point. >= -60 dBm ⇒ over-powered ⇒ must drop to -3 dB.
+  aps: [
+    { id:"A1", loc:"NW open office", exteriorDbm:-78 },
+    { id:"A2", loc:"S corridor",     exteriorDbm:-52 },
+    { id:"A3", loc:"N lab bay",      exteriorDbm:-80 },
+    { id:"A4", loc:"S lobby",        exteriorDbm:-49 },
+    { id:"A5", loc:"SE loading dock",exteriorDbm:-55 },
+    { id:"A6", loc:"NE server room", exteriorDbm:-76 }
+  ],
+  leakLimitDbm: -60,        // stronger than this ⇒ leaking
+  reducedPower: "-3"        // required TX setting for leaking radios
+};
+
+/* ---------- ANSWER KEY ---------- */
+// Radios that must be set to -3 dB are exactly those leaking past the wall.
+const KEY = {
+  reducePowerAps: CONFIG.aps.filter(a => a.exteriorDbm >= CONFIG.leakLimitDbm).map(a => a.id), // A2,A4,A5
+  bgInterval: 30,
+  loadThresh: 40,
+  bandPct: 30,
+  questions: {
+    q1: "rogue",     // background scanning chiefly detects...
+    q2: "survey",    // which result tells you a radio leaks outside
+    q3: "emanation"  // why dial perimeter radios back
+  }
+};
+
+/* ---------- QUESTIONS (original wording) ---------- */
+const QUESTIONS = [
+  { id:"q1", prompt:"Background scanning lets the controller listen on other channels. Which of these is it most directly used to find?",
+    options:[
+      {v:"rogue", t:"Unauthorized (rogue) access points operating nearby"},
+      {v:"dhcp",  t:"DHCP scope exhaustion on the wired side"},
+      {v:"cert",  t:"Expired TLS certificates on web servers"},
+      {v:"disk",  t:"Failing disks in the controller appliance"}
+    ]},
+  { id:"q2", prompt:"You need to know which radios broadcast past the building. Which result tells you that?",
+    options:[
+      {v:"survey", t:"A wireless site survey / signal heat map of the area"},
+      {v:"arp",    t:"The switch's ARP table"},
+      {v:"syslog", t:"The controller's NTP sync log"},
+      {v:"cpu",    t:"The AP's CPU utilization graph"}
+    ]},
+  { id:"q3", prompt:"Why lower transmit power on the radios near the exterior wall?",
+    options:[
+      {v:"emanation", t:"To limit RF emanation outside the controlled area an attacker could reach"},
+      {v:"speed",     t:"To make those radios negotiate faster data rates"},
+      {v:"power",     t:"To reduce the building's electrical bill meaningfully"},
+      {v:"channels",  t:"To free up channels on the wired uplink"}
+    ]}
+];
+
+/* ---------- live state ---------- */
+const apPower = {};            // id -> string value ("" | "0" | "-1" ... )
+CONFIG.aps.forEach(a => apPower[a.id] = "");
+const qPick = {};              // qid -> chosen value
+
+/* ---------- build AP rows ---------- */
+const apRows = document.getElementById("apRows");
+CONFIG.aps.forEach(a => {
+  const leaking = a.exteriorDbm >= CONFIG.leakLimitDbm;
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td class="apname">AP-${a.id}
+        <span class="badge-bleed ${leaking?'hi':'lo'}">${a.exteriorDbm} dBm ext</span></td>
+    <td>${a.loc}</td>
+    <td>
+      <label class="sr" for="pw-${a.id}">TX power for AP-${a.id}</label>
+      <select id="pw-${a.id}" data-ap="${a.id}">
+        <option value="">— full —</option>
+        <option value="0">0 dB</option>
+        <option value="-1">−1 dB</option>
+        <option value="-2">−2 dB</option>
+        <option value="-3">−3 dB</option>
+        <option value="-6">−6 dB</option>
+      </select>
+    </td>`;
+  apRows.appendChild(tr);
+});
+apRows.querySelectorAll("select").forEach(s=>{
+  s.addEventListener("change", e=>{ apPower[e.target.dataset.ap]=e.target.value; evaluate(); });
+});
+
+/* ---------- build questions ---------- */
+const qWrap = document.getElementById("questions");
+QUESTIONS.forEach(q=>{
+  const div = document.createElement("div");
+  div.className="q";
+  let opts = q.options.map(o=>`
+    <label class="opt" data-q="${q.id}" data-v="${o.v}">
+      <input type="radio" name="${q.id}" value="${o.v}">
+      <span>${o.t}</span>
+    </label>`).join("");
+  div.innerHTML = `<div class="p"><strong>Q${q.id.slice(1)}.</strong> ${q.prompt}</div>
+                   <div class="opts">${opts}</div>`;
+  qWrap.appendChild(div);
+});
+qWrap.querySelectorAll("input[type=radio]").forEach(r=>{
+  r.addEventListener("change", e=>{ qPick[e.target.name]=e.target.value; evaluate(); });
+});
+
+/* ---------- generic control listeners ---------- */
+["autoPower","bgEnable","chan24","chan5","bgInterval","loadThresh","bandPct","hackerName"]
+  .forEach(id=>{
+    const el=document.getElementById(id);
+    el.addEventListener("input",evaluate);
+    el.addEventListener("change",evaluate);
+  });
+
+/* ---------- task definitions (pass conditions over sim state) ---------- */
+function readState(){
+  return {
+    autoPower: document.getElementById("autoPower").checked,
+    chan24: document.getElementById("chan24").value,
+    chan5:  document.getElementById("chan5").value,
+    bgEnable: document.getElementById("bgEnable").checked,
+    bgInterval: parseInt(document.getElementById("bgInterval").value,10),
+    loadThresh: parseInt(document.getElementById("loadThresh").value,10),
+    bandPct: parseInt(document.getElementById("bandPct").value,10),
+    name: document.getElementById("hackerName").value.trim()
+  };
+}
+
+function buildTasks(s){
+  const reducedSet = CONFIG.aps.filter(a=>apPower[a.id]===CONFIG.reducedPower).map(a=>a.id);
+  const correctReduce = KEY.reducePowerAps.every(id=>reducedSet.includes(id));
+  const noExtraReduce = reducedSet.every(id=>KEY.reducePowerAps.includes(id));
+  const powerOk = correctReduce && noExtraReduce;
+
+  return [
+    { id:"autopower", label:"Self-healing: automatic power adjustment is on",
+      pass: s.autoPower,
+      why:"Turn on automatic radio-power adjustment in panel A." },
+    { id:"channels", label:"Both radios use background-scan channel selection",
+      pass: s.chan24==="bgscan" && s.chan5==="bgscan",
+      why:"Set 2.4 GHz and 5 GHz to background-scan optimization." },
+    { id:"bgscan", label:"Background scanning enabled on all radios",
+      pass: s.bgEnable,
+      why:"Enable background scanning in panel B." },
+    { id:"interval", label:`Scan interval set to ${KEY.bgInterval} seconds`,
+      pass: s.bgInterval===KEY.bgInterval,
+      why:`Enter ${KEY.bgInterval} in the scan-interval field.` },
+    { id:"load", label:`Load-balancing threshold set to ${KEY.loadThresh} dB`,
+      pass: s.loadThresh===KEY.loadThresh,
+      why:`Set the load-balancing threshold to ${KEY.loadThresh}.` },
+    { id:"band", label:`2.4 GHz band capped at ${KEY.bandPct}% of clients`,
+      pass: s.bandPct===KEY.bandPct,
+      why:`Set the 2.4 GHz maximum to ${KEY.bandPct}.` },
+    { id:"power", label:"Leaking radios reduced to −3 dB (and only those)",
+      pass: powerOk,
+      why:"Use the survey: set only the over-powered radios to −3 dB." }
+  ];
+}
+
+/* ---------- evaluation / UI sync ---------- */
+const checklistEl=document.getElementById("checklist");
+const scoreText=document.getElementById("scoreText");
+const meterFill=document.getElementById("meterFill");
+const submitBtn=document.getElementById("submitBtn");
+const spectrum=document.getElementById("spectrum");
+const spectrumTag=document.getElementById("spectrumTag");
+
+// build spectrum bars once
+(function(){ for(let i=0;i<48;i++){const b=document.createElement("span");b.className="bar";
+  b.style.height=(20+Math.random()*70)+"%";spectrum.appendChild(b);} })();
+
+function syncQuestionStyles(){
+  QUESTIONS.forEach(q=>{
+    qWrap.querySelectorAll(`.opt[data-q="${q.id}"]`).forEach(o=>{
+      o.classList.remove("correct","wrong");
+      if(qPick[q.id]===o.dataset.v){
+        o.classList.add(qPick[q.id]===KEY.questions[q.id]?"correct":"wrong");
+      }
+    });
+  });
+}
+
+let lastState={tasks:[],questions:[],score:{earned:0,total:0},passed:false};
+
+function evaluate(){
+  const s=readState();
+  const tasks=buildTasks(s);
+
+  // checklist render
+  checklistEl.innerHTML="";
+  tasks.forEach(t=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<span class="dot" data-pass="${t.pass}"></span>
+      <span class="lbl">${t.label}${t.pass?"":`<span class="why">${t.why}</span>`}</span>`;
+    checklistEl.appendChild(li);
+  });
+
+  // questions
+  const questions=QUESTIONS.map(q=>({
+    id:q.id,
+    prompt:q.prompt,
+    answer:qPick[q.id]||null,
+    correct: qPick[q.id]===KEY.questions[q.id]
+  }));
+  syncQuestionStyles();
+
+  const taskPass=tasks.filter(t=>t.pass).length;
+  const qPass=questions.filter(q=>q.correct).length;
+  const earned=taskPass+qPass;
+  const total=tasks.length+questions.length;
+  const passed=(taskPass===tasks.length)&&(qPass===questions.length);
+
+  scoreText.textContent=`${earned} / ${total}`;
+  meterFill.style.width=(total? (earned/total*100):0)+"%";
+
+  // spectrum reacts to self-healing being active (signature feedback)
+  const calm = s.autoPower && s.bgEnable && s.chan24==="bgscan" && s.chan5==="bgscan";
+  spectrum.dataset.calm = calm;
+  spectrumTag.textContent = calm ? "RF: SELF-HEALING ACTIVE" : "RF: UNMANAGED";
+  if(calm){ spectrum.querySelectorAll(".bar").forEach(b=>b.style.height=(40+Math.random()*22)+"%"); }
+
+  submitBtn.disabled = !(s.name.length>0 && passed);
+
+  lastState={tasks:tasks.map(t=>({id:t.id,label:t.label,passed:t.pass})),
+             questions, score:{earned,total}, passed};
+}
+
+/* ---------- reset ---------- */
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  document.getElementById("autoPower").checked=false;
+  document.getElementById("bgEnable").checked=false;
+  ["chan24","chan5"].forEach(id=>document.getElementById(id).value="");
+  ["bgInterval","loadThresh","bandPct","hackerName"].forEach(id=>document.getElementById(id).value="");
+  apRows.querySelectorAll("select").forEach(s=>s.value="");
+  CONFIG.aps.forEach(a=>apPower[a.id]="");
+  qWrap.querySelectorAll("input[type=radio]").forEach(r=>r.checked=false);
+  Object.keys(qPick).forEach(k=>delete qPick[k]);
+  setStatus("info","Lab reset. All controls cleared.");
+  evaluate();
+});
+
+/* ---------- status helper ---------- */
+const statusEl=document.getElementById("status");
+function setStatus(kind,html){ statusEl.innerHTML=`<div class="box ${kind}">${html}</div>`; }
+
+/* =====================================================================
+   Self-contained screenshot via SVG <foreignObject> (no external lib).
+   We clone the captured region, mirror live control state into attributes
+   (so values/checked/selected survive serialization), embed the page CSS,
+   then rasterize the SVG to a PNG data URL on a canvas.
+   ===================================================================== */
+function syncControlAttributes(srcRoot, cloneRoot){
+  const src=srcRoot.querySelectorAll("input,select,textarea");
+  const cln=cloneRoot.querySelectorAll("input,select,textarea");
+  src.forEach((el,i)=>{
+    const c=cln[i]; if(!c) return;
+    if(el.tagName==="SELECT"){
+      [...c.options].forEach((o,j)=>{
+        if(j===el.selectedIndex) o.setAttribute("selected","selected");
+        else o.removeAttribute("selected");
+      });
+    } else if(el.type==="checkbox"||el.type==="radio"){
+      if(el.checked) c.setAttribute("checked","checked"); else c.removeAttribute("checked");
+    } else {
+      c.setAttribute("value", el.value);
+    }
+  });
+}
+
+function captureScreenshot(){
+  return new Promise((resolve)=>{
+    try{
+      const node=document.getElementById("lab-capture");
+      const rect=node.getBoundingClientRect();
+      const w=Math.max(1,Math.ceil(rect.width));
+      const h=Math.max(1,Math.ceil(rect.height));
+      const clone=node.cloneNode(true);
+      syncControlAttributes(node,clone);
+      clone.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+
+      const css=document.getElementById("lab-styles").textContent;
+      const serialized=new XMLSerializer().serializeToString(clone);
+
+      const svg=
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+        `<foreignObject width="100%" height="100%">`+
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:#0E1320">`+
+        `<style>${css}</style>${serialized}</div>`+
+        `</foreignObject></svg>`;
+
+      const url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+      const img=new Image();
+      img.onload=function(){
+        try{
+          const scale=Math.min(2, 1200/w); // keep PNG reasonable
+          const canvas=document.createElement("canvas");
+          canvas.width=Math.round(w*scale); canvas.height=Math.round(h*scale);
+          const ctx=canvas.getContext("2d");
+          ctx.fillStyle="#0E1320"; ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.scale(scale,scale);
+          ctx.drawImage(img,0,0);
+          resolve(canvas.toDataURL("image/png"));
+        }catch(e){ resolve(fallbackReceipt()); }
+      };
+      img.onerror=function(){ resolve(fallbackReceipt()); };
+      img.src=url;
+    }catch(e){ resolve(fallbackReceipt()); }
+  });
+}
+
+// Text receipt if the browser blocks foreignObject rasterization.
+function fallbackReceipt(){
+  const c=document.createElement("canvas"); c.width=720; c.height=300;
+  const x=c.getContext("2d");
+  x.fillStyle="#0E1320"; x.fillRect(0,0,720,300);
+  x.fillStyle="#45E0C8"; x.font="16px monospace";
+  x.fillText("WaveCore lab — submission receipt",24,40);
+  x.fillStyle="#E6ECF5"; x.font="13px monospace";
+  x.fillText("assignment: "+CONFIG.assignmentId,24,76);
+  x.fillText("score: "+lastState.score.earned+" / "+lastState.score.total,24,100);
+  x.fillText("passed: "+lastState.passed,24,124);
+  x.fillStyle="#8A97AD"; x.font="11px monospace";
+  x.fillText("(visual capture unavailable in this browser)",24,160);
+  return c.toDataURL("image/png");
+}
+
+/* =====================================================================
+   Submission — direct simple-request POST to Apps Script (§4 CORS rule)
+   ===================================================================== */
+submitBtn.addEventListener("click", async ()=>{
+  const s=readState();
+  if(!s.name){ setStatus("err","Enter a hacker name before submitting."); return; }
+  if(!lastState.passed){ setStatus("err","Finish every task and question before submitting."); return; }
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("err","This lab has not been wired to a submission endpoint yet. Ask your instructor for the configured file.");
+    return;
+  }
+
+  submitBtn.disabled=true;
+  setStatus("info","Capturing your work and submitting…");
+
+  const screenshot=await captureScreenshot();
+
+  const payload={
+    assignmentId: CONFIG.assignmentId,
+    hackerName: s.name.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: lastState.tasks,
+    questions: lastState.questions.map(q=>({id:q.id,prompt:q.prompt,answer:q.answer,correct:q.correct})),
+    score: lastState.score,
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  try{
+    // NO headers => text/plain => no CORS preflight (§4 / §9)
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+    const out=await res.json();
+    if(out && out.success){
+      const link=out.docUrl?` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission</a>`:"";
+      setStatus("ok",`Submitted as <strong>${s.name}</strong> — ${lastState.score.earned}/${lastState.score.total}.${link}`);
+    }else{
+      setStatus("err","The server rejected the submission"+(out&&out.error?`: ${out.error}.`:".")+" Tell your instructor.");
+      submitBtn.disabled=false;
+    }
+  }catch(err){
+    // Fallback: fire-and-forget if the response can't be read in a locked-down context.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+      setStatus("ok",`Sent as <strong>${s.name}</strong>. The page couldn't read the server reply, so confirm receipt with your instructor.`);
+    }catch(e2){
+      setStatus("err","Couldn't reach the submission server. Check your connection and try again, or notify your instructor.");
+      submitBtn.disabled=false;
+    }
+  }
+});
+
+/* ---------- boot ---------- */
+evaluate();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-perimeter-firewall.html",title:"Lab: Publish a DMZ Web Server Through the Perimeter Firewall"}, NEXT={href:"splus-syn-flood-analysis.html",title:"Lab \u2014 Analyze a SYN Flood Attack"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.5 Detecting Network Attacks";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

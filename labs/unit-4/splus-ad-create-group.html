@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Create a Security Group (Directory Console)</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-ad-create-group",
+  "title": "Lab — Create a Security Group (Directory Console)",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "1.1",
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ Lab Simulation  —  "Create a Security Group in Active Directory"
+  assignmentId: splus-ad-create-group
+  Objectives:   CompTIA SY0-701 4.6 (Identity & Access Management:
+                provisioning, permission assignments)
+                
+
+  CLEAN-ROOM ORIGINAL WORK. Built from the public exam objective and the
+  documented behavior of the Windows directory console. Scenario, persona,
+  domain, organizational units, group name, member names, file/values, and
+  all question wording are original to this author. No third-party lab's
+  text, names, values, ordering, or screenshots were copied. UI is self-
+  rendered (HTML/SVG/CSS); no captured product images are used.
+
+  © 2026 [Author Name]. All rights reserved.
+  Licensed for use within the author's own institution / course only.
+  Replace [Author Name] before distribution.
+  ============================================================================
+-->
+<style id="lab-styles">
+  :root{
+    --bg:#eef1f5;
+    --panel:#ffffff;
+    --panel-2:#f6f8fb;
+    --ink:#1f2733;
+    --ink-soft:#54606e;
+    --line:#cdd5df;
+    --line-soft:#e3e8ef;
+    --accent:#1f6feb;
+    --accent-ink:#ffffff;
+    --good:#1a7f48;
+    --good-bg:#e7f5ec;
+    --bad:#b4232b;
+    --bad-bg:#fbe9ea;
+    --warn:#8a5a00;
+    --warn-bg:#fdf3e2;
+    --titlebar:#26405e;
+    --titlebar-ink:#eaf1fb;
+    --select:#dbe9ff;
+    --select-line:#1f6feb;
+    --radius:10px;
+    --shadow:0 6px 24px rgba(20,33,51,.16);
+    --focus:0 0 0 3px rgba(31,111,235,.45);
+    --font: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45}
+  a{color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+  h1{font-size:1.32rem;margin:.2rem 0 .15rem}
+  .sub{color:var(--ink-soft);font-size:.92rem;margin:0 0 14px}
+  .objtag{display:inline-block;background:var(--panel-2);border:1px solid var(--line-soft);
+    color:var(--ink-soft);border-radius:999px;padding:2px 10px;font-size:.78rem;margin:0 6px 6px 0}
+
+  /* ---- scenario brief ---- */
+  .brief{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:16px}
+  .brief h2{font-size:1rem;margin:.1rem 0 .4rem}
+  .brief p{margin:.35rem 0;color:var(--ink)}
+  .brief .tasklead{margin-top:.5rem;font-weight:600}
+
+  /* ---- layout: console + side panel ---- */
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+  @media (max-width:920px){ .grid{grid-template-columns:1fr} }
+
+  /* ---- emulated console window ---- */
+  .console{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:var(--shadow)}
+  .titlebar{background:var(--titlebar);color:var(--titlebar-ink);display:flex;align-items:center;
+    gap:8px;padding:8px 12px;font-size:.9rem}
+  .titlebar .dot{width:10px;height:10px;border-radius:50%}
+  .titlebar .name{font-weight:600;letter-spacing:.2px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;background:var(--panel-2);
+    border-bottom:1px solid var(--line-soft)}
+  .toolbar .crumb{margin-left:auto;color:var(--ink-soft);font-size:.82rem;align-self:center;
+    font-family:var(--mono)}
+  .console-body{display:grid;grid-template-columns:248px 1fr;min-height:360px}
+  @media (max-width:560px){ .console-body{grid-template-columns:1fr} }
+
+  /* tree */
+  .tree-pane{border-right:1px solid var(--line-soft);background:var(--panel-2);padding:8px 6px;overflow:auto}
+  .tree-pane h3{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-soft);
+    margin:4px 8px 8px}
+  ul.tree,ul.tree ul{list-style:none;margin:0;padding:0}
+  ul.tree ul{margin-left:14px;border-left:1px dashed var(--line);padding-left:6px}
+  .node{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:7px;cursor:pointer;
+    color:var(--ink);font-size:.9rem;user-select:none}
+  .node:hover{background:#e9eef6}
+  .node.sel{background:var(--select);outline:1px solid var(--select-line)}
+  .node:focus-visible{box-shadow:var(--focus);outline:none}
+  .node .ico{flex:0 0 auto}
+  .node .twisty{width:12px;text-align:center;color:var(--ink-soft);font-size:.7rem}
+
+  /* contents */
+  .contents{padding:10px 12px;overflow:auto}
+  .contents .hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .contents .hdr h3{margin:0;font-size:.95rem}
+  table.objs{width:100%;border-collapse:collapse;font-size:.88rem}
+  table.objs th{text-align:left;color:var(--ink-soft);font-weight:600;border-bottom:1px solid var(--line);
+    padding:6px 8px;font-size:.78rem;text-transform:uppercase;letter-spacing:.4px}
+  table.objs td{padding:7px 8px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+  table.objs tr.obj{cursor:default}
+  table.objs tr.obj.grp{cursor:pointer}
+  table.objs tr.obj.grp:hover{background:var(--select)}
+  table.objs tr.obj:focus-visible{box-shadow:var(--focus) inset;outline:none}
+  .obj .nm{display:flex;align-items:center;gap:8px}
+  .empty{color:var(--ink-soft);font-style:italic;padding:14px 6px}
+  .hint{color:var(--ink-soft);font-size:.8rem;margin-top:8px}
+
+  /* buttons */
+  button{font-family:inherit;font-size:.88rem}
+  .btn{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:8px;
+    padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{background:var(--panel-2)}
+  .btn:focus-visible{box-shadow:var(--focus);outline:none}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--accent)}
+  .btn.sm{padding:5px 10px;font-size:.82rem}
+
+  /* side panel: tasks + questions */
+  .side{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);
+    box-shadow:var(--shadow)}
+  .card h2{font-size:.98rem;margin:0;padding:12px 14px;border-bottom:1px solid var(--line-soft);
+    display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .card h2 .count{font-size:.78rem;color:var(--ink-soft);font-weight:600}
+  .card .body{padding:10px 14px}
+  ul.checks{list-style:none;margin:0;padding:0}
+  ul.checks li{display:flex;gap:9px;align-items:flex-start;padding:7px 2px;border-bottom:1px dashed var(--line-soft)}
+  ul.checks li:last-child{border-bottom:none}
+  .mark{flex:0 0 18px;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);
+    display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;margin-top:1px;color:#fff}
+  .mark.done{background:var(--good);border-color:var(--good)}
+  .mark.todo{background:#fff;color:transparent}
+  .check-label{font-size:.86rem}
+  .check-label small{display:block;color:var(--ink-soft);font-size:.76rem;margin-top:1px}
+
+  .q{padding:9px 2px;border-bottom:1px dashed var(--line-soft)}
+  .q:last-child{border-bottom:none}
+  .q .prompt{font-size:.88rem;margin-bottom:7px}
+  .q .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:8px;
+    padding:7px 10px;cursor:pointer;font-size:.85rem;display:flex;gap:8px;align-items:center}
+  .opt:hover{background:var(--panel-2)}
+  .opt:focus-visible{box-shadow:var(--focus);outline:none}
+  .opt .bullet{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line);flex:0 0 auto}
+  .opt.sel{border-color:var(--accent);background:var(--select)}
+  .opt.sel .bullet{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 2.5px #fff}
+  .opt.correct{border-color:var(--good);background:var(--good-bg)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .qfeed{font-size:.78rem;margin-top:6px}
+  .qfeed.ok{color:var(--good)} .qfeed.no{color:var(--bad)}
+
+  /* submission bar */
+  .submitbar{margin-top:18px;background:var(--panel);border:1px solid var(--line-soft);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+  .submitbar .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:.8rem;color:var(--ink-soft);font-weight:600}
+  .field input{font-family:inherit;font-size:.95rem;padding:8px 10px;border:1px solid var(--line);
+    border-radius:8px;min-width:220px;background:#fff;color:var(--ink)}
+  .field input:focus-visible{box-shadow:var(--focus);outline:none;border-color:var(--accent)}
+  .scorepill{margin-left:auto;align-self:center;background:var(--panel-2);border:1px solid var(--line-soft);
+    border-radius:999px;padding:6px 14px;font-weight:700;font-size:.9rem}
+  .status{margin-top:10px;font-size:.86rem;padding:10px 12px;border-radius:8px;display:none}
+  .status.show{display:block}
+  .status.ok{background:var(--good-bg);color:var(--good);border:1px solid #bfe3cc}
+  .status.err{background:var(--bad-bg);color:var(--bad);border:1px solid #f0c4c7}
+  .status.info{background:var(--warn-bg);color:var(--warn);border:1px solid #f0dcb0}
+  .status.busy{background:var(--panel-2);color:var(--ink-soft);border:1px solid var(--line-soft)}
+
+  /* modal */
+  .scrim{position:fixed;inset:0;background:rgba(18,26,38,.45);display:none;align-items:center;
+    justify-content:center;padding:18px;z-index:50}
+  .scrim.show{display:flex}
+  .modal{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);
+    width:min(560px,100%);max-height:90vh;overflow:auto;border:1px solid var(--line)}
+  .modal .mhead{background:var(--titlebar);color:var(--titlebar-ink);padding:10px 14px;font-weight:600;
+    display:flex;align-items:center;justify-content:space-between}
+  .modal .mhead button{background:transparent;border:none;color:var(--titlebar-ink);cursor:pointer;
+    font-size:1.1rem;line-height:1;padding:4px}
+  .modal .mhead button:focus-visible{box-shadow:var(--focus);outline:none;border-radius:6px}
+  .modal .mbody{padding:16px}
+  .modal .mfoot{padding:12px 16px;border-top:1px solid var(--line-soft);display:flex;gap:10px;
+    justify-content:flex-end}
+  .mfield{margin-bottom:14px}
+  .mfield > label{display:block;font-weight:600;font-size:.86rem;margin-bottom:5px}
+  .mfield input[type=text]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+    font-size:.95rem;font-family:inherit}
+  .mfield input[type=text]:focus-visible{box-shadow:var(--focus);outline:none;border-color:var(--accent)}
+  fieldset{border:1px solid var(--line-soft);border-radius:8px;padding:8px 12px 10px;margin:0}
+  fieldset legend{font-weight:600;font-size:.84rem;padding:0 6px}
+  .radio{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.9rem;cursor:pointer}
+  .radio input{width:16px;height:16px}
+  .mnote{font-size:.78rem;color:var(--ink-soft);margin-top:4px}
+  .merror{color:var(--bad);font-size:.82rem;margin-top:8px;display:none}
+  .merror.show{display:block}
+
+  /* tabs in properties */
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-soft);margin:-4px -4px 12px}
+  .tab{padding:8px 14px;border:none;background:transparent;cursor:pointer;font-size:.88rem;
+    border-bottom:2px solid transparent;color:var(--ink-soft)}
+  .tab.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+  .tab:focus-visible{box-shadow:var(--focus);outline:none;border-radius:6px}
+
+  .memberbox{border:1px solid var(--line);border-radius:8px;min-height:150px;max-height:230px;overflow:auto;
+    padding:4px}
+  .memberbox .mrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px}
+  .memberbox .mrow:hover{background:var(--panel-2)}
+  .memberbox .mrow.sel{background:var(--select)}
+  .memberbox .mrow .who{display:flex;flex-direction:column}
+  .memberbox .mrow .who small{color:var(--ink-soft);font-size:.76rem}
+  .memberbox .empty2{color:var(--ink-soft);font-style:italic;padding:16px}
+
+  /* picker */
+  .pickrow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:7px;cursor:pointer}
+  .pickrow:hover{background:var(--panel-2)}
+  .pickrow input{width:16px;height:16px}
+  .pickrow .who{display:flex;flex-direction:column}
+  .pickrow .who small{color:var(--ink-soft);font-size:.76rem}
+  .pickfilter{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;
+    font-size:.9rem;font-family:inherit}
+
+  .visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  footer.lic{margin-top:26px;color:var(--ink-soft);font-size:.76rem;text-align:center}
+
+  @media (prefers-reduced-motion: no-preference){
+    .status,.opt,.btn,.node{transition:background .12s ease, box-shadow .12s ease}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header>
+    <h1>Lab&nbsp;&middot;&nbsp;Create a Security Group</h1>
+    <p class="sub">Directory Console simulation — provision a group and assign members to streamline access control.</p>
+    <div>
+      <span class="objtag">SY0-701&nbsp;4.6 — Identity &amp; Access Management</span>
+    </div>
+  </header>
+
+  <!-- captured area starts here -->
+  <div id="lab-capture">
+
+    <section class="brief" aria-label="Scenario and tasks">
+      <h2>Scenario</h2>
+      <p>You administer the <strong>nwlogix.local</strong> domain for <strong>Northwind Logistics</strong> from the
+         domain controller <strong>NWL-DC01</strong>. Resource permissions are currently assigned to people one account
+         at a time, which is slow and error-prone. To simplify your access control lists, you will gather every
+         <em>shift-lead</em> into a single group, then grant that group permission once.</p>
+      <p class="tasklead">Your tasks in the Directory Console:</p>
+      <ol style="margin:.3rem 0 0 1.1rem;padding:0">
+        <li>In the <strong>Users</strong> container, create a group named <code>LogisticsLeads</code> with
+            <strong>Global</strong> scope and <strong>Security</strong> type.</li>
+        <li>Add these six shift-leads to <code>LogisticsLeads</code> (each lives in a different organizational unit):
+          <ul style="margin:.25rem 0 0 1rem">
+            <li>Dana Okafor &mdash; Operations</li>
+            <li>Tomas Reyes &mdash; Warehouse \ WarehouseLeads</li>
+            <li>Priya Nair &mdash; Dispatch \ DispatchLeads</li>
+            <li>Greg Holloway &mdash; Fleet \ FleetLeads</li>
+            <li>Mei-Lin Chen &mdash; Inventory \ InventoryLeads</li>
+            <li>Samir Haddad &mdash; Procurement \ ProcurementLeads</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <div class="grid">
+
+      <!-- ============ Emulated console ============ -->
+      <section class="console" aria-label="Directory Console">
+        <div class="titlebar">
+          <span class="dot" style="background:#ff5f57"></span>
+          <span class="dot" style="background:#febc2e"></span>
+          <span class="dot" style="background:#28c840"></span>
+          <span class="name">Directory Console — NWL-DC01 [nwlogix.local]</span>
+        </div>
+        <div class="toolbar">
+          <button class="btn sm" id="btnNewGroup" type="button" title="Create a new group in the selected container">
+            <svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5" r="2.6" fill="#1f6feb"/><path d="M2 13c0-2.2 1.8-3.4 4-3.4s4 1.2 4 3.4z" fill="#1f6feb"/><path d="M12 6v4M10 8h4" stroke="#1a7f48" stroke-width="1.6" stroke-linecap="round"/></svg>
+            New Group&hellip;
+          </button>
+          <button class="btn sm" id="btnProps" type="button" disabled title="Open properties of the selected group">
+            <svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="10" rx="1.5" fill="none" stroke="#54606e" stroke-width="1.3"/><path d="M5 6h6M5 8.5h6M5 11h4" stroke="#54606e" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Properties
+          </button>
+          <button class="btn sm" id="btnReset" type="button" title="Reset the simulation">
+            <svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7" fill="none" stroke="#54606e" stroke-width="1.4" stroke-linecap="round"/><path d="M12.6 2.4v2.4h-2.4" fill="none" stroke="#54606e" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Reset lab
+          </button>
+          <span class="crumb" id="crumb">nwlogix.local \ Users</span>
+        </div>
+
+        <div class="console-body">
+          <!-- tree -->
+          <nav class="tree-pane" aria-label="Directory tree">
+            <h3>Console tree</h3>
+            <ul class="tree" role="tree" id="tree" aria-label="nwlogix.local">
+              <li role="none">
+                <div class="node" role="treeitem" tabindex="0" data-node="domain" aria-expanded="true">
+                  <span class="twisty">▾</span>
+                  <svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="#26405e" stroke-width="1.3"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" fill="none" stroke="#26405e" stroke-width="1.1"/></svg>
+                  nwlogix.local
+                </div>
+                <ul role="group">
+                  <li role="none"><div class="node sel" role="treeitem" tabindex="-1" data-node="users" aria-selected="true">
+                    <span class="twisty"> </span>
+                    <svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5.5h12v8H2z" fill="#fbe9c8" stroke="#caa15a" stroke-width="1"/><path d="M2 5.5l1.6-2h4l1 1.5H14" fill="none" stroke="#caa15a" stroke-width="1"/></svg>
+                    Users</div></li>
+                  <li role="none"><div class="node" role="treeitem" tabindex="-1" data-node="ou:Operations">
+                    <span class="twisty"> </span><svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="#7a4fb0" stroke-width="1.3"/><circle cx="8" cy="8" r="1.6" fill="#7a4fb0"/></svg>
+                    Operations</div></li>
+                  <li role="none"><div class="node" role="treeitem" tabindex="-1" data-node="ou:Warehouse/WarehouseLeads">
+                    <span class="twisty"> </span><svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="#7a4fb0" stroke-width="1.3"/><circle cx="8" cy="8" r="1.6" fill="#7a4fb0"/></svg>
+                    Warehouse \ WarehouseLeads</div></li>
+                  <li role="none"><div class="node" role="treeitem" tabindex="-1" data-node="ou:Dispatch/DispatchLeads">
+                    <span class="twisty"> </span><svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="#7a4fb0" stroke-width="1.3"/><circle cx="8" cy="8" r="1.6" fill="#7a4fb0"/></svg>
+                    Dispatch \ DispatchLeads</div></li>
+                  <li role="none"><div class="node" role="treeitem" tabindex="-1" data-node="ou:Fleet/FleetLeads">
+                    <span class="twisty"> </span><svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="#7a4fb0" stroke-width="1.3"/><circle cx="8" cy="8" r="1.6" fill="#7a4fb0"/></svg>
+                    Fleet \ FleetLeads</div></li>
+                  <li role="none"><div class="node" role="treeitem" tabindex="-1" data-node="ou:Inventory/InventoryLeads">
+                    <span class="twisty"> </span><svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="#7a4fb0" stroke-width="1.3"/><circle cx="8" cy="8" r="1.6" fill="#7a4fb0"/></svg>
+                    Inventory \ InventoryLeads</div></li>
+                  <li role="none"><div class="node" role="treeitem" tabindex="-1" data-node="ou:Procurement/ProcurementLeads">
+                    <span class="twisty"> </span><svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="#7a4fb0" stroke-width="1.3"/><circle cx="8" cy="8" r="1.6" fill="#7a4fb0"/></svg>
+                    Procurement \ ProcurementLeads</div></li>
+                </ul>
+              </li>
+            </ul>
+          </nav>
+
+          <!-- contents -->
+          <div class="contents" id="contents" aria-live="polite">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Side panel ============ -->
+      <aside class="side">
+        <div class="card">
+          <h2>Task checklist <span class="count" id="taskCount">0 / 7</span></h2>
+          <div class="body">
+            <ul class="checks" id="taskList"><!-- rendered by JS --></ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Knowledge check <span class="count" id="qCount">0 / 3</span></h2>
+          <div class="body" id="questionList"><!-- rendered by JS --></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <!-- captured area ends here -->
+
+  <!-- ============ Submission bar ============ -->
+  <section class="submitbar" aria-label="Submit lab">
+    <div class="row">
+      <div class="field">
+        <label for="hackerName">Hacker name (pseudonym — no real names)</label>
+        <input id="hackerName" type="text" maxlength="40" autocomplete="off"
+               placeholder="e.g. nightowl-42" aria-describedby="nameNote">
+      </div>
+      <button class="btn primary" id="btnSubmit" type="button">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8.5l3 3 9-9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Submit completed lab
+      </button>
+      <span class="scorepill" id="scorePill">Score 0 / 10</span>
+    </div>
+    <p class="hint" id="nameNote" style="margin:8px 0 0">A screenshot of the lab area is captured and sent with your results. Your pseudonym keeps personal info out of the system.</p>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <footer class="lic">
+    © 2026 [Author Name]. Original clean-room lab for SY0-701 objective 4.6. Self-rendered UI; no third-party lab content reproduced.
+  </footer>
+</div>
+
+<!-- ============ Modals ============ -->
+<div class="scrim" id="scrim">
+  <!-- New Group dialog -->
+  <div class="modal" id="modalNewGroup" role="dialog" aria-modal="true" aria-labelledby="ngTitle" hidden>
+    <div class="mhead"><span id="ngTitle">New Object — Group</span>
+      <button type="button" data-close aria-label="Close dialog">×</button></div>
+    <div class="mbody">
+      <p class="mnote" id="ngContainer">Create in: <strong>nwlogix.local / Users</strong></p>
+      <div class="mfield">
+        <label for="ngName">Group name</label>
+        <input id="ngName" type="text" maxlength="64" autocomplete="off" placeholder="Type the group name">
+      </div>
+      <div class="mfield">
+        <fieldset>
+          <legend>Group scope</legend>
+          <label class="radio"><input type="radio" name="ngScope" value="Domain local"> Domain local</label>
+          <label class="radio"><input type="radio" name="ngScope" value="Global" checked> Global</label>
+          <label class="radio"><input type="radio" name="ngScope" value="Universal"> Universal</label>
+        </fieldset>
+      </div>
+      <div class="mfield">
+        <fieldset>
+          <legend>Group type</legend>
+          <label class="radio"><input type="radio" name="ngType" value="Security" checked> Security</label>
+          <label class="radio"><input type="radio" name="ngType" value="Distribution"> Distribution</label>
+        </fieldset>
+      </div>
+      <div class="merror" id="ngError"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="button" id="ngOk">OK</button>
+    </div>
+  </div>
+
+  <!-- Group Properties dialog -->
+  <div class="modal" id="modalProps" role="dialog" aria-modal="true" aria-labelledby="prTitle" hidden>
+    <div class="mhead"><span id="prTitle">Group Properties</span>
+      <button type="button" data-close aria-label="Close dialog">×</button></div>
+    <div class="mbody">
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" id="tabGeneral" aria-selected="true" type="button">General</button>
+        <button class="tab" role="tab" id="tabMembers" aria-selected="false" type="button">Members</button>
+      </div>
+      <div id="paneGeneral" role="tabpanel" aria-labelledby="tabGeneral">
+        <div class="mfield"><label>Group name</label><div id="prName" style="font-weight:600"></div></div>
+        <div class="mfield"><label>Scope</label><div id="prScope"></div></div>
+        <div class="mfield"><label>Type</label><div id="prType"></div></div>
+        <p class="mnote">A <strong>security</strong> group can be granted permissions on resources. A
+           <strong>global</strong> group holds members from its own domain and can be used across the forest.</p>
+      </div>
+      <div id="paneMembers" role="tabpanel" aria-labelledby="tabMembers" hidden>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button class="btn sm" type="button" id="btnAddMembers">Add…</button>
+          <button class="btn sm" type="button" id="btnRemoveMember" disabled>Remove</button>
+        </div>
+        <div class="memberbox" id="memberBox" role="listbox" aria-label="Group members"></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" type="button" data-close>Close</button>
+      <button class="btn primary" type="button" data-close>OK</button>
+    </div>
+  </div>
+
+  <!-- Member picker -->
+  <div class="modal" id="modalPicker" role="dialog" aria-modal="true" aria-labelledby="pkTitle" hidden>
+    <div class="mhead"><span id="pkTitle">Select Users</span>
+      <button type="button" data-close-picker aria-label="Close dialog">×</button></div>
+    <div class="mbody">
+      <input class="pickfilter" id="pickFilter" type="text" placeholder="Filter by name or OU…" autocomplete="off"
+             aria-label="Filter users">
+      <div id="pickList" role="group" aria-label="Available users" style="max-height:300px;overflow:auto"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" type="button" data-close-picker>Cancel</button>
+      <button class="btn primary" type="button" id="pkOk">Add selected</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   LAB CONFIG + ANSWER KEY  (the only per-lab edits besides APPS_SCRIPT_URL)
+   ========================================================================= */
+const CONFIG = {
+  assignmentId: "splus-ad-create-group",
+  title: "Create a Security Group in Active Directory",
+  objectives: ["1.1", "4.6"],
+  // answer key:
+  targetGroupName: "LogisticsLeads",
+  targetScope: "Global",
+  targetType: "Security",
+  targetContainer: "users",
+  // submission endpoint — instructor pastes the deployed /exec URL (same library-wide)
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "REPLACE_WITH_PER_COHORT_TOKEN"
+};
+
+/* Directory data (original). isLead flags the six correct members. */
+const USERS = [
+  {id:"u-okafor",  name:"Dana Okafor",   ou:"Operations",                    lead:true },
+  {id:"u-reyes",   name:"Tomas Reyes",   ou:"Warehouse/WarehouseLeads",      lead:true },
+  {id:"u-nair",    name:"Priya Nair",    ou:"Dispatch/DispatchLeads",        lead:true },
+  {id:"u-holloway",name:"Greg Holloway", ou:"Fleet/FleetLeads",              lead:true },
+  {id:"u-chen",    name:"Mei-Lin Chen",  ou:"Inventory/InventoryLeads",      lead:true },
+  {id:"u-haddad",  name:"Samir Haddad",  ou:"Procurement/ProcurementLeads",  lead:true },
+  // distractors (regular staff — NOT to be added)
+  {id:"u-conrad",  name:"Bea Conrad",    ou:"Warehouse/WarehouseLeads",      lead:false},
+  {id:"u-pryce",   name:"Owen Pryce",    ou:"Dispatch/DispatchLeads",        lead:false},
+  {id:"u-feld",    name:"Lena Feld",     ou:"Operations",                    lead:false},
+  {id:"u-osei",    name:"Kwame Osei",    ou:"Fleet/FleetLeads",              lead:false},
+  {id:"u-ramos",   name:"Iris Ramos",    ou:"Inventory/InventoryLeads",      lead:false},
+  {id:"u-bauer",   name:"Niko Bauer",    ou:"Procurement/ProcurementLeads",  lead:false}
+];
+const LEAD_IDS = USERS.filter(u=>u.lead).map(u=>u.id);
+
+const OU_LABEL = {
+  "Operations":"Operations",
+  "Warehouse/WarehouseLeads":"Warehouse \\ WarehouseLeads",
+  "Dispatch/DispatchLeads":"Dispatch \\ DispatchLeads",
+  "Fleet/FleetLeads":"Fleet \\ FleetLeads",
+  "Inventory/InventoryLeads":"Inventory \\ InventoryLeads",
+  "Procurement/ProcurementLeads":"Procurement \\ ProcurementLeads"
+};
+
+/* Knowledge-check questions (original wording). */
+const QUESTIONS = [
+  { id:"q1",
+    prompt:"You will grant this group NTFS permissions on a shared folder. Which group TYPE must it be?",
+    options:["Distribution","Security","Universal","Organizational"],
+    answerIndex:1,
+    why:"Only security groups can be listed on an access control list. Distribution groups serve email only." },
+  { id:"q2",
+    prompt:"A GLOBAL group can directly contain user accounts from where?",
+    options:["Any domain in the forest","Only its own domain","Only the local computer","Any externally trusted domain"],
+    answerIndex:1,
+    why:"Global groups take members only from their own domain, but can be granted access to resources across the forest." },
+  { id:"q3",
+    prompt:"Which statement about DISTRIBUTION groups is correct?",
+    options:["They can be assigned file permissions","They are used only as email distribution lists",
+             "They must always use Universal scope","They replace organizational units"],
+    answerIndex:1,
+    why:"Distribution groups cannot be security principals, so they appear only in mail lists, never on an ACL." }
+];
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+const FRESH = () => ({
+  selectedNode: "users",
+  group: null,            // {name, scope, type, container, members:Set}
+  selectedGroup: false,   // group row selected in contents
+  answers: { q1:null, q2:null, q3:null }
+});
+let state = FRESH();
+
+/* =========================================================================
+   RENDER: contents pane
+   ========================================================================= */
+const el = (id)=>document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function containerLabel(node){
+  if(node==="domain") return "nwlogix.local";
+  if(node==="users")  return "nwlogix.local \\ Users";
+  if(node.startsWith("ou:")) return "nwlogix.local \\ "+OU_LABEL[node.slice(3)];
+  return node;
+}
+
+function renderContents(){
+  const node = state.selectedNode;
+  const box = el("contents");
+  el("crumb").textContent = containerLabel(node);
+
+  let rows = "";
+  let header = "";
+
+  if(node==="users"){
+    header = "Users";
+    // built-in-ish seed object + the created group
+    rows += objRow("Service Accounts","Security Group · Global","grp-seed",false);
+    if(state.group){
+      const sel = state.selectedGroup ? " sel" : "";
+      rows += `<tr class="obj grp${sel}" tabindex="0" data-grp="1" aria-label="${esc(state.group.name)} group">
+        <td><span class="nm">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2.4" fill="#1f6feb"/><circle cx="11" cy="6.5" r="1.9" fill="#7a9bd6"/><path d="M2 12.5c0-2 1.6-3 4-3s4 1 4 3z" fill="#1f6feb"/><path d="M9 12.5c0-1.4 1-2.4 2.2-2.4S13.4 11.1 13.4 12.5z" fill="#7a9bd6"/></svg>
+          ${esc(state.group.name)}</span></td>
+        <td>Security Group · ${esc(state.group.scope)}</td>
+        <td>${state.group.members.size} member${state.group.members.size===1?"":"s"}</td>
+      </tr>`;
+    }
+    box.innerHTML = `
+      <div class="hdr"><h3>${header}</h3></div>
+      <table class="objs"><thead><tr><th>Name</th><th>Type</th><th>Detail</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      ${state.group ? '<p class="hint">Tip: double-click the group (or select it and press Enter) to open Properties and add members.</p>'
+                    : '<p class="hint">Tip: click <strong>New Group…</strong> in the toolbar to create the group here.</p>'}`;
+  } else if(node.startsWith("ou:")){
+    const ou = node.slice(3);
+    header = OU_LABEL[ou];
+    const here = USERS.filter(u=>u.ou===ou);
+    rows = here.map(u=>`<tr class="obj"><td><span class="nm">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.4" r="2.7" fill="#54606e"/><path d="M3 13c0-2.6 2.2-4 5-4s5 1.4 5 4z" fill="#54606e"/></svg>
+      ${esc(u.name)}</span></td><td>User</td><td>${u.lead?'<span style="color:var(--good)">Shift lead</span>':'Staff'}</td></tr>`).join("");
+    box.innerHTML = `<div class="hdr"><h3>${esc(header)}</h3></div>
+      <table class="objs"><thead><tr><th>Name</th><th>Type</th><th>Role</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  } else {
+    box.innerHTML = `<div class="hdr"><h3>nwlogix.local</h3></div>
+      <p class="hint">Select a container in the console tree to view its objects.</p>`;
+  }
+
+  // wire group row interaction
+  const grpRow = box.querySelector('tr[data-grp]');
+  if(grpRow){
+    grpRow.addEventListener('click', ()=>{ state.selectedGroup=true; el("btnProps").disabled=false; renderContents(); });
+    grpRow.addEventListener('dblclick', openProps);
+    grpRow.addEventListener('keydown', (e)=>{ if(e.key==="Enter"){ state.selectedGroup=true; el("btnProps").disabled=false; openProps(); }});
+  }
+  el("btnProps").disabled = !(state.group && state.selectedGroup);
+}
+function objRow(name,type,id,clickable){
+  return `<tr class="obj"><td><span class="nm">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2.4" fill="#9aa6b5"/><circle cx="11" cy="6.5" r="1.9" fill="#c2cbd6"/><path d="M2 12.5c0-2 1.6-3 4-3s4 1 4 3z" fill="#9aa6b5"/></svg>
+    ${esc(name)}</span></td><td>${esc(type)}</td><td>—</td></tr>`;
+}
+
+/* =========================================================================
+   TREE selection
+   ========================================================================= */
+function selectNode(node, domEl){
+  state.selectedNode = node;
+  state.selectedGroup = false;
+  document.querySelectorAll('.tree .node').forEach(n=>{n.classList.remove('sel');n.removeAttribute('aria-selected');n.tabIndex=-1;});
+  if(domEl){ domEl.classList.add('sel'); domEl.setAttribute('aria-selected','true'); domEl.tabIndex=0; }
+  renderContents();
+}
+document.querySelectorAll('.tree .node[data-node]').forEach(n=>{
+  n.addEventListener('click', ()=> selectNode(n.dataset.node, n));
+  n.addEventListener('keydown', (e)=>{
+    if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectNode(n.dataset.node, n); }
+  });
+});
+
+/* =========================================================================
+   MODAL helpers
+   ========================================================================= */
+let lastFocus=null;
+function openModal(id){
+  lastFocus=document.activeElement;
+  el("scrim").classList.add("show");
+  document.querySelectorAll(".modal").forEach(m=>m.hidden=true);
+  const m=el(id); m.hidden=false;
+  const f=m.querySelector('input,button,[tabindex]'); if(f) f.focus();
+}
+function closeModal(){
+  el("scrim").classList.remove("show");
+  document.querySelectorAll(".modal").forEach(m=>m.hidden=true);
+  if(lastFocus && lastFocus.focus) lastFocus.focus();
+}
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click', closeModal));
+el("scrim").addEventListener('click',(e)=>{ if(e.target===el("scrim")) { /* keep picker open over props */ } });
+document.addEventListener('keydown',(e)=>{ if(e.key==="Escape" && el("scrim").classList.contains("show")) closeModal(); });
+
+/* =========================================================================
+   NEW GROUP
+   ========================================================================= */
+el("btnNewGroup").addEventListener('click', ()=>{
+  // reflect which container we're in
+  el("ngContainer").innerHTML = "Create in: <strong>"+esc(containerLabel(state.selectedNode))+"</strong>";
+  el("ngName").value="";
+  el("ngError").classList.remove("show");
+  document.querySelector('input[name=ngScope][value=Global]').checked=true;
+  document.querySelector('input[name=ngType][value=Security]').checked=true;
+  openModal("modalNewGroup");
+});
+el("ngOk").addEventListener('click', ()=>{
+  const name=el("ngName").value.trim();
+  const scope=(document.querySelector('input[name=ngScope]:checked')||{}).value;
+  const type=(document.querySelector('input[name=ngType]:checked')||{}).value;
+  const errBox=el("ngError");
+  if(!name){ errBox.textContent="Enter a group name to continue."; errBox.classList.add("show"); el("ngName").focus(); return; }
+  // create in currently selected container
+  let container = state.selectedNode==="users" ? "users" : state.selectedNode;
+  state.group = { name, scope, type, container, members:new Set() };
+  state.selectedNode = "users".indexOf(container)===0 ? "users" : container; // stay where created
+  // make sure tree reflects selection on Users if created there
+  closeModal();
+  // select group automatically
+  state.selectedGroup = (container==="users");
+  renderContents();
+  syncTasks();
+});
+
+/* =========================================================================
+   PROPERTIES + MEMBERS
+   ========================================================================= */
+function openProps(){
+  if(!state.group) return;
+  el("prName").textContent=state.group.name;
+  el("prScope").textContent=state.group.scope;
+  el("prType").textContent=state.group.type;
+  showTab("general");
+  renderMembers();
+  openModal("modalProps");
+}
+el("btnProps").addEventListener('click', openProps);
+
+function showTab(which){
+  const g=which==="general";
+  el("tabGeneral").classList.toggle("active",g); el("tabGeneral").setAttribute("aria-selected",g);
+  el("tabMembers").classList.toggle("active",!g); el("tabMembers").setAttribute("aria-selected",!g);
+  el("paneGeneral").hidden=!g; el("paneMembers").hidden=g;
+}
+el("tabGeneral").addEventListener('click',()=>showTab("general"));
+el("tabMembers").addEventListener('click',()=>showTab("members"));
+
+let selectedMemberId=null;
+function renderMembers(){
+  const box=el("memberBox");
+  const ids=[...state.group.members];
+  if(ids.length===0){ box.innerHTML='<div class="empty2">No members yet. Click “Add…” to choose users.</div>';
+    el("btnRemoveMember").disabled=true; return; }
+  box.innerHTML = ids.map(id=>{
+    const u=USERS.find(x=>x.id===id); if(!u) return "";
+    const sel = id===selectedMemberId ? " sel":"";
+    return `<div class="mrow${sel}" role="option" tabindex="0" data-id="${id}" aria-selected="${id===selectedMemberId}">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.4" r="2.7" fill="#54606e"/><path d="M3 13c0-2.6 2.2-4 5-4s5 1.4 5 4z" fill="#54606e"/></svg>
+      <span class="who">${esc(u.name)}<small>${esc(OU_LABEL[u.ou]||u.ou)}</small></span></div>`;
+  }).join("");
+  box.querySelectorAll('.mrow').forEach(r=>{
+    const pick=()=>{ selectedMemberId=r.dataset.id; el("btnRemoveMember").disabled=false; renderMembers(); };
+    r.addEventListener('click',pick);
+    r.addEventListener('keydown',e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();}});
+  });
+}
+el("btnRemoveMember").addEventListener('click', ()=>{
+  if(selectedMemberId){ state.group.members.delete(selectedMemberId); selectedMemberId=null;
+    el("btnRemoveMember").disabled=true; renderMembers(); renderContents(); syncTasks(); }
+});
+
+/* Member picker */
+const pickChecked=new Set();
+el("btnAddMembers").addEventListener('click', ()=>{
+  pickChecked.clear();
+  el("pickFilter").value="";
+  renderPicker("");
+  // open picker as overlay (props stays underneath)
+  document.querySelectorAll(".modal").forEach(m=>m.hidden=true);
+  el("modalPicker").hidden=false;
+  el("scrim").classList.add("show");
+  el("pickFilter").focus();
+});
+el("pickFilter").addEventListener('input', e=>renderPicker(e.target.value));
+function renderPicker(filter){
+  const f=filter.trim().toLowerCase();
+  const list=el("pickList");
+  const avail=USERS.filter(u=>!state.group.members.has(u.id))
+    .filter(u=> !f || u.name.toLowerCase().includes(f) || (OU_LABEL[u.ou]||u.ou).toLowerCase().includes(f));
+  if(avail.length===0){ list.innerHTML='<div class="empty2">No matching users.</div>'; return; }
+  list.innerHTML = avail.map(u=>`
+    <label class="pickrow">
+      <input type="checkbox" value="${u.id}" ${pickChecked.has(u.id)?"checked":""}>
+      <span class="who">${esc(u.name)}<small>${esc(OU_LABEL[u.ou]||u.ou)}</small></span>
+    </label>`).join("");
+  list.querySelectorAll('input[type=checkbox]').forEach(c=>{
+    c.addEventListener('change',()=>{ c.checked?pickChecked.add(c.value):pickChecked.delete(c.value); });
+  });
+}
+document.querySelectorAll('[data-close-picker]').forEach(b=>b.addEventListener('click', ()=>{
+  // return to properties
+  el("modalPicker").hidden=true; el("modalProps").hidden=false; showTab("members");
+}));
+el("pkOk").addEventListener('click', ()=>{
+  pickChecked.forEach(id=>state.group.members.add(id));
+  pickChecked.clear();
+  el("modalPicker").hidden=true; el("modalProps").hidden=false; showTab("members");
+  renderMembers(); renderContents(); syncTasks();
+});
+
+/* =========================================================================
+   TASKS + QUESTIONS scoring
+   ========================================================================= */
+function taskState(){
+  const g=state.group;
+  const created = !!g && g.name===CONFIG.targetGroupName && g.scope===CONFIG.targetScope
+                  && g.type===CONFIG.targetType && g.container===CONFIG.targetContainer;
+  const tasks=[];
+  tasks.push({ id:"t-create", label:"Create group “"+CONFIG.targetGroupName+"” in Users (Global · Security)",
+    detail: g ? hintForCreate(g) : "Not created yet", passed: created });
+  LEAD_IDS.forEach(id=>{
+    const u=USERS.find(x=>x.id===id);
+    tasks.push({ id:"t-mem-"+id, label:"Add "+u.name+" ("+(OU_LABEL[u.ou]||u.ou)+")",
+      detail:"", passed: !!g && g.members.has(id) });
+  });
+  return tasks;
+}
+function hintForCreate(g){
+  const problems=[];
+  if(g.name!==CONFIG.targetGroupName) problems.push("name should be “"+CONFIG.targetGroupName+"”");
+  if(g.container!==CONFIG.targetContainer) problems.push("must be in the Users container");
+  if(g.scope!==CONFIG.targetScope) problems.push("scope should be "+CONFIG.targetScope);
+  if(g.type!==CONFIG.targetType) problems.push("type should be "+CONFIG.targetType);
+  return problems.length? "Fix: "+problems.join("; ") : "Looks correct";
+}
+function renderTasks(){
+  const tasks=taskState();
+  const passed=tasks.filter(t=>t.passed).length;
+  el("taskCount").textContent=passed+" / "+tasks.length;
+  el("taskList").innerHTML = tasks.map(t=>`
+    <li>
+      <span class="mark ${t.passed?'done':'todo'}" aria-hidden="true">${t.passed?'✓':''}</span>
+      <span class="check-label">${esc(t.label)}
+        ${t.detail && !t.passed ? '<small>'+esc(t.detail)+'</small>':''}</span>
+    </li>`).join("");
+  return {passed, total:tasks.length, tasks};
+}
+
+function renderQuestions(){
+  const host=el("questionList");
+  host.innerHTML = QUESTIONS.map((q,qi)=>{
+    const chosen=state.answers[q.id];
+    const opts=q.options.map((o,oi)=>{
+      let cls="opt";
+      if(chosen!==null){
+        if(oi===q.answerIndex) cls+=" correct";
+        else if(oi===chosen) cls+=" wrong";
+        if(oi===chosen) cls+=" sel";
+      }
+      return `<button type="button" class="${cls}" data-q="${q.id}" data-o="${oi}" ${chosen!==null?'':''}>
+        <span class="bullet" aria-hidden="true"></span><span>${esc(o)}</span></button>`;
+    }).join("");
+    let feed="";
+    if(chosen!==null){
+      const ok=chosen===q.answerIndex;
+      feed=`<div class="qfeed ${ok?'ok':'no'}">${ok?'Correct. ':'Not quite. '}${esc(q.why)}</div>`;
+    }
+    return `<div class="q"><div class="prompt"><strong>Q${qi+1}.</strong> ${esc(q.prompt)}</div>
+      <div class="opts">${opts}</div>${feed}</div>`;
+  }).join("");
+  host.querySelectorAll('.opt').forEach(b=>{
+    b.addEventListener('click',()=>{
+      state.answers[b.dataset.q]=parseInt(b.dataset.o,10);
+      renderQuestions(); syncTasks();
+    });
+  });
+  const correct=QUESTIONS.filter(q=>state.answers[q.id]===q.answerIndex).length;
+  el("qCount").textContent=correct+" / "+QUESTIONS.length;
+  return {correct,total:QUESTIONS.length};
+}
+
+function syncTasks(){
+  const t=renderTasks();
+  const q=renderQuestions();
+  const earned=t.passed+q.correct, total=t.total+q.total;
+  el("scorePill").textContent="Score "+earned+" / "+total;
+  return {t,q,earned,total};
+}
+
+/* =========================================================================
+   RESET
+   ========================================================================= */
+el("btnReset").addEventListener('click', ()=>{
+  state=FRESH(); selectedMemberId=null;
+  // reselect Users node
+  document.querySelectorAll('.tree .node').forEach(n=>{n.classList.remove('sel');n.tabIndex=-1;n.removeAttribute('aria-selected');});
+  const usersNode=document.querySelector('.tree .node[data-node="users"]');
+  if(usersNode){ usersNode.classList.add('sel'); usersNode.tabIndex=0; usersNode.setAttribute('aria-selected','true'); }
+  el("btnProps").disabled=true;
+  renderContents(); syncTasks();
+  setStatus("", "");
+});
+
+/* =========================================================================
+   SCREENSHOT (dependency-free; serializes the lab DOM via SVG foreignObject)
+   No external library or network is used.
+   ========================================================================= */
+async function captureLab(){
+  const node=document.getElementById("lab-capture");
+  const rect=node.getBoundingClientRect();
+  const w=Math.max(1,Math.ceil(rect.width));
+  const h=Math.max(1,Math.ceil(rect.height));
+  const css=document.getElementById("lab-styles").textContent;
+  const clone=node.cloneNode(true);
+  clone.removeAttribute("id");
+  // serialize as XML (XHTML namespace) so it renders inside foreignObject
+  const xml=new XMLSerializer().serializeToString(clone);
+  const svg=
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+    '<foreignObject x="0" y="0" width="'+w+'" height="'+h+'">'+
+    '<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px;background:#eef1f5;padding:6px;">'+
+    '<style>'+css+'</style>'+xml+
+    '</div></foreignObject></svg>';
+  const url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  const img=new Image();
+  const loaded=new Promise((res,rej)=>{ img.onload=()=>res(); img.onerror=()=>rej(new Error("render")); });
+  img.src=url;
+  await loaded;
+  const scale=Math.min(2, (window.devicePixelRatio||1));
+  const canvas=document.createElement("canvas");
+  canvas.width=w*scale; canvas.height=h*scale;
+  const ctx=canvas.getContext("2d");
+  ctx.fillStyle="#eef1f5"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.scale(scale,scale);
+  ctx.drawImage(img,0,0,w,h);
+  return canvas.toDataURL("image/png");
+}
+
+/* =========================================================================
+   SUBMISSION
+   ========================================================================= */
+function setStatus(kind,msg){
+  const s=el("status");
+  s.className="status"+(kind?(" show "+kind):"");
+  s.innerHTML=msg;
+}
+function buildPayload(snapshot, screenshot){
+  const t=snapshot.t, q=snapshot.q;
+  return {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: el("hackerName").value.trim(),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: t.tasks.map(x=>({id:x.id,label:x.label,passed:x.passed})),
+    questions: QUESTIONS.map(x=>({
+      id:x.id, prompt:x.prompt,
+      answer: state.answers[x.id]===null? null : x.options[state.answers[x.id]],
+      correct: state.answers[x.id]===x.answerIndex })),
+    score: { earned: snapshot.earned, total: snapshot.total },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+}
+
+el("btnSubmit").addEventListener('click', async ()=>{
+  const name=el("hackerName").value.trim();
+  if(!name){ setStatus("err","Enter a hacker name before submitting."); el("hackerName").focus(); return; }
+  if(name.length>40){ setStatus("err","Hacker name is too long (40 characters max)."); return; }
+
+  const snapshot=syncTasks();
+  const btn=el("btnSubmit"); btn.disabled=true;
+  setStatus("busy","Capturing screenshot and submitting…");
+
+  let screenshot="";
+  try{ screenshot=await captureLab(); }
+  catch(e){ screenshot=""; /* proceed without image rather than blocking */ }
+
+  const payload=buildPayload(snapshot, screenshot);
+
+  if(CONFIG.APPS_SCRIPT_URL.includes("REPLACE_WITH")){
+    setStatus("info","Submission endpoint is not configured yet. Ask your instructor to set <code>APPS_SCRIPT_URL</code> "
+      +"and <code>submissionToken</code> in this file. Your score is "+snapshot.earned+" / "+snapshot.total+".");
+    btn.disabled=false; return;
+  }
+
+  try{
+    // simple request: no custom headers -> no CORS preflight
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body: JSON.stringify(payload) });
+    const out=await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission document</a>.' : '';
+      setStatus("ok","Submitted successfully. Score "+snapshot.earned+" / "+snapshot.total+"."+link);
+    } else {
+      setStatus("err","The server rejected the submission"+(out&&out.error?(": "+esc(out.error)):".")+" Please tell your instructor.");
+      btn.disabled=false;
+    }
+  } catch(err){
+    // Fallback: fire-and-forget (can't read response). Submission likely still recorded.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("info","Submission sent, but this browser blocked reading the confirmation. "
+        +"Please confirm receipt with your instructor. Score "+snapshot.earned+" / "+snapshot.total+".");
+    }catch(e2){
+      setStatus("err","Could not reach the submission server. Check your connection and try again.");
+      btn.disabled=false;
+    }
+  }
+});
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+renderContents();
+syncTasks();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV=null, NEXT={href:"splus-ad-user-provisioning.html",title:"Provision Active Directory User Accounts \u2014 Security+ Lab"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

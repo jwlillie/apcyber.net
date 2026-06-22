@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-filehistory-recovery",
+  "title": "Recover Prior File Versions with File History",
+  "version": "1.0.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.3 Protecting Devices"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "3.4"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Recover Prior File Versions with File History (SY0-701 3.4.8)</title>
+<!--
+  ============================================================================
+  CompTIA Security+ (SY0-701) Single-File Simulation Lab
+  Lab: Recover Prior File Versions with File History
+  Objectives: 3.4 / 3.4.8 Backups / 3.4.8.5 Recovery (and 3.4.8.4 Snapshots)
+
+  CLEAN-ROOM NOTICE
+  Built from the public SY0-701 objective and the documented behavior of the
+  Windows File History utility. Scenario, persona, organization, file names,
+  folder paths, version dates/times, task wording, and all question wording are
+  original to this file and are NOT copied from any third-party courseware.
+
+  © 2026 <REPLACE WITH AUTHOR / ORG NAME>.  All rights reserved.
+  Licensed for use within the author's CompTIA Security+ lab library.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Windows-style emulation palette (self-drawn; no captured product art) */
+    --accent:#0a6cf5;
+    --accent-press:#0a5fd0;
+    --restore:#107c10;
+    --restore-press:#0b5e0b;
+    --win-bg:#eef1f6;
+    --win-chrome:#f7f9fc;
+    --win-border:#d4d9e2;
+    --win-soft:#e7ebf2;
+    --ink:#1c2530;
+    --ink-soft:#5a6675;
+    --sel:#cfe3ff;
+    --sel-border:#7fb2ff;
+    /* Lab panel palette (the lab's own identity, kept quiet) */
+    --paper:#10151c;
+    --paper-2:#161d27;
+    --paper-line:#27313f;
+    --paper-ink:#e7edf5;
+    --paper-soft:#9fb0c4;
+    --ok:#39d98a;
+    --bad:#ff6b6b;
+    --warn:#ffcb5b;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--ui);
+    color:var(--paper-ink);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #1b2737 0%, transparent 60%),
+      linear-gradient(180deg,#0b0f15,#0e131b 60%,#0b0f15);
+    min-height:100vh;
+    padding:18px;
+    line-height:1.45;
+  }
+  .wrap{max-width:1180px;margin:0 auto;display:grid;gap:16px}
+  .lab-head{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:baseline;justify-content:space-between}
+  .lab-head h1{font-size:1.18rem;margin:0;letter-spacing:.2px}
+  .obj-tags{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font:600 11px/1 var(--mono);background:#13202f;border:1px solid #284a6b;color:#8fc0ff;
+       padding:5px 7px;border-radius:999px}
+  .scenario{background:var(--paper-2);border:1px solid var(--paper-line);border-radius:12px;padding:14px 16px}
+  .scenario h2{margin:0 0 6px;font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-soft)}
+  .scenario p{margin:.35em 0;color:#d6dfeb}
+
+  /* ---- workspace: simulated app (left) + lab panel (right) ---- */
+  #captureRoot{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+  @media (max-width:900px){#captureRoot{grid-template-columns:1fr}}
+
+  .stage{background:var(--win-bg);border:1px solid #0a0e14;border-radius:12px;
+         padding:14px;box-shadow:0 18px 40px rgba(0,0,0,.45);min-height:430px}
+
+  /* Generic emulated window chrome */
+  .win{background:var(--win-chrome);border:1px solid var(--win-border);border-radius:8px;
+       overflow:hidden;color:var(--ink);box-shadow:0 6px 18px rgba(20,30,50,.12)}
+  .win+.win{margin-top:14px}
+  .titlebar{display:flex;align-items:center;gap:8px;background:#fff;border-bottom:1px solid var(--win-border);
+            padding:7px 10px;font-size:.82rem;font-weight:600}
+  .titlebar .dots{margin-left:auto;display:flex;gap:7px}
+  .titlebar .dots i{width:11px;height:11px;border-radius:3px;background:#dfe4ec;display:inline-block}
+  .titlebar .dots i.close{background:#f0b4b4}
+
+  /* Settings window */
+  .settings{display:grid;grid-template-columns:150px 1fr}
+  .settings .nav{background:var(--win-soft);border-right:1px solid var(--win-border);padding:10px 8px}
+  .settings .nav button{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;
+       border:0;border-radius:6px;padding:8px 9px;font:inherit;font-size:.82rem;color:var(--ink);cursor:pointer}
+  .settings .nav button[aria-current="true"]{background:#dbe7ff;font-weight:600}
+  .settings .nav button:hover{background:#e3eaf6}
+  .settings .body{padding:14px 16px}
+  .settings .body h3{margin:.1em 0 .2em;font-size:1rem}
+  .settings .body .muted{color:var(--ink-soft);font-size:.82rem;margin:0 0 12px}
+  .card-link{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:#fff;
+       border:1px solid var(--win-border);border-radius:8px;padding:12px;cursor:pointer;font:inherit}
+  .card-link:hover{border-color:var(--accent);background:#f4f8ff}
+  .card-link .ic{flex:0 0 auto}
+  .card-link b{font-size:.9rem}
+  .card-link span{display:block;color:var(--ink-soft);font-size:.78rem}
+
+  /* File History window */
+  .fh-top{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--win-border);background:#fbfcff}
+  .fh-back{border:1px solid var(--win-border);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font:inherit;font-size:.8rem}
+  .fh-back:disabled{opacity:.45;cursor:not-allowed}
+  .crumbs{font-size:.82rem;color:var(--ink-soft)}
+  .crumbs b{color:var(--ink)}
+  .fh-version{margin-left:auto;text-align:right}
+  .fh-version .vlabel{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+  .fh-version .vtime{font-size:.86rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .fh-version .vmeta{font-size:.7rem;color:var(--ink-soft)}
+
+  .fh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;padding:14px;
+           min-height:210px;align-content:start;background:#fff}
+  .tile{display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid transparent;border-radius:8px;
+        padding:10px 6px;cursor:pointer;background:transparent;font:inherit}
+  .tile:hover{background:#f1f5fc}
+  .tile[aria-selected="true"]{background:var(--sel);border-color:var(--sel-border)}
+  .tile .name{font-size:.76rem;text-align:center;word-break:break-word;color:var(--ink)}
+  .tile .name small{display:block;color:var(--ink-soft);font-size:.68rem}
+  .tile:focus-visible,.fh-nav button:focus-visible,.fh-back:focus-visible,
+  .card-link:focus-visible,.settings .nav button:focus-visible,.fh-restore:focus-visible{
+    outline:3px solid #ffcf66;outline-offset:2px}
+
+  .fh-foot{display:flex;align-items:center;justify-content:center;gap:18px;padding:12px;
+           border-top:1px solid var(--win-border);background:#fbfcff}
+  .fh-nav{display:flex;gap:10px}
+  .fh-nav button{width:38px;height:38px;border-radius:50%;border:1px solid var(--win-border);background:#fff;
+       cursor:pointer;font-size:1rem;display:grid;place-items:center}
+  .fh-nav button:hover{border-color:var(--accent);color:var(--accent)}
+  .fh-nav button:disabled{opacity:.4;cursor:not-allowed}
+  .fh-restore{width:58px;height:58px;border-radius:50%;border:0;background:var(--restore);color:#fff;
+       cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 12px rgba(16,124,16,.35)}
+  .fh-restore:hover{background:var(--restore-press)}
+  .fh-restore:disabled{background:#9bbf9b;cursor:not-allowed;box-shadow:none}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);opacity:0;
+         background:#0f1620;border:1px solid #2a3a4d;color:#eaf1fa;padding:11px 15px;border-radius:10px;
+         max-width:520px;font-size:.86rem;box-shadow:0 10px 30px rgba(0,0,0,.5);transition:.25s;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.bad{border-color:#5a2230}
+  .toast.ok{border-color:#1f5a3a}
+
+  /* ---- lab panel ---- */
+  .panel{background:var(--paper-2);border:1px solid var(--paper-line);border-radius:12px;overflow:hidden}
+  .panel section{padding:14px 15px;border-bottom:1px solid var(--paper-line)}
+  .panel section:last-child{border-bottom:0}
+  .panel h2{margin:0 0 10px;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-soft)}
+  .checklist{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+  .checklist li{display:flex;gap:10px;align-items:flex-start;font-size:.86rem}
+  .box{flex:0 0 auto;width:18px;height:18px;border-radius:5px;border:1.5px solid #3a4759;margin-top:1px;
+       display:grid;place-items:center;font-size:.72rem;color:#0b0f15}
+  .done .box{background:var(--ok);border-color:var(--ok)}
+  .done .label{color:var(--paper-soft);text-decoration:line-through}
+  .checklist .sub{display:block;color:var(--paper-soft);font:600 12px/1.3 var(--mono);margin-top:2px}
+
+  .q{display:grid;gap:7px;margin:0 0 14px}
+  .q:last-child{margin-bottom:0}
+  .q p{margin:0;font-size:.86rem}
+  .q .opts{display:grid;gap:6px}
+  .opt{display:flex;gap:9px;align-items:flex-start;background:#101822;border:1px solid var(--paper-line);
+       border-radius:8px;padding:8px 10px;cursor:pointer;font-size:.83rem}
+  .opt:hover{border-color:#33506e}
+  .opt input{margin-top:2px}
+  .opt.correct{border-color:var(--ok);background:#10241a}
+  .opt.wrong{border-color:var(--bad);background:#26141a}
+  .qfeed{font:600 12px/1.3 var(--mono);min-height:1em}
+  .qfeed.ok{color:var(--ok)} .qfeed.bad{color:var(--bad)}
+
+  .submitbar{display:grid;gap:10px}
+  .field label{display:block;font-size:.74rem;color:var(--paper-soft);margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em}
+  .field input{width:100%;background:#0c121a;border:1px solid var(--paper-line);border-radius:8px;color:var(--paper-ink);
+       padding:10px 12px;font:inherit}
+  .field input:focus-visible{outline:3px solid #ffcf66;outline-offset:1px;border-color:#33506e}
+  .field .hint{font-size:.72rem;color:var(--paper-soft);margin:4px 0 0}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap}
+  button.primary{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:11px 16px;font:600 .9rem var(--ui);
+       cursor:pointer;flex:1 1 auto}
+  button.primary:hover{background:var(--accent-press)}
+  button.primary:disabled{background:#2c3a4d;color:#7a8aa0;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--paper-soft);border:1px solid var(--paper-line);border-radius:9px;
+       padding:11px 14px;font:600 .85rem var(--ui);cursor:pointer}
+  button.ghost:hover{color:var(--paper-ink);border-color:#33506e}
+  button.primary:focus-visible,button.ghost:focus-visible{outline:3px solid #ffcf66;outline-offset:2px}
+
+  .score{font:700 .95rem var(--mono);color:var(--paper-ink)}
+  .score small{font-weight:500;color:var(--paper-soft)}
+  .status{font-size:.84rem;min-height:1.2em}
+  .status a{color:#8fc0ff}
+  .status.ok{color:var(--ok)} .status.bad{color:var(--bad)} .status.work{color:var(--warn)}
+
+  .footnote{font-size:.72rem;color:var(--paper-soft);text-align:center;padding:4px 0 2px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <div class="lab-head">
+    <h1>Lab&nbsp;— Recover Prior File Versions with File History</h1>
+    <div class="obj-tags" aria-label="Mapped SY0-701 objectives">
+      <span class="tag">SY0-701 · 3.4</span>
+      <span class="tag">3.4.8 Backups</span>
+      <span class="tag">3.4.8.5 Recovery</span>
+    </div>
+  </div>
+
+  <div class="scenario">
+    <h2>Scenario</h2>
+    <p>Marisol Vega is the catalog photographer at <b>Tidewater Outfitters</b>, an outdoor-gear
+       retailer preparing its spring release. While retouching the product set she flattened and
+       lost layers on a hero shot, and she also re-cropped a homepage banner that the marketing
+       lead now wants returned to its earlier mid-morning version.</p>
+    <p>The workstation runs a continuous File History backup of the <b>Pictures</b> library. Marisol
+       has asked you to roll two files back to the exact earlier versions she needs before the print
+       deadline.</p>
+  </div>
+
+  <div id="captureRoot">
+
+    <!-- =================== SIMULATED ENVIRONMENT =================== -->
+    <div class="stage" aria-label="Simulated Windows environment">
+
+      <!-- Settings window -->
+      <div class="win" id="settingsWin">
+        <div class="titlebar">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="#0a6cf5" d="M8 5.2a2.8 2.8 0 100 5.6 2.8 2.8 0 000-5.6zm6.4 3.6.0-1.6-1.7-.4a4.9 4.9 0 00-.5-1.2l.9-1.5-1.1-1.1-1.5.9a4.9 4.9 0 00-1.2-.5L9.6 1.6H8l-.4 1.7a4.9 4.9 0 00-1.2.5l-1.5-.9-1.1 1.1.9 1.5a4.9 4.9 0 00-.5 1.2L2.4 7.2v1.6l1.7.4c.1.4.3.8.5 1.2l-.9 1.5 1.1 1.1 1.5-.9c.4.2.8.4 1.2.5l.4 1.7h1.6l.4-1.7c.4-.1.8-.3 1.2-.5l1.5.9 1.1-1.1-.9-1.5c.2-.4.4-.8.5-1.2z"/></svg>
+          Settings
+          <span class="dots"><i></i><i></i><i class="close"></i></span>
+        </div>
+        <div class="settings">
+          <div class="nav">
+            <button type="button">Home</button>
+            <button type="button" aria-current="true" id="navBackup">System &amp; backup</button>
+            <button type="button">Network</button>
+            <button type="button">Accounts</button>
+          </div>
+          <div class="body">
+            <h3>Backup</h3>
+            <p class="muted">Keep copies of your libraries so you can get files back if they're lost,
+               damaged, or changed.</p>
+            <button type="button" class="card-link" id="openFileHistory">
+              <span class="ic" aria-hidden="true">
+                <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="#0a6cf5" stroke-width="2"/><path d="M17 9v8l5 3" fill="none" stroke="#0a6cf5" stroke-width="2" stroke-linecap="round"/><path d="M6 10a13 13 0 00-1 4l3-1-2-3z" fill="#0a6cf5"/></svg>
+              </span>
+              <span>
+                <b>Restore files from a current backup</b>
+                <span>Open File History to browse and recover earlier versions of your files.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- File History window (hidden until opened) -->
+      <div class="win" id="fhWin" hidden>
+        <div class="titlebar">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="#107c10" stroke-width="1.6"/><path d="M8 4v4l3 2" fill="none" stroke="#107c10" stroke-width="1.6" stroke-linecap="round"/></svg>
+          File History — Home
+          <span class="dots"><i></i><i></i><i class="close"></i></span>
+        </div>
+
+        <div class="fh-top">
+          <button type="button" class="fh-back" id="fhBack" disabled aria-label="Go up one folder">↑ Up</button>
+          <div class="crumbs" id="fhCrumbs" aria-live="polite"><b>Pictures</b></div>
+          <div class="fh-version" aria-live="polite">
+            <div class="vlabel">Backup taken</div>
+            <div class="vtime" id="fhTime">—</div>
+            <div class="vmeta" id="fhMeta"></div>
+          </div>
+        </div>
+
+        <div class="fh-grid" id="fhGrid" role="listbox" aria-label="Items in this backup"></div>
+
+        <div class="fh-foot">
+          <div class="fh-nav">
+            <button type="button" id="fhOlder" aria-label="Show an older backup">‹</button>
+            <button type="button" id="fhNewer" aria-label="Show a newer backup">›</button>
+          </div>
+          <button type="button" class="fh-restore" id="fhRestore" disabled aria-label="Restore the selected item from this backup">
+            <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 4a9 9 0 11-8.5 6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M4 4v5h5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== LAB PANEL =================== -->
+    <div class="panel">
+      <section>
+        <h2>Your tasks</h2>
+        <ul class="checklist" id="taskList"></ul>
+      </section>
+
+      <section>
+        <h2>Knowledge check</h2>
+        <div id="questions"></div>
+      </section>
+
+      <section>
+        <div class="submitbar">
+          <div class="score" id="scoreBox">Score: <span id="scoreNum">0 / 6</span> <small>(3 tasks + 3 questions)</small></div>
+          <div class="field">
+            <label for="hacker">Hacker name (pseudonym — no real names)</label>
+            <input id="hacker" autocomplete="off" maxlength="40" placeholder="e.g. tide_runner_07" />
+            <p class="hint">Use a handle, not your real name. This keeps personal info out of the system.</p>
+          </div>
+          <div class="btnrow">
+            <button type="button" class="primary" id="submitBtn" disabled>Submit completed lab</button>
+            <button type="button" class="ghost" id="resetBtn">Reset lab</button>
+          </div>
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <p class="footnote">© 2026 &lt;REPLACE WITH AUTHOR / ORG NAME&gt; — original clean-room Security+ lab · SY0-701 obj. 3.4.8</p>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!--
+  ============================================================================
+  SCREENSHOT NOTE
+  This file is dependency-free. Instead of bundling a ~150KB third-party
+  rasterizer, the screenshot is produced natively from the simulated DOM using
+  an SVG <foreignObject> snapshot, which works precisely because the lab renders
+  itself with inline CSS and self-drawn SVG icons (no external images/fonts).
+  If you prefer the html2canvas approach from the build spec, paste its minified
+  source where marked in script block (1) and the engine will use it instead.
+  ============================================================================
+-->
+<script>
+/* === (1) OPTIONAL: paste minified html2canvas source here to override capture ===
+   window.html2canvas = ... ;
+   ================================================================================ */
+</script>
+
+<script>
+/* ============================================================================
+   (2) ENGINE + CONFIG + ANSWER KEY
+   ============================================================================ */
+"use strict";
+
+/* ---- LAB CONFIG (only this block + the answer key change per lab) ---- */
+const CONFIG = {
+  assignmentId:   "splus-filehistory-recovery",
+  title:          "Recover Prior File Versions with File History",
+  objectives:     ["3.4"],
+  passThreshold:  "all tasks + all questions correct",
+  // Shared across the whole library — paste the deployed Apps Script /exec URL:
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  // Rotate per cohort; must match the Script Property on the server:
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  maxNameLen: 40
+};
+
+/* ---- ANSWER KEY (original values — not copied from any courseware) ---- */
+// Continuous-backup snapshots, oldest -> newest. Last entry is the live "current" view.
+const SNAPSHOTS = [
+  { id:"s1", ts:"Tue, Apr 9, 2024  8:05 AM" },
+  { id:"s2", ts:"Tue, Apr 9, 2024  9:40 AM" },   // target version for the hero shot
+  { id:"s3", ts:"Tue, Apr 9, 2024  11:20 AM" },
+  { id:"s4", ts:"Tue, Apr 9, 2024  2:05 PM" },    // target version for the banner
+  { id:"s5", ts:"Wed, Apr 10, 2024  8:00 AM" }    // most recent backup ("current")
+];
+
+// Pictures library contents. target = the snapshot ts the learner must restore from.
+const TREE = {
+  "": [ // root of the Pictures library
+    { name:"SpringCatalog", type:"folder" },
+    { name:"WebBanners",    type:"folder" }
+  ],
+  "SpringCatalog": [
+    { name:"kayak_hero_v2.png", type:"image", target:"Tue, Apr 9, 2024  9:40 AM" },
+    { name:"tent_flatlay.png",  type:"image" },
+    { name:"catalog_notes.txt", type:"text" }
+  ],
+  "WebBanners": [
+    { name:"spring_sale_banner.png", type:"image", target:"Tue, Apr 9, 2024  2:05 PM" },
+    { name:"newsletter_header.png",  type:"image" },
+    { name:"promo_strip.png",        type:"image" }
+  ]
+};
+
+const TASKS = [
+  { id:"open_fh",        label:"Open File History from the Settings app",
+    sub:"Settings → System & backup → Restore files from a current backup" },
+  { id:"restore_kayak",  label:"Restore the kayak hero shot to its earlier version",
+    sub:"Pictures\\SpringCatalog\\kayak_hero_v2.png — Tue, Apr 9, 2024 9:40 AM" },
+  { id:"restore_banner", label:"Restore the storefront banner to its earlier version",
+    sub:"Pictures\\WebBanners\\spring_sale_banner.png — Tue, Apr 9, 2024 2:05 PM" }
+];
+
+const QUESTIONS = [
+  { id:"q1",
+    prompt:"Which built-in Windows feature keeps continuous, timestamped copies of files in your libraries so you can return a file to an earlier point in time?",
+    options:["File History","Disk Cleanup","Task Scheduler","Device Manager"],
+    answer:"File History" },
+  { id:"q2",
+    prompt:"On the SY0-701 objectives, bringing data back to a known-good earlier state from a backup set falls under which backup concept?",
+    options:["Replication","Journaling","Recovery","Load balancing"],
+    answer:"Recovery" },
+  { id:"q3",
+    prompt:"File History stores several point-in-time copies of the same file. A backup design that preserves multiple roll-back-able point-in-time copies is best described as keeping ___.",
+    options:["a single mirror only","snapshots (point-in-time versions)","write-once audit logs","encrypted archives only"],
+    answer:"snapshots (point-in-time versions)" }
+];
+
+/* ---- in-memory state (no localStorage / sessionStorage) ---- */
+const state = {
+  fhOpen:false,
+  snapIdx:SNAPSHOTS.length-1, // start at the current backup
+  cwd:"",                     // "" = library root
+  selected:null,              // selected item name in current folder
+  tasks:Object.fromEntries(TASKS.map(t=>[t.id,false])),
+  answers:Object.fromEntries(QUESTIONS.map(q=>[q.id,null]))
+};
+
+const $ = s=>document.querySelector(s);
+const toastEl = $("#toast");
+let toastTimer=null;
+function toast(msg,kind){
+  toastEl.textContent=msg;
+  toastEl.className="toast show "+(kind||"");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toastEl.className="toast",3200);
+}
+
+/* ---------- render: tasks ---------- */
+function renderTasks(){
+  const ul=$("#taskList"); ul.innerHTML="";
+  TASKS.forEach(t=>{
+    const done=state.tasks[t.id];
+    const li=document.createElement("li");
+    li.className=done?"done":"";
+    li.innerHTML=`<span class="box" aria-hidden="true">${done?"✓":""}</span>
+      <span><span class="label">${t.label}</span>
+      <span class="sub">${t.sub}</span></span>`;
+    li.setAttribute("aria-label",`${t.label} — ${done?"complete":"not complete"}`);
+    ul.appendChild(li);
+  });
+  refreshScore();
+}
+
+/* ---------- render: questions ---------- */
+function renderQuestions(){
+  const box=$("#questions"); box.innerHTML="";
+  QUESTIONS.forEach(q=>{
+    const wrap=document.createElement("div"); wrap.className="q";
+    const fid="fb_"+q.id;
+    wrap.innerHTML=`<p id="lbl_${q.id}">${q.prompt}</p>`;
+    const opts=document.createElement("div"); opts.className="opts"; opts.setAttribute("role","radiogroup");
+    opts.setAttribute("aria-labelledby","lbl_"+q.id);
+    q.options.forEach((o,i)=>{
+      const id=q.id+"_"+i;
+      const lab=document.createElement("label"); lab.className="opt"; lab.htmlFor=id;
+      lab.innerHTML=`<input type="radio" name="${q.id}" id="${id}" value="${o.replace(/"/g,'&quot;')}">
+        <span>${o}</span>`;
+      lab.querySelector("input").addEventListener("change",()=>checkAnswer(q,o,opts,fid));
+      opts.appendChild(lab);
+    });
+    wrap.appendChild(opts);
+    const fb=document.createElement("div"); fb.className="qfeed"; fb.id=fid; wrap.appendChild(fb);
+    box.appendChild(wrap);
+  });
+}
+function checkAnswer(q,chosen,optsEl,fid){
+  state.answers[q.id]=chosen;
+  const correct = chosen===q.answer;
+  [...optsEl.querySelectorAll(".opt")].forEach(l=>{
+    l.classList.remove("correct","wrong");
+    const val=l.querySelector("input").value;
+    if(val===chosen) l.classList.add(correct?"correct":"wrong");
+  });
+  const fb=document.getElementById(fid);
+  fb.className="qfeed "+(correct?"ok":"bad");
+  fb.textContent = correct ? "Correct." : "Not quite — review the backup/recovery concept and try again.";
+  refreshScore();
+}
+
+/* ---------- File History rendering ---------- */
+function currentSnap(){ return SNAPSHOTS[state.snapIdx]; }
+function isCurrent(){ return state.snapIdx===SNAPSHOTS.length-1; }
+
+function renderFH(){
+  $("#fhTime").textContent = currentSnap().ts;
+  $("#fhMeta").textContent = isCurrent()
+    ? "Most recent backup of "+(state.cwd||"Pictures")
+    : "Earlier backup — "+(SNAPSHOTS.length-1-state.snapIdx)+" version(s) back";
+  // crumbs
+  $("#fhCrumbs").innerHTML = state.cwd
+    ? `Pictures &rsaquo; <b>${state.cwd}</b>`
+    : `<b>Pictures</b>`;
+  $("#fhBack").disabled = !state.cwd;
+  $("#fhOlder").disabled = state.snapIdx<=0;
+  $("#fhNewer").disabled = state.snapIdx>=SNAPSHOTS.length-1;
+
+  const grid=$("#fhGrid"); grid.innerHTML="";
+  (TREE[state.cwd]||[]).forEach(item=>{
+    const tile=document.createElement("button");
+    tile.type="button"; tile.className="tile"; tile.setAttribute("role","option");
+    tile.setAttribute("aria-selected", state.selected===item.name ? "true":"false");
+    tile.innerHTML = iconFor(item.type) +
+      `<span class="name">${item.name}${item.type==="folder"?"<small>Folder</small>":""}</span>`;
+    tile.addEventListener("click",()=>{
+      if(item.type==="folder"){ state.cwd=item.name; state.selected=null; renderFH(); }
+      else { state.selected = state.selected===item.name?null:item.name; renderFH(); }
+    });
+    tile.addEventListener("dblclick",()=>{ if(item.type==="folder"){state.cwd=item.name;state.selected=null;renderFH();} });
+    grid.appendChild(tile);
+  });
+  $("#fhRestore").disabled = !state.selected;
+}
+function iconFor(type){
+  if(type==="folder")
+    return `<svg width="46" height="38" viewBox="0 0 46 38" aria-hidden="true"><path d="M3 8a3 3 0 013-3h11l4 4h16a3 3 0 013 3v18a3 3 0 01-3 3H6a3 3 0 01-3-3z" fill="#ffce6b" stroke="#e6a93a"/><path d="M3 13h37v15a3 3 0 01-3 3H6a3 3 0 01-3-3z" fill="#ffdd8f"/></svg>`;
+  if(type==="text")
+    return `<svg width="36" height="42" viewBox="0 0 36 42" aria-hidden="true"><path d="M5 3h18l9 9v27a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" fill="#fff" stroke="#9aa6b6"/><path d="M23 3v9h9" fill="#e7ecf3" stroke="#9aa6b6"/><g stroke="#9aa6b6"><path d="M9 18h16M9 23h16M9 28h11"/></g></svg>`;
+  // image
+  return `<svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="6" width="34" height="28" rx="3" fill="#e7f0ff" stroke="#7fa8e6"/><circle cx="13" cy="15" r="3.4" fill="#ffd166"/><path d="M6 31l9-10 7 7 5-5 7 8z" fill="#6fae6f"/></svg>`;
+}
+
+/* ---------- restore action ---------- */
+function doRestore(){
+  if(!state.selected) return;
+  const items=TREE[state.cwd]||[];
+  const item=items.find(i=>i.name===state.selected);
+  if(!item || item.type==="folder") return;
+
+  if(!item.target){
+    toast(`“${item.name}” isn't one of the files this task needs — check the task list.`,"bad");
+    return;
+  }
+  if(currentSnap().ts!==item.target){
+    toast(`That's not the version you need for “${item.name}”. Use ‹ to step back to ${item.target}, then Restore.`,"bad");
+    return;
+  }
+  // correct file + correct backup version
+  toast(`Restored “${item.name}” from ${item.target}.`,"ok");
+  if(item.name==="kayak_hero_v2.png")      state.tasks.restore_kayak=true;
+  if(item.name==="spring_sale_banner.png") state.tasks.restore_banner=true;
+  renderTasks();
+}
+
+/* ---------- scoring ---------- */
+function computeScore(){
+  const taskPts=Object.values(state.tasks).filter(Boolean).length;
+  const qPts=QUESTIONS.filter(q=>state.answers[q.id]===q.answer).length;
+  return { earned:taskPts+qPts, total:TASKS.length+QUESTIONS.length, taskPts, qPts };
+}
+function refreshScore(){
+  const s=computeScore();
+  $("#scoreNum").textContent=`${s.earned} / ${s.total}`;
+  $("#submitBtn").disabled = !(s.earned===s.total && $("#hacker").value.trim().length>0);
+}
+
+/* ---------- screenshot (dependency-free SVG foreignObject) ---------- */
+async function captureLab(){
+  const node=$("#captureRoot");
+  // If a real html2canvas was pasted in, prefer it.
+  if(typeof window.html2canvas==="function"){
+    try{
+      const c=await window.html2canvas(node,{backgroundColor:"#0e131b",scale:1});
+      return c.toDataURL("image/png");
+    }catch(e){ /* fall through to native */ }
+  }
+  try{
+    const rect=node.getBoundingClientRect();
+    const w=Math.ceil(rect.width), h=Math.ceil(node.scrollHeight);
+    const clone=node.cloneNode(true);
+    clone.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+    const css=[...document.querySelectorAll("style")].map(s=>s.textContent).join("\n");
+    const xml=new XMLSerializer().serializeToString(clone);
+    const svg=
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+      `<foreignObject x="0" y="0" width="${w}" height="${h}">`+
+      `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:#0e131b;padding:0;">`+
+      `<style>${css}</style>${xml}</div></foreignObject></svg>`;
+    const blob=new Blob([svg],{type:"image/svg+xml;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    const data=await new Promise((resolve,reject)=>{
+      img.onload=()=>{
+        const dpr=Math.min(window.devicePixelRatio||1,2);
+        const cv=document.createElement("canvas");
+        cv.width=w*dpr; cv.height=h*dpr;
+        const ctx=cv.getContext("2d");
+        ctx.scale(dpr,dpr);
+        ctx.fillStyle="#0e131b"; ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img,0,0);
+        URL.revokeObjectURL(url);
+        resolve(cv.toDataURL("image/png"));
+      };
+      img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("svg render failed"));};
+      img.src=url;
+    });
+    return data;
+  }catch(e){
+    // 1x1 transparent fallback so submission can still proceed
+    return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  }
+}
+
+/* ---------- build payload (generalized tasks/questions shape) ---------- */
+function buildPayload(screenshot){
+  const s=computeScore();
+  return {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: $("#hacker").value.trim().slice(0,CONFIG.maxNameLen),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t=>({id:t.id,label:t.label,passed:!!state.tasks[t.id]})),
+    questions: QUESTIONS.map(q=>({
+      id:q.id, prompt:q.prompt,
+      answer:state.answers[q.id], correct:state.answers[q.id]===q.answer
+    })),
+    score:{ earned:s.earned, total:s.total },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+}
+
+/* ---------- submit (simple request → no CORS preflight) ---------- */
+async function submitLab(){
+  const status=$("#status");
+  const btn=$("#submitBtn");
+  btn.disabled=true;
+  status.className="status work"; status.textContent="Capturing your work and submitting…";
+
+  let payload;
+  try{ payload=buildPayload(await captureLab()); }
+  catch(e){ status.className="status bad"; status.textContent="Couldn't prepare the submission. Reset and try again."; btn.disabled=false; return; }
+
+  if(!/^https?:\/\//.test(CONFIG.APPS_SCRIPT_URL)){
+    status.className="status bad";
+    status.textContent="This lab hasn't been wired up yet — the instructor needs to paste the Apps Script URL into APPS_SCRIPT_URL.";
+    btn.disabled=false; return;
+  }
+
+  try{
+    // NOTE: no headers → body defaults to text/plain → no preflight. Apps Script
+    // returns Access-Control-Allow-Origin:*, so we can read the JSON response.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+    const out=await res.json();
+    if(out && out.success){
+      status.className="status ok";
+      status.innerHTML = out.docUrl
+        ? `Submitted. Your instructor received it — <a href="${out.docUrl}" target="_blank" rel="noopener">view your submission record</a>.`
+        : "Submitted. Your instructor received it.";
+    }else{
+      status.className="status bad";
+      status.textContent = (out && out.error) ? ("Submission rejected: "+out.error) : "Submission was not accepted. Check with your instructor.";
+      btn.disabled=false;
+    }
+  }catch(e){
+    // Locked-down context: fall back to fire-and-forget (can't read docUrl).
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+      status.className="status ok";
+      status.textContent="Submission sent. The response couldn't be read here — confirm receipt with your instructor.";
+    }catch(e2){
+      status.className="status bad";
+      status.textContent="Couldn't reach the submission server. Check your connection and try again.";
+      btn.disabled=false;
+    }
+  }
+}
+
+/* ---------- reset ---------- */
+function resetLab(){
+  state.fhOpen=false; state.snapIdx=SNAPSHOTS.length-1; state.cwd=""; state.selected=null;
+  TASKS.forEach(t=>state.tasks[t.id]=false);
+  QUESTIONS.forEach(q=>state.answers[q.id]=null);
+  $("#fhWin").hidden=true; $("#settingsWin").hidden=false;
+  $("#hacker").value="";
+  $("#status").textContent=""; $("#status").className="status";
+  renderTasks(); renderQuestions(); renderFH();
+  toast("Lab reset.","");
+}
+
+/* ---------- wiring ---------- */
+$("#openFileHistory").addEventListener("click",()=>{
+  state.fhOpen=true; state.tasks.open_fh=true;
+  $("#fhWin").hidden=false;
+  renderFH(); renderTasks();
+  $("#fhWin").scrollIntoView({behavior:(matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"),block:"nearest"});
+  toast("File History is open. Browse to the file and step back to the version you need.","");
+});
+$("#fhBack").addEventListener("click",()=>{ state.cwd=""; state.selected=null; renderFH(); });
+$("#fhOlder").addEventListener("click",()=>{ if(state.snapIdx>0){state.snapIdx--; renderFH();} });
+$("#fhNewer").addEventListener("click",()=>{ if(state.snapIdx<SNAPSHOTS.length-1){state.snapIdx++; renderFH();} });
+$("#fhRestore").addEventListener("click",doRestore);
+$("#submitBtn").addEventListener("click",submitLab);
+$("#resetBtn").addEventListener("click",resetLab);
+$("#hacker").addEventListener("input",refreshScore);
+
+/* ---------- init ---------- */
+renderTasks(); renderQuestions(); renderFH();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-filehistory-backup.html",title:"Configure File History Backups"}, NEXT={href:"splus-dc-system-state-backup.html",title:"Sentinel Backup Console \u2014 DC System State Lab"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.3 Protecting Devices";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>

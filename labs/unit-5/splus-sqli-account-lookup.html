@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Lab Simulation
+  Title:        SQL Injection — Account Lookup Tampering
+  Assignment:   splus-sqli-account-lookup
+  Objectives:   2.3 (Web-based vulnerabilities: SQLi, 2.3.3.1)
+                2.4 (Application attacks: Injection, 2.4.4.1)
+
+  Copyright (c) 2026 <YOUR NAME / YOUR ORGANIZATION>. All rights reserved.
+  Licensed for use within <YOUR COURSE / COHORT>. Original clean-room work
+  authored from the public CompTIA SY0-701 exam objectives. Not derived from,
+  and not affiliated with, any third-party courseware vendor. Scenario,
+  persona, domain names, account values, and question wording are original.
+
+  Single self-contained file: open directly in any modern browser.
+  No build step, no external runtime dependencies, no CDN.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>SQLi Lab — Account Lookup Tampering</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-sqli-account-lookup",
+  "title": "SQLi Lab — Account Lookup Tampering",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 5,
+    "unitTitle": "Securing Applications and Data",
+    "topics": [
+      "5.1 Application and Data Vulnerabilities and Attacks"
+    ],
+    "skills": [
+      "1.B"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.3",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<style id="labStyles">
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c2330; --ink:#e6edf3;
+    --muted:#9aa7b4; --line:#2a3340; --accent:#3fb6ff; --accent-ink:#04243a;
+    --ok:#3ad29f; --ok-dim:#173b30; --warn:#ffb454; --bad:#ff6b6b;
+    --bad-dim:#3a1d1d; --code:#0a0e14; --inject:#ffd166; --radius:10px;
+    --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans);
+    line-height:1.5; padding:18px;
+  }
+  .wrap{max-width:1080px; margin:0 auto}
+  h1{font-size:1.35rem; margin:0 0 2px}
+  h2{font-size:1.02rem; margin:0 0 10px; letter-spacing:.2px}
+  .sub{color:var(--muted); font-size:.9rem; margin:0 0 16px}
+  .obj{display:inline-block; font-size:.72rem; font-family:var(--mono);
+    background:var(--panel-2); border:1px solid var(--line); color:var(--accent);
+    padding:2px 8px; border-radius:999px; margin-right:6px}
+  .grid{display:grid; grid-template-columns:1.35fr 1fr; gap:16px}
+  @media (max-width:860px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px}
+  .card + .card{margin-top:16px}
+
+  /* Simulated banking console */
+  .console-bar{display:flex; align-items:center; gap:10px; margin:-16px -16px 14px;
+    padding:10px 16px; background:linear-gradient(180deg,#10243a,#0c1a2b);
+    border-bottom:1px solid var(--line); border-radius:var(--radius) var(--radius) 0 0}
+  .dot{width:10px;height:10px;border-radius:50%;background:#2f6b9c}
+  .console-bar .addr{font-family:var(--mono); font-size:.82rem; color:#bcd6ee;
+    background:#08131f; border:1px solid #1c3a55; padding:3px 10px; border-radius:6px}
+  .console-bar .lock{color:var(--ok); font-size:.8rem}
+  label{display:block; font-size:.82rem; color:var(--muted); margin:0 0 4px}
+  input[type=text]{width:100%; font-family:var(--mono); font-size:.95rem;
+    background:var(--code); color:var(--ink); border:1px solid var(--line);
+    border-radius:8px; padding:10px 12px}
+  input[type=text]:focus-visible, button:focus-visible, .radio:focus-within{
+    outline:3px solid var(--accent); outline-offset:2px}
+  .row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
+  .row .field{flex:1 1 220px}
+  button{font-family:var(--sans); font-size:.9rem; cursor:pointer;
+    border-radius:8px; border:1px solid var(--line); padding:10px 16px;
+    background:var(--panel-2); color:var(--ink)}
+  button.primary{background:var(--accent); color:var(--accent-ink);
+    border-color:var(--accent); font-weight:600}
+  button.ghost{background:transparent}
+  button:hover{filter:brightness(1.08)}
+  .hint{font-size:.78rem; color:var(--muted); margin-top:8px}
+
+  .sql{font-family:var(--mono); font-size:.82rem; background:var(--code);
+    border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    margin-top:12px; overflow-x:auto; white-space:pre-wrap; word-break:break-word}
+  .sql .kw{color:#7aa2ff}
+  .sql .inj{color:var(--accent-ink); background:var(--inject); border-radius:3px;
+    padding:0 3px; font-weight:700}
+  .result{margin-top:12px}
+  table{width:100%; border-collapse:collapse; font-size:.82rem; margin-top:6px}
+  th,td{text-align:left; padding:7px 9px; border-bottom:1px solid var(--line)}
+  th{color:var(--muted); font-weight:600; font-size:.74rem; text-transform:uppercase;
+    letter-spacing:.4px}
+  td{font-family:var(--mono)}
+  .rowcount{font-size:.82rem; margin-top:8px}
+  .rowcount.danger{color:var(--bad)}
+  .rowcount.normal{color:var(--ok)}
+  .empty{color:var(--muted); font-size:.85rem; padding:10px 0}
+
+  /* Task checklist */
+  ul.tasks{list-style:none; margin:0; padding:0}
+  ul.tasks li{display:flex; gap:10px; align-items:flex-start; padding:8px 0;
+    border-bottom:1px dashed var(--line)}
+  ul.tasks li:last-child{border-bottom:0}
+  .check{flex:0 0 22px; width:22px; height:22px; border-radius:50%;
+    border:2px solid var(--line); display:grid; place-items:center;
+    font-size:.8rem; color:transparent; margin-top:1px}
+  li.done .check{background:var(--ok-dim); border-color:var(--ok); color:var(--ok)}
+  .task-txt{font-size:.88rem}
+  li.done .task-txt{color:var(--muted)}
+
+  /* Questions */
+  .q{padding:12px 0; border-bottom:1px dashed var(--line)}
+  .q:last-child{border-bottom:0}
+  .q .prompt{font-size:.9rem; margin-bottom:8px}
+  .q .prompt b{color:var(--accent)}
+  .radio{display:flex; gap:9px; align-items:flex-start; padding:6px 8px;
+    border:1px solid var(--line); border-radius:8px; margin-bottom:6px; cursor:pointer}
+  .radio input{margin-top:3px}
+  .radio span{font-size:.85rem}
+  .q.correct .radio.sel{border-color:var(--ok); background:var(--ok-dim)}
+  .q.incorrect .radio.sel{border-color:var(--bad); background:var(--bad-dim)}
+  .qfeedback{font-size:.8rem; margin-top:4px; min-height:1em}
+  .q.correct .qfeedback{color:var(--ok)}
+  .q.incorrect .qfeedback{color:var(--bad)}
+
+  /* Score + submit */
+  .score{font-family:var(--mono); font-size:.95rem}
+  .score b{color:var(--accent)}
+  .submit-bar{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;
+    margin-top:16px; padding-top:16px; border-top:1px solid var(--line)}
+  .submit-bar .field{flex:1 1 240px}
+  #status{font-size:.85rem; margin-top:10px; min-height:1.2em}
+  #status.ok{color:var(--ok)} #status.err{color:var(--bad)} #status.busy{color:var(--warn)}
+  #status a{color:var(--accent)}
+  .pill{font-size:.72rem; font-family:var(--mono); padding:2px 8px; border-radius:999px;
+    border:1px solid var(--line); color:var(--muted)}
+  .pill.live{color:var(--ok); border-color:var(--ok)}
+  .whoami{font-size:.8rem; color:var(--muted); margin-bottom:10px}
+  .whoami b{color:var(--ink)}
+  footer{color:var(--muted); font-size:.74rem; margin-top:22px; text-align:center}
+  @media (prefers-reduced-motion: no-preference){
+    .check, .radio, button{transition:all .15s ease}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header>
+    <h1>SQL Injection — Account Lookup Tampering</h1>
+    <p class="sub">Hands-on simulation · CompTIA Security+ SY0-701
+      <span class="obj">2.3 Web-based vulnerabilities</span>
+      <span class="obj">2.4 Application attacks</span>
+    </p>
+  </header>
+
+  <!-- ====================== CAPTURED LAB AREA ====================== -->
+  <main id="captureArea">
+    <p class="whoami">Submission by: <b id="whoLabel">(enter a handle below)</b></p>
+
+    <div class="grid">
+
+      <!-- LEFT: simulated banking console -->
+      <section class="card" aria-labelledby="simHead">
+        <div class="console-bar" aria-hidden="true">
+          <span class="dot"></span>
+          <span class="addr">https://teller.pinebrooksavingsonline.example/lookup</span>
+          <span class="lock">&#128274; TLS</span>
+        </div>
+        <h2 id="simHead">Pinebrook Savings — Teller Account Lookup</h2>
+        <p class="hint">Internal tool. The lookup field is concatenated straight into a
+          SQL query (the flaw you are assessing). Authorized sandbox only.</p>
+
+        <div class="row" role="group" aria-label="Account lookup">
+          <div class="field">
+            <label for="acct">Account number</label>
+            <input type="text" id="acct" autocomplete="off" spellcheck="false"
+                   placeholder="e.g. 47821" aria-describedby="acctHint">
+          </div>
+          <button type="button" id="runBtn" class="primary">Look up account</button>
+        </div>
+        <p class="hint" id="acctHint">Tip: a normal lookup uses just your account number.
+          To test the flaw, try appending a condition that is always true.</p>
+
+        <div class="sql" id="sqlView" aria-live="polite">
+          <span class="kw">SELECT</span> account_no, holder, balance, status
+<span class="kw">FROM</span> accounts <span class="kw">WHERE</span> account_no = <span id="sqlInput">…</span>;
+        </div>
+
+        <div class="result" id="result" aria-live="polite">
+          <div class="empty">No query run yet.</div>
+        </div>
+      </section>
+
+      <!-- RIGHT: tasks, questions, score -->
+      <aside>
+        <section class="card" aria-labelledby="taskHead">
+          <h2 id="taskHead">Lab tasks <span class="pill" id="taskPill">0 / 3</span></h2>
+          <ul class="tasks" id="taskList">
+            <li data-task="handle"><span class="check" aria-hidden="true">&#10003;</span>
+              <span class="task-txt">Choose a hacker handle (pseudonym, no real name).</span></li>
+            <li data-task="legit"><span class="check" aria-hidden="true">&#10003;</span>
+              <span class="task-txt">Run a legitimate lookup with account <b>47821</b> and confirm it returns a single record.</span></li>
+            <li data-task="inject"><span class="check" aria-hidden="true">&#10003;</span>
+              <span class="task-txt">Tamper with the input so the query returns <b>every</b> account (the injection).</span></li>
+          </ul>
+        </section>
+
+        <section class="card" aria-labelledby="qHead">
+          <h2 id="qHead">Questions <span class="pill" id="qPill">0 / 3</span></h2>
+          <div id="questions"></div>
+        </section>
+
+        <section class="card" aria-labelledby="scoreHead">
+          <h2 id="scoreHead">Progress</h2>
+          <p class="score">Score: <b id="scoreNow">0</b> / <span id="scoreTot">6</span></p>
+          <p class="hint" id="passNote">Pass requires all 3 tasks and all 3 questions correct.</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+  <!-- ==================== END CAPTURED LAB AREA ==================== -->
+
+  <!-- Submission bar (outside capture so the button is not in the screenshot) -->
+  <section class="card">
+    <div class="submit-bar">
+      <div class="field">
+        <label for="handle">Hacker name (pseudonym)</label>
+        <input type="text" id="handle" autocomplete="off" maxlength="40"
+               placeholder="e.g. nightshade_07" aria-describedby="handleHint">
+      </div>
+      <button type="button" id="submitBtn" class="primary">Submit completed lab</button>
+      <button type="button" id="resetBtn" class="ghost">Reset lab</button>
+    </div>
+    <p class="hint" id="handleHint">No real names. This handle is the only identifier sent.</p>
+    <p id="status" role="status" aria-live="assertive"></p>
+  </section>
+
+  <footer>
+    Original clean-room simulation authored from CompTIA SY0-701 objectives.
+    &copy; 2026 &lt;your name&gt;. For formative practice — answer keys are client-side
+    and self-reported unless re-scored server-side.
+  </footer>
+</div>
+
+<script>
+/* ============================================================================
+   LAB ENGINE  (CONFIG + ANSWER KEY + logic + native screenshot + submit)
+   ----------------------------------------------------------------------------
+   NOTE ON SCREENSHOTS: The build prompt specifies inlining html2canvas. That
+   library is ~150KB of minified code that cannot be reproduced reliably from
+   memory, and this build environment has no network access to fetch it. So
+   this lab uses a dependency-free native capture (SVG <foreignObject> ->
+   <canvas> -> PNG) that screenshots the same simulated DOM. It keeps the file
+   truly self-contained (the stated goal) with no CDN. If you prefer the exact
+   html2canvas path, paste its official minified source where marked below and
+   swap captureScreenshot() to call html2canvas(el).then(c=>c.toDataURL()).
+   ========================================================================== */
+
+/* ---- vvvv  (optional) paste official minified html2canvas here  vvvv ---- */
+/* ---- ^^^^  leave empty to use the native capture below          ^^^^ ---- */
+
+const CONFIG = {
+  assignmentId : "splus-sqli-account-lookup",
+  title        : "SQL Injection — Account Lookup Tampering",
+  objectives   : ["2.3", "2.4"],
+  legitAccount : "47821",
+  maxNameLen   : 40,
+  // ---- shared across the whole lab library ----
+  APPS_SCRIPT_URL : "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken : "REPLACE_WITH_COHORT_TOKEN"
+};
+
+// Simulated accounts table (original fictitious data).
+const DB = [
+  { account_no:"47821", holder:"R. Castellano",   balance:"$4,120.55",  status:"active"  },
+  { account_no:"10044", holder:"M. Okonkwo",      balance:"$87,902.10", status:"active"  },
+  { account_no:"63219", holder:"T. Halvorsen",    balance:"$512.00",    status:"frozen"  },
+  { account_no:"55870", holder:"A. Beaumont",     balance:"$29,455.73", status:"active"  },
+  { account_no:"90001", holder:"(service/system)",balance:"$\u2014",    status:"service" }
+];
+
+// ANSWER KEY (client-side; see footer + INSTRUCTOR_SETUP for server re-scoring)
+const QUESTIONS = [
+  {
+    id:"q1",
+    prompt:"When you query only your own account number, how many rows does the database return?",
+    options:["0 rows","1 row","3 rows","Every row in the table"],
+    answerIndex:1
+  },
+  {
+    id:"q2",
+    prompt:"Why does appending an OR condition like <b>0 OR 1=1</b> cause every account to be returned?",
+    options:[
+      "It deletes the WHERE clause from the query",
+      "The added condition is always true, so the WHERE clause matches every row",
+      "It crashes the database, which then dumps its contents",
+      "It guesses each account's password in turn"
+    ],
+    answerIndex:1
+  },
+  {
+    id:"q3",
+    prompt:"Which control most directly prevents this class of attack?",
+    options:[
+      "Requiring longer account numbers",
+      "Forcing HTTPS/TLS on the page",
+      "Parameterized (prepared) statements that separate code from data",
+      "Stronger user passwords"
+    ],
+    answerIndex:2
+  }
+];
+
+const state = {
+  tasks: { handle:false, legit:false, inject:false },
+  answers: {},                       // qid -> chosen index
+  lastQuery: null
+};
+const TOTAL = 3 + QUESTIONS.length;
+
+/* ---------------------- DOM refs ---------------------- */
+const $ = sel => document.querySelector(sel);
+const acct      = $("#acct");
+const runBtn    = $("#runBtn");
+const sqlInput  = $("#sqlInput");
+const resultEl  = $("#result");
+const taskList  = $("#taskList");
+const taskPill  = $("#taskPill");
+const qWrap     = $("#questions");
+const qPill     = $("#qPill");
+const scoreNow  = $("#scoreNow");
+const handleIn  = $("#handle");
+const whoLabel  = $("#whoLabel");
+const statusEl  = $("#status");
+
+$("#scoreTot").textContent = TOTAL;
+
+/* ---------------------- SQL simulation ---------------------- */
+// Detect an OR-tautology appended to the input (1=1, 7=7, 'x'='x', x=x, true...).
+function isAlwaysTrue(raw){
+  const m = raw.match(/\bor\b\s+(.+)$/i);
+  if(!m) return false;
+  let expr = m[1].trim().replace(/--.*$/,"").replace(/;.*$/,"").trim();
+  if(/^true$/i.test(expr)) return true;
+  let n = expr.match(/^(\d+)\s*=\s*(\d+)$/);            // 1=1
+  if(n) return n[1] === n[2];
+  let q = expr.match(/^'([^']*)'\s*=\s*'([^']*)'$/);    // 'x'='x'
+  if(q) return q[1] === q[2];
+  let w = expr.match(/^(\w+)\s*=\s*(\w+)$/);            // x=x
+  if(w) return w[1].toLowerCase() === w[2].toLowerCase();
+  return false;
+}
+
+function runQuery(raw){
+  const input = raw.trim();
+  if(isAlwaysTrue(input)) return { rows: DB.slice(), injected:true };
+  if(/^\d+$/.test(input)) return { rows: DB.filter(a => a.account_no === input), injected:false };
+  const lead = input.match(/^(\d+)/);                  // number then a false/garbage tail
+  if(lead) return { rows: DB.filter(a => a.account_no === lead[1]), injected:false };
+  return { rows: [], injected:false };
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+}
+
+function render(raw, res){
+  const safe = escapeHtml(raw);
+  sqlInput.innerHTML = raw ? '<span class="inj">' + safe + '</span>' : "\u2026";
+
+  if(res.rows.length === 0){
+    resultEl.innerHTML = '<div class="empty">No account found for that input.</div>';
+    return;
+  }
+  let html = "<table><thead><tr><th>Account</th><th>Holder</th><th>Balance</th><th>Status</th></tr></thead><tbody>";
+  res.rows.forEach(r => {
+    html += "<tr><td>"+escapeHtml(r.account_no)+"</td><td>"+escapeHtml(r.holder)+
+            "</td><td>"+escapeHtml(r.balance)+"</td><td>"+escapeHtml(r.status)+"</td></tr>";
+  });
+  html += "</tbody></table>";
+  const cls = res.injected ? "danger" : "normal";
+  const msg = res.injected
+      ? res.rows.length + " rows returned \u2014 the WHERE clause matched every record. Injection successful."
+      : res.rows.length + " row" + (res.rows.length===1?"":"s") + " returned.";
+  resultEl.innerHTML = html + '<div class="rowcount '+cls+'">'+msg+'</div>';
+}
+
+runBtn.addEventListener("click", () => {
+  const raw = acct.value;
+  const res = runQuery(raw);
+  state.lastQuery = { raw: raw.trim(), res };
+  render(raw, res);
+
+  if(raw.trim() === CONFIG.legitAccount && res.rows.length === 1) state.tasks.legit = true;
+  if(res.injected && res.rows.length > 1) state.tasks.inject = true;
+  refresh();
+});
+acct.addEventListener("keydown", e => { if(e.key === "Enter") runBtn.click(); });
+
+/* ---------------------- Questions ---------------------- */
+function buildQuestions(){
+  qWrap.innerHTML = "";
+  QUESTIONS.forEach(q => {
+    const block = document.createElement("div");
+    block.className = "q";
+    block.id = "block_" + q.id;
+    let inner = '<div class="prompt"><b>'+ (QUESTIONS.indexOf(q)+1) +'.</b> '+ q.prompt +'</div>';
+    q.options.forEach((opt, i) => {
+      const rid = q.id + "_" + i;
+      inner += '<label class="radio" for="'+rid+'">'+
+               '<input type="radio" name="'+q.id+'" id="'+rid+'" value="'+i+'">'+
+               '<span>'+ escapeHtml(opt) +'</span></label>';
+    });
+    inner += '<div class="qfeedback" aria-live="polite"></div>';
+    block.innerHTML = inner;
+    qWrap.appendChild(block);
+  });
+  qWrap.querySelectorAll('input[type=radio]').forEach(r => {
+    r.addEventListener("change", e => {
+      const [qid] = e.target.name.split("|");
+      state.answers[e.target.name] = parseInt(e.target.value,10);
+      checkQuestion(e.target.name);
+      refresh();
+    });
+  });
+}
+
+function checkQuestion(qid){
+  const q = QUESTIONS.find(x => x.id === qid);
+  const block = $("#block_" + qid);
+  const chosen = state.answers[qid];
+  block.querySelectorAll(".radio").forEach(r => r.classList.remove("sel"));
+  if(chosen == null) return;
+  const labels = block.querySelectorAll(".radio");
+  if(labels[chosen]) labels[chosen].classList.add("sel");
+  const fb = block.querySelector(".qfeedback");
+  if(chosen === q.answerIndex){
+    block.classList.add("correct"); block.classList.remove("incorrect");
+    fb.textContent = "Correct.";
+  } else {
+    block.classList.add("incorrect"); block.classList.remove("correct");
+    fb.textContent = "Not quite \u2014 reconsider why the tampered query behaves as it does.";
+  }
+}
+
+function questionCorrect(qid){
+  const q = QUESTIONS.find(x => x.id === qid);
+  return state.answers[qid] === q.answerIndex;
+}
+
+/* ---------------------- Score / UI refresh ---------------------- */
+function refresh(){
+  state.tasks.handle = handleIn.value.trim().length > 0;
+
+  taskList.querySelectorAll("li").forEach(li => {
+    li.classList.toggle("done", !!state.tasks[li.dataset.task]);
+  });
+  const tDone = Object.values(state.tasks).filter(Boolean).length;
+  taskPill.textContent = tDone + " / 3";
+
+  const qDone = QUESTIONS.filter(q => questionCorrect(q.id)).length;
+  qPill.textContent = qDone + " / " + QUESTIONS.length;
+
+  scoreNow.textContent = tDone + qDone;
+
+  const h = handleIn.value.trim();
+  whoLabel.textContent = h ? h : "(enter a handle below)";
+}
+handleIn.addEventListener("input", refresh);
+
+/* ---------------------- Native screenshot (no dependencies) ---------------------- */
+function captureScreenshot(node){
+  return new Promise(resolve => {
+    try {
+      const rect = node.getBoundingClientRect();
+      const w = Math.max(1, Math.ceil(rect.width));
+      const h = Math.max(1, Math.ceil(rect.height));
+      const clone = node.cloneNode(true);
+      clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+
+      // sync live form values into the clone so they appear in the capture
+      const live  = node.querySelectorAll("input, textarea, select");
+      const cl    = clone.querySelectorAll("input, textarea, select");
+      live.forEach((el, i) => {
+        const c = cl[i]; if(!c) return;
+        if(el.type === "radio" || el.type === "checkbox"){
+          if(el.checked) c.setAttribute("checked",""); else c.removeAttribute("checked");
+        } else { c.setAttribute("value", el.value || ""); }
+      });
+
+      const css = document.getElementById("labStyles").textContent;
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+        '<foreignObject width="100%" height="100%">'+
+        '<div xmlns="http://www.w3.org/1999/xhtml" style="background:#0d1117;padding:18px;">'+
+        '<style>'+css+'</style>'+ xml +
+        '</div></foreignObject></svg>';
+
+      const scale = Math.min(2, window.devicePixelRatio || 1);
+      const blob  = new Blob([svg], { type:"image/svg+xml;charset=utf-8" });
+      const url   = URL.createObjectURL(blob);
+      const img   = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width  = w * scale;
+          canvas.height = h * scale;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#0d1117";
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.scale(scale, scale);
+          ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(url);
+          resolve(canvas.toDataURL("image/png"));
+        } catch(e){ URL.revokeObjectURL(url); resolve(fallbackShot()); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(fallbackShot()); };
+      img.src = url;
+    } catch(e){ resolve(fallbackShot()); }
+  });
+}
+
+// If a browser refuses to rasterize foreignObject (e.g. some Safari builds),
+// produce a guaranteed text-summary PNG so submission still carries evidence.
+function fallbackShot(){
+  const c = document.createElement("canvas");
+  c.width = 760; c.height = 240;
+  const x = c.getContext("2d");
+  x.fillStyle = "#0d1117"; x.fillRect(0,0,c.width,c.height);
+  x.fillStyle = "#3fb6ff"; x.font = "bold 20px sans-serif";
+  x.fillText("SQLi Lab \u2014 submission summary", 24, 40);
+  x.fillStyle = "#e6edf3"; x.font = "15px monospace";
+  const s = computeScore();
+  const lines = [
+    "Handle:    " + (handleIn.value.trim() || "(none)"),
+    "Assignment:" + CONFIG.assignmentId,
+    "Tasks:     " + Object.values(state.tasks).filter(Boolean).length + " / 3",
+    "Questions: " + QUESTIONS.filter(q => questionCorrect(q.id)).length + " / " + QUESTIONS.length,
+    "Score:     " + s.earned + " / " + s.total,
+    "Time:      " + new Date().toISOString()
+  ];
+  lines.forEach((l, i) => x.fillText(l, 24, 80 + i*26));
+  return c.toDataURL("image/png");
+}
+
+/* ---------------------- Payload + submit ---------------------- */
+function computeScore(){
+  const tDone = Object.values(state.tasks).filter(Boolean).length;
+  const qDone = QUESTIONS.filter(q => questionCorrect(q.id)).length;
+  return { earned: tDone + qDone, total: TOTAL };
+}
+
+function buildPayload(screenshot){
+  const taskLabels = {
+    handle: "Chose a pseudonymous hacker handle",
+    legit : "Ran a legitimate lookup for account " + CONFIG.legitAccount + " (1 record)",
+    inject: "Injected an always-true condition to dump all accounts"
+  };
+  return {
+    assignmentId   : CONFIG.assignmentId,
+    hackerName     : handleIn.value.trim().slice(0, CONFIG.maxNameLen),
+    clientTimestamp: new Date().toISOString(),
+    objectives     : CONFIG.objectives,
+    tasks: Object.keys(state.tasks).map(id => ({
+      id, label: taskLabels[id], passed: !!state.tasks[id]
+    })),
+    questions: QUESTIONS.map(q => ({
+      id: q.id,
+      prompt: q.prompt.replace(/<[^>]+>/g,""),
+      answer: state.answers[q.id] != null ? q.options[state.answers[q.id]] : null,
+      correct: questionCorrect(q.id)
+    })),
+    score          : computeScore(),
+    screenshot     : screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+}
+
+function setStatus(msg, kind){ statusEl.textContent = msg; statusEl.className = kind || ""; }
+
+$("#submitBtn").addEventListener("click", async () => {
+  refresh();
+  const handle = handleIn.value.trim();
+  if(!handle){ setStatus("Enter a hacker handle before submitting.", "err"); handleIn.focus(); return; }
+
+  const s = computeScore();
+  if(s.earned < s.total){
+    setStatus("Not finished yet \u2014 complete all tasks and answer all questions correctly first (" + s.earned + "/" + s.total + ").", "err");
+    return;
+  }
+
+  setStatus("Capturing screenshot and submitting\u2026", "busy");
+  const shot = await captureScreenshot(document.getElementById("captureArea"));
+  const payload = buildPayload(shot);
+
+  if(/REPLACE_WITH/.test(CONFIG.APPS_SCRIPT_URL)){
+    setStatus("Lab not yet wired to a Drive endpoint: set APPS_SCRIPT_URL in the file. (Your work is complete \u2014 " + s.earned + "/" + s.total + ".)", "err");
+    return;
+  }
+
+  // SIMPLE request: no custom headers, text/plain body -> no CORS preflight.
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    const out = await res.json();
+    if(out && out.success){
+      const link = out.docUrl
+        ? ' View receipt: <a href="'+out.docUrl+'" target="_blank" rel="noopener">your submission doc</a>.'
+        : "";
+      setStatus("Submitted successfully." + link, "ok");
+    } else {
+      setStatus("Server rejected the submission" + (out && out.error ? (": " + out.error) : ".") + " Contact your instructor.", "err");
+    }
+  } catch(err){
+    // Locked-down context: fire-and-forget (cannot read docUrl).
+    try {
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("Submission sent, but the response could not be read. Confirm receipt with your instructor.", "ok");
+    } catch(e2){
+      setStatus("Could not reach the submission server. Check your connection or notify your instructor.", "err");
+    }
+  }
+});
+
+/* ---------------------- Reset ---------------------- */
+$("#resetBtn").addEventListener("click", () => {
+  state.tasks = { handle:false, legit:false, inject:false };
+  state.answers = {}; state.lastQuery = null;
+  acct.value = ""; handleIn.value = "";
+  sqlInput.textContent = "\u2026";
+  resultEl.innerHTML = '<div class="empty">No query run yet.</div>';
+  buildQuestions();
+  setStatus("", "");
+  refresh();
+  acct.focus();
+});
+
+/* ---------------------- Init ---------------------- */
+buildQuestions();
+refresh();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV=null, NEXT={href:"splus-ntfs-disable-inheritance.html",title:"Lab \u2014 Restrict a Folder with NTFS Permissions & Disable Inheritance"}, CRUMB="All Labs \u203a Unit 5 \u2014 Securing Applications and Data \u203a 5.1 Application and Data Vulnerabilities and Attacks";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:2147483600;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:7px 14px;box-sizing:border-box;height:36px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;color:#13242b;background:rgba(247,250,250,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-bottom:1px solid #cfdad9;box-shadow:0 1px 6px rgba(11,107,112,.10)";
+  var home=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","⌂ AP Cyber");
+  home.href="../../index.html";home.id="apcyber-mainsite-link";bar.appendChild(home);
+  var sep0=mk("span","color:#cfdad9;flex:0 0 auto","·");bar.appendChild(sep0);
+  var all=mk("a","color:#0b6b70;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto","← All Labs");
+  all.href="../index.html";bar.appendChild(all);
+  var crumb=mk("span","color:#5b6b72;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#aeb9bd;white-space:nowrap;font-weight:400;flex:0 0 auto",label);}
+    var a=mk("a","color:#0b6b70;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"‹ Prev"));bar.appendChild(navbtn(NEXT,"Next ›"));
+  function place(){
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    document.body.style.paddingTop=(cur+36)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+})();</script>
+</body>
+</html>
