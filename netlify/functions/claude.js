@@ -1,10 +1,38 @@
 // netlify/functions/claude.js
 // Secure proxy for all Claude API calls.
 // The API key lives in Netlify environment variables — never exposed to the browser.
+//
+// Hardening (v25): reject browser calls coming from OTHER websites via an
+// Origin/Referer allowlist. NOTE: requests with no Origin/Referer (same-origin
+// browser calls, or scripted/curl callers) still pass through, so this does NOT
+// stop a determined scripted attacker. The real backstop against runaway spend
+// is a hard usage cap set on the ANTHROPIC_API_KEY in the Anthropic console.
+
+const ALLOWED_HOSTS = ["apcyber.net", "www.apcyber.net", "localhost", "127.0.0.1"];
+
+function hostAllowed(host) {
+  if (host.endsWith(".netlify.app")) return true; // Netlify deploy previews
+  return ALLOWED_HOSTS.some((h) => host === h || host.endsWith("." + h));
+}
+
+function originAllowed(event) {
+  const h = event.headers || {};
+  const ref = h.origin || h.referer || h.Origin || h.Referer || "";
+  if (!ref) return true; // no Origin/Referer present — same-origin or non-browser
+  try {
+    return hostAllowed(new URL(ref).hostname);
+  } catch {
+    return false;
+  }
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  if (!originAllowed(event)) {
+    return { statusCode: 403, body: JSON.stringify({ error: "Forbidden origin" }) };
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
