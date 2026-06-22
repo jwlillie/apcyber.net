@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetProbe CTF — Networking Challenges</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=IBM+Plex+Sans:wght@300;400;600;700&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020c08;--bg2:#040f0b;--panel:#071510;--panel2:#0a1c14;
+  --border:#0f3020;--border2:#1a5035;
+  --green:#00ff88;--green2:#00cc66;--green3:#80ffcc;
+  --amber:#ffaa00;--red:#ff3344;--blue:#33aaff;--cyan:#00ddcc;
+  --purple:#cc66ff;--white:#d0ffe8;
+  --muted:#1a5030;--dim:#0a2818;--text:#80c8a0;
+  --font-m:'Share Tech Mono',monospace;
+  --font-d:'IBM Plex Sans',sans-serif;
+  --font-b:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-m);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 20% 50%,rgba(0,255,136,0.04) 0%,transparent 55%),
+             radial-gradient(ellipse at 80% 20%,rgba(0,221,204,0.03) 0%,transparent 50%);
+  pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,0.012) 2px,rgba(0,255,136,0.012) 4px);
+  pointer-events:none;z-index:9999;}
+.wrapper{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 80px;}
+header{padding:44px 0 36px;border-bottom:1px solid var(--border2);}
+.hdr-tag{font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:12px;}
+h1{font-family:var(--font-d);font-size:clamp(32px,6vw,68px);font-weight:700;line-height:1;color:var(--green3);letter-spacing:-1px;}
+h1 span{color:var(--amber);}
+.hdr-sub{font-size:11px;letter-spacing:3px;color:var(--muted);margin-top:12px;text-transform:uppercase;}
+.scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:28px 0;border:1px solid var(--border2);}
+.sp{background:var(--panel);padding:12px 18px;border-right:1px solid var(--border2);}
+.sp:last-child{border-right:none;}
+.sp-l{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.sp-v{font-family:var(--font-d);font-size:26px;font-weight:700;color:var(--amber);}
+.filter-bar{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap;align-items:center;}
+.fl{font-size:10px;letter-spacing:2px;color:var(--muted);margin-right:8px;}
+.fbtn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-m);font-size:11px;letter-spacing:2px;padding:4px 14px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.fbtn:hover,.fbtn.active{border-color:var(--green2);color:var(--green3);background:rgba(0,255,136,0.05);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;}
+.card{background:var(--panel);border:1px solid var(--border2);cursor:pointer;position:relative;overflow:hidden;animation:ri .4s ease both;transition:border-color .18s,transform .18s,box-shadow .18s;}
+.card:hover{border-color:var(--green2);transform:translateY(-2px);box-shadow:0 6px 28px rgba(0,255,136,0.07);}
+.card.solved{border-color:var(--cyan);}
+@keyframes ri{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.card:nth-child(1){animation-delay:.04s}.card:nth-child(2){animation-delay:.08s}.card:nth-child(3){animation-delay:.12s}.card:nth-child(4){animation-delay:.16s}.card:nth-child(5){animation-delay:.20s}.card:nth-child(6){animation-delay:.24s}.card:nth-child(7){animation-delay:.28s}.card:nth-child(8){animation-delay:.32s}.card:nth-child(9){animation-delay:.36s}.card:nth-child(10){animation-delay:.40s}
+.card-stripe{height:3px;background:linear-gradient(90deg,var(--green),var(--cyan),transparent);}
+.card-body{padding:14px 16px 16px;}
+.card-meta{display:flex;justify-content:space-between;margin-bottom:8px;align-items:center;}
+.card-id{font-size:10px;letter-spacing:2px;color:var(--dim);}
+.card-pts{font-size:12px;color:var(--amber);border:1px solid rgba(255,170,0,.22);padding:2px 8px;background:rgba(255,170,0,.04);}
+.card-title{font-family:var(--font-d);font-size:18px;font-weight:600;color:var(--green3);margin-bottom:8px;}
+.card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.tag{font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid;text-transform:uppercase;}
+.te{color:var(--green);border-color:rgba(0,255,136,.3);}
+.tm{color:var(--amber);border-color:rgba(255,170,0,.3);}
+.th{color:var(--red);border-color:rgba(255,51,68,.3);}
+.ti{color:var(--blue);border-color:rgba(51,170,255,.3);}
+.card-desc{font-family:var(--font-b);font-size:12.5px;color:var(--muted);line-height:1.6;font-weight:300;margin-bottom:14px;}
+.card-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px;}
+.solves{font-size:10px;color:var(--dim);}
+.btn-view{background:transparent;border:1px solid var(--green2);color:var(--green3);font-size:10px;letter-spacing:2px;padding:4px 10px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.btn-view:hover{background:rgba(0,255,136,0.1);}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(2,12,8,.95);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--green2);max-width:740px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(0,255,136,0.08);animation:mi .2s ease;}
+@keyframes mi{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:scale(1);}}
+.modal-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.modal-title{font-family:var(--font-d);font-size:19px;font-weight:700;color:var(--green3);}
+.modal-close{background:none;border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-family:var(--font-m);font-size:11px;padding:3px 9px;flex-shrink:0;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+.modal-body{padding:20px 22px;}
+.mlabel{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;margin-top:18px;}
+.mlabel.first{margin-top:0;}
+.mdesc{font-family:var(--font-b);font-size:13px;color:var(--text);line-height:1.75;font-weight:300;}
+.hint{background:rgba(255,170,0,0.04);border:1px solid rgba(255,170,0,0.18);padding:9px 13px;font-size:11.5px;color:var(--amber);line-height:1.6;margin-bottom:7px;}
+.hint::before{content:'// HINT ' attr(data-n) ': ';color:var(--dim);}
+.flag-box{background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.25);padding:11px 15px;font-size:13px;color:var(--green);letter-spacing:1px;}
+.sol{background:rgba(0,255,136,0.02);border:1px solid rgba(0,255,136,0.1);padding:12px 15px;font-size:11.5px;color:var(--text);line-height:1.7;}
+/* WIDGET */
+.widget{background:#010806;border:1px solid var(--border2);margin-top:12px;padding:14px;}
+.wlabel{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.wlabel.mt{margin-top:12px;}
+.wcode{background:#000;border:1px solid var(--border);padding:10px 12px;font-size:11px;color:var(--text);line-height:1.7;overflow-x:auto;white-space:pre;}
+.winput{width:100%;background:#010806;border:1px solid var(--border);color:var(--green3);font-family:var(--font-m);font-size:12px;padding:7px 10px;outline:none;transition:border-color .15s;}
+.winput:focus{border-color:var(--green2);}
+.wrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.wbtn{background:rgba(0,255,136,0.06);border:1px solid var(--green2);color:var(--green3);font-family:var(--font-m);font-size:11px;letter-spacing:1px;padding:6px 13px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.wbtn:hover{background:rgba(0,255,136,0.15);}
+.wbtn.a{border-color:var(--amber);color:var(--amber);background:rgba(255,170,0,0.05);}
+.wbtn.a:hover{background:rgba(255,170,0,0.13);}
+.wbtn.r{border-color:var(--red);color:var(--red);background:rgba(255,51,68,0.05);}
+.wbtn.b{border-color:var(--blue);color:var(--blue);background:rgba(51,170,255,0.05);}
+.wbtn.c{border-color:var(--cyan);color:var(--cyan);background:rgba(0,221,204,0.05);}
+.wout{padding:10px 12px;font-size:12px;line-height:1.7;display:none;border-top:1px solid var(--border);color:var(--text);white-space:pre-wrap;}
+.wout.show{display:block;}
+.wout.ok{color:var(--green);}
+.wout.err{color:var(--red);}
+/* PACKET ROW */
+.pkt{padding:6px 10px;margin:2px 0;border:1px solid var(--border);font-size:11px;cursor:pointer;transition:background .12s;display:flex;gap:8px;align-items:center;}
+.pkt:hover,.pkt.sel{background:var(--panel2);}
+.pkt.sel{border-color:var(--green2);}
+.pkt .pno{color:var(--dim);min-width:24px;}
+.pkt .ptime{color:var(--muted);min-width:60px;}
+.pkt .psrc{color:var(--green3);min-width:110px;}
+.pkt .pdst{color:var(--blue);min-width:110px;}
+.pkt .pproto{min-width:50px;}
+.pkt .pinfo{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.proto-tcp{color:var(--blue);}
+.proto-udp{color:var(--cyan);}
+.proto-icmp{color:var(--amber);}
+.proto-dns{color:var(--purple);}
+.proto-http{color:var(--green);}
+.proto-arp{color:var(--red);}
+.proto-ftp{color:var(--amber);}
+/* TCP STATE DIAGRAM */
+.tcp-state{display:flex;gap:0;margin:8px 0;}
+.tcp-box{flex:1;padding:8px 4px;text-align:center;font-size:10px;border:1px solid var(--border);background:var(--panel);transition:all .3s;}
+.tcp-box.active{background:rgba(0,255,136,0.1);border-color:var(--green2);color:var(--green3);}
+.tcp-box.done{background:rgba(0,221,204,0.08);border-color:var(--cyan);color:var(--cyan);}
+.tcp-arrow{width:20px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;}
+/* ARP TABLE */
+.arp-row{display:flex;gap:0;border-bottom:1px solid var(--border);font-size:11px;}
+.arp-row.hdr{background:var(--panel2);font-size:10px;letter-spacing:1px;color:var(--muted);}
+.arp-cell{padding:6px 10px;flex:1;border-right:1px solid var(--border);}
+.arp-cell:last-child{border-right:none;}
+.arp-row.suspect{background:rgba(255,51,68,0.06);border-color:rgba(255,51,68,.3);}
+/* PROGRESS */
+.prog-bar{height:4px;background:var(--border);margin:8px 0;display:none;}
+.prog-fill{height:100%;background:var(--green);transition:width .08s;width:0;}
+.prog-txt{font-size:11px;color:var(--muted);}
+/* BIT STREAM */
+.bit-stream{display:flex;flex-wrap:wrap;gap:1px;margin-top:6px;}
+.bit{width:12px;height:12px;border:1px solid var(--border);font-size:8px;display:flex;align-items:center;justify-content:center;}
+.bit.b1{background:rgba(0,255,136,0.4);color:var(--green3);}
+.bit.b0{background:rgba(0,0,0,0.5);color:var(--dim);}
+canvas{display:block;border:1px solid var(--border);background:#000;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrapper">
+<header>
+<div style="background:#050810;border-bottom:1px solid #1a2640;padding:.4rem 1.5rem;font-family:'Share Tech Mono',monospace;font-size:11px"><a href="ctf.html" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:rgba(0,240,255,0.45);text-decoration:none;letter-spacing:2px;margin-right:1.5rem;transition:color .2s" onmouseover="this.style.color='#00f0ff'" onmouseout="this.style.color='rgba(0,240,255,0.45)'">&#8592; CTF HUB</a></div>
+  <div class="hdr-tag">// NETPROBE CTF PLATFORM — 1980s NOC PHOSPHOR-GREEN EDITION</div>
+  <h1>Net<span>Probe</span></h1>
+  <div class="hdr-sub">PCAP · DNS · ARP · TCP · ICMP · FTP · BGP · 802.11 · VLAN · SNMP</div>
+</header>
+<div class="scoreboard">
+  <div class="sp"><div class="sp-l">Challenges</div><div class="sp-v" id="sc-total">0</div></div>
+  <div class="sp"><div class="sp-l">Total Points</div><div class="sp-v" id="sc-pts">0</div></div>
+  <div class="sp"><div class="sp-l">Solved</div><div class="sp-v" id="sc-solved">0</div></div>
+  <div class="sp"><div class="sp-l">Points Earned</div><div class="sp-v" id="sc-earned">0</div></div>
+</div>
+<div class="filter-bar">
+  <span class="fl">FILTER:</span>
+  <button class="fbtn active" onclick="filterCards('all',this)">ALL</button>
+  <button class="fbtn" onclick="filterCards('easy',this)">EASY</button>
+  <button class="fbtn" onclick="filterCards('medium',this)">MEDIUM</button>
+  <button class="fbtn" onclick="filterCards('hard',this)">HARD</button>
+</div>
+<div class="grid" id="grid"></div>
+</div>
+
+<div class="modal-overlay" id="overlay" onclick="closeModal(event)">
+<div class="modal">
+  <div class="modal-hdr">
+    <div class="modal-title" id="m-title"></div>
+    <button class="modal-close" onclick="closeModal()">[ X ] CLOSE</button>
+  </div>
+  <div class="modal-body" id="m-body"></div>
+</div>
+</div>
+
+<script>
+var challenges=[
+{id:'CH-01',title:'PCAP Analysis',pts:50,diff:'easy',tags:['pcap','wireshark','tcp'],solves:328,
+ desc:'A network capture was taken on a compromised segment. Browse the packet list, apply display filters, and follow a suspicious TCP stream to recover the plaintext flag transmitted over the wire.',
+ hints:['Filter: tcp.stream eq 0 isolates the first conversation','Right-click a TCP packet → Follow → TCP Stream shows the full payload'],
+ flag:'CTF{pcap_tcp_str34m_r3c0v3r3d}',
+ sol:'Wireshark → filter tcp.stream eq 3 → Follow TCP Stream. The client sends "GET /flag HTTP/1.0" and the server replies with the flag in the response body.',
+ widget:'pcap'},
+{id:'CH-02',title:'DNS Query Decoder',pts:100,diff:'easy',tags:['dns','udp','query'],solves:251,
+ desc:'A PCAP shows suspicious DNS traffic. The attacker is tunnelling data by encoding it in DNS query hostnames. Decode the base32-encoded subdomains to recover the exfiltrated flag.',
+ hints:['DNS tunnelling encodes data in subdomain labels before the zone apex','Each query label is a chunk of base32-encoded data — concatenate them in order'],
+ flag:'CTF{dns_tunn3l_b4s332_3xf1l}',
+ sol:'Extract subdomain labels from queries to tunnel.evil.com. Base32-decode the concatenated labels to recover the flag.',
+ widget:'dns_tunnel'},
+{id:'CH-03',title:'ARP Poisoning',pts:100,diff:'easy',tags:['arp','mitm','mac'],solves:213,
+ desc:'The ARP table shows an anomaly — two different IP addresses map to the same MAC address, a classic sign of ARP cache poisoning. Identify the attacker\'s MAC and the victim IP being hijacked.',
+ hints:['A legitimate router entry and a spoofed entry share the same MAC','The duplicate MAC is sending unsolicited ARP replies (Opcode 2 with no prior request)'],
+ flag:'CTF{4rp_p01s0n_m4c_sp00f_d3t3ct}',
+ sol:'ARP table: 192.168.1.1 and 192.168.1.100 both resolve to de:ad:be:ef:00:01. This is the attacker\'s MAC poisoning the gateway entry.',
+ widget:'arp'},
+{id:'CH-04',title:'TCP Handshake',pts:150,diff:'medium',tags:['tcp','handshake','flags'],solves:187,
+ desc:'Step through a captured TCP three-way handshake packet by packet. Identify the SYN, SYN-ACK, and ACK flags, note the initial sequence numbers, and extract the flag hidden in the ISN values.',
+ hints:['ISN (Initial Sequence Number) is set in the SYN packet','The two ISNs encoded as 8 hex digits each — read them as ASCII'],
+ flag:'CTF{tcp_1sn_c0v3rt_ch4nn3l}',
+ sol:'Client ISN: 0x43544600 = "CTF\\x00", Server ISN: 0x7b74637 decoded → combined ISNs spell the flag in hex-encoded ASCII.',
+ widget:'tcp'},
+{id:'CH-05',title:'ICMP Covert Channel',pts:150,diff:'medium',tags:['icmp','ping','covert'],solves:159,
+ desc:'A flood of ICMP echo requests was captured. Each ping payload contains one byte of hidden data in a non-standard offset. Collect and decode the payloads in sequence to reveal the flag.',
+ hints:['Standard ping payload starts at byte 8 of the ICMP data','This covert channel uses byte offset 16 of each payload — not the standard region'],
+ flag:'CTF{1cmp_p4yl04d_c0v3rt_ch4nn3l}',
+ sol:'Extract byte at offset 16 from each ICMP echo request payload in sequence. Converting the byte sequence to ASCII spells the flag.',
+ widget:'icmp'},
+{id:'CH-06',title:'FTP Credential Recovery',pts:200,diff:'medium',tags:['ftp','cleartext','credentials'],solves:131,
+ desc:'FTP transmits credentials in plaintext. A capture of an FTP session shows the USER and PASS commands. Extract the credentials, then decode the file transferred during the session.',
+ hints:['FTP control channel uses TCP port 21 — filter ftp','The RETR command shows the filename; the data channel carries the file content'],
+ flag:'CTF{ftp_cl34rt3xt_cr3d3nt14ls}',
+ sol:'Filter ftp → USER admin, PASS s3cr3t_ftp → RETR flag.txt → Follow data stream on port 20 → flag in file content.',
+ widget:'ftp'},
+{id:'CH-07',title:'BGP Hijack Detection',pts:250,diff:'medium',tags:['bgp','routing','as'],solves:87,
+ desc:'A BGP route update was captured that announces a more-specific prefix, redirecting traffic away from the legitimate AS. Identify the hijacking AS number and the hijacked prefix to recover the flag.',
+ hints:['BGP UPDATE messages contain NLRI (prefix) and AS_PATH attributes','A more-specific /24 can hijack traffic destined for a /16 — look for suspicious new routes'],
+ flag:'CTF{bgp_h1j4ck_4s_pr3f1x_4n4lys1s}',
+ sol:'Legitimate: AS64512 announces 203.0.113.0/24. Hijack UPDATE: AS65001 announces 203.0.113.128/25 — more specific prefix wins, traffic redirected.',
+ widget:'bgp'},
+{id:'CH-08',title:'802.11 Deauth Attack',pts:300,diff:'hard',tags:['wifi','802.11','deauth'],solves:62,
+ desc:'A wireless capture shows deauthentication frames being sent to disconnect clients from an AP. Identify the spoofed source MAC, the targeted BSSID, count the deauth frames, and find the flag in the beacon frame vendor IE.',
+ hints:['802.11 deauth frames have type/subtype 0x0C','Deauth reason code 7 = "Class 3 frame received from nonassociated STA" — common in attacks'],
+ flag:'CTF{802_11_d34uth_b3ac0n_1nj3ct}',
+ sol:'Filter: wlan.fc.type_subtype == 0x0C. Source MAC de:ad:00:00:00:01 sent 847 deauths to BSSID aa:bb:cc:dd:ee:ff. Beacon vendor IE (OUI 00:50:f2) contains the flag.',
+ widget:'wifi'},
+{id:'CH-09',title:'VLAN Hopping',pts:350,diff:'hard',tags:['vlan','8021q','switch'],solves:39,
+ desc:'An attacker used double-tagging to hop from VLAN 10 to VLAN 99 (the management VLAN). The capture shows 802.1Q double-tagged frames. Parse the inner and outer tags to find the flag in the management traffic.',
+ hints:['802.1Q tag is 4 bytes: TPID (0x8100) + TCI (PCP + DEI + VID)','Double-tagging: outer tag = native VLAN, inner tag = target VLAN'],
+ flag:'CTF{vl4n_h0pp1ng_d0ubl3_t4g_99}',
+ sol:'Frame: Eth → 0x8100 VID=10 (outer, native) → 0x8100 VID=99 (inner, target) → IPv4 payload. Management VLAN 99 HTTP response body contains flag.',
+ widget:'vlan'},
+{id:'CH-10',title:'SNMP Enumeration',pts:400,diff:'hard',tags:['snmp','oid','community'],solves:21,
+ desc:'An SNMP-enabled device was discovered on the network with a weak community string. Walk the MIB tree to enumerate device info, interfaces, and the flag stored in a custom OID under the enterprise branch.',
+ hints:['Default SNMP community strings: "public", "private", "community"','snmpwalk -v2c -c public <ip> 1.3.6 walks the full MIB tree'],
+ flag:'CTF{snmp_m1b_w4lk_c0mmun1ty_str}',
+ sol:'snmpwalk -v2c -c public 192.0.2.100 1.3.6.1.4.1.99999 → custom enterprise OID 1.3.6.1.4.1.99999.1.1 = "CTF{snmp_m1b_w4lk_c0mmun1ty_str}"',
+ widget:'snmp'}
+];
+
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+var solved={};var earned=0;
+
+function filterCards(diff,btn){
+  document.querySelectorAll('.fbtn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');
+  document.querySelectorAll('.card').forEach(function(c){c.style.display=(diff==='all'||c.dataset.diff===diff)?'':'none';});
+}
+
+function openModal(idx){
+  var ch=challenges[idx];
+  var h='<div class="mlabel first">DESCRIPTION</div><div class="mdesc">'+esc(ch.desc)+'</div>';
+  h+='<div class="mlabel">HINTS</div>';
+  ch.hints.forEach(function(hi,i){h+='<div class="hint" data-n="'+(i+1)+'">'+esc(hi)+'</div>';});
+  h+='<div class="mlabel">LIVE CHALLENGE</div>'+buildWidget(ch.widget);
+  h+='<div class="mlabel">FLAG</div><div class="flag-box">'+esc(ch.flag)+'</div>';
+  h+='<div class="mlabel">SOLUTION</div><div class="sol">'+esc(ch.sol)+'</div>';
+  document.getElementById('m-title').textContent=ch.id+' — '+ch.title;
+  document.getElementById('m-body').innerHTML=h;
+  document.getElementById('overlay').classList.add('open');
+  if(ch.widget==='icmp')setTimeout(icmpDraw,80);
+  if(ch.widget==='wifi')setTimeout(wifiDraw,80);
+  if(!solved[idx]){solved[idx]=true;earned+=ch.pts;
+    document.getElementById('sc-solved').textContent=Object.keys(solved).length;
+    document.getElementById('sc-earned').textContent=earned;
+    document.querySelector('[data-idx="'+idx+'"]').classList.add('solved');
+  }
+}
+
+function closeModal(e){if(!e||e.target===document.getElementById('overlay'))document.getElementById('overlay').classList.remove('open');}
+
+// ── WIDGET BUILDERS ───────────────────────────────────────────
+
+function buildWidget(w){
+  var h='<div class="widget">';
+
+  // CH-01: PCAP Analysis
+  if(w==='pcap'){
+    var pkts=[
+      {no:1,t:'0.000',src:'192.168.1.5',dst:'192.168.1.1',proto:'tcp',flags:'[SYN]',info:'Seq=0 Win=65535 Len=0'},
+      {no:2,t:'0.001',src:'192.168.1.1',dst:'192.168.1.5',proto:'tcp',flags:'[SYN,ACK]',info:'Seq=0 Ack=1 Win=65535'},
+      {no:3,t:'0.001',src:'192.168.1.5',dst:'192.168.1.1',proto:'tcp',flags:'[ACK]',info:'Seq=1 Ack=1'},
+      {no:4,t:'0.002',src:'192.168.1.5',dst:'192.168.1.1',proto:'http',flags:'[PSH,ACK]',info:'GET /flag HTTP/1.0'},
+      {no:5,t:'0.010',src:'192.168.1.1',dst:'192.168.1.5',proto:'http',flags:'[PSH,ACK]',info:'HTTP/1.0 200 OK (text/plain)'},
+      {no:6,t:'0.010',src:'192.168.1.5',dst:'192.168.1.1',proto:'tcp',flags:'[ACK]',info:'Seq=43 Ack=89'},
+      {no:7,t:'0.011',src:'192.168.1.1',dst:'192.168.1.5',proto:'tcp',flags:'[FIN,ACK]',info:'Seq=89 Ack=43'},
+      {no:8,t:'0.012',src:'192.168.1.5',dst:'192.168.1.1',proto:'tcp',flags:'[FIN,ACK]',info:'Seq=43 Ack=90'},
+    ];
+    h+='<div class="wlabel">PACKET LIST — click to inspect</div>';
+    h+='<div id="pcap-list">';
+    var protoColor={'tcp':'proto-tcp','udp':'proto-udp','http':'proto-http','icmp':'proto-icmp','dns':'proto-dns','arp':'proto-arp','ftp':'proto-ftp'};
+    pkts.forEach(function(p,i){
+      h+='<div class="pkt" id="pkt-'+i+'" onclick="pcapSelect('+i+')">'
+        +'<span class="pno">'+p.no+'</span>'
+        +'<span class="ptime">'+p.t+'</span>'
+        +'<span class="psrc">'+p.src+'</span>'
+        +'<span class="pdst">'+p.dst+'</span>'
+        +'<span class="pproto '+(protoColor[p.proto]||'')+'">'+p.proto.toUpperCase()+'</span>'
+        +'<span class="pinfo">'+esc(p.flags+' '+p.info)+'</span>'
+        +'</div>';
+    });
+    h+='</div>';
+    h+='<div class="wlabel mt">DISPLAY FILTER</div>';
+    h+='<input class="winput" id="pcap-filter" placeholder="e.g.  tcp  or  http  or  tcp.stream eq 0">';
+    h+='<div class="wrow"><button class="wbtn" onclick="pcapFilter()">Apply filter</button><button class="wbtn a" onclick="pcapStream()">Follow TCP stream #0</button></div>';
+    h+='<div class="wout show" id="pcap-detail">Click a packet above to inspect its payload.</div>';
+    h+='<div class="wout" id="pcap-r"></div>';
+    window._pcapPkts=pkts;
+  }
+
+  // CH-02: DNS Tunnel
+  else if(w==='dns_tunnel'){
+    var queries=[
+      {no:1,q:'INFU6S2BJVHU6S2B.tunnel.evil.com',type:'A'},
+      {no:2,q:'JVCM6===.tunnel.evil.com',type:'A'},
+      {no:3,q:'KNCL2RCBJVDE4S2B.tunnel.evil.com',type:'A'},
+      {no:4,q:'KZHU6T2BJVHU63SB.tunnel.evil.com',type:'A'},
+      {no:5,q:'IFCTSRCBJVDE4S2B.tunnel.evil.com',type:'A'},
+      {no:6,q:'JRDU4RSBKVCM6===.tunnel.evil.com',type:'A'},
+    ];
+    h+='<div class="wlabel">DNS QUERIES — suspicious subdomain labels</div>';
+    h+='<div style="background:#000;border:1px solid var(--border)">';
+    queries.forEach(function(q,i){
+      h+='<div class="pkt" onclick="dnsSelect('+i+')">'
+        +'<span class="pno">'+q.no+'</span>'
+        +'<span class="pproto proto-dns">DNS</span>'
+        +'<span class="pinfo" style="color:var(--amber)">Query A '+esc(q.q)+'</span>'
+        +'</div>';
+    });
+    h+='</div>';
+    h+='<div class="wlabel mt">EXTRACTED SUBDOMAIN LABELS</div>';
+    h+='<div class="wcode" id="dns-labels">Click packets above to extract labels...</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="dnsExtract()">Extract all labels</button><button class="wbtn a" onclick="dnsB32Decode()">Base32 decode → flag</button></div>';
+    h+='<div class="wout" id="dns-r"></div>';
+    window._dnsLabels=queries.map(function(q){return q.q.split('.')[0];});
+  }
+
+  // CH-03: ARP Poisoning
+  else if(w==='arp'){
+    var arpTable=[
+      {ip:'192.168.1.1',mac:'aa:bb:cc:dd:ee:01',iface:'eth0',type:'static',note:'Default gateway'},
+      {ip:'192.168.1.5',mac:'11:22:33:44:55:66',iface:'eth0',type:'dynamic',note:''},
+      {ip:'192.168.1.10',mac:'77:88:99:aa:bb:cc',iface:'eth0',type:'dynamic',note:''},
+      {ip:'192.168.1.20',mac:'fe:dc:ba:98:76:54',iface:'eth0',type:'dynamic',note:''},
+      {ip:'192.168.1.100',mac:'de:ad:be:ef:00:01',iface:'eth0',type:'dynamic',note:'⚠ DUPLICATE MAC'},
+      {ip:'192.168.1.1',mac:'de:ad:be:ef:00:01',iface:'eth0',type:'dynamic',note:'⚠ GATEWAY SPOOFED'},
+    ];
+    h+='<div class="wlabel">ARP CACHE TABLE</div>';
+    h+='<div style="border:1px solid var(--border)">';
+    h+='<div class="arp-row hdr"><span class="arp-cell">IP Address</span><span class="arp-cell">MAC Address</span><span class="arp-cell">Type</span><span class="arp-cell">Note</span></div>';
+    arpTable.forEach(function(row,i){
+      var sus=row.note.indexOf('⚠')>=0;
+      h+='<div class="arp-row'+(sus?' suspect':'')+'">'
+        +'<span class="arp-cell" style="color:'+(sus?'var(--red)':'var(--green3)')+'">'+row.ip+'</span>'
+        +'<span class="arp-cell" style="color:'+(sus?'var(--red)':'var(--text)')+'">'+row.mac+'</span>'
+        +'<span class="arp-cell" style="color:var(--muted)">'+row.type+'</span>'
+        +'<span class="arp-cell" style="color:'+(sus?'var(--red)':'var(--muted)')+'">'+esc(row.note||'—')+'</span>'
+        +'</div>';
+    });
+    h+='</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="arpAnalyse()">Analyse for duplicate MACs</button><button class="wbtn a" onclick="arpFlag()">Identify attacker + extract flag</button></div>';
+    h+='<div class="wout" id="arp-r"></div>';
+  }
+
+  // CH-04: TCP Handshake
+  else if(w==='tcp'){
+    var tcpPkts=[
+      {no:1,src:'10.0.0.5:54321',dst:'10.0.0.1:80',flags:'SYN',seq:'0x43544600',ack:'0x00000000',info:'ISN set by client'},
+      {no:2,src:'10.0.0.1:80',dst:'10.0.0.5:54321',flags:'SYN+ACK',seq:'0x7b746370',ack:'0x43544601',info:'ISN set by server, ACK=clientISN+1'},
+      {no:3,src:'10.0.0.5:54321',dst:'10.0.0.1:80',flags:'ACK',seq:'0x43544601',ack:'0x7b746371',info:'Handshake complete'},
+    ];
+    h+='<div class="wlabel">TCP THREE-WAY HANDSHAKE PACKETS</div>';
+    tcpPkts.forEach(function(p,i){
+      h+='<div class="pkt" onclick="tcpSelect('+i+')">'
+        +'<span class="pno">'+p.no+'</span>'
+        +'<span class="psrc" style="font-size:10px">'+esc(p.src)+'</span>'
+        +'<span style="color:var(--muted);font-size:10px">→</span>'
+        +'<span class="pdst" style="font-size:10px">'+esc(p.dst)+'</span>'
+        +'<span class="pproto" style="color:var(--blue);min-width:70px">'+p.flags+'</span>'
+        +'<span class="pinfo">'+esc(p.info)+'</span>'
+        +'</div>';
+    });
+    h+='<div class="wlabel mt">STATE MACHINE</div>';
+    h+='<div class="tcp-state" id="tcp-states">';
+    ['CLOSED','SYN_SENT','SYN_RCVD','ESTABLISHED'].forEach(function(s,i){
+      if(i>0)h+='<div class="tcp-arrow">→</div>';
+      h+='<div class="tcp-box" id="tcps-'+i+'">'+s+'</div>';
+    });
+    h+='</div>';
+    h+='<div class="wout show" id="tcp-detail">Click a packet to inspect ISN values and flags.</div>';
+    h+='<div class="wrow"><button class="wbtn a" onclick="tcpDecodeISN()">Decode ISN values as ASCII → flag</button></div>';
+    h+='<div class="wout" id="tcp-r"></div>';
+  }
+
+  // CH-05: ICMP Covert Channel
+  else if(w==='icmp'){
+    h+='<div class="wlabel">ICMP ECHO REQUESTS — payload bytes at offset 16</div>';
+    h+='<canvas id="icmp-canvas" width="660" height="120"></canvas>';
+    h+='<div class="wlabel mt">BYTE STREAM (collected from offset 16 of each ping)</div>';
+    h+='<div class="bit-stream" id="icmp-bytes"></div>';
+    h+='<div style="font-size:11px;color:var(--muted);margin-top:6px" id="icmp-chars"></div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="icmpStep()">Step through pings one by one</button><button class="wbtn a" onclick="icmpDecodeAll()">Decode all → ASCII flag</button></div>';
+    h+='<div class="wout" id="icmp-r"></div>';
+    window._icmpFlag='CTF{1cmp_p4yl04d_c0v3rt_ch4nn3l}';
+    window._icmpStep=0;
+  }
+
+  // CH-06: FTP Recovery
+  else if(w==='ftp'){
+    var ftpPkts=[
+      {no:1,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'220 ProFTPD 1.3.5 Server ready.'},
+      {no:2,src:'10.0.0.1:54230',dst:'192.168.1.5:21',data:'USER admin'},
+      {no:3,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'331 Password required for admin.'},
+      {no:4,src:'10.0.0.1:54230',dst:'192.168.1.5:21',data:'PASS s3cr3t_ftp'},
+      {no:5,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'230 User admin logged in.'},
+      {no:6,src:'10.0.0.1:54230',dst:'192.168.1.5:21',data:'RETR flag.txt'},
+      {no:7,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'150 Opening ASCII mode data connection.'},
+      {no:8,src:'192.168.1.5:20',dst:'10.0.0.1:54231',data:'[DATA] CTF{ftp_cl34rt3xt_cr3d3nt14ls}'},
+      {no:9,src:'192.168.1.5:21',dst:'10.0.0.1:54230',data:'226 Transfer complete.'},
+    ];
+    h+='<div class="wlabel">FTP SESSION — control channel (port 21) + data channel (port 20)</div>';
+    h+='<div style="background:#000;border:1px solid var(--border);max-height:220px;overflow-y:auto">';
+    ftpPkts.forEach(function(p,i){
+      var isData=p.src.indexOf(':20')>=0;
+      var isCred=p.data.indexOf('PASS ')===0||p.data.indexOf('USER ')===0;
+      var isFlag=p.data.indexOf('CTF{')>=0;
+      h+='<div class="pkt" onclick="ftpSelect('+i+')">'
+        +'<span class="pno">'+p.no+'</span>'
+        +'<span class="pproto '+(isData?'proto-http':'proto-ftp')+'">'+( isData?'DATA':'FTP')+'</span>'
+        +'<span class="pinfo" style="color:'+(isFlag?'var(--green)':isCred?'var(--red)':'var(--muted)')+'">'+esc(p.data)+'</span>'
+        +'</div>';
+    });
+    h+='</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="ftpCreds()">Extract credentials</button><button class="wbtn a" onclick="ftpData()">Follow data channel → read file</button></div>';
+    h+='<div class="wout" id="ftp-r"></div>';
+    window._ftpPkts=ftpPkts;
+  }
+
+  // CH-07: BGP Hijack
+  else if(w==='bgp'){
+    h+='<div class="wlabel">BGP ROUTING TABLE — before and after hijack</div>';
+    h+='<div class="wcode" id="bgp-table">'
+      +'BEFORE:\n'
+      +'  Network          Next Hop        AS_PATH         Origin\n'
+      +'  203.0.113.0/24   10.0.0.1        AS64512         IGP\n'
+      +'  198.51.100.0/24  10.0.0.1        AS64512 64500   IGP\n\n'
+      +'AFTER (UPDATE received from 10.0.0.99):\n'
+      +'  203.0.113.0/24   10.0.0.1        AS64512         IGP\n'
+      +'  <span style="color:var(--red)">203.0.113.128/25  10.0.0.99       AS65001 64512   IGP  ← NEW</span>\n'
+      +'  198.51.100.0/24  10.0.0.1        AS64512 64500   IGP\n'
+      +'</div>';
+    h+='<div class="wlabel mt">BGP UPDATE MESSAGE</div>';
+    h+='<div class="wcode">'
+      +'BGP UPDATE from peer 10.0.0.99 (AS65001)\n'
+      +'  WITHDRAWN routes: (none)\n'
+      +'  Path attributes:\n'
+      +'    ORIGIN: IGP\n'
+      +'    AS_PATH: 65001 64512\n'
+      +'    NEXT_HOP: 10.0.0.99\n'
+      +'  NLRI (announced prefixes):\n'
+      +'    <span style="color:var(--red)">203.0.113.128/25  ← more-specific hijack</span>'
+      +'</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="bgpAnalyse()">Analyse hijack (longest-prefix match)</button><button class="wbtn a" onclick="bgpFlag()">Extract AS + prefix → flag</button></div>';
+    h+='<div class="wout" id="bgp-r"></div>';
+  }
+
+  // CH-08: 802.11 Deauth
+  else if(w==='wifi'){
+    h+='<div class="wlabel">802.11 FRAME TIMELINE</div>';
+    h+='<canvas id="wifi-canvas" width="660" height="100"></canvas>';
+    h+='<div class="wlabel mt">DEAUTH FRAME DETAIL</div>';
+    h+='<div class="wcode">'
+      +'Frame 1 of 847 deauth frames:\n'
+      +'  Frame type:    Management (0x00)\n'
+      +'  Subtype:       Deauthentication (0x0C)\n'
+      +'  Src MAC:       <span style="color:var(--red)">de:ad:00:00:00:01</span>  ← spoofed\n'
+      +'  Dst MAC:       ff:ff:ff:ff:ff:ff  (broadcast)\n'
+      +'  BSSID:         <span style="color:var(--amber)">aa:bb:cc:dd:ee:ff</span>  ← target AP\n'
+      +'  Reason code:   0x0007 (Class 3 frame from nonassoc STA)\n'
+      +'</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="wifiCount()">Count deauth frames by source MAC</button><button class="wbtn a" onclick="wifiBeacon()">Parse beacon frames → vendor IE</button></div>';
+    h+='<div class="wout" id="wifi-r"></div>';
+  }
+
+  // CH-09: VLAN Hopping
+  else if(w==='vlan'){
+    h+='<div class="wlabel">ETHERNET FRAME — double-tagged (hex)</div>';
+    h+='<div class="wcode">'
+      +'Dst MAC:  aa:bb:cc:dd:ee:ff\n'
+      +'Src MAC:  11:22:33:44:55:66\n'
+      +'EtherType: <span style="color:var(--amber)">0x8100</span>  (802.1Q)\n'
+      +'  PCP=0  DEI=0  <span style="color:var(--amber)">VID=10</span>  (outer tag — native VLAN)\n'
+      +'EtherType: <span style="color:var(--red)">0x8100</span>  (802.1Q again)\n'
+      +'  PCP=0  DEI=0  <span style="color:var(--red)">VID=99</span>  (inner tag — TARGET VLAN)\n'
+      +'EtherType: 0x0800  (IPv4)\n'
+      +'Payload:  [IPv4 → TCP → HTTP payload]\n'
+      +'</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="vlanStrip()">Strip outer tag → reveal inner tag</button><button class="wbtn a" onclick="vlanPayload()">Read VLAN 99 HTTP payload → flag</button></div>';
+    h+='<div class="wout" id="vlan-r"></div>';
+  }
+
+  // CH-10: SNMP
+  else if(w==='snmp'){
+    h+='<div class="wlabel">SNMP WALK — community string tester</div>';
+    h+='<div style="display:flex;gap:6px">';
+    h+='<input class="winput" id="snmp-ip" placeholder="Target IP: 192.0.2.100" value="192.0.2.100" style="flex:1">';
+    h+='<input class="winput" id="snmp-comm" placeholder="Community string..." style="flex:1">';
+    h+='</div>';
+    h+='<div class="wrow"><button class="wbtn" onclick="snmpTest()">snmpwalk -v2c -c [community] [ip]</button><button class="wbtn a" onclick="snmpAuto()">Try default community strings</button></div>';
+    h+='<div class="wout" id="snmp-r1"></div>';
+    h+='<div id="snmp-row2" style="display:none"><div class="wrow"><button class="wbtn c" onclick="snmpWalk()">Walk enterprise OID 1.3.6.1.4.1.99999</button></div></div>';
+    h+='<div class="wout" id="snmp-r2"></div>';
+  }
+
+  h+='</div>';
+  return h;
+}
+
+// ── WIDGET HANDLERS ───────────────────────────────────────────
+
+// CH-01 PCAP
+var pcapPayloads={
+  3:{label:'Packet 4 — HTTP Request',text:'GET /flag HTTP/1.0\nHost: 192.168.1.1\nUser-Agent: curl/7.85.0\nAccept: */*\n'},
+  4:{label:'Packet 5 — HTTP Response',text:'HTTP/1.0 200 OK\nContent-Type: text/plain\nContent-Length: 31\n\nCTF{pcap_tcp_str34m_r3c0v3r3d}',flag:true},
+};
+function pcapSelect(i){
+  document.querySelectorAll('.pkt').forEach(function(p,j){p.classList.toggle('sel',j===i);});
+  var d=document.getElementById('pcap-detail');
+  if(pcapPayloads[i]){
+    d.className='wout '+(pcapPayloads[i].flag?'ok ':'')+'show';
+    d.textContent=pcapPayloads[i].label+':\n\n'+pcapPayloads[i].text;
+  }else{
+    var p=window._pcapPkts[i];
+    d.className='wout show';d.textContent='Packet '+p.no+'\n'+p.src+' → '+p.dst+'\nFlags: '+p.flags+'\n'+p.info+'\n(No application-layer payload)';
+  }
+}
+function pcapFilter(){
+  var f=document.getElementById('pcap-filter').value.toLowerCase().trim();
+  var r=document.getElementById('pcap-r');
+  if(f==='http'||f.indexOf('stream')>=0){
+    r.className='wout ok show';
+    r.textContent='Filter "'+f+'" matched packets 4 & 5:\n\nPacket 4: GET /flag HTTP/1.0\nPacket 5: HTTP/1.0 200 OK → CTF{pcap_tcp_str34m_r3c0v3r3d}';}
+  else if(f){r.className='wout show';r.textContent='Filter "'+f+'" applied.\nTry: http  or  tcp.stream eq 0';}
+  else{r.className='wout err show';r.textContent='Enter a display filter.';}
+}
+function pcapStream(){
+  var r=document.getElementById('pcap-r');
+  r.className='wout ok show';
+  r.innerHTML='<span style="color:var(--green3)">TCP Stream #0 (192.168.1.5:54321 ↔ 192.168.1.1:80)</span>\n\n'
+    +'<span style="color:var(--blue)">→ GET /flag HTTP/1.0\n   Host: 192.168.1.1\n\n</span>'
+    +'<span style="color:var(--green)">← HTTP/1.0 200 OK\n   Content-Type: text/plain\n\n   CTF{pcap_tcp_str34m_r3c0v3r3d}</span>';
+}
+
+// CH-02 DNS Tunnel
+function dnsSelect(i){
+  var labels=window._dnsLabels||[];
+  var el=document.getElementById('dns-labels');
+  el.textContent='Subdomain label from query '+( i+1)+': '+labels[i];
+}
+function dnsExtract(){
+  var labels=window._dnsLabels||[];
+  var el=document.getElementById('dns-labels');
+  el.textContent='All extracted labels:\n'+labels.join('\n')+'\n\nConcatenated: '+labels.join('');
+}
+function dnsB32Decode(){
+  var r=document.getElementById('dns-r');
+  // Simulated decode — pre-computed answer
+  r.className='wout ok show';
+  r.textContent='Concatenated labels:\nINFU6S2BJVHU6S2BJVCM6===...\n\nBase32 decode (RFC 4648):\nCTF{dns_tunn3l_b4s332_3xf1l}';
+}
+
+// CH-03 ARP
+function arpAnalyse(){
+  var r=document.getElementById('arp-r');
+  r.className='wout show';
+  r.textContent='Scanning ARP cache for duplicate MACs...\n\nDuplicate MAC detected: de:ad:be:ef:00:01\n  → Maps to 192.168.1.100 (attacker)\n  → Also maps to 192.168.1.1 (gateway) ← SPOOFED\n\nThis is ARP cache poisoning / MITM attack.\nAll traffic to the gateway is being intercepted by 192.168.1.100.';
+}
+function arpFlag(){
+  var r=document.getElementById('arp-r');
+  r.className='wout ok show';
+  r.textContent='Attacker MAC:  de:ad:be:ef:00:01\nAttacker IP:   192.168.1.100\nVictim (spoofed): 192.168.1.1 (gateway)\n\nUnsolicited ARP replies: 1,247 frames\nAttack type: Gratuitous ARP poisoning\n\nFlag: CTF{4rp_p01s0n_m4c_sp00f_d3t3ct}';
+}
+
+// CH-04 TCP Handshake
+var tcpDetails=[
+  {state:0,text:'SYN — Client initiates connection\n\nTCP Flags:    SYN (0x002)\nSrc: 10.0.0.5:54321 → Dst: 10.0.0.1:80\nSeq (Client ISN): 0x43544600\nAck: 0x00000000\nWindow: 65535\n\nNote: ISN 0x43544600 → bytes: 43 54 46 00 → ASCII "CTF\\0"'},
+  {state:1,text:'SYN+ACK — Server acknowledges, sets own ISN\n\nTCP Flags:    SYN + ACK (0x012)\nSrc: 10.0.0.1:80 → Dst: 10.0.0.5:54321\nSeq (Server ISN): 0x7b746370\nAck: 0x43544601  (clientISN + 1)\n\nNote: ISN 0x7b746370 → bytes: 7b 74 63 70 → ASCII "{tcp"'},
+  {state:2,text:'ACK — Handshake complete\n\nTCP Flags:    ACK (0x010)\nSrc: 10.0.0.5:54321 → Dst: 10.0.0.1:80\nSeq: 0x43544601\nAck: 0x7b746371  (serverISN + 1)\n\nConnection ESTABLISHED — data transfer can begin.'}
+];
+function tcpSelect(i){
+  var d=document.getElementById('tcp-detail');
+  d.className='wout show';d.textContent=tcpDetails[i].text;
+  document.querySelectorAll('.tcp-box').forEach(function(b,j){
+    b.className='tcp-box'+(j<=tcpDetails[i].state?' active':'')+(j<tcpDetails[i].state?' done':'');
+  });
+}
+function tcpDecodeISN(){
+  var r=document.getElementById('tcp-r');
+  r.className='wout ok show';
+  r.innerHTML='Client ISN: 0x43544600 → 43="C" 54="T" 46="F" 00\n'
+    +'Server ISN: 0x7b746370 → 7b="{" 74="t" 63="c" 70="p"\n'
+    +'Combined ISN bytes (hex→ASCII):\n'
+    +'43 54 46 7b 74 63 70 5f 31 73 6e 5f 63 30 76 33 72 74 5f 63 68 34 6e 6e 33 6c 7d\n\n'
+    +'<span style="color:var(--green)">Decoded: CTF{tcp_1sn_c0v3rt_ch4nn3l}</span>';
+}
+
+// CH-05 ICMP Covert Channel
+function icmpDraw(){
+  var c=document.getElementById('icmp-canvas');if(!c)return;
+  var ctx=c.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,660,120);
+  var flag=window._icmpFlag||'';
+  var n=flag.length;
+  var bw=Math.floor(640/n);
+  for(var i=0;i<n;i++){
+    var x=10+i*bw;
+    // draw ping frame
+    ctx.strokeStyle='rgba(0,255,136,0.3)';ctx.lineWidth=1;
+    ctx.strokeRect(x,10,bw-2,80);
+    // draw payload bytes
+    ctx.fillStyle='rgba(0,255,136,0.08)';ctx.fillRect(x+2,12,bw-4,56);
+    // highlight offset 16 byte
+    ctx.fillStyle='rgba(255,170,0,0.5)';ctx.fillRect(x+2,70,bw-4,18);
+    ctx.fillStyle='#ffaa00';ctx.font='bold 9px monospace';
+    var hex=flag.charCodeAt(i).toString(16).padStart(2,'0');
+    ctx.fillText(hex,x+(bw-14)/2,82);
+  }
+  ctx.fillStyle='var(--muted)';ctx.font='9px monospace';
+  ctx.fillStyle='rgba(0,255,136,0.5)';ctx.fillText('← standard ICMP payload (8–15)',10,110);
+  ctx.fillStyle='rgba(255,170,0,0.8)';ctx.fillText('← covert byte @ offset 16',10,108);
+}
+function icmpStep(){
+  var flag=window._icmpFlag||'';
+  var step=window._icmpStep||0;
+  if(step>=flag.length){document.getElementById('icmp-r').className='wout ok show';document.getElementById('icmp-r').textContent='All bytes collected!\nDecoded: '+flag;return;}
+  var byte=flag.charCodeAt(step);
+  var bstream=document.getElementById('icmp-bytes');
+  var d=document.createElement('div');
+  d.className='bit b1';d.style.width='22px';d.style.height='22px';d.style.fontSize='10px';
+  d.textContent=byte.toString(16).padStart(2,'0');d.title=String.fromCharCode(byte);
+  bstream.appendChild(d);
+  var chars=document.getElementById('icmp-chars');
+  chars.textContent='Decoded so far: '+flag.substring(0,step+1);
+  window._icmpStep=step+1;
+}
+function icmpDecodeAll(){
+  var flag=window._icmpFlag||'';
+  var bstream=document.getElementById('icmp-bytes');bstream.innerHTML='';
+  for(var i=0;i<flag.length;i++){
+    var d=document.createElement('div');d.className='bit b1';d.style.width='22px';d.style.height='22px';d.style.fontSize='10px';
+    d.textContent=flag.charCodeAt(i).toString(16).padStart(2,'0');
+    bstream.appendChild(d);
+  }
+  document.getElementById('icmp-chars').textContent='Decoded: '+flag;
+  var r=document.getElementById('icmp-r');r.className='wout ok show';r.textContent='All '+flag.length+' covert bytes extracted from ICMP payloads at offset 16.\nDecoded ASCII: '+flag;
+  window._icmpStep=flag.length;
+}
+
+// CH-06 FTP
+function ftpSelect(i){
+  var pkts=window._ftpPkts||[];var p=pkts[i];if(!p)return;
+  var r=document.getElementById('ftp-r');
+  r.className='wout '+(p.data.indexOf('CTF{')>=0?'ok ':'')+'show';
+  r.textContent='Port: '+(p.src.indexOf(':20')>=0?'20 (data)':'21 (control)')+'\n'+p.src+' → '+p.dst+'\n\n'+p.data;
+}
+function ftpCreds(){
+  var r=document.getElementById('ftp-r');
+  r.className='wout show';
+  r.innerHTML='FTP Control Stream (port 21):\n\n'
+    +'220 ProFTPD 1.3.5 Server ready.\n'
+    +'<span style="color:var(--red)">USER admin</span>\n'
+    +'331 Password required.\n'
+    +'<span style="color:var(--red)">PASS s3cr3t_ftp</span>\n'
+    +'230 User admin logged in.\n\n'
+    +'Credentials recovered:\n  Username: admin\n  Password: s3cr3t_ftp';
+}
+function ftpData(){
+  var r=document.getElementById('ftp-r');
+  r.className='wout ok show';
+  r.textContent='Following data channel (port 20)...\n\nRETR flag.txt\n150 Opening ASCII mode data connection.\n\nFile contents:\nCTF{ftp_cl34rt3xt_cr3d3nt14ls}\n\n226 Transfer complete.';
+}
+
+// CH-07 BGP
+function bgpAnalyse(){
+  var r=document.getElementById('bgp-r');
+  r.className='wout show';
+  r.textContent='BGP Longest-Prefix Match analysis:\n\nRoute 1: 203.0.113.0/24 via AS64512 (legitimate)\nRoute 2: 203.0.113.128/25 via AS65001 (hijack)\n\nFor destination 203.0.113.200:\n  /24 matches — but /25 is MORE SPECIFIC\n  → Router prefers 203.0.113.128/25\n  → Traffic redirected to AS65001 (attacker)\n\nThis is a BGP prefix hijack attack.';
+}
+function bgpFlag(){
+  var r=document.getElementById('bgp-r');
+  r.className='wout ok show';
+  r.textContent='Hijacking AS:     65001\nHijacked prefix:  203.0.113.128/25\nLegitimate AS:    64512\nLegitimate route: 203.0.113.0/24\n\nAttack type: More-specific prefix announcement\nPeer IP: 10.0.0.99\n\nFlag: CTF{bgp_h1j4ck_4s_pr3f1x_4n4lys1s}';
+}
+
+// CH-08 WiFi
+function wifiDraw(){
+  var c=document.getElementById('wifi-canvas');if(!c)return;
+  var ctx=c.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,660,100);
+  // draw beacon frames
+  for(var i=0;i<8;i++){
+    ctx.fillStyle='rgba(0,255,136,0.3)';ctx.fillRect(10+i*80,20,30,20);
+    ctx.fillStyle='var(--green3)';ctx.font='8px monospace';ctx.fillText('BEACON',12+i*80,34);
+  }
+  // draw deauth burst
+  ctx.fillStyle='rgba(255,51,68,0.2)';ctx.fillRect(10,55,640,30);
+  ctx.fillStyle='var(--red)';ctx.font='9px monospace';ctx.fillText('847 × DEAUTH frames (src: de:ad:00:00:00:01 → bcast) ← attack',14,74);
+}
+function wifiCount(){
+  var r=document.getElementById('wifi-r');
+  r.className='wout show';
+  r.innerHTML='Frame type filter: wlan.fc.type_subtype == 0x0C\n\nDeauth frame counts by source MAC:\n'
+    +'<span style="color:var(--red)">de:ad:00:00:00:01  →  847 frames  ← ATTACKER</span>\n'
+    +'aa:bb:cc:dd:ee:ff  →  2 frames   (legitimate)\n\n'
+    +'Target BSSID: aa:bb:cc:dd:ee:ff\nReason code: 7 (Class 3 from nonassoc STA)\nAll 847 sent as broadcast — DoS attack.';
+}
+function wifiBeacon(){
+  var r=document.getElementById('wifi-r');
+  r.className='wout ok show';
+  r.textContent='Parsing beacon frame vendor IEs (tag 221)...\n\nOUI 00:50:f2  (Microsoft WPS) — normal\nOUI 00:0c:e7  (Ruckus) — normal\nOUI 00:50:f2  extra data field:\n  Length: 32 bytes\n  Raw: 43 54 46 7b 38 30 32 5f 31 31 5f ...\n  Decoded: CTF{802_11_d34uth_b3ac0n_1nj3ct}';
+}
+
+// CH-09 VLAN
+function vlanStrip(){
+  var r=document.getElementById('vlan-r');
+  r.className='wout show';
+  r.innerHTML='Stripping outer 802.1Q tag (VID=10, native VLAN)...\n\n'
+    +'Remaining frame:\n'
+    +'  Dst MAC:   aa:bb:cc:dd:ee:ff\n'
+    +'  Src MAC:   11:22:33:44:55:66\n'
+    +'  EtherType: <span style="color:var(--red)">0x8100</span> (still 802.1Q!)\n'
+    +'    PCP=0  DEI=0  <span style="color:var(--red)">VID=99</span>  ← inner tag\n'
+    +'  EtherType: 0x0800 (IPv4)\n\n'
+    +'Inner tag reveals target VLAN: <span style="color:var(--red)">99 (Management VLAN)</span>\n'
+    +'Double-tag attack successful — frame forwarded into VLAN 99.';
+}
+function vlanPayload(){
+  var r=document.getElementById('vlan-r');
+  r.className='wout ok show';
+  r.textContent='VLAN 99 (Management) HTTP payload:\n\nGET /mgmt/status HTTP/1.1\nHost: 10.99.0.1\n\nHTTP/1.1 200 OK\nContent-Type: text/plain\n\nDevice: Core-Switch-01\nFirmware: 4.2.1\nFlag: CTF{vl4n_h0pp1ng_d0ubl3_t4g_99}';
+}
+
+// CH-10 SNMP
+function snmpTest(){
+  var ip=document.getElementById('snmp-ip').value.trim()||'192.0.2.100';
+  var comm=document.getElementById('snmp-comm').value.trim();
+  var r=document.getElementById('snmp-r1');
+  if(!comm){r.className='wout err show';r.textContent='Enter a community string.';return;}
+  if(comm==='public'||comm==='private'){
+    r.className='wout show';
+    r.textContent='snmpwalk -v2c -c '+comm+' '+ip+' 1.3.6.1.2.1.1\n\nSNMPv2-MIB::sysDescr.0 = Linux netprobe-device 5.15.0\nSNMPv2-MIB::sysObjectID.0 = .1.3.6.1.4.1.99999\nSNMPv2-MIB::sysUpTime.0 = 432109\nSNMPv2-MIB::sysContact.0 = admin@corp.local\nSNMPv2-MIB::sysName.0 = netprobe-device\nSNMPv2-MIB::sysLocation.0 = Server Room B\n\nCommunity "'+comm+'" accepted!';
+    document.getElementById('snmp-row2').style.display='block';
+  }else{
+    r.className='wout err show';r.textContent='snmpwalk -v2c -c '+comm+' '+ip+'\nTimeout: no response\n(Wrong community string — try defaults)';
+  }
+}
+function snmpAuto(){
+  var r=document.getElementById('snmp-r1');r.className='wout show';
+  var tries=['community','admin','manager','public','private'];var i=0;r.textContent='';
+  var t=setInterval(function(){
+    r.textContent+='Trying "'+tries[i]+'"... '+(tries[i]==='public'?'SUCCESS!\n':'timeout\n');
+    if(tries[i]==='public'){clearInterval(t);r.className='wout show';document.getElementById('snmp-row2').style.display='block';
+      r.textContent+='Community string: public\nDevice responded — SNMP walk available.';}
+    i++;if(i>=tries.length)clearInterval(t);
+  },280);
+  document.getElementById('snmp-comm').value='public';
+}
+function snmpWalk(){
+  var r=document.getElementById('snmp-r2');
+  r.className='wout ok show';
+  r.textContent='snmpwalk -v2c -c public 192.0.2.100 1.3.6.1.4.1.99999\n\n'
+    +'enterprises.99999.1.0 = STRING: "NetProbe Device Controller"\n'
+    +'enterprises.99999.1.1 = STRING: "CTF{snmp_m1b_w4lk_c0mmun1ty_str}"\n'
+    +'enterprises.99999.2.0 = INTEGER: 42\n'
+    +'enterprises.99999.3.0 = STRING: "firmware-v2.1.0"\n\n'
+    +'Flag found at OID 1.3.6.1.4.1.99999.1.1!';
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded',function(){
+  var total=0;challenges.forEach(function(c){total+=c.pts;});
+  document.getElementById('sc-total').textContent=challenges.length;
+  document.getElementById('sc-pts').textContent=total;
+  var g=document.getElementById('grid');
+  challenges.forEach(function(ch,idx){
+    var dTag=ch.diff==='easy'?'<span class="tag te">EASY</span>':ch.diff==='medium'?'<span class="tag tm">MEDIUM</span>':'<span class="tag th">HARD</span>';
+    var tTags=ch.tags.map(function(t){return '<span class="tag ti">'+esc(t)+'</span>';}).join('');
+    var c=document.createElement('div');c.className='card';c.dataset.diff=ch.diff;c.dataset.idx=idx;
+    c.innerHTML='<div class="card-stripe"></div><div class="card-body">'
+      +'<div class="card-meta"><span class="card-id">'+esc(ch.id)+'</span><span class="card-pts">'+ch.pts+' pts</span></div>'
+      +'<div class="card-title">'+esc(ch.title)+'</div>'
+      +'<div class="card-tags">'+dTag+tTags+'</div>'
+      +'<div class="card-desc">'+esc(ch.desc.substring(0,100))+'...</div>'
+      +'<div class="card-footer"><span class="solves">'+ch.solves+' solves</span><button class="btn-view">OPEN &gt;&gt;</button></div></div>';
+    c.addEventListener('click',function(){openModal(idx);});
+    g.appendChild(c);
+  });
+});
+</script>
+
+<div style="text-align:center;padding:1rem;font-size:.7rem;color:#3a4a66;font-family:'Share Tech Mono',monospace">AP® is a trademark of the College Board. This site is not affiliated with the College Board.</div>
+</body>
+</html>
