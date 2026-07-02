@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Brightwater Clinic — Physical-Layer Fault Isolation</title>
+<!--
+  ============================================================================
+  Brightwater Clinic: Physical-Layer Fault Isolation
+  A clean-room simulation lab for CompTIA Network+ (N10-009) and the College
+  Board AP Networking pilot.
+
+  Blueprint tags:
+    N10-009 : 5.2 (cabling & physical interface issues, LED status indicators)
+              5.1 (troubleshooting methodology)
+              5.3 (troubleshooting tools/commands — ping)
+              1.5 (transmission media — copper/RJ45)
+    APNET   : 2.1 (Missed Connection: Troubleshooting My SOHO Network)
+              4.1 (What Happens When Networks Break or Fail?)
+              4.3 (Tools of Network Analysts)
+
+  Original work. All scenario, persona, hostnames, IP plan, VLANs, task and
+  question wording, and UI are authored from the public objectives — NOT copied
+  from any vendor lab (TestOut, Cisco NetAcad/Packet Tracer, or otherwise).
+
+  © 2026 <AUTHOR / ORG — fill in>. Released under the MIT License.
+  You may reuse, modify, and distribute with attribution and this notice.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#10171d; --panel:#172029; --panel-2:#1d2933; --ink:#e9f1f4;
+    --muted:#8aa0ad; --line:#27343d; --line-2:#34444f;
+    --teal:#39c2b8; --teal-dim:#1f6b66;
+    --led-off:#33424b; --led-link:#41d67a; --led-act:#ffce4a; --led-fault:#ff6060;
+    --good:#41d67a; --bad:#ff6b6b; --warn:#ffce4a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, #14222a 0, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans);
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px; margin:0 auto; padding:22px 18px 60px}
+
+  /* ---- header / hero ---- */
+  header.hero{
+    border:1px solid var(--line); border-radius:var(--radius);
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    padding:18px 20px; position:relative; overflow:hidden;
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--teal); margin:0 0 6px;
+  }
+  header.hero h1{font-size:clamp(20px,3.4vw,30px); margin:0; letter-spacing:-.01em}
+  header.hero p.sub{margin:8px 0 0; color:var(--muted); max-width:62ch}
+  .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+  .tag{
+    font-family:var(--mono); font-size:11px; color:var(--ink);
+    border:1px solid var(--line-2); background:#0e161b; border-radius:999px;
+    padding:3px 9px;
+  }
+  .tag b{color:var(--teal); font-weight:600}
+
+  .grid{display:grid; grid-template-columns:1.35fr .95fr; gap:16px; margin-top:16px}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+
+  .card{
+    border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--panel); padding:14px 16px;
+  }
+  .card h2{
+    font-size:12px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 12px; font-weight:600;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h2::before{content:""; width:6px; height:6px; border-radius:2px; background:var(--teal); display:inline-block}
+
+  /* ---- rack / signature element ---- */
+  .rack-note{font-family:var(--mono); font-size:11px; color:var(--muted); margin:-4px 0 10px}
+  svg.rack{width:100%; height:auto; display:block; background:#0d141a; border:1px solid var(--line); border-radius:8px}
+  text.lbl{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+  text.lbl.dev{fill:var(--ink); font-size:11.5px}
+  text.lbl.ip{fill:var(--teal-dim)}
+  rect.chassis{fill:#141d23; stroke:var(--line-2)}
+  rect.port{fill:#0e161b; stroke:var(--line-2)}
+  rect.devbox{fill:#121b21; stroke:var(--line-2)}
+  line.cable{stroke:var(--line-2); stroke-width:2}
+  line.cable.live{stroke:var(--led-link)}
+  line.cable.dead{stroke:#3a2530}
+  circle.led{stroke:#000; stroke-opacity:.35}
+  .led.off{fill:var(--led-off)}
+  .led.link{fill:var(--led-link)}
+  .led.act{fill:var(--led-act)}
+  .led.fault{fill:var(--led-fault)}
+  .led.blink{animation:blink 1.1s steps(1,end) infinite}
+  @keyframes blink{50%{opacity:.2}}
+  @media (prefers-reduced-motion: reduce){ .led.blink{animation:none} }
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:8px}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+  /* ---- console ---- */
+  .console{display:flex; flex-direction:column; gap:8px}
+  pre.out{
+    font-family:var(--mono); font-size:12.5px; line-height:1.45;
+    background:#0b1116; border:1px solid var(--line); border-radius:8px;
+    color:#cfe0e6; margin:0; padding:12px; height:300px; overflow:auto;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  pre.out .ok{color:var(--good)} pre.out .err{color:var(--bad)}
+  pre.out .info{color:var(--teal)} pre.out .dim{color:var(--muted)}
+  pre.out .prompt{color:var(--teal)}
+  .cmdline{display:flex; align-items:center; gap:8px; border:1px solid var(--line-2);
+    background:#0b1116; border-radius:8px; padding:6px 10px}
+  .cmdline .ps{font-family:var(--mono); color:var(--teal); font-size:13px; white-space:nowrap}
+  .cmdline input{
+    flex:1; background:transparent; border:0; color:var(--ink);
+    font-family:var(--mono); font-size:13px; outline:none;
+  }
+  .hint{font-family:var(--mono); font-size:11px; color:var(--muted)}
+
+  /* ---- actions ---- */
+  .actions{display:grid; gap:8px}
+  .act-group{border:1px solid var(--line); border-radius:8px; padding:10px}
+  .act-group legend{font-family:var(--mono); font-size:11px; color:var(--teal); padding:0 6px; letter-spacing:.06em}
+  button{
+    font-family:var(--sans); font-size:13px; color:var(--ink);
+    background:#13202a; border:1px solid var(--line-2); border-radius:7px;
+    padding:8px 11px; cursor:pointer; text-align:left; width:100%;
+    transition:border-color .12s, background .12s;
+  }
+  button:hover{border-color:var(--teal-dim); background:#16242f}
+  button:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+  button.ghost{background:transparent}
+  button.primary{background:var(--teal); color:#04201d; border-color:var(--teal); font-weight:600; text-align:center}
+  button.primary:hover{filter:brightness(1.06)}
+  button:disabled{opacity:.45; cursor:not-allowed}
+
+  /* ---- tasks & questions ---- */
+  ol.tasklist{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+  ol.tasklist li{display:flex; gap:10px; align-items:flex-start; font-size:13.5px}
+  .check{
+    flex:none; width:18px; height:18px; border-radius:5px; margin-top:2px;
+    border:1px solid var(--line-2); display:grid; place-items:center;
+    font-size:12px; font-weight:700; color:#04201d; background:#0e161b;
+  }
+  .check.pass{background:var(--good); border-color:var(--good)}
+  .check.pass::after{content:"✓"}
+  li.passed .tlabel{color:var(--muted)}
+
+  .q{border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:10px}
+  .q .qp{font-size:13.5px; margin:0 0 9px; font-weight:600}
+  .q .qp .num{font-family:var(--mono); color:var(--teal); margin-right:8px}
+  .opt{display:flex; gap:9px; align-items:flex-start; padding:5px 4px; cursor:pointer; border-radius:6px}
+  .opt:hover{background:#0e161b}
+  .opt input{margin-top:3px; accent-color:var(--teal)}
+  .q input[type=number]{
+    width:120px; font-family:var(--mono); font-size:14px; color:var(--ink);
+    background:#0b1116; border:1px solid var(--line-2); border-radius:6px; padding:7px 9px; outline:none;
+  }
+  .q input[type=number]:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+  .verdict{font-family:var(--mono); font-size:12px; margin-top:8px}
+  .verdict.ok{color:var(--good)} .verdict.no{color:var(--warn)}
+
+  /* ---- submit bar ---- */
+  .subbar{
+    margin-top:16px; border:1px solid var(--line); border-radius:var(--radius);
+    background:linear-gradient(180deg,var(--panel-2),var(--panel)); padding:14px 16px;
+  }
+  .subrow{display:flex; flex-wrap:wrap; gap:12px; align-items:end}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field label{font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase}
+  .field input{
+    font-family:var(--mono); font-size:14px; color:var(--ink); background:#0b1116;
+    border:1px solid var(--line-2); border-radius:7px; padding:9px 11px; outline:none; min-width:200px;
+  }
+  .field input:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+  .scorepill{
+    font-family:var(--mono); font-size:13px; border:1px solid var(--line-2);
+    border-radius:999px; padding:7px 14px; color:var(--ink); background:#0e161b;
+  }
+  .scorepill b{color:var(--teal)}
+  #status{font-family:var(--mono); font-size:12.5px; margin-top:10px; min-height:18px}
+  #status a{color:var(--teal)}
+  #status.ok{color:var(--good)} #status.err{color:var(--bad)} #status.work{color:var(--warn)}
+  footer.legal{margin-top:22px; color:var(--muted); font-size:11.5px; font-family:var(--mono); line-height:1.6}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-physical-connectivity", "title": "Brightwater Clinic — Physical-Layer Fault Isolation", "version": "1.0.0", "objectives": ["N10-009:5.2", "APNET:3.6"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Network+ N10-009 · AP Networking pilot · Lab</p>
+    <h1>Brightwater Clinic: Physical-Layer Fault Isolation</h1>
+    <p class="sub">
+      You cover the help desk for <b>Brightwater Veterinary Clinic</b>. After a weekend rewiring job,
+      two machines lost their network connection. Use the link LEDs, the diagnostic console, and a
+      structured set of cable swaps to find which physical segment is at fault on each machine — without
+      shotgunning parts. The clinic LAN is <b>10.20.5.0/24</b>; the switch is <b>SW-CORE-1</b>.
+    </p>
+    <div class="tags" aria-label="Blueprint coverage">
+      <span class="tag"><b>N10-009</b> 5.2 · 5.1 · 5.3 · 1.5</span>
+      <span class="tag"><b>AP NET</b> 2.1 · 4.1 · 4.3</span>
+      <span class="tag">assignment <b>netplus-physical-connectivity</b></span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT: rack + console -->
+    <div style="display:grid; gap:16px">
+      <section class="card" id="lab-capture" aria-label="Wiring rack">
+        <h2>SW-CORE-1 rack &amp; patch panel</h2>
+        <p class="rack-note">Left LED = link (steady when a physical connection exists). Right LED = activity (blinks on traffic).</p>
+        <svg class="rack" id="rack" viewBox="0 0 560 360" role="img"
+             aria-describedby="rack-desc"></svg>
+        <p id="rack-desc" class="visually-hidden" aria-live="polite"></p>
+        <div class="legend" aria-hidden="true">
+          <span><i class="dot" style="background:var(--led-link)"></i>link up</span>
+          <span><i class="dot" style="background:var(--led-act)"></i>activity</span>
+          <span><i class="dot" style="background:var(--led-off)"></i>no link</span>
+          <span><i class="dot" style="background:var(--led-fault)"></i>fault to isolate</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Diagnostic console — admin@VETSERVER</h2>
+        <div class="console">
+          <pre class="out" id="out" tabindex="0" aria-live="polite" aria-label="Console output"></pre>
+          <div class="cmdline">
+            <span class="ps" aria-hidden="true">admin@VETSERVER:~$</span>
+            <label class="visually-hidden" for="cmd">Console command</label>
+            <input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false"
+                   placeholder="type a command — try: help">
+          </div>
+          <p class="hint">Commands: <b>help</b> · <b>ping &lt;host|ip&gt;</b> · <b>link &lt;host&gt;</b> · <b>show ports</b> · <b>clear</b></p>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: actions + tasks + questions -->
+    <div style="display:grid; gap:16px">
+      <section class="card">
+        <h2>Bench actions</h2>
+        <div class="actions">
+          <fieldset class="act-group">
+            <legend>Reception drop — FRONTDESK-PC</legend>
+            <div style="display:grid; gap:7px">
+              <button data-act="fd-reseat">Reseat the connector at the FRONTDESK-PC NIC</button>
+              <button data-act="fd-wall">Swap the reception wall cable for a known-good Cat6</button>
+              <button data-act="fd-patch">Swap the closet patch cable (panel A02 ↔ Gi0/2) for a known-good Cat6</button>
+            </div>
+          </fieldset>
+          <fieldset class="act-group">
+            <legend>Exam-2 drop — EXAM2-PC</legend>
+            <div style="display:grid; gap:7px">
+              <button data-act="ex-wall">Swap the exam-2 wall cable for a known-good Cat6</button>
+              <button data-act="ex-patch">Swap the closet patch cable (panel A05 ↔ Gi0/5) for a known-good Cat6</button>
+              <button data-act="ex-onboard">Move the EXAM2-PC cable to the onboard NIC port</button>
+            </div>
+          </fieldset>
+          <button class="ghost" data-act="reset" style="text-align:center">↺ Reset the lab</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Task checklist</h2>
+        <ol class="tasklist" id="tasks"></ol>
+      </section>
+
+      <section class="card">
+        <h2>Lab questions</h2>
+        <div id="questions"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- SUBMIT BAR -->
+  <section class="subbar" aria-label="Submit lab">
+    <div class="subrow">
+      <div class="field">
+        <label for="handle">Callsign (no real names)</label>
+        <input id="handle" maxlength="32" autocomplete="off" placeholder="e.g. copper-fox-7">
+      </div>
+      <div class="scorepill" id="scorepill">Score <b><span id="earned">0</span></b> / <span id="total">10</span></div>
+      <button class="primary" id="submitBtn" style="min-width:200px">Submit completed lab</button>
+    </div>
+    <div id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <footer class="legal">
+    Brightwater Clinic: Physical-Layer Fault Isolation · v1.0.0 ·
+    netplus-physical-connectivity · self-contained, no runtime dependencies.<br>
+    © 2026 &lt;AUTHOR / ORG — fill in&gt;. Original lab expression. Released under the MIT License.
+    Addresses use RFC 5737 documentation ranges; the clinic and personas are fictional.
+  </footer>
+</div>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 1 — SCREENSHOT
+     -------------------------------------------------------------------------
+     The project spec calls for an INLINED html2canvas so the file is fully
+     dependency-free. A faithful ~150KB minified html2canvas cannot be authored
+     by hand, so this file ships with a built-in, dependency-free PNG renderer
+     (captureLab) that draws the lab's state — link status, tasks, answers, and
+     score — into a real PNG. It works out of the box.
+
+     OPTIONAL: to capture a pixel-accurate image of the simulated DOM instead,
+     paste the official minified html2canvas source between the markers below.
+     If window.html2canvas is defined at submit time, it is used automatically;
+     otherwise the built-in renderer is used. Either way the payload carries a
+     valid PNG.
+     ========================================================================= -->
+<script>
+/* >>> PASTE MINIFIED html2canvas HERE (optional) >>> */
+/* <<< END html2canvas <<< */
+</script>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 2 — ENGINE + CONFIG + ANSWER KEY
+     ========================================================================= -->
+<script>
+"use strict";
+
+/* ----------------------------- LAB CONFIG ------------------------------ */
+const CONFIG = {
+  assignmentId: "netplus-physical-connectivity",
+  title: "Brightwater Clinic: Physical-Layer Fault Isolation",
+  version: "1.0.0",
+  objectives: ["N10-009:5.2", "APNET:3.6"],
+
+  // Deploy the shared apps-script.gs as a Web App and paste its /exec URL here.
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  // Rotate per cohort. Must match the SUBMISSION_TOKEN Script Property.
+  submissionToken: "PASTE_PER_COHORT_TOKEN",
+
+  internetHost: "203.0.113.10",         // upstream test host (RFC 5737)
+  hosts: {
+    "VETSERVER":    { ip:"10.20.5.10", port:"Gi0/1", role:"server" },
+    "FRONTDESK-PC": { ip:"10.20.5.21", port:"Gi0/2", role:"pc" },
+    "EXAM2-PC":     { ip:"10.20.5.22", port:"Gi0/5", role:"pc" },
+    "GW-EDGE":      { ip:"10.20.5.1",  port:"Gi0/8", role:"router" }
+  }
+};
+
+/* ------------------------- SIMULATION STATE ---------------------------- */
+/* Fault design (the two things the learner must isolate):
+   FRONTDESK-PC : closet patch cable A02<->Gi0/2 is bad. Wall run & NIC are fine.
+   EXAM2-PC     : the add-in NIC port is dead. Cabling & switch port are fine;
+                  moving to the onboard NIC restores link.                      */
+function freshSim(){
+  return {
+    frontdesk:{ nicOk:true,  wallOk:true,  patchOk:false, switchOk:true },
+    exam2:    { activeNic:"addin", addinOk:false, onboardOk:true,
+                wallOk:true, patchOk:true, switchOk:true },
+    observed:{ frontdesk:false, exam2:false },
+    pinged:{},          // targets pinged at least once
+    replied:{}          // targets that replied (successful ping)
+  };
+}
+let SIM = freshSim();
+
+function frontUp(){ const f=SIM.frontdesk; return f.nicOk&&f.wallOk&&f.patchOk&&f.switchOk; }
+function exam2Up(){ const e=SIM.exam2; const nic = e.activeNic==="addin"? e.addinOk : e.onboardOk;
+                    return nic&&e.wallOk&&e.patchOk&&e.switchOk; }
+function hostUp(name){
+  if(name==="FRONTDESK-PC") return frontUp();
+  if(name==="EXAM2-PC")     return exam2Up();
+  return true; // VETSERVER, GW-EDGE always up
+}
+
+/* --------------------------- RACK RENDERING ---------------------------- */
+const RACK = document.getElementById("rack");
+const RACK_DESC = document.getElementById("rack-desc");
+const PORTS = ["Gi0/1","Gi0/2","Gi0/3","Gi0/4","Gi0/5","Gi0/6","Gi0/7","Gi0/8"];
+
+function portDevice(p){ for(const h in CONFIG.hosts){ if(CONFIG.hosts[h].port===p) return h; } return null; }
+
+function renderRack(){
+  const portW=46, portH=34, gap=8, x0=40, yPanel=40, ySwitch=120;
+  let svg = "";
+  // patch panel chassis
+  svg += `<rect class="chassis" x="20" y="22" width="520" height="62" rx="6"/>`;
+  svg += `<text class="lbl" x="28" y="18">PATCH PANEL · A01–A08</text>`;
+  // switch chassis
+  svg += `<rect class="chassis" x="20" y="102" width="520" height="62" rx="6"/>`;
+  svg += `<text class="lbl" x="28" y="98">SWITCH SW-CORE-1</text>`;
+
+  PORTS.forEach((p,i)=>{
+    const x = x0 + i*(portW+gap);
+    const dev = portDevice(p);
+    // patch port
+    svg += `<rect class="port" x="${x}" y="${yPanel}" width="${portW}" height="${portH}" rx="4"/>`;
+    svg += `<text class="lbl" x="${x+portW/2}" y="${yPanel+21}" text-anchor="middle">A0${i+1}</text>`;
+    // switch port w/ two LEDs
+    svg += `<rect class="port" x="${x}" y="${ySwitch}" width="${portW}" height="${portH}" rx="4"/>`;
+    svg += `<text class="lbl" x="${x+portW/2}" y="${ySwitch+30}" text-anchor="middle" font-size="9">${i+1}</text>`;
+    // LEDs
+    let linkCls="off", actCls="off", blink="";
+    if(dev){
+      if(hostUp(dev)){ linkCls="link"; actCls="act"; blink=" blink"; }
+      else { linkCls = (dev==="FRONTDESK-PC"||dev==="EXAM2-PC") ? "fault" : "off"; actCls="off"; }
+    }
+    svg += `<circle class="led ${linkCls}" cx="${x+13}" cy="${ySwitch+12}" r="5"/>`;
+    svg += `<circle class="led ${actCls}${blink}" cx="${x+33}" cy="${ySwitch+12}" r="5"/>`;
+    // closet patch cable panel->switch
+    let cableCls = dev ? (hostUp(dev) ? "live" : "dead") : "";
+    if(dev) svg += `<line class="cable ${cableCls}" x1="${x+portW/2}" y1="${yPanel+portH}" x2="${x+portW/2}" y2="${ySwitch}"/>`;
+  });
+
+  // device boxes connected to patch ports via "wall drops"
+  const devs = [
+    {n:"VETSERVER",   p:"Gi0/1", col:0},
+    {n:"FRONTDESK-PC",p:"Gi0/2", col:1},
+    {n:"EXAM2-PC",    p:"Gi0/5", col:4},
+    {n:"GW-EDGE",     p:"Gi0/8", col:7}
+  ];
+  devs.forEach(d=>{
+    const i = PORTS.indexOf(d.p);
+    const x = x0 + i*(portW+gap);
+    const cx = x + portW/2;
+    const by = 250, bw=92, bh=58, bx = Math.min(Math.max(cx-bw/2,8), 560-bw-8);
+    const up = hostUp(d.n);
+    // wall-drop cable patch->device
+    svg += `<line class="cable ${up?'live':(d.n==='FRONTDESK-PC'||d.n==='EXAM2-PC'?'dead':'')}" x1="${cx}" y1="164" x2="${cx}" y2="${by}"/>`;
+    svg += `<rect class="devbox" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="6"/>`;
+    svg += `<text class="lbl dev" x="${bx+8}" y="${by+20}">${d.n}</text>`;
+    svg += `<text class="lbl ip" x="${bx+8}" y="${by+36}">${CONFIG.hosts[d.n].ip}</text>`;
+    svg += `<text class="lbl" x="${bx+8}" y="${by+50}" font-size="9">${up?'link up':'NO LINK'}</text>`;
+  });
+
+  RACK.innerHTML = svg;
+  RACK_DESC.textContent =
+    `Switch SW-CORE-1. ` + devs.map(d=>`${d.n} on ${d.p}: ${hostUp(d.n)?"link up":"no link"}`).join("; ") + ".";
+}
+
+/* ------------------------------ CONSOLE -------------------------------- */
+const OUT = document.getElementById("out");
+const CMD = document.getElementById("cmd");
+function print(text, cls){ const span=document.createElement("span"); if(cls) span.className=cls;
+  span.textContent=text+"\n"; OUT.appendChild(span); OUT.scrollTop=OUT.scrollHeight; }
+function echo(cmd){ print("admin@VETSERVER:~$ "+cmd, "prompt"); }
+
+function resolveTarget(tok){
+  if(!tok) return null;
+  const upper = tok.toUpperCase();
+  for(const h in CONFIG.hosts){ if(h===upper) return {name:h, ip:CONFIG.hosts[h].ip}; }
+  if(tok===CONFIG.internetHost) return {name:CONFIG.internetHost, ip:CONFIG.internetHost};
+  if(/^\d{1,3}(\.\d{1,3}){3}$/.test(tok)){
+    for(const h in CONFIG.hosts){ if(CONFIG.hosts[h].ip===tok) return {name:h, ip:tok}; }
+    return {name:tok, ip:tok, unknownIp:true};
+  }
+  return {bad:true};
+}
+
+function doPing(tok){
+  const t = resolveTarget(tok);
+  if(!tok){ print("ping: missing target. Usage: ping <host|ip>", "err"); return; }
+  if(t && t.bad){ print(`ping: cannot resolve '${tok}': name or address not known`, "err"); return; }
+
+  let alive;
+  if(t.name===CONFIG.internetHost) alive=true;               // upstream reachable (gateway up)
+  else if(CONFIG.hosts[t.name]) alive = hostUp(t.name);
+  else alive = false;                                        // unknown in-range IP: no host
+
+  print(`Pinging ${t.name} [${t.ip}] with 32 bytes of data:`);
+  if(alive){
+    for(let i=0;i<4;i++) print(`Reply from ${t.ip}: bytes=32 time=${1+(i%2)}ms TTL=128`, "ok");
+    print("");
+    print(`Ping statistics for ${t.ip}:`);
+    print("    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)", "ok");
+    SIM.replied[t.name]=true;
+  }else{
+    for(let i=0;i<4;i++) print("Request timed out.", "err");
+    print("");
+    print(`Ping statistics for ${t.ip}:`);
+    print("    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss)", "err");
+  }
+  SIM.pinged[t.name]=true;
+  if(t.name==="GW-EDGE") SIM.pinged["GW-EDGE"]=true;
+  recompute();
+}
+
+function ledLine(name){
+  const up = hostUp(name);
+  const port = CONFIG.hosts[name].port;
+  if(up) return `${name.padEnd(13)} link LED: ON    activity LED: BLINK   (link up @ ${port})`;
+  return     `${name.padEnd(13)} link LED: OFF   activity LED: OFF     (no physical link to switch)`;
+}
+function doLink(tok){
+  if(!tok){ print("link: missing host. Usage: link <host>", "err"); return; }
+  const up=tok.toUpperCase();
+  if(!CONFIG.hosts[up]){ print(`link: unknown host '${tok}'`, "err"); return; }
+  print(ledLine(up), hostUp(up)?"ok":"info");
+  if(up==="FRONTDESK-PC") SIM.observed.frontdesk=true;
+  if(up==="EXAM2-PC")     SIM.observed.exam2=true;
+  recompute();
+}
+function doShowPorts(){
+  print("Switch SW-CORE-1 — port status", "info");
+  print("PORT     CONNECTED-DEVICE   LINK   ACTIVITY");
+  PORTS.forEach(p=>{
+    const dev=portDevice(p);
+    if(!dev) return;
+    const up=hostUp(dev);
+    print(`${p.padEnd(8)} ${dev.padEnd(18)} ${(up?"up":"down").padEnd(6)} ${up?"active":"--"}`, up?"ok":"info");
+  });
+  SIM.observed.frontdesk=true; SIM.observed.exam2=true;
+  recompute();
+}
+
+const HELP = [
+  "Available commands:",
+  "  help                 show this list",
+  "  ping <host|ip>       send 4 echo requests (e.g. ping FRONTDESK-PC)",
+  "  link <host>          read a host's NIC link / activity LEDs",
+  "  show ports           list switch port link state",
+  "  clear                clear the console",
+  "",
+  "Known hosts: VETSERVER, FRONTDESK-PC, EXAM2-PC, GW-EDGE  ·  upstream test host "+CONFIG.internetHost
+];
+function runCommand(raw){
+  const line = raw.trim();
+  if(!line) return;
+  echo(line);
+  const parts = line.split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  if(cmd==="help"){ HELP.forEach(l=>print(l, l.startsWith("Available")||l.startsWith("Known")?"info":"dim")); }
+  else if(cmd==="ping"){ doPing(parts[1]); }
+  else if(cmd==="link"){ doLink(parts[1]); }
+  else if(cmd==="show" && (parts[1]||"").toLowerCase()==="ports"){ doShowPorts(); }
+  else if(cmd==="clear"){ OUT.innerHTML=""; }
+  else { print(`% Unrecognized command '${cmd}'. Type 'help' for a list.`, "err"); }
+}
+CMD.addEventListener("keydown", e=>{ if(e.key==="Enter"){ runCommand(CMD.value); CMD.value=""; } });
+
+/* ------------------------------ ACTIONS -------------------------------- */
+function applyAction(act){
+  switch(act){
+    case "fd-reseat":
+      print("> Reseated the connector at the FRONTDESK-PC NIC.", "dim");
+      print(frontUp() ? "  FRONTDESK-PC link LED is ON." :
+            "  FRONTDESK-PC link LED is still OFF — a loose NIC connector was not the fault.", frontUp()?"ok":"info");
+      break;
+    case "fd-wall":
+      print("> Swapped the reception wall cable for a known-good Cat6.", "dim");
+      print(frontUp() ? "  FRONTDESK-PC link LED is ON." :
+            "  FRONTDESK-PC link LED is still OFF — the horizontal wall run was not the fault.", frontUp()?"ok":"info");
+      break;
+    case "fd-patch":
+      SIM.frontdesk.patchOk=true;
+      print("> Swapped the closet patch cable A02 ↔ Gi0/2 for a known-good Cat6.", "dim");
+      print("  FRONTDESK-PC link LED is now ON — the closet patch cable was the faulty segment.", "ok");
+      break;
+    case "ex-wall":
+      print("> Swapped the exam-2 wall cable for a known-good Cat6.", "dim");
+      print(exam2Up() ? "  EXAM2-PC link LED is ON." :
+            "  EXAM2-PC link LED is still OFF — the wall run was not the fault.", exam2Up()?"ok":"info");
+      break;
+    case "ex-patch":
+      print("> Swapped the closet patch cable A05 ↔ Gi0/5 for a known-good Cat6.", "dim");
+      print(exam2Up() ? "  EXAM2-PC link LED is ON." :
+            "  EXAM2-PC link LED is still OFF — this patch cable was not the fault.", exam2Up()?"ok":"info");
+      break;
+    case "ex-onboard":
+      SIM.exam2.activeNic="onboard";
+      print("> Moved the EXAM2-PC cable to the onboard NIC port.", "dim");
+      print("  EXAM2-PC link LED is now ON — the add-in NIC card was dead; the onboard port works.", "ok");
+      break;
+    case "reset":
+      SIM=freshSim(); OUT.innerHTML=""; banner(); break;
+  }
+  renderRack(); recompute();
+}
+document.querySelectorAll("button[data-act]").forEach(b=>{
+  b.addEventListener("click", ()=>applyAction(b.getAttribute("data-act")));
+});
+
+/* ------------------------------- TASKS --------------------------------- */
+const TASKS = [
+  { id:"observe",  label:"Read the NIC/port link LEDs for FRONTDESK-PC and EXAM2-PC (use link or show ports).",
+    test:()=> SIM.observed.frontdesk && SIM.observed.exam2 },
+  { id:"baseline", label:"Baseline reachability: ping the gateway GW-EDGE and both affected PCs.",
+    test:()=> SIM.pinged["GW-EDGE"] && SIM.pinged["FRONTDESK-PC"] && SIM.pinged["EXAM2-PC"] },
+  { id:"fix-frontdesk", label:"Restore FRONTDESK-PC by isolating and replacing the one faulty cable segment.",
+    test:()=> frontUp() },
+  { id:"fix-exam2", label:"Restore EXAM2-PC by isolating the dead component and routing around it.",
+    test:()=> exam2Up() },
+  { id:"verify", label:"Verify end to end: successful ping to FRONTDESK-PC, EXAM2-PC, and the upstream host "+CONFIG.internetHost+".",
+    test:()=> SIM.replied["FRONTDESK-PC"] && SIM.replied["EXAM2-PC"] && SIM.replied[CONFIG.internetHost] }
+];
+const tasksEl = document.getElementById("tasks");
+function renderTasks(){
+  tasksEl.innerHTML="";
+  TASKS.forEach(t=>{
+    const passed = t._passed;
+    const li=document.createElement("li");
+    li.className = passed ? "passed" : "";
+    li.innerHTML = `<span class="check ${passed?"pass":""}"></span><span class="tlabel">${t.label}</span>`;
+    tasksEl.appendChild(li);
+  });
+}
+
+/* ----------------------------- QUESTIONS ------------------------------- */
+const QUESTIONS = [
+  { id:"q1", type:"mc",
+    prompt:"On a switch port, a steady (non-blinking) link LED tells you that…",
+    options:[
+      "Network traffic is actively flowing through the port",
+      "A physical connection exists between the port and a powered device",
+      "The port has been administratively shut down",
+      "Power over Ethernet is being supplied to the device"],
+    answer:1 },
+  { id:"q2", type:"mc",
+    prompt:"On FRONTDESK-PC, a known-good cable on the wall jack did not restore link, but swapping the closet patch cable did. The faulty component was…",
+    options:[
+      "The FRONTDESK-PC network adapter",
+      "The horizontal cabling inside the wall",
+      "The patch cable between the panel and the switch",
+      "The switch port configuration"],
+    answer:2 },
+  { id:"q3", type:"mc",
+    prompt:"EXAM2-PC regained link only after the cable was moved to its onboard NIC port. The most likely fault was…",
+    options:[
+      "The horizontal cabling between the jack and the panel",
+      "The add-in network adapter card",
+      "An incorrect VLAN assignment on the port",
+      "An exhausted DHCP scope"],
+    answer:1 },
+  { id:"q4", type:"num",
+    prompt:"The clinic LAN is 10.20.5.0/24. How many usable host addresses does that subnet provide?",
+    answer:254 },
+  { id:"q5", type:"mc",
+    prompt:"With both links restored, what is the correct final step of the troubleshooting methodology?",
+    options:[
+      "Establish a theory of probable cause",
+      "Document findings and actions, then verify full system functionality",
+      "Escalate the ticket to the cabling vendor",
+      "Power-cycle every device on the segment"],
+    answer:1 }
+];
+const responses = {}; // id -> chosen index / numeric string
+const qEl = document.getElementById("questions");
+function renderQuestions(){
+  qEl.innerHTML="";
+  QUESTIONS.forEach((q,qi)=>{
+    const box=document.createElement("div"); box.className="q";
+    let html = `<p class="qp"><span class="num">Q${qi+1}</span>${q.prompt}</p>`;
+    if(q.type==="mc"){
+      html += q.options.map((o,oi)=>`
+        <label class="opt">
+          <input type="radio" name="${q.id}" value="${oi}">
+          <span>${o}</span>
+        </label>`).join("");
+    }else{
+      html += `<input type="number" inputmode="numeric" name="${q.id}" aria-label="${q.prompt}" placeholder="answer">`;
+    }
+    html += `<div class="verdict" id="v-${q.id}" aria-live="polite"></div>`;
+    box.innerHTML=html;
+    qEl.appendChild(box);
+  });
+  qEl.querySelectorAll("input").forEach(inp=>{
+    inp.addEventListener("change", e=>{
+      const id=e.target.name;
+      responses[id] = e.target.type==="number" ? e.target.value : Number(e.target.value);
+      recompute();
+    });
+  });
+}
+function questionCorrect(q){
+  const r = responses[q.id];
+  if(r===undefined || r==="") return null;
+  if(q.type==="num") return Number(r)===q.answer;
+  return r===q.answer;
+}
+
+/* --------------------------- SCORE / RECOMPUTE ------------------------- */
+function recompute(){
+  TASKS.forEach(t=> t._passed = !!t.test());
+  renderTasks();
+  let earned=0;
+  TASKS.forEach(t=>{ if(t._passed) earned++; });
+  QUESTIONS.forEach(q=>{
+    const c=questionCorrect(q);
+    const v=document.getElementById("v-"+q.id);
+    if(v){
+      if(c===null){ v.textContent=""; v.className="verdict"; }
+      else if(c){ v.textContent="✓ correct"; v.className="verdict ok"; earned++; }
+      else { v.textContent="✗ not yet — re-check your reasoning"; v.className="verdict no"; }
+    }else if(c){ earned++; }
+  });
+  const total = TASKS.length + QUESTIONS.length;
+  document.getElementById("earned").textContent=earned;
+  document.getElementById("total").textContent=total;
+  return {earned, total};
+}
+
+/* ------------------------------ SCREENSHOT ----------------------------- */
+function nativeCapture(){
+  const score=recompute();
+  const W=900, pad=28, lh=22;
+  // pre-measure height
+  let rows = 6 + 4 + TASKS.length + QUESTIONS.length + 4;
+  const H = pad*2 + rows*lh + 40;
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const g=c.getContext("2d");
+  g.fillStyle="#10171d"; g.fillRect(0,0,W,H);
+  g.fillStyle="#39c2b8"; g.font="12px monospace";
+  g.fillText("BRIGHTWATER CLINIC · PHYSICAL-LAYER FAULT ISOLATION", pad, pad+4);
+  g.fillStyle="#e9f1f4"; g.font="bold 20px sans-serif";
+  let y=pad+34;
+  g.fillText(CONFIG.title, pad, y); y+=lh+4;
+  g.font="13px monospace"; g.fillStyle="#8aa0ad";
+  g.fillText("callsign: "+(document.getElementById("handle").value||"(none)")
+    +"   ·   "+new Date().toISOString(), pad, y); y+=lh+6;
+
+  g.fillStyle="#39c2b8"; g.font="12px monospace"; g.fillText("LINK STATUS", pad, y); y+=lh;
+  ["VETSERVER","FRONTDESK-PC","EXAM2-PC","GW-EDGE"].forEach(n=>{
+    const up=hostUp(n);
+    g.fillStyle = up? "#41d67a":"#ff6060";
+    g.beginPath(); g.arc(pad+6, y-4, 5, 0, 7); g.fill();
+    g.fillStyle="#e9f1f4"; g.font="13px monospace";
+    g.fillText(`${n} (${CONFIG.hosts[n].ip}) — ${up?"link up":"NO LINK"}`, pad+20, y); y+=lh;
+  });
+  y+=6;
+  g.fillStyle="#39c2b8"; g.font="12px monospace"; g.fillText("TASKS", pad, y); y+=lh;
+  TASKS.forEach(t=>{
+    g.fillStyle=t._passed?"#41d67a":"#8aa0ad"; g.font="13px monospace";
+    g.fillText((t._passed?"[x] ":"[ ] ")+t.label.slice(0,90), pad, y); y+=lh;
+  });
+  y+=6;
+  g.fillStyle="#39c2b8"; g.font="12px monospace"; g.fillText("QUESTIONS", pad, y); y+=lh;
+  QUESTIONS.forEach((q,i)=>{
+    const c2=questionCorrect(q);
+    g.fillStyle = c2===true?"#41d67a":(c2===false?"#ff6b6b":"#8aa0ad");
+    g.font="13px monospace";
+    g.fillText(`Q${i+1}: ${c2===true?"correct":c2===false?"incorrect":"unanswered"}`, pad, y); y+=lh;
+  });
+  y+=10; g.fillStyle="#e9f1f4"; g.font="bold 15px monospace";
+  g.fillText(`SCORE  ${score.earned} / ${score.total}`, pad, y);
+  return c.toDataURL("image/png");
+}
+async function captureLab(){
+  if(typeof window.html2canvas==="function"){
+    try{
+      const node=document.querySelector(".wrap");
+      const canvas=await window.html2canvas(node,{backgroundColor:"#10171d",scale:1});
+      return canvas.toDataURL("image/png");
+    }catch(e){ /* fall through to native */ }
+  }
+  return nativeCapture();
+}
+
+/* ------------------------------- SUBMIT -------------------------------- */
+const statusEl=document.getElementById("status");
+function setStatus(msg, cls){ statusEl.className=cls||""; statusEl.innerHTML=msg; }
+
+async function submitLab(){
+  const handle=(document.getElementById("handle").value||"").trim();
+  if(!handle){ setStatus("Enter a callsign first (a pseudonym — no real names).","err");
+    document.getElementById("handle").focus(); return; }
+  if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+    setStatus("This lab has no submission URL configured yet. Ask your instructor to set APPS_SCRIPT_URL.","err"); return; }
+
+  const score=recompute();
+  setStatus("Capturing and submitting…","work");
+  const btn=document.getElementById("submitBtn"); btn.disabled=true;
+
+  const screenshot=await captureLab();
+  const payload={
+    assignmentId: CONFIG.assignmentId,
+    handle: handle,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t=>({id:t.id, label:t.label, passed:!!t._passed})),
+    questions: QUESTIONS.map((q,i)=>({
+      id:q.id, prompt:q.prompt,
+      answer: (responses[q.id]===undefined)? "" :
+              (q.type==="num"? String(responses[q.id]) : q.options[responses[q.id]]),
+      correct: questionCorrect(q)===true
+    })),
+    score: {earned:score.earned, total:score.total},
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  try{
+    // SIMPLE request: no custom headers, text/plain body → no CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST", body:JSON.stringify(payload)});
+    const out=await res.json();
+    if(out && out.success){
+      btn.disabled=false;
+      setStatus(`Submitted as <b>${handle}</b> — score ${score.earned}/${score.total}. `+
+                (out.docUrl?`<a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission doc ↗</a>`:""), "ok");
+    }else{
+      btn.disabled=false;
+      setStatus("Submission rejected: "+((out&&out.error)||"unknown error")+". Check with your instructor.","err");
+    }
+  }catch(e){
+    // Locked-down fallback: fire-and-forget, can't read the doc link.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST", mode:"no-cors", body:JSON.stringify(payload)});
+      btn.disabled=false;
+      setStatus(`Sent as <b>${handle}</b> (score ${score.earned}/${score.total}), but the confirmation could not be read in this browser. Confirm receipt with your instructor.`,"work");
+    }catch(e2){
+      btn.disabled=false;
+      setStatus("Could not reach the submission server. Check your connection and try again.","err");
+    }
+  }
+}
+document.getElementById("submitBtn").addEventListener("click", submitLab);
+
+/* ------------------------------- BOOT ---------------------------------- */
+function banner(){
+  print("Brightwater Veterinary Clinic — admin diagnostic shell", "info");
+  print("Two machines reported 'no internet' this morning after the weekend rewire.", "dim");
+  print("Start by reading the LEDs:  link FRONTDESK-PC   then   link EXAM2-PC", "dim");
+  print("Type 'help' for all commands.", "dim");
+  print("");
+}
+renderRack(); renderTasks(); renderQuestions(); recompute(); banner();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-troubleshoot-methodology.html",title:"Lab \u2014 Troubleshooting Methodology \u00b7 Marsh Hollow Pottery"}, NEXT={href:"index_netplus-phys-link-01.html",title:"Down Link \u00b7 Find and Fix the Dead Drop"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.6";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

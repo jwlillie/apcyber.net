@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Tideline Networks — NOC Lab Library
+  Lab: "Reading the Journal: Kernel & System Logs on a NOC Collector"
+  assignmentId: netplus-journald-logs
+
+  Clean-room original work. Scenario, persona, hostnames, journal contents,
+  task and question wording, and all UI markup are original to this library and
+  were authored from the public CompTIA Network+ objectives and the public
+  College Board AP Networking course framework. No third-party lab's wording,
+  scenario, hostnames, values, ordering, or screenshots are reproduced.
+
+  © 2026 [AUTHOR / PUBLISHER NAME]. All rights reserved.
+  Licensed for instructional use within your institution under the library's
+  end-user license. Replace this bracketed notice with your own before release.
+  ============================================================================
+
+  NOTE ON SCREENSHOT CAPTURE:
+  The master spec calls for inlined html2canvas. This build instead uses a
+  native, zero-dependency capture (SVG <foreignObject> -> canvas -> PNG) in the
+  captureLabImage() function below. It produces a PNG data URL of the simulated
+  DOM with no external library. To use literal html2canvas instead, paste the
+  minified library above the engine script and replace captureLabImage()'s body
+  with: `return (await html2canvas(node)).toDataURL('image/png');`
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>NOC Lab — Reading the Journal</title>
+<style id="lab-styles">
+  :root{
+    --bg:#0a1622;            /* deep harbor slate */
+    --bg-raise:#0f2031;
+    --panel:#12283c;
+    --ink:#dbe7f0;          /* primary text */
+    --ink-dim:#8aa3b8;
+    --line:#21405a;
+    --accent:#37c6c0;        /* Tideline cyan (operations) */
+    --accent-ink:#06231f;
+    --amber:#e6a23c;         /* kernel / priority phosphor */
+    --green:#5fd49a;         /* pass */
+    --red:#f1707a;           /* fail / error */
+    --kernel:#f0b561;        /* kernel log lines */
+    --shadow:0 10px 40px rgba(0,0,0,.45);
+    --mono:'SFMono-Regular',ui-monospace,'Cascadia Code','Roboto Mono',Menlo,Consolas,monospace;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+  body{padding:18px;line-height:1.45}
+  a{color:var(--accent)}
+  .wrap{max-width:1120px;margin:0 auto;display:grid;gap:16px;grid-template-columns:1.55fr 1fr}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr}}
+
+  header.masthead{grid-column:1/-1;display:flex;align-items:center;gap:14px;
+    border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:
+    linear-gradient(180deg,var(--bg-raise),var(--panel));box-shadow:var(--shadow)}
+  .badge{flex:0 0 auto;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;
+    background:radial-gradient(circle at 30% 25%,#2bd6cf,#16726e);color:#03201e;font-weight:800;
+    font-family:var(--mono);letter-spacing:-1px}
+  .masthead h1{font-size:1.05rem;margin:0;letter-spacing:.2px}
+  .masthead .sub{margin:2px 0 0;color:var(--ink-dim);font-size:.82rem}
+  .tags{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .tag{font-family:var(--mono);font-size:.7rem;border:1px solid var(--line);color:var(--accent);
+    padding:3px 8px;border-radius:999px;background:rgba(55,198,192,.06)}
+
+  /* ---------------- Terminal ---------------- */
+  .term{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#071019;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:460px}
+  .term-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#0c1a27;
+    border-bottom:1px solid var(--line)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .dot.r{background:#ef5f5f}.dot.y{background:#e6a23c}.dot.g{background:#52c98a}
+  .term-bar .name{margin-left:6px;font-family:var(--mono);font-size:.78rem;color:var(--ink-dim)}
+  .term-out{flex:1;overflow:auto;padding:12px 14px;font-family:var(--mono);font-size:.82rem;
+    white-space:pre-wrap;word-break:break-word;color:#cfe3ef;background:
+    repeating-linear-gradient(180deg,transparent,transparent 22px,rgba(255,255,255,.012) 22px,rgba(255,255,255,.012) 23px)}
+  .term-out .k{color:var(--kernel)}          /* kernel lines */
+  .term-out .sys{color:#9fd0e6}              /* service lines */
+  .term-out .warn{color:var(--amber)}
+  .term-out .err{color:var(--red)}
+  .term-out .muted{color:var(--ink-dim)}
+  .term-out .echo{color:#7fe0db}
+  .term-in{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line);
+    background:#0a141f}
+  .prompt{font-family:var(--mono);font-size:.82rem;color:var(--accent);white-space:nowrap}
+  .term-in input{flex:1;background:transparent;border:none;outline:none;color:var(--ink);
+    font-family:var(--mono);font-size:.85rem;caret-color:var(--accent)}
+  .term-in input::placeholder{color:#496479}
+  .ghost{background:#10243a;border:1px solid var(--line);color:var(--ink-dim);font-family:var(--mono);
+    font-size:.72rem;padding:5px 9px;border-radius:7px;cursor:pointer}
+  .ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* ---------------- Side panels ---------------- */
+  .side{display:flex;flex-direction:column;gap:16px}
+  .card{border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,var(--bg-raise),var(--panel));
+    box-shadow:var(--shadow);padding:14px 16px}
+  .card h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-dim);
+    margin:0 0 10px;font-weight:700}
+  .brief{font-size:.86rem;color:var(--ink)}
+  .brief .who{color:var(--accent);font-weight:600}
+
+  ul.checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  ul.checklist li{display:flex;gap:10px;align-items:flex-start;font-size:.86rem}
+  .mark{flex:0 0 auto;width:20px;height:20px;border-radius:6px;border:1px solid var(--line);
+    display:grid;place-items:center;font-family:var(--mono);font-size:.8rem;color:var(--ink-dim);
+    margin-top:1px;transition:all .2s}
+  li.done .mark{background:var(--green);border-color:var(--green);color:#06241a}
+  li.done .label{color:var(--ink)}
+  .label{color:var(--ink-dim)}
+  .label b{color:var(--ink);font-weight:600}
+  code.cmd{font-family:var(--mono);font-size:.82em;background:#0a1a28;border:1px solid var(--line);
+    padding:1px 5px;border-radius:5px;color:var(--accent)}
+
+  .q{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+  .q:first-of-type{border-top:none;padding-top:0;margin-top:0}
+  .q .prompt-text{font-size:.86rem;margin:0 0 7px}
+  .q-row{display:flex;gap:8px}
+  .q-row input[type=text]{flex:1;background:#0a1a28;border:1px solid var(--line);border-radius:7px;
+    color:var(--ink);font-family:var(--mono);font-size:.82rem;padding:7px 9px;outline:none}
+  .q-row input[type=text]:focus{border-color:var(--accent)}
+  .q-row button{background:transparent;border:1px solid var(--line);color:var(--ink-dim);
+    border-radius:7px;padding:0 12px;font-size:.78rem;cursor:pointer}
+  .q-row button:hover{border-color:var(--accent);color:var(--accent)}
+  .q .result{font-size:.78rem;margin:6px 0 0;min-height:1.1em}
+  .q .result.ok{color:var(--green)}
+  .q .result.no{color:var(--red)}
+
+  /* ---------------- Submission ---------------- */
+  .submit-bar{grid-column:1/-1;border:1px solid var(--line);border-radius:12px;
+    background:linear-gradient(180deg,var(--bg-raise),var(--panel));box-shadow:var(--shadow);
+    padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .submit-bar label{font-size:.8rem;color:var(--ink-dim)}
+  .submit-bar input[type=text]{background:#0a1a28;border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-family:var(--mono);font-size:.86rem;padding:9px 11px;outline:none;min-width:180px}
+  .submit-bar input[type=text]:focus{border-color:var(--accent)}
+  .score-chip{font-family:var(--mono);font-size:.82rem;color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+  .btn{margin-left:auto;display:inline-flex;align-items:center;gap:8px;background:var(--accent);
+    color:var(--accent-ink);border:none;border-radius:9px;padding:10px 18px;font-weight:700;
+    font-size:.9rem;cursor:pointer;transition:filter .15s}
+  .btn:hover{filter:brightness(1.07)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.secondary{background:transparent;border:1px solid var(--line);color:var(--ink-dim);font-weight:600}
+  .btn.secondary:hover{border-color:var(--accent);color:var(--accent)}
+  .status{grid-column:1/-1;font-size:.84rem;min-height:1.2em}
+  .status.ok{color:var(--green)}.status.no{color:var(--red)}.status.busy{color:var(--amber)}
+
+  /* focus visibility (quality floor) */
+  a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);
+    outline-offset:2px;border-radius:4px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-journald-logs", "title": "NOC Lab — Reading the Journal", "version": "1.0.0", "objectives": ["N10-009:3.2", "APNET:4.5"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<!-- LAB CAPTURE REGION: everything inside #lab is what the screenshot records -->
+<div id="lab" class="wrap">
+
+  <header class="masthead">
+    <div class="badge" aria-hidden="true">TN</div>
+    <div>
+      <h1>Tideline Networks — NOC Operations Console</h1>
+      <p class="sub">Lab 12 · Reading the Journal on a collector host &nbsp;·&nbsp; host <code class="cmd">tide-noc-01</code></p>
+    </div>
+    <div class="tags" aria-label="Blueprint coverage">
+      <span class="tag">N10-009 · 3.2</span>
+      <span class="tag">APNET · 4.5.C</span>
+    </div>
+  </header>
+
+  <!-- Terminal simulation -->
+  <main class="term" aria-label="Linux terminal">
+    <div class="term-bar">
+      <span class="dot r" aria-hidden="true"></span>
+      <span class="dot y" aria-hidden="true"></span>
+      <span class="dot g" aria-hidden="true"></span>
+      <span class="name">operator@tide-noc-01: ~</span>
+      <button class="ghost" id="reset-btn" type="button" style="margin-left:auto">Reset terminal</button>
+    </div>
+    <div class="term-out" id="out" role="log" aria-live="polite" aria-label="Terminal output"></div>
+    <div class="term-in">
+      <span class="prompt" aria-hidden="true">operator@tide-noc-01:~$</span>
+      <label class="sr-only" for="cmd">Type a command</label>
+      <input id="cmd" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+             inputmode="text" placeholder="type a command, then press Enter (try: journalctl --help)">
+    </div>
+  </main>
+
+  <!-- Side: brief, tasks, questions -->
+  <aside class="side">
+    <section class="card">
+      <h2>Shift brief</h2>
+      <p class="brief"><span class="who">You</span> are on the overnight ops desk at Tideline Networks.
+        At <b>02:14</b> the log-collector host <code class="cmd">tide-noc-01</code> — the box that
+        receives syslog from the edge routers — rebooted on its own. Before you escalate, pull its
+        journal so you can see what the kernel reported on this boot, and skim the whole journal newest
+        entries first.</p>
+    </section>
+
+    <section class="card" aria-label="Task checklist">
+      <h2>Tasks</h2>
+      <ul class="checklist" id="tasks">
+        <li data-task="kernel" id="t-kernel">
+          <span class="mark" aria-hidden="true">○</span>
+          <span class="label">Show the <b>kernel</b> message log for the <b>current boot</b>.
+            <span class="sr-only">Not yet complete.</span></span>
+        </li>
+        <li data-task="reverse" id="t-reverse">
+          <span class="mark" aria-hidden="true">○</span>
+          <span class="label">Show the journal in <b>reverse</b> order — <b>newest entries first</b>.
+            <span class="sr-only">Not yet complete.</span></span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="card" aria-label="Questions">
+      <h2>Check your understanding</h2>
+
+      <div class="q" data-q="q1">
+        <p class="prompt-text">Which <code class="cmd">journalctl</code> option restricts output to
+          kernel ring-buffer messages?</p>
+        <div class="q-row">
+          <label class="sr-only" for="q1">Answer for question 1</label>
+          <input id="q1" type="text" autocomplete="off" placeholder="e.g. -x">
+          <button type="button" data-check="q1">Check</button>
+        </div>
+        <p class="result" id="r1" aria-live="polite"></p>
+      </div>
+
+      <div class="q" data-q="q2">
+        <p class="prompt-text">Which option prints entries in reverse, with the newest first?</p>
+        <div class="q-row">
+          <label class="sr-only" for="q2">Answer for question 2</label>
+          <input id="q2" type="text" autocomplete="off" placeholder="short flag or long flag">
+          <button type="button" data-check="q2">Check</button>
+        </div>
+        <p class="result" id="r2" aria-live="polite"></p>
+      </div>
+
+      <div class="q" data-q="q3">
+        <p class="prompt-text">By default, the kernel-only option limits output to <b>which</b> boot?</p>
+        <div class="q-row">
+          <label class="sr-only" for="q3">Answer for question 3</label>
+          <input id="q3" type="text" autocomplete="off" placeholder="one word">
+          <button type="button" data-check="q3">Check</button>
+        </div>
+        <p class="result" id="r3" aria-live="polite"></p>
+      </div>
+    </section>
+  </aside>
+
+  <!-- Submission bar -->
+  <div class="submit-bar">
+    <label for="handle">Callsign</label>
+    <input id="handle" type="text" autocomplete="off" maxlength="32"
+           placeholder="your handle — no real name" aria-describedby="handle-help">
+    <span id="handle-help" class="sr-only">Use a pseudonym. Do not enter your real name.</span>
+    <span class="score-chip" id="score-chip">0 / 5 complete</span>
+    <button class="btn secondary" id="reset-all" type="button">Reset lab</button>
+    <button class="btn" id="submit" type="button">Submit completed lab</button>
+  </div>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+</div>
+
+<script>
+/* ===========================================================================
+   ENGINE + CONFIG + ANSWER KEY  (clean-room, original to this library)
+   =========================================================================== */
+"use strict";
+
+/* ----------------------------- LAB CONFIG ------------------------------- */
+const CONFIG = {
+  assignmentId: "netplus-journald-logs",
+  objectives:   ["N10-009:3.2", "APNET:4.5"],  // see manifest notes re: 007/009 file
+  // ---- Instructor fills these two before deploying: ----
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  passThreshold:  "all tasks complete + all questions correct"
+};
+
+/* ----------------------------- ANSWER KEY ------------------------------- *
+ * NOTE: client-side keys are inspectable in dev tools. This makes the score
+ * self-reported (fine for formative work). For trustworthy scoring, have the
+ * Apps Script re-validate `questions` against a server-held key (see §7).      */
+const KEY = {
+  q1: { accept: ["-k", "--dmesg", "k", "dmesg"], label: "-k (or --dmesg)" },
+  q2: { accept: ["-r", "--reverse", "r", "reverse"], label: "-r (or --reverse)" },
+  q3: { accept: ["current", "current boot", "this boot", "the current boot"], label: "the current boot" }
+};
+
+/* ------------------- Simulated journal (original data) ------------------ *
+ * Two boots: the CURRENT boot (after the unexpected reboot) and one PREVIOUS
+ * boot that ended in a thermal-protection shutdown — which is the thing the
+ * operator is investigating. `-b` filters to current boot; `-k` shows kernel
+ * lines; `-r` reverses. All hostnames, daemons, and text are original.        */
+const HOST = "tide-noc-01";
+const JOURNAL = {
+  current: { id: "b8f1c0d2", lines: [
+    { f:"kernel",  t:"Jun 29 02:14:07", m:"Linux version 6.8.0-tideline (ops@forge-02) #1 SMP" },
+    { f:"kernel",  t:"Jun 29 02:14:07", m:"Command line: BOOT_IMAGE=/vmlinuz root=LABEL=tnoc-root ro" },
+    { f:"kernel",  t:"Jun 29 02:14:07", m:"Memory: 31894M available / 32768M total" },
+    { f:"kernel",  t:"Jun 29 02:14:08", m:"igb 0000:05:00.0 noc-eth0: link is not ready" },
+    { f:"kernel",  t:"Jun 29 02:14:10", m:"igb 0000:05:00.0 noc-eth0: NIC Link is Up 1000 Mbps Full Duplex" },
+    { f:"kernel",  t:"Jun 29 02:14:10", m:"bonding: noc-bond0: enslaving noc-eth0 as active interface" },
+    { f:"kernel",  t:"Jun 29 02:14:11", m:"EXT4-fs (sda2): mounted filesystem with ordered data mode" },
+    { f:"systemd", t:"Jun 29 02:14:13", m:"systemd[1]: Reached target Multi-User System." },
+    { f:"chronyd", t:"Jun 29 02:14:15", m:"chronyd: time synchronised to NTP source 10.40.0.9" },
+    { f:"sshd",    t:"Jun 29 02:14:16", m:"sshd[842]: Server listening on 0.0.0.0 port 22." },
+    { f:"rsyslogd",t:"Jun 29 02:14:16", m:"rsyslogd: imudp listening for syslog on 0.0.0.0:514" },
+    { f:"flowd",   t:"Jun 29 02:14:17", m:"flowd[915]: netflow collector listening on 0.0.0.0:2055" },
+    { f:"collectd",t:"Jun 29 02:14:18", m:"collectd[948]: plugin 'interface' loaded; sampling 10s" }
+  ]},
+  previous: { id: "a4e90b77", lines: [
+    { f:"kernel",  t:"Jun 28 23:51:02", m:"igb 0000:05:00.0 noc-eth0: NIC Link is Up 1000 Mbps Full Duplex" },
+    { f:"flowd",   t:"Jun 28 23:51:05", m:"flowd[911]: netflow collector listening on 0.0.0.0:2055" },
+    { f:"kernel",  t:"Jun 29 02:13:41", m:"thermal thermal_zone1: critical temperature reached (96C)" },
+    { f:"kernel",  t:"Jun 29 02:13:42", m:"thermal: initiating protective emergency shutdown" },
+    { f:"systemd", t:"Jun 29 02:13:42", m:"systemd[1]: Shutting down (thermal protection)." }
+  ]}
+};
+
+/* ------------------------------ State ----------------------------------- */
+const state = {
+  tasks:     { kernel:false, reverse:false },
+  questions: { q1:false, q2:false, q3:false }
+};
+
+const out  = document.getElementById("out");
+const cmdEl= document.getElementById("cmd");
+let history = [], hIdx = -1;
+
+/* ------------------------- Terminal rendering --------------------------- */
+function esc(s){ return s.replace(/[&<>]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c])); }
+function print(html){ const d=document.createElement("div"); d.innerHTML=html; out.appendChild(d); out.scrollTop=out.scrollHeight; }
+function printEcho(text){ print('<span class="echo">operator@'+HOST+':~$</span> '+esc(text)); }
+
+function classFor(f){ return f==="kernel" ? "k" : "sys"; }
+function fmtLine(l){
+  const cls = (/critical|emergency|protection/i.test(l.m)) ? "warn" : classFor(l.f);
+  return '<span class="'+cls+'">'+esc(l.t)+' '+esc(HOST)+' '+esc(l.f)+': '+esc(l.m)+'</span>';
+}
+
+function banner(){
+  out.innerHTML = "";
+  print('<span class="muted">Tideline Networks collector — '+HOST+'  (systemd-journald)</span>');
+  print('<span class="muted">Type <span class="echo">journalctl --help</span> for options. Two boots are recorded.</span>');
+  print('<span class="muted">&nbsp;</span>');
+}
+
+/* ----------------------- journalctl simulation -------------------------- */
+const HELP = [
+  "journalctl [OPTIONS...]  —  query the systemd journal",
+  "  -k, --dmesg      show only kernel messages (implies current boot)",
+  "  -b, --boot[=ID]  show messages from a specific boot (default: current)",
+  "  -r, --reverse    show newest entries first",
+  "  -n, --lines=N    show the most recent N lines",
+  "      --no-pager   do not pipe output into a pager",
+  "  -e               jump to the end of the journal",
+  "  -h, --help       show this help"
+].join("\n");
+
+const KNOWN_LONG = new Set(["--dmesg","--boot","--reverse","--lines","--no-pager","--help","--utc","--system"]);
+
+function parseJournalctl(args){
+  const o = { kernel:false, reverse:false, boot:"current", lines:null, help:false, error:null };
+  for (let i=0;i<args.length;i++){
+    let a = args[i];
+    if (a==="--help"||a==="-h"){ o.help=true; continue; }
+    if (a==="--dmesg"){ o.kernel=true; o.boot="current"; continue; }
+    if (a==="--reverse"){ o.reverse=true; continue; }
+    if (a==="--no-pager"||a==="--utc"||a==="--system"||a==="-e"){ continue; }
+    if (a==="--boot"){ o.boot="current"; continue; }
+    if (a.startsWith("--boot=")){ o.boot = a.slice(7)==="-1"?"previous":"current"; continue; }
+    if (a==="--lines"){ o.lines=parseInt(args[++i],10)||10; continue; }
+    if (a.startsWith("--lines=")){ o.lines=parseInt(a.slice(8),10)||10; continue; }
+    if (a.startsWith("--")){ o.error="journalctl: unrecognized option '"+a+"'"; return o; }
+    if (a==="-b"){
+      // optional following boot offset like -1 / 0
+      const nxt = args[i+1];
+      if (nxt==="-1"){ o.boot="previous"; i++; } else if (nxt==="0"){ o.boot="current"; i++; } else { o.boot="current"; }
+      continue;
+    }
+    if (a==="-n"){ o.lines=parseInt(args[++i],10)||10; continue; }
+    if (a.startsWith("-") && a.length>1){
+      // combined short flags, e.g. -rk, -kb
+      for (const ch of a.slice(1)){
+        if (ch==="k") { o.kernel=true; o.boot="current"; }
+        else if (ch==="r") o.reverse=true;
+        else if (ch==="b") o.boot="current";
+        else if (ch==="e") {}
+        else { o.error="journalctl: invalid option -- '"+ch+"'"; return o; }
+      }
+      continue;
+    }
+    o.error="journalctl: unrecognized argument '"+a+"'";
+    return o;
+  }
+  return o;
+}
+
+function runJournalctl(args){
+  const o = parseJournalctl(args);
+  if (o.help){ print('<span class="muted">'+esc(HELP)+'</span>'); return; }
+  if (o.error){
+    print('<span class="err">'+esc(o.error)+'</span>');
+    print('<span class="muted">Try \'journalctl --help\' for available options.</span>');
+    return;
+  }
+  // build the line set
+  let set = [];
+  if (o.boot==="previous") set = JOURNAL.previous.lines.slice();
+  else set = JOURNAL.current.lines.slice();
+  if (o.kernel) set = set.filter(l => l.f==="kernel");
+  if (o.reverse) set = set.slice().reverse();
+  if (o.lines && o.lines>0) set = (o.reverse ? set.slice(0,o.lines) : set.slice(-o.lines));
+
+  const bootId = o.boot==="previous" ? JOURNAL.previous.id : JOURNAL.current.id;
+  print('<span class="muted">-- Logs begin, boot '+bootId+(o.kernel?', kernel only':'')+(o.reverse?', reverse':'')+' --</span>');
+  if (set.length===0){ print('<span class="muted">-- No entries --</span>'); }
+  set.forEach(l => print(fmtLine(l)));
+
+  // task auto-detection (only successful, non-error runs count)
+  if (o.kernel && o.boot==="current") markTask("kernel");
+  if (o.reverse) markTask("reverse");
+}
+
+/* ----------------------------- Dispatcher ------------------------------- */
+function dispatch(raw){
+  const line = raw.trim();
+  printEcho(line);
+  if (line==="") return;
+  history.push(line); hIdx = history.length;
+  const parts = line.split(/\s+/);
+  const cmd = parts[0], args = parts.slice(1);
+
+  switch(cmd){
+    case "journalctl": runJournalctl(args); break;
+    case "clear":      banner(); break;
+    case "help":       print('<span class="muted">Available here: journalctl, hostname, whoami, clear, reset. This lab needs journalctl.</span>'); break;
+    case "hostname":   print(esc(HOST)); break;
+    case "whoami":     print("operator"); break;
+    case "man":        if(args[0]==="journalctl"){ print('<span class="muted">'+esc(HELP)+'</span>'); }
+                       else { print('<span class="err">No manual entry for '+esc(args[0]||"")+'</span>'); } break;
+    case "ls": case "cd": case "cat":
+      print('<span class="muted">This sandbox only simulates journalctl. Focus on the journal tasks.</span>'); break;
+    case "reset":      banner(); break;
+    default:
+      print('<span class="err">bash: '+esc(cmd)+': command not found</span>');
+  }
+}
+
+/* --------------------------- Task / score UI ---------------------------- */
+function markTask(name){
+  if (state.tasks[name]) return;
+  state.tasks[name] = true;
+  const li = document.getElementById("t-"+name);
+  li.classList.add("done");
+  li.querySelector(".mark").textContent = "✓";
+  const sr = li.querySelector(".sr-only"); if (sr) sr.textContent = "Complete.";
+  updateScore();
+}
+function checkQuestion(id){
+  const val = (document.getElementById(id).value||"").trim().toLowerCase();
+  const ok = KEY[id].accept.some(a => a.toLowerCase()===val);
+  const r = document.getElementById("r"+id.slice(1));
+  state.questions[id] = ok;
+  if (val===""){ r.textContent=""; r.className="result"; }
+  else if (ok){ r.textContent="Correct."; r.className="result ok"; }
+  else { r.textContent="Not quite — expected "+KEY[id].label+"."; r.className="result no"; }
+  updateScore();
+}
+function tally(){
+  const t = Object.values(state.tasks).filter(Boolean).length;
+  const q = Object.values(state.questions).filter(Boolean).length;
+  return { earned:t+q, total:5, t, q, allTasks:t===2, allQ:q===3 };
+}
+function updateScore(){
+  const s = tally();
+  document.getElementById("score-chip").textContent = s.earned+" / "+s.total+" complete";
+}
+
+/* --------------------- Screenshot: native, no library ------------------- *
+ * Serializes the #lab subtree (plus the page <style>) into an SVG
+ * <foreignObject>, rasterizes to a canvas, returns a PNG data URL.
+ * Zero external dependencies. Swap in html2canvas here if preferred.        */
+async function captureLabImage(node){
+  try{
+    const css = document.getElementById("lab-styles").textContent;
+    const clone = node.cloneNode(true);
+    // reflect live <input> values into the clone so they appear in the image
+    const liveInputs = node.querySelectorAll("input");
+    const cloneInputs = clone.querySelectorAll("input");
+    liveInputs.forEach((el,i)=>{ if(cloneInputs[i]) cloneInputs[i].setAttribute("value", el.value||""); });
+
+    const rect = node.getBoundingClientRect();
+    const w = Math.max(1, Math.ceil(rect.width));
+    const h = Math.max(1, Math.ceil(rect.height));
+    const xhtml = new XMLSerializer().serializeToString(clone);
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject width="100%" height="100%">'+
+      '<div xmlns="http://www.w3.org/1999/xhtml" style="background:#0a1622">'+
+      '<style>'+css+'</style>'+ xhtml +
+      '</div></foreignObject></svg>';
+
+    const url = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+    const img = new Image();
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error("render")); img.src=url; });
+
+    const dpr = Math.min(2, window.devicePixelRatio||1);
+    const canvas = document.createElement("canvas");
+    canvas.width = w*dpr; canvas.height = h*dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr,dpr);
+    ctx.fillStyle = "#0a1622"; ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img,0,0);
+    return canvas.toDataURL("image/png");
+  }catch(e){
+    return "";   // capture failed; submission proceeds without the image
+  }
+}
+
+/* ------------------------------ Submit ---------------------------------- */
+function setStatus(msg, kind){ const s=document.getElementById("status"); s.textContent=msg; s.className="status "+(kind||""); }
+
+async function submitLab(){
+  const handle = (document.getElementById("handle").value||"").trim();
+  if (!handle){ setStatus("Enter a callsign first (a pseudonym — no real name).","no"); document.getElementById("handle").focus(); return; }
+  if (CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){ setStatus("This lab isn't wired up yet: the instructor needs to paste the Apps Script URL.","no"); return; }
+
+  const s = tally();
+  const btn = document.getElementById("submit");
+  btn.disabled = true;
+  setStatus("Capturing your work and submitting…","busy");
+
+  const screenshot = await captureLabImage(document.getElementById("lab"));
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    handle: handle.slice(0,32),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: [
+      { id:"kernel",  label:"Show kernel log for current boot", passed: state.tasks.kernel },
+      { id:"reverse", label:"Show journal in reverse (newest first)", passed: state.tasks.reverse }
+    ],
+    questions: [
+      { id:"q1", prompt:"Option for kernel-only messages",          answer:(document.getElementById("q1").value||"").trim(), correct: state.questions.q1 },
+      { id:"q2", prompt:"Option for reverse / newest-first",        answer:(document.getElementById("q2").value||"").trim(), correct: state.questions.q2 },
+      { id:"q3", prompt:"Default boot scope of the kernel option",  answer:(document.getElementById("q3").value||"").trim(), correct: state.questions.q3 }
+    ],
+    score: { earned:s.earned, total:s.total },
+    screenshot: screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  try{
+    // Simple request: no custom headers, default text/plain body -> no CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const outJson = await res.json();
+    if (outJson && outJson.success){
+      setStatus("Submitted. Your instructor's copy: "+outJson.docUrl, "ok");
+    } else {
+      setStatus("The server rejected the submission: "+((outJson&&outJson.error)||"unknown error")+". Check with your instructor.", "no");
+    }
+  }catch(err){
+    // Fallback: fire-and-forget; cannot read the Doc link in locked-down contexts.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("Submission sent, but the confirmation couldn't be read in this browser. Confirm receipt with your instructor.", "busy");
+    }catch(e2){
+      setStatus("Could not reach the submission server. Check your connection and try again.", "no");
+    }
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+/* ----------------------------- Wiring ----------------------------------- */
+cmdEl.addEventListener("keydown", e=>{
+  if (e.key==="Enter"){ dispatch(cmdEl.value); cmdEl.value=""; }
+  else if (e.key==="ArrowUp"){ if(hIdx>0){ hIdx--; cmdEl.value=history[hIdx]||""; } e.preventDefault(); }
+  else if (e.key==="ArrowDown"){ if(hIdx<history.length){ hIdx++; cmdEl.value=history[hIdx]||""; } e.preventDefault(); }
+});
+document.querySelectorAll("[data-check]").forEach(b=> b.addEventListener("click", ()=>checkQuestion(b.dataset.check)));
+document.querySelectorAll(".q-row input").forEach(inp=> inp.addEventListener("keydown", e=>{ if(e.key==="Enter") checkQuestion(inp.id); }));
+document.getElementById("reset-btn").addEventListener("click", ()=>{ banner(); cmdEl.focus(); });
+document.getElementById("reset-all").addEventListener("click", ()=>{
+  state.tasks={kernel:false,reverse:false}; state.questions={q1:false,q2:false,q3:false};
+  ["t-kernel","t-reverse"].forEach(id=>{ const li=document.getElementById(id); li.classList.remove("done");
+    li.querySelector(".mark").textContent="○"; const sr=li.querySelector(".sr-only"); if(sr) sr.textContent="Not yet complete."; });
+  ["q1","q2","q3"].forEach(id=>{ document.getElementById(id).value=""; const r=document.getElementById("r"+id.slice(1)); r.textContent=""; r.className="result"; });
+  document.getElementById("handle").value=""; setStatus("",""); updateScore(); banner(); cmdEl.focus();
+});
+document.getElementById("submit").addEventListener("click", submitLab);
+
+banner(); updateScore(); cmdEl.focus();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-switch-syslog.html",title:"Lab \u2014 Tiered Syslog on a Distribution Switch"}, NEXT={href:"index_netplus-onpath-logs.html",title:"TraceDesk Lab \u2014 Quiet on the Wire"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.5";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

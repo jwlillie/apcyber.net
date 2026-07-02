@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Block Unmanaged Devices with a MAC ACL (CLI)</title>
+<!--
+  ============================================================================
+  Network+ / AP Networking Lab Library
+  Lab: netplus-mac-acl-bench  —  "Lock the Benches: Block Unmanaged Devices with a MAC ACL"
+  Built CLEAN-ROOM from the public CompTIA Network+ objectives and the public
+  College Board AP Networking course framework. No third-party lab wording,
+  scenario, hostnames, addressing, values, ordering, screenshots, or question
+  phrasing is reused. All expression below is original to this library.
+
+  © 2026 <AUTHOR / ORG — replace>.  Licensed for use within the
+  Network+ / AP Networking Lab Library.  All rights reserved by the author.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121922; --panel-2:#0e141c; --ink:#e7eef7; --muted:#8aa0b6;
+    --term-bg:#06090d; --term-ink:#c9f7d6; --term-dim:#5f8a6e; --term-err:#ff8a8a;
+    --term-warn:#ffd479; --accent:#4ea1ff; --accent-2:#7ee3a7; --line:#22303f;
+    --pass:#46d39a; --fail:#ff6b6b; --pending:#5e7287;
+    --focus:#ffd479; --chip:#1b2733; --radius:10px; --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.45}
+  a{color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px clamp(12px,3vw,26px) 60px}
+  header.lab-head{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+  header.lab-head h1{font-size:clamp(1.05rem,2.4vw,1.5rem);margin:0;letter-spacing:.2px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font:600 11px/1 var(--mono);background:var(--chip);color:var(--accent-2);border:1px solid var(--line);padding:5px 8px;border-radius:999px}
+  .tag.np{color:#ffd479}
+  .grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:18px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  section.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .card h2{font-size:.95rem;margin:0;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--panel-2);letter-spacing:.3px}
+  .card .body{padding:14px}
+
+  /* Terminal */
+  #term-card .body{padding:0}
+  #screen{background:var(--term-bg);color:var(--term-ink);font-family:var(--mono);font-size:13px;
+          padding:14px 14px 6px;height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  #screen .dim{color:var(--term-dim)}
+  #screen .err{color:var(--term-err)}
+  #screen .warn{color:var(--term-warn)}
+  #screen .ok{color:var(--accent-2)}
+  .prompt-line{display:flex;align-items:flex-start;gap:0;background:var(--term-bg);
+               border-top:1px solid #122; padding:8px 14px 12px;font-family:var(--mono);font-size:13px}
+  #ps1{color:var(--accent-2);white-space:pre;flex:none}
+  #cmd{flex:1;background:transparent;border:0;color:var(--term-ink);font-family:var(--mono);
+       font-size:13px;outline:none;padding:0 2px}
+  #cmd:focus-visible{outline:none}
+  .prompt-line:focus-within{box-shadow:inset 0 0 0 2px var(--focus)}
+
+  /* Panels */
+  .objlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .objlist li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);
+              border-radius:8px;background:var(--panel-2)}
+  .mark{flex:none;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font:700 12px/1 var(--mono);
+        background:#1a2430;color:var(--muted);border:1px solid var(--line);margin-top:1px}
+  li.pass .mark{background:rgba(70,211,154,.16);color:var(--pass);border-color:rgba(70,211,154,.4)}
+  li.fail .mark{background:rgba(255,107,107,.14);color:var(--fail);border-color:rgba(255,107,107,.4)}
+  .obj-text{font-size:.86rem}
+  .obj-text .sub{color:var(--muted);font-size:.78rem;margin-top:2px}
+
+  table.roster{width:100%;border-collapse:collapse;font:12px/1.3 var(--mono);margin-top:4px}
+  table.roster th,table.roster td{border:1px solid var(--line);padding:5px 7px;text-align:left}
+  table.roster th{background:var(--panel-2);color:var(--muted);font-weight:600}
+  .hint{color:var(--muted);font-size:.82rem;margin:10px 0 0}
+  details.help{margin-top:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
+  details.help>summary{cursor:pointer;padding:9px 12px;font-weight:600;font-size:.85rem;outline:none}
+  details.help>summary:focus-visible{box-shadow:inset 0 0 0 2px var(--focus);border-radius:8px}
+  details.help .help-body{padding:0 12px 12px;font:12px/1.5 var(--mono);color:var(--muted)}
+  details.help code{color:var(--accent-2)}
+
+  .qs{display:flex;flex-direction:column;gap:14px}
+  fieldset.q{border:1px solid var(--line);border-radius:8px;margin:0;padding:12px}
+  fieldset.q legend{font-size:.86rem;font-weight:600;padding:0 6px}
+  fieldset.q .opt{display:flex;gap:8px;align-items:flex-start;padding:5px 2px;font-size:.85rem}
+  fieldset.q .opt input{margin-top:3px}
+  fieldset.q.correct{border-color:rgba(70,211,154,.5)}
+  fieldset.q.incorrect{border-color:rgba(255,107,107,.5)}
+  .q-status{font:600 12px/1 var(--mono);margin-top:6px}
+  .q-status.ok{color:var(--pass)} .q-status.no{color:var(--fail)}
+
+  /* Submission bar */
+  .subbar{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;
+          display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end}
+  @media (max-width:680px){.subbar{grid-template-columns:1fr}}
+  .field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px;letter-spacing:.2px}
+  .field input{width:100%;background:var(--term-bg);border:1px solid var(--line);color:var(--ink);
+               border-radius:8px;padding:10px 12px;font:14px var(--mono)}
+  .field input:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+  button{font:600 14px var(--sans);border-radius:8px;border:1px solid var(--line);padding:11px 16px;cursor:pointer;background:#1b2733;color:var(--ink)}
+  button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  button.primary{background:linear-gradient(180deg,#2a6fd6,#2159b4);border-color:#2a6fd6;color:#fff}
+  button.primary[disabled]{opacity:.5;cursor:not-allowed;filter:saturate(.5)}
+  button.ghost{background:transparent}
+  #status{margin-top:12px;min-height:1.4em;font-size:.9rem}
+  #status.good{color:var(--pass)} #status.bad{color:var(--fail)} #status.work{color:var(--term-warn)}
+  .scorepill{font:700 12px var(--mono);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:7px 11px}
+  .scorepill b{color:var(--accent-2)}
+  footer.note{margin-top:26px;color:var(--muted);font-size:.76rem;border-top:1px solid var(--line);padding-top:14px}
+
+  @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto !important;animation:none !important;transition:none !important}}
+  .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-mac-acl-bench", "title": "Block Unmanaged Devices with a MAC ACL (CLI)", "version": "1.0.0", "objectives": ["N10-009:4.3", "APNET:3.5", "APNET:4.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap" id="labArea">
+  <header class="lab-head">
+    <h1>Lock the Benches — Block Unmanaged Devices with a MAC ACL</h1>
+    <div class="tags" aria-label="Blueprint coverage">
+      <span class="tag np" title="Best-effort N10-009 map; verify against the N10-009 objectives PDF">N10-009&nbsp;4.3</span>
+      <span class="tag" title="MAC filtering increases security">APNET&nbsp;3.5.A</span>
+      <span class="tag" title="Configure rules / ACL ordering">APNET&nbsp;3.5.C</span>
+      <span class="tag" title="Using the CLI">APNET&nbsp;4.3</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ============ LEFT: simulated switch CLI ============ -->
+    <section class="card" id="term-card">
+      <h2>Console — <span id="dev-name">bench-sw7</span> (simulated)</h2>
+      <div class="body">
+        <div id="screen" role="log" aria-live="polite" aria-label="Switch console output" tabindex="0"></div>
+        <div class="prompt-line" role="group" aria-label="Command entry" onclick="focusCmd()">
+          <span id="ps1">bench-sw7&gt; </span>
+          <input id="cmd" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+                 aria-label="Type a switch command and press Enter" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RIGHT: tasks + roster + questions ============ -->
+    <div>
+      <section class="card">
+        <h2>Scenario &amp; Tasks</h2>
+        <div class="body">
+          <p style="margin-top:0;font-size:.9rem">
+            You volunteer as the network steward for the <b>Cedar Loop Makerspace</b>. People keep
+            plugging personal streaming sticks and smart speakers into the open lab benches, hogging
+            bandwidth and dodging the captive portal. You have a roster of the offending devices by
+            vendor (the first three octets of their MAC — the OUI). Build a Layer&nbsp;2 MAC ACL on
+            <code>bench-sw7</code> that denies those vendors, bind it inbound on the bench access
+            ports, and save it so it survives a reboot.
+          </p>
+
+          <ul class="objlist" id="tasklist">
+            <li data-task="acl"><span class="mark" aria-hidden="true">·</span><span class="obj-text">
+              Create an extended MAC access list named <code>BenchGuard</code>.
+              <span class="sub">Tip: <code>mac access-list extended BenchGuard</code></span></span></li>
+            <li data-task="entries"><span class="mark" aria-hidden="true">·</span><span class="obj-text">
+              Add a <b>deny</b> entry for each of the six rogue vendor OUIs (see roster), masking the
+              lower 24 bits so any device from that vendor is matched.
+              <span class="sub">Form: <code>deny &lt;mac&gt; 0000.00ff.ffff any</code></span></span></li>
+            <li data-task="bind"><span class="mark" aria-hidden="true">·</span><span class="obj-text">
+              Bind <code>BenchGuard</code> <b>inbound</b> on every bench port: <code>g1/0/5</code>
+              through <code>g1/0/16</code>.
+              <span class="sub">Tip: <code>interface range g1/0/5 - 16</code>, then <code>mac access-group BenchGuard in</code></span></span></li>
+            <li data-task="save"><span class="mark" aria-hidden="true">·</span><span class="obj-text">
+              Save to the startup configuration so the rules persist.
+              <span class="sub">Tip: <code>copy running-config startup-config</code></span></span></li>
+          </ul>
+
+          <p class="hint" style="margin-top:14px"><b>Rogue device roster</b> (block these vendors):</p>
+          <table class="roster" aria-label="Rogue vendor OUI roster">
+            <thead><tr><th>#</th><th>Vendor (in-scenario)</th><th>MAC / OUI</th><th>Mask</th></tr></thead>
+            <tbody id="roster"></tbody>
+          </table>
+
+          <details class="help">
+            <summary>Command reference (this simulated CLI)</summary>
+            <div class="help-body">
+              <code>enable</code> — enter privileged mode<br>
+              <code>configure terminal</code> (or <code>conf t</code>) — global config<br>
+              <code>mac access-list extended NAME</code> — create / edit a MAC ACL<br>
+              &nbsp;&nbsp;<code>deny &lt;mac&gt; &lt;mask&gt; any</code> — deny entry (mask wildcards bits to ignore)<br>
+              <code>interface range g1/0/5 - 16</code> — select a port range<br>
+              &nbsp;&nbsp;<code>mac access-group NAME in</code> — bind ACL inbound on selected ports<br>
+              <code>show mac access-list</code> · <code>show running-config</code><br>
+              <code>copy running-config startup-config</code> (or <code>write memory</code>) — save<br>
+              <code>exit</code> — leave current mode · <code>end</code> — back to privileged · <code>?</code> — help
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:18px">
+        <h2>Check Your Understanding</h2>
+        <div class="body">
+          <div class="qs" id="questions"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ============ Submission bar ============ -->
+  <div class="subbar">
+    <div class="field">
+      <label for="handle">Callsign (no real names — keep it pseudonymous)</label>
+      <input id="handle" type="text" maxlength="40" placeholder="e.g. copper-fox" aria-describedby="handle-help"/>
+      <span id="handle-help" class="visually-hidden">Your pseudonymous callsign is the only identifier collected.</span>
+    </div>
+    <div class="field" style="align-self:end">
+      <span class="scorepill" aria-live="polite">Score: <b id="scoreEarned">0</b> / <span id="scoreTotal">7</span></span>
+    </div>
+    <div style="display:flex;gap:10px;align-self:end">
+      <button class="ghost" type="button" id="resetBtn">Reset lab</button>
+      <button class="primary" type="button" id="submitBtn">Submit completed lab</button>
+    </div>
+  </div>
+  <div id="status" role="status" aria-live="assertive"></div>
+
+  <footer class="note">
+    Clean-room original lab for the Network+ / AP Networking Lab Library.
+    Answer keys are client-side and self-reported (fine for formative work; have the
+    Apps Script re-score for graded use). The screenshot captures only this simulated
+    console — no host OS, no PII. © 2026 &lt;AUTHOR / ORG — replace&gt;.
+  </footer>
+</div>
+
+<!-- ============================================================================
+  SCRIPT BLOCK 1 — html2canvas (OPTIONAL inline dependency)
+
+  Paste your library's minified html2canvas source between the markers below to
+  get pixel-perfect DOM capture (the same blob the Security+ labs already inline).
+  If you leave it empty, this file STILL WORKS: captureLab() falls back to a
+  self-contained canvas renderer that draws the console transcript + task/question
+  state. Either way the file makes ZERO runtime network calls except the one
+  submission POST.
+  ----- BEGIN html2canvas ----- */
+/*  (paste minified html2canvas here)                                            */
+/*  ----- END html2canvas -----
+============================================================================ -->
+<script>/* intentionally empty unless you paste html2canvas above */</script>
+
+<!-- ============================================================================
+  SCRIPT BLOCK 2 — engine + CONFIG + ANSWER KEY + capture + POST
+============================================================================ -->
+<script>
+"use strict";
+/* ---------------------------------------------------------------- CONFIG --- */
+const CONFIG = {
+  assignmentId: "netplus-mac-acl-bench",
+  // Same /exec URL across the whole library:
+  APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "__PER_COHORT_TOKEN__",
+  // Payload carries BOTH blueprints. N10-009 tag is best-effort (verify vs the
+  // N10-009 PDF — the project currently holds the N10-007 file, where this maps
+  // to 4.2/4.5). AP tags are sourced from the AP Networking framework.
+  objectives: ["N10-009:4.3", "APNET:3.5", "APNET:3.5", "APNET:4.3"],
+  device: "bench-sw7",
+  portRangeValid: { prefix: "g1/0/", lo: 1, hi: 24 },
+  // ----- ANSWER KEY -----
+  key: {
+    aclName: "benchguard",                       // matched case-insensitively
+    ouiMask: "000000ffffff",                      // wildcard lower 24 bits
+    benchPorts: range(5, 16).map(n => "g1/0/" + n),
+    rogues: [
+      { v: "Lumio Audio",   mac: "1c5a.6b00.0000" },
+      { v: "Norvex Media",  mac: "4e91.d300.0000" },
+      { v: "Plixar Cast",   mac: "7a02.ff00.0000" },
+      { v: "Halden IoT",    mac: "9c44.1800.0000" },
+      { v: "Brevo Stream",  mac: "b6e7.2a00.0000" },
+      { v: "Dolma Devices", mac: "d038.cc00.0000" }
+    ]
+  }
+};
+const ROGUE_OUIS = CONFIG.key.rogues.map(r => normMac(r.mac).slice(0, 6)); // first 24 bits
+
+/* ---------- in-memory device state (no localStorage) ---------- */
+let S;
+function freshState(){
+  return {
+    mode: "user",            // user | priv | config | macacl | iface
+    aclEditing: null,        // name being edited
+    ifaceSel: [],            // selected interfaces in iface mode
+    acls: {},                // name(lower) -> {name, entries:[{action,mac,mask,src}]}
+    bindings: {},            // ifaceId -> {in: aclNameLower}
+    savedSig: null           // signature of last saved config
+  };
+}
+
+/* ---------------------------------------------------------------- HELPERS -- */
+function range(a,b){const o=[];for(let i=a;i<=b;i++)o.push(i);return o;}
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function normMac(s){const h=(s||).toLowerCase().replace(/[^0-9a-f]/g,);return h.length===12?h:null;}
+function dotMac(h){return h.slice(0,4)+"."+h.slice(4,8)+"."+h.slice(8,12);}
+
+/* ---------------------------------------------------------------- TERMINAL - */
+const screenEl = () => $("screen");
+function out(text, cls){
+  const span=document.createElement("span");
+  if(cls) span.className=cls;
+  span.textContent=text+"\n";
+  screenEl().appendChild(span);
+  screenEl().scrollTop=screenEl().scrollHeight;
+}
+function echoCmd(cmd){
+  const span=document.createElement("span");
+  span.textContent=ps1Text()+cmd+"\n";
+  screenEl().appendChild(span);
+}
+function ps1Text(){
+  const d=CONFIG.device;
+  switch(S.mode){
+    case "user":   return d+"> ";
+    case "priv":   return d+"# ";
+    case "config": return d+"(config)# ";
+    case "macacl": return d+"(config-mac-acl)# ";
+    case "iface":  return d+"(config-if-range)# ";
+  }
+  return d+"> ";
+}
+function refreshPrompt(){ $("ps1").textContent=ps1Text(); }
+
+/* ---------------------------------------------------------------- PARSER --- */
+function handle(raw){
+  const cmd=raw.trim();
+  echoCmd(cmd);
+  if(cmd===) return;
+  const t=cmd.split(/\s+/);
+  const c0=t[0].toLowerCase();
+
+  if(c0==="?"||c0==="help"){ printHelp(); return; }
+
+  // global navigation
+  if(c0==="enable"){ if(S.mode==="user"){S.mode="priv";} else out("% Already enabled."); return finish(); }
+  if(c0==="disable"){ S.mode="user"; return finish(); }
+  if((c0==="configure"&&(t[1]||).toLowerCase()==="terminal")||(c0==="conf"&&(t[1]||).toLowerCase()==="t")){
+    if(S.mode==="priv"){S.mode="config";} else out("% Run 'enable' first to reach configuration mode.","err"); return finish();
+  }
+  if(c0==="end"){ S.mode = (S.mode==="user")?"user":"priv"; S.aclEditing=null; S.ifaceSel=[]; return finish(); }
+  if(c0==="exit"){ popMode(); return finish(); }
+
+  if(c0==="show"){ doShow(t.slice(1)); return finish(); }
+
+  if(c0==="copy"){
+    const a=(t[1]||).toLowerCase(), b=(t[2]||).toLowerCase();
+    if(S.mode!=="priv"){ out("% 'copy' runs in privileged mode (#). Try 'end' then retry.","err"); return finish(); }
+    if(a==="running-config"&&b==="startup-config"){ saveConfig(); } 
+    else out("% Unrecognized copy command. Try: copy running-config startup-config","err");
+    return finish();
+  }
+  if(c0==="write"||c0==="wr"){
+    if(S.mode!=="priv"){ out("% Save from privileged mode (#).","err"); return finish(); }
+    saveConfig(); return finish();
+  }
+
+  // mode-specific verbs
+  if(c0==="mac"&&(t[1]||).toLowerCase()==="access-list"){
+    if(S.mode!=="config"){ out("% Build the ACL from global config. Run 'configure terminal' first.","err"); return finish(); }
+    const kind=(t[2]||).toLowerCase(), name=t[3];
+    if(kind!=="extended"){ out("% Syntax: mac access-list extended NAME","err"); return finish(); }
+    if(!name){ out("% Missing ACL name. Syntax: mac access-list extended NAME","err"); return finish(); }
+    const key=name.toLowerCase();
+    if(!S.acls[key]) S.acls[key]={name:name,entries:[]};
+    S.mode="macacl"; S.aclEditing=key; return finish();
+  }
+
+  if(c0==="deny"||c0==="permit"){
+    if(S.mode!=="macacl"){ out("% '"+c0+"' is entered inside a MAC ACL. Run 'mac access-list extended NAME' first.","err"); return finish(); }
+    return addEntry(c0, t.slice(1));
+  }
+
+  if(c0==="interface"){
+    if(S.mode!=="config"&&S.mode!=="iface"){ out("% Select interfaces from global config. Run 'configure terminal' first.","err"); return finish(); }
+    return selectInterfaces(t.slice(1));
+  }
+
+  if(c0==="mac"&&(t[1]||).toLowerCase()==="access-group"){
+    if(S.mode!=="iface"){ out("% Bind an ACL while a port/range is selected. Use 'interface range ...' first.","err"); return finish(); }
+    const name=t[2], dir=(t[3]||).toLowerCase();
+    if(!name||(dir!=="in"&&dir!=="out")){ out("% Syntax: mac access-group NAME in|out","err"); return finish(); }
+    if(!S.acls[name.toLowerCase()]){ out("% ACL '"+name+"' does not exist yet. Create it first.","err"); return finish(); }
+    if(dir!=="in"){ out("% This lab binds inbound. Use direction 'in'.","warn"); return finish(); }
+    S.ifaceSel.forEach(id => { S.bindings[id]=Object.assign({}, S.bindings[id], {in:name.toLowerCase()}); });
+    out("Applied "+name+" (in) to "+S.ifaceSel.length+" interface(s).","ok");
+    return finish();
+  }
+
+  if(c0==="clear"&&(t[1]||).toLowerCase()==="screen"){ screenEl().innerHTML=; return; }
+
+  out("% Unknown command: '"+t[0]+"'. Type '?' for help.","err");
+  return finish();
+}
+
+function popMode(){
+  switch(S.mode){
+    case "macacl": S.mode="config"; S.aclEditing=null; break;
+    case "iface":  S.mode="config"; S.ifaceSel=[]; break;
+    case "config": S.mode="priv"; break;
+    case "priv":   S.mode="user"; break;
+    default: break;
+  }
+}
+
+function addEntry(action, args){
+  // forms: deny <mac> <mask> any   |   deny host <mac> any
+  let mac=null, mask=null, src="any";
+  if((args[0]||).toLowerCase()==="host"){
+    mac=normMac(args[1]); mask="000000000000";
+    if((args[2]||).toLowerCase()!=="any"){ out("% Syntax: "+action+" host <mac> any","err"); return finish(); }
+  } else {
+    mac=normMac(args[0]); mask=normMac(args[1]);
+    if((args[2]||).toLowerCase()!=="any"){ out("% Add a source of 'any'. Syntax: "+action+" <mac> <mask> any","err"); return finish(); }
+  }
+  if(!mac){ out("% Invalid destination MAC. Use a 48-bit address like 1c5a.6b00.0000","err"); return finish(); }
+  if(!mask){ out("% Invalid mask. To match a vendor OUI, ignore the lower 24 bits: 0000.00ff.ffff","err"); return finish(); }
+  const acl=S.acls[S.aclEditing];
+  acl.entries.push({action, mac, mask, src});
+  out("  -> "+action+" "+dotMac(mac)+" "+dotMac(mask)+" "+src+"   ["+acl.entries.length+" entr"+(acl.entries.length===1?"y":"ies")+"]","dim");
+  return finish();
+}
+
+function selectInterfaces(args){
+  // interface g1/0/7   OR   interface range g1/0/5 - 16   OR   ... g1/0/5 - g1/0/16
+  let toks=args.slice();
+  if((toks[0]||).toLowerCase()==="range") toks=toks.slice(1);
+  const joined=toks.join(" ").toLowerCase().replace(/\s*-\s*/g," - ");
+  const p=CONFIG.portRangeValid.prefix;
+  let lo,hi;
+  const m=joined.match(/^g1\/0\/(\d+)(?:\s*-\s*(?:g1\/0\/)?(\d+))?$/);
+  if(!m){ out("% Could not parse interfaces. Examples: 'interface g1/0/7' or 'interface range g1/0/5 - 16'","err"); return finish(); }
+  lo=parseInt(m[1],10); hi=m[2]?parseInt(m[2],10):lo;
+  if(lo>hi){ const x=lo;lo=hi;hi=x; }
+  if(lo<CONFIG.portRangeValid.lo||hi>CONFIG.portRangeValid.hi){
+    out("% Out of range. This switch has "+p+CONFIG.portRangeValid.lo+" through "+p+CONFIG.portRangeValid.hi+".","err"); return finish();
+  }
+  S.ifaceSel=range(lo,hi).map(n=>p+n);
+  S.mode="iface";
+  out("Selected "+S.ifaceSel.length+" interface(s): "+S.ifaceSel[0]+" - "+S.ifaceSel[S.ifaceSel.length-1],"dim");
+  return finish();
+}
+
+/* ---------------------------------------------------------------- SHOW ----- */
+function doShow(args){
+  const a=(args[0]||).toLowerCase(), b=(args[1]||).toLowerCase();
+  if(a==="mac"&&(b==="access-list"||b==="access-lists")){
+    const keys=Object.keys(S.acls);
+    if(!keys.length){ out("(no MAC access lists defined)","dim"); return; }
+    keys.forEach(k=>{
+      const acl=S.acls[k];
+      out("Extended MAC access list "+acl.name);
+      if(!acl.entries.length) out("   (empty)","dim");
+      acl.entries.forEach((e,i)=> out("   "+(10*(i+1))+" "+e.action+" "+dotMac(e.mac)+" "+dotMac(e.mask)+" "+e.src));
+    });
+    return;
+  }
+  if(a==="running-config"||a==="run"||(a==="startup-config")){
+    out(renderConfig(a==="startup-config"));
+    return;
+  }
+  out("% Try: show mac access-list  |  show running-config","err");
+}
+
+function renderConfig(startup){
+  const sig=startup?S.savedSig:configSig();
+  let lines=["! "+(startup?"startup-config":"running-config")+"  ("+CONFIG.device+")"];
+  if(startup && !S.savedSig){ return "! startup-config is empty (nothing saved yet)"; }
+  const state = startup ? S._savedState || S : S;
+  // Re-render from current live state for running; for startup use savedState snapshot.
+  const src = startup ? (S._savedState||{acls:{},bindings:{}}) : S;
+  Object.keys(src.acls).forEach(k=>{
+    const acl=src.acls[k];
+    lines.push("mac access-list extended "+acl.name);
+    acl.entries.forEach(e=> lines.push("  "+e.action+" "+dotMac(e.mac)+" "+dotMac(e.mask)+" "+e.src));
+  });
+  const byAcl={};
+  Object.keys(src.bindings).forEach(id=>{ const n=src.bindings[id].in; if(!n)return; (byAcl[n]=byAcl[n]||[]).push(id); });
+  Object.keys(byAcl).forEach(n=>{
+    byAcl[n].sort((x,y)=>+x.split("/").pop()-+y.split("/").pop());
+    lines.push("interface range "+byAcl[n][0]+" - "+byAcl[n][byAcl[n].length-1]);
+    lines.push("  mac access-group "+(src.acls[n]?src.acls[n].name:n)+" in");
+  });
+  lines.push("end");
+  return lines.join("\n");
+}
+
+/* ---------------------------------------------------------------- SAVE ----- */
+function configSig(){
+  const acls=Object.keys(S.acls).sort().map(k=>{
+    const a=S.acls[k]; return a.name+"|"+a.entries.map(e=>e.action+e.mac+e.mask+e.src).join(",");
+  }).join(";;");
+  const binds=Object.keys(S.bindings).sort().map(id=>id+":"+(S.bindings[id].in||)).join(",");
+  return acls+"##"+binds;
+}
+function snapshot(){ return JSON.parse(JSON.stringify({acls:S.acls,bindings:S.bindings})); }
+function saveConfig(){
+  out("Destination filename [startup-config]? startup-config","dim");
+  S.savedSig=configSig();
+  S._savedState=snapshot();
+  out("Building configuration...","dim");
+  out("[OK] Running configuration saved to startup-config.","ok");
+}
+
+/* ---------------------------------------------------------------- HELP ----- */
+function printHelp(){
+  const map={
+    user:["enable — enter privileged mode","? — this help"],
+    priv:["configure terminal — global config","show mac access-list | show running-config",
+          "copy running-config startup-config — save","disable — back to user mode"],
+    config:["mac access-list extended NAME — create/edit a MAC ACL","interface range g1/0/5 - 16 — select ports","exit — up one level"],
+    macacl:["deny <mac> <mask> any — add a deny entry","exit — leave the ACL"],
+    iface:["mac access-group NAME in — bind ACL inbound","exit — leave interface selection"]
+  };
+  out("Available here:","dim");
+  (map[S.mode]||[]).forEach(l=>out("  "+l,"dim"));
+}
+
+/* ------------------------------------------------------------- GRADING ----- */
+function gradeTasks(){
+  const k=CONFIG.key;
+  const acl=S.acls[k.aclName];
+  const r={};
+  // T1 ACL exists with right name
+  r.acl = !!acl;
+  // T2 all six OUIs present as deny + correct OUI mask + any
+  let entriesOk=false;
+  if(acl){
+    entriesOk = ROGUE_OUIS.every(oui =>
+      acl.entries.some(e => e.action==="deny" && e.mask===k.ouiMask && e.src==="any" && normMac(e.mac).slice(0,6)===oui)
+    );
+  }
+  r.entries = !!entriesOk;
+  // T3 every bench port bound inbound to the ACL
+  r.bind = k.benchPorts.every(p => S.bindings[p] && S.bindings[p].in===k.aclName);
+  // T4 saved & no unsaved changes
+  r.save = (S.savedSig!==null) && (S.savedSig===configSig()) && r.acl && r.entries && r.bind;
+  return r;
+}
+
+const QUESTIONS = [
+  { id:"q1", obj:"APNET:3.5",
+    prompt:"In what order does the switch evaluate the entries in a MAC ACL?",
+    options:[
+      "Lowest priority value first, regardless of position",
+      "Top to bottom, and the first matching entry decides the action",
+      "All entries are checked and the most restrictive one wins",
+      "Bottom to top, so the last entry takes precedence"],
+    answer:1 },
+  { id:"q2", obj:"APNET:3.5",
+    prompt:"Limiting which MAC addresses a switch port will accept also helps defend against what attack?",
+    options:[
+      "MAC flooding that overflows the CAM table and forces fail-open",
+      "A SYN flood against an open TCP port",
+      "DNS cache poisoning on the resolver",
+      "A brute-force attack on the admin password"],
+    answer:0 },
+  { id:"q3", obj:"APNET:3.5",
+    prompt:"A MAC-based access list filters traffic at which OSI layer?",
+    options:["Layer 1 — Physical","Layer 2 — Data Link","Layer 3 — Network","Layer 4 — Transport"],
+    answer:1 }
+];
+
+function gradeQuestions(){
+  return QUESTIONS.map(q=>{
+    const sel=document.querySelector('input[name="'+q.id+'"]:checked');
+    const chosen= sel? parseInt(sel.value,10) : -1;
+    return { id:q.id, prompt:q.prompt, obj:q.obj,
+             answer: chosen>=0? q.options[chosen] : null,
+             correct: chosen===q.answer };
+  });
+}
+
+/* ------------------------------------------------------------- UI UPDATE --- */
+function finish(){ refreshPrompt(); render(); }
+function render(){
+  const tk=gradeTasks();
+  const map={acl:"acl",entries:"entries",bind:"bind",save:"save"};
+  document.querySelectorAll("#tasklist li").forEach(li=>{
+    const ok=tk[map[li.dataset.task]];
+    li.classList.toggle("pass",!!ok); li.classList.toggle("fail",ok===false && hasAnyProgress());
+    li.querySelector(".mark").textContent = ok? "✓" : "·";
+  });
+  // questions visual + score
+  const qg=gradeQuestions();
+  qg.forEach(q=>{
+    const fs=document.querySelector('fieldset[data-q="'+q.id+'"]');
+    if(!fs) return;
+    const answered = q.answer!==null;
+    fs.classList.toggle("correct", answered && q.correct);
+    fs.classList.toggle("incorrect", answered && !q.correct);
+    const st=fs.querySelector(".q-status");
+    st.textContent = !answered? : (q.correct? "Correct" : "Not quite — review the concept");
+    st.className="q-status "+(answered?(q.correct?"ok":"no"):);
+  });
+  const earned = Object.values(tk).filter(Boolean).length + qg.filter(q=>q.correct).length;
+  const total = 4 + QUESTIONS.length;
+  $("scoreEarned").textContent=earned; $("scoreTotal").textContent=total;
+  $("submitBtn").disabled = !( $("handle").value.trim().length>=2 );
+  return {tk, qg, earned, total};
+}
+function hasAnyProgress(){ return Object.keys(S.acls).length>0 || Object.keys(S.bindings).length>0; }
+
+/* ------------------------------------------------------------- SCREENSHOT -- */
+async function captureLab(){
+  const node=$("labArea");
+  if(window.html2canvas){
+    try{ const c=await window.html2canvas(node,{backgroundColor:"#0b0f14",scale:1,logging:false}); return c.toDataURL("image/png"); }
+    catch(e){ /* fall through to fallback */ }
+  }
+  return fallbackCapture();
+}
+// Self-contained fallback: render transcript + task/question status to a canvas.
+function fallbackCapture(){
+  const W=900, pad=22, lineH=18; const ctx0=document.createElement("canvas").getContext("2d");
+  ctx0.font="13px monospace";
+  const transcript=(screenEl().textContent||).split("\n");
+  const tk=gradeTasks(); const qg=gradeQuestions();
+  const lines=[];
+  lines.push(["#"+CONFIG.assignmentId+"  ·  callsign: "+($("handle").value.trim()||"(none)"),"head"]);
+  lines.push([]);
+  lines.push(["── Console transcript ──","sub"]);
+  transcript.slice(-40).forEach(l=>lines.push([l,"term"]));
+  lines.push([]);
+  lines.push(["── Tasks ──","sub"]);
+  const tlabels={acl:"MAC ACL 'BenchGuard' created",entries:"Six rogue OUI deny entries added",
+                 bind:"Bound inbound on g1/0/5–g1/0/16",save:"Saved to startup-config"};
+  Object.keys(tlabels).forEach(k=>lines.push([(tk[k]?"[x] ":"[ ] ")+tlabels[k], tk[k]?"pass":"fail"]));
+  lines.push([]);
+  lines.push(["── Questions ──","sub"]);
+  qg.forEach((q,i)=>lines.push([(q.correct?"[x] ":"[ ] ")+"Q"+(i+1)+": "+(q.answer||"(unanswered)"), q.correct?"pass":"fail"]));
+  const H=pad*2 + lines.length*lineH;
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=Math.max(H,200);
+  const ctx=cv.getContext("2d");
+  ctx.fillStyle="#0b0f14"; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.font="13px monospace"; let y=pad+4;
+  for(const [text,kind] of lines){
+    ctx.fillStyle = kind==="head"?"#7ee3a7":kind==="sub"?"#4ea1ff":kind==="pass"?"#46d39a":kind==="fail"?"#ff8a8a":kind==="term"?"#c9f7d6":"#e7eef7";
+    if(kind==="head") ctx.font="bold 14px monospace"; else ctx.font="13px monospace";
+    ctx.fillText(text.slice(0,118), pad, y); y+=lineH;
+  }
+  return cv.toDataURL("image/png");
+}
+
+/* ------------------------------------------------------------- SUBMIT ------ */
+async function submitLab(){
+  const status=$("status");
+  const handle=$("handle").value.trim();
+  if(handle.length<2){ status.className="bad"; status.textContent="Enter a callsign first (2–40 characters, no real names)."; return; }
+  const g=render();
+  $("submitBtn").disabled=true; status.className="work"; status.textContent="Capturing console + building submission…";
+
+  let shot=; try{ shot=await captureLab(); }catch(e){ shot=; }
+
+  const payload={
+    assignmentId: CONFIG.assignmentId,
+    handle: handle,                                   // pseudonym only — keep PII out
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: [
+      {id:"acl",     label:"Create MAC ACL 'BenchGuard'",                       passed:g.tk.acl},
+      {id:"entries", label:"Add six rogue-OUI deny entries",                    passed:g.tk.entries},
+      {id:"bind",    label:"Bind inbound on bench ports g1/0/5–g1/0/16",        passed:g.tk.bind},
+      {id:"save",    label:"Save to startup-config",                           passed:g.tk.save}
+    ],
+    questions: g.qg.map(q=>({id:q.id, prompt:q.prompt, answer:q.answer, correct:q.correct})),
+    score: { earned: g.earned, total: g.total },
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("__")===0){
+    status.className="bad";
+    status.textContent="This lab isn't wired to a submission endpoint yet (APPS_SCRIPT_URL placeholder). Ask your instructor.";
+    $("submitBtn").disabled=false; return;
+  }
+
+  try{
+    // Simple request only: no custom headers, default text/plain body → no CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+    const out=await res.json();
+    if(out && out.success){
+      status.className="good";
+      status.innerHTML="Submitted ✓ — your record: "+(out.docUrl?('<a href="'+esc(out.docUrl)+'" target="_blank" rel="noopener">open Doc</a>'):"saved.");
+    } else {
+      status.className="bad";
+      status.textContent="The server rejected the submission"+(out&&out.error?(": "+out.error):".")+" Check with your instructor.";
+      $("submitBtn").disabled=false;
+    }
+  }catch(err){
+    // Locked-down fallback: fire-and-forget; can't read the response.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      status.className="good";
+      status.textContent="Submission sent (couldn't read the server reply in this browser). Confirm receipt with your instructor.";
+    }catch(e2){
+      status.className="bad";
+      status.textContent="Network error — submission did not send. Check your connection and try again.";
+      $("submitBtn").disabled=false;
+    }
+  }
+}
+
+/* ------------------------------------------------------------- BOOT -------- */
+function focusCmd(){ $("cmd").focus(); }
+function buildRoster(){
+  const tb=$("roster");
+  CONFIG.key.rogues.forEach((r,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML="<td>"+(i+1)+"</td><td>"+esc(r.v)+"</td><td>"+esc(r.mac)+"</td><td>0000.00ff.ffff</td>";
+    tb.appendChild(tr);
+  });
+}
+function buildQuestions(){
+  const box=$("questions");
+  QUESTIONS.forEach((q,qi)=>{
+    const fs=document.createElement("fieldset");
+    fs.className="q"; fs.dataset.q=q.id;
+    let html="<legend>Q"+(qi+1)+". "+esc(q.prompt)+"</legend>";
+    q.options.forEach((opt,oi)=>{
+      const id=q.id+"_"+oi;
+      html+='<label class="opt" for="'+id+'"><input type="radio" id="'+id+'" name="'+q.id+'" value="'+oi+'"> <span>'+esc(opt)+"</span></label>";
+    });
+    html+='<div class="q-status" aria-live="polite"></div>';
+    fs.innerHTML=html;
+    box.appendChild(fs);
+  });
+  box.addEventListener("change", render);
+}
+function resetLab(){
+  S=freshState();
+  screenEl().innerHTML=;
+  $("handle").value=$("handle").value; // keep callsign
+  out("bench-sw7 simulated console ready. Type '?' for help.","dim");
+  out("Goal: deny six rogue vendor OUIs at Layer 2 and bind it on the bench ports.","dim");
+  $("status").textContent=; $("status").className=;
+  document.querySelectorAll('input[type="radio"]').forEach(r=>r.checked=false);
+  finish(); focusCmd();
+}
+function boot(){
+  S=freshState();
+  buildRoster(); buildQuestions();
+  $("cmd").addEventListener("keydown",e=>{ if(e.key==="Enter"){ const v=e.target.value; e.target.value=; handle(v); } });
+  $("handle").addEventListener("input",render);
+  $("submitBtn").addEventListener("click",submitLab);
+  $("resetBtn").addEventListener("click",resetLab);
+  out("bench-sw7 simulated console ready. Type '?' for help.","dim");
+  out("Goal: deny six rogue vendor OUIs at Layer 2 and bind it on the bench ports.","dim");
+  render(); focusCmd();
+}
+document.addEventListener("DOMContentLoaded",boot);
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-ips-sensor-deploy.html",title:"Arm the Edge \u2014 IPS Sensor Deployment Lab"}, NEXT={href:"index_netplus-screened-subnet-firewall.html",title:"Edge Console \u2014 Screened-Subnet Firewall Rules Lab"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.5";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

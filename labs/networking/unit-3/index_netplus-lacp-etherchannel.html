@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Bonding the Backbone — LACP Link Aggregation Lab</title>
+<!--
+  ============================================================================
+  Network+ / AP Networking Simulation Lab
+  Lab: "Bonding the Backbone" — Build an LACP Link Aggregation Group
+  assignmentId: netplus-lacp-etherchannel
+  Blueprint tags: N10-009:2.2 (configure switching technologies/features),
+                  APNET:3.2.C + APNET:3.3.C (topologies/reliability; configure a LAN),
+                  APNET-SKILL:1.C, APNET-SKILL:1.D
+  ----------------------------------------------------------------------------
+  Clean-room original work. Procedure (LACP link aggregation) is factual and
+  standard; all scenario, hostnames, port IDs, channel-group/VLAN values, task
+  and question wording, and UI are original to this library. No third-party
+  lab's expression, values, ordering, or screenshots are used.
+
+  Copyright (c) 2026 [AUTHOR / LIBRARY NAME — replace before publishing].
+  Licensed for instructional use within your cohort. All rights reserved.
+  Replace this notice with your own copyright/license line per library policy.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0f1620; --panel:#161f2b; --panel-2:#1b2735; --rule:#26303d;
+    --ink:#dce3ec; --muted:#8493a8; --faint:#5d6b80;
+    --amber:#f2a33c;        /* link-LED accent: a port carrying light */
+    --green:#46c98b;        /* port bundled / pass */
+    --red:#e0606b;          /* fault / fail */
+    --term-bg:#0a1018; --term-ink:#cfe3d8;
+    --focus:#7fb4ff;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #16202e 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:clamp(12px,3vw,28px);
+  }
+  .mono{font-family:ui-monospace,"Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace}
+  a{color:var(--focus)}
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:6px}
+
+  .wrap{max-width:1180px;margin:0 auto}
+  header.lab{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);font-weight:700;margin:0 0 4px}
+  h1{font-size:clamp(20px,3vw,28px);margin:0;font-weight:700;letter-spacing:-.01em}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .tag{font:600 11px/1 ui-monospace,monospace;color:var(--muted);background:var(--panel-2);border:1px solid var(--rule);padding:5px 8px;border-radius:999px}
+
+  .grid{display:grid;grid-template-columns:1.25fr .95fr;gap:16px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+  .card>.head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--rule);background:var(--panel-2)}
+  .card>.head h2{font-size:13px;margin:0;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .card .body{padding:14px}
+
+  /* ----- device chassis / port LEDs (the signature element) ----- */
+  .chassis{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;background:linear-gradient(180deg,#11202c,#0d1822);border:1px solid var(--rule);border-radius:var(--r);margin-bottom:12px}
+  .chassis .name{font:700 13px/1 ui-monospace,monospace;color:var(--ink)}
+  .chassis .sub{font-size:11px;color:var(--faint)}
+  .ports{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+  .port{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:46px}
+  .port .led{width:14px;height:14px;border-radius:50%;background:#33404f;border:1px solid #1a232e;box-shadow:inset 0 0 3px #000}
+  .port.up .led{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .port.bundled .led{background:var(--green);box-shadow:0 0 10px var(--green)}
+  .port .lbl{font:600 10px/1 ui-monospace,monospace;color:var(--muted)}
+  .lag-pill{font:700 11px/1 ui-monospace,monospace;padding:6px 9px;border-radius:999px;border:1px dashed var(--faint);color:var(--faint)}
+  .lag-pill.live{border-style:solid;border-color:var(--green);color:var(--green)}
+  @media (prefers-reduced-motion:no-preference){
+    .port .led{transition:background .25s ease,box-shadow .25s ease}
+  }
+
+  /* ----- terminal ----- */
+  .terminal{background:var(--term-bg);border:1px solid var(--rule);border-radius:var(--r)}
+  .term-out{height:340px;overflow:auto;padding:12px 14px;white-space:pre-wrap;word-break:break-word;color:var(--term-ink);font-family:ui-monospace,"Cascadia Code","JetBrains Mono",Menlo,monospace;font-size:13px;line-height:1.45}
+  .term-out .err{color:var(--red)}
+  .term-out .ok{color:var(--green)}
+  .term-out .dim{color:var(--faint)}
+  .term-in{display:flex;align-items:center;gap:8px;border-top:1px solid var(--rule);padding:8px 12px}
+  .prompt{color:var(--amber);font-family:ui-monospace,monospace;font-size:13px;white-space:nowrap}
+  .term-in input{flex:1;background:transparent;border:0;color:var(--term-ink);font-family:ui-monospace,monospace;font-size:13px;padding:6px 2px}
+  .term-in input:focus{outline:none}
+  .hint{font-size:12px;color:var(--faint);margin:8px 2px 0}
+
+  /* ----- task list ----- */
+  ol.tasks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  ol.tasks li{display:flex;gap:10px;padding:10px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--panel-2)}
+  ol.tasks li .box{flex:0 0 18px;height:18px;border-radius:5px;border:1px solid var(--faint);margin-top:1px;display:grid;place-items:center;font-size:12px;color:var(--bg)}
+  ol.tasks li.done{border-color:rgba(70,201,139,.5)}
+  ol.tasks li.done .box{background:var(--green);border-color:var(--green)}
+  ol.tasks li .t{font-size:13.5px}
+  ol.tasks li .t small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+
+  /* ----- questions ----- */
+  .q{border:1px solid var(--rule);border-radius:8px;padding:11px 12px;background:var(--panel-2);margin-bottom:9px}
+  .q p{margin:0 0 8px;font-size:13.5px}
+  .q .qrow{display:flex;gap:8px}
+  .q input[type=text]{flex:1;background:var(--term-bg);border:1px solid var(--rule);color:var(--ink);border-radius:7px;padding:8px 10px;font-size:13px}
+  .q .verdict{font-size:12px;margin-top:6px;min-height:16px}
+  .q .verdict.ok{color:var(--green)}
+  .q .verdict.no{color:var(--red)}
+  button{font:600 13px/1 system-ui,sans-serif;cursor:pointer;border-radius:8px;border:1px solid var(--rule);background:var(--panel-2);color:var(--ink);padding:9px 13px}
+  button:hover{border-color:var(--faint)}
+  button.primary{background:var(--amber);border-color:var(--amber);color:#241704;font-weight:700}
+  button.primary:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent}
+
+  /* ----- submit bar ----- */
+  .submit{margin-top:16px;border:1px solid var(--rule);border-radius:var(--r);background:var(--panel);padding:14px}
+  .submit .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:12px;color:var(--muted)}
+  .field input{background:var(--term-bg);border:1px solid var(--rule);color:var(--ink);border-radius:8px;padding:9px 11px;font-size:14px;min-width:220px}
+  .score-chip{font:700 13px/1 ui-monospace,monospace;color:var(--ink);background:var(--panel-2);border:1px solid var(--rule);padding:10px 12px;border-radius:8px}
+  .status{margin-top:10px;font-size:13px;min-height:18px}
+  .status.ok{color:var(--green)} .status.no{color:var(--red)} .status.work{color:var(--amber)}
+  .legal{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.6}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-lacp-etherchannel", "title": "Bonding the Backbone — LACP Link Aggregation Lab", "version": "1.0.0", "objectives": ["N10-009:2.2", "APNET:3.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap" id="labArea">
+
+  <header class="lab">
+    <div>
+      <p class="eyebrow">Network Operations · Lab 03</p>
+      <h1>Bonding the Backbone</h1>
+      <div class="tags" aria-label="Blueprint coverage">
+        <span class="tag">N10-009 · 2.2</span>
+        <span class="tag">AP NET · 3.2.C</span>
+        <span class="tag">AP NET · 3.3.C</span>
+        <span class="tag">Skills 1.C / 1.D</span>
+      </div>
+    </div>
+    <button class="ghost" id="resetBtn" type="button">Reset lab</button>
+  </header>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="head"><h2>Scenario</h2></div>
+    <div class="body" style="font-size:14px;color:var(--ink)">
+      Cedar Hollow Public Library is moving its digital-archive collection onto a new media
+      server. A single 1&nbsp;Gbps uplink between the distribution switch <b class="mono">CHPL-DSW1</b>
+      and that server keeps saturating during the morning catalog sync. You'll bond two switch
+      ports into one logical link so the server gets more throughput <i>and</i> keeps working if one
+      cable fails. Use the Link Aggregation Control Protocol (LACP) so both sides negotiate the
+      bundle automatically, then place the bundle on the archive VLAN and verify it came up.
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: device + terminal -->
+    <section class="card" aria-label="Switch console">
+      <div class="head"><h2>CHPL-DSW1 — console</h2></div>
+      <div class="body">
+
+        <div class="chassis" id="chassis">
+          <div>
+            <div class="name">CHPL-DSW1</div>
+            <div class="sub">48-port distribution switch · archive rack B</div>
+          </div>
+          <div class="ports" aria-label="Member port status">
+            <div class="port" id="ledg5"><span class="led"></span><span class="lbl">Gi0/5</span></div>
+            <div class="port" id="ledg6"><span class="led"></span><span class="lbl">Gi0/6</span></div>
+            <div class="lag-pill" id="lagPill">Po20 — down</div>
+          </div>
+        </div>
+
+        <div class="terminal">
+          <div class="term-out mono" id="out" role="log" aria-live="polite" aria-label="Console output"></div>
+          <div class="term-in">
+            <span class="prompt mono" id="prompt">CHPL-DSW1&gt;</span>
+            <label class="sr" for="cmd">Type a switch command</label>
+            <input id="cmd" class="mono" autocomplete="off" autocapitalize="off" spellcheck="false"
+                   aria-describedby="cmdhint" placeholder="type a command, then Enter" />
+          </div>
+        </div>
+        <p class="hint" id="cmdhint">
+          Tip: <span class="mono">?</span> lists what you can do from here. <span class="mono">history</span> shows
+          past commands; <span class="mono">↑/↓</span> recall them. This is a teaching console — wrong syntax returns a
+          real-style error so you can correct it.
+        </p>
+      </div>
+    </section>
+
+    <!-- RIGHT: tasks + questions -->
+    <section>
+      <div class="card" style="margin-bottom:16px" aria-label="Task checklist">
+        <div class="head"><h2>Tasks <span id="taskCount" class="mono" style="color:var(--muted);font-weight:600">0/5</span></h2></div>
+        <div class="body">
+          <ol class="tasks" id="taskList"></ol>
+        </div>
+      </div>
+
+      <div class="card" aria-label="Questions">
+        <div class="head"><h2>Verify &amp; explain <span id="qCount" class="mono" style="color:var(--muted);font-weight:600">0/4</span></h2></div>
+        <div class="body" id="qList"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SUBMIT -->
+  <div class="submit" aria-label="Submission">
+    <div class="row">
+      <div class="field">
+        <label for="handle">Callsign (no real names)</label>
+        <input id="handle" maxlength="40" placeholder="e.g. blue-heron-7" autocomplete="off" />
+      </div>
+      <div class="score-chip" id="scoreChip">Score 0 / 9</div>
+      <button class="primary" id="submitBtn" type="button" disabled>Submit completed lab</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite">Finish every task and question to enable submission.</div>
+  </div>
+
+  <p class="legal">
+    © 2026 [Author / Library name]. Clean-room instructional simulation for CompTIA Network+ (N10-009)
+    and the College Board AP Networking pilot. Original scenario, values, and interface; not derived from
+    any third-party lab. Pseudonymous submission only — do not enter real names, emails, or student IDs.
+  </p>
+</div>
+
+<!-- ======================================================================
+     SCRIPT BLOCK 1 — screenshot capture (dependency-free)
+     The library spec calls for inlined html2canvas. We can't ship the
+     minified library here and the runtime makes no CDN calls, so this is a
+     self-contained DOM->PNG capturer (SVG <foreignObject> serialized onto a
+     canvas). It screenshots the simulated DOM, which is all the lab contains.
+     If you prefer the real library, paste minified html2canvas above this
+     comment and set window.html2canvas; the submit flow will use it if found.
+     ====================================================================== -->
+<script>
+(function(){
+  function inlineStyles(src, dst){
+    const cs = getComputedStyle(src);
+    let s = '';
+    for (let i=0;i<cs.length;i++){ const p=cs[i]; s += p+':'+cs.getPropertyValue(p)+';'; }
+    dst.setAttribute('style', s);
+    const a=src.children, b=dst.children;
+    for (let i=0;i<a.length;i++){ if(b[i]) inlineStyles(a[i], b[i]); }
+  }
+  // Built-in capturer -> returns a Promise<dataURL>
+  window.__capturePNG = function(node){
+    return new Promise(function(resolve){
+      try{
+        const rect = node.getBoundingClientRect();
+        const w = Math.max(1, Math.ceil(rect.width));
+        const h = Math.max(1, Math.ceil(rect.height));
+        const clone = node.cloneNode(true);
+        inlineStyles(node, clone);
+        // strip inputs' live focus rings etc. by serializing value into attribute
+        clone.querySelectorAll('input').forEach(function(inp,idx){
+          const orig = node.querySelectorAll('input')[idx];
+          if(orig) inp.setAttribute('value', orig.value||'');
+        });
+        const xml = new XMLSerializer().serializeToString(clone);
+        const svg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+          '<foreignObject width="100%" height="100%">'+
+          '<div xmlns="http://www.w3.org/1999/xhtml">'+xml+'</div>'+
+          '</foreignObject></svg>';
+        const img = new Image();
+        const svgUrl = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+        img.onload = function(){
+          const scale = Math.min(2, (window.devicePixelRatio||1));
+          const c = document.createElement('canvas');
+          c.width = w*scale; c.height = h*scale;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#0f1620'; ctx.fillRect(0,0,c.width,c.height);
+          ctx.scale(scale,scale);
+          ctx.drawImage(img,0,0);
+          try{ resolve(c.toDataURL('image/png')); }
+          catch(e){ resolve(''); }
+        };
+        img.onerror = function(){ resolve(''); };
+        img.src = svgUrl;
+      }catch(e){ resolve(''); }
+    });
+  };
+})();
+</script>
+
+<!-- ======================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, CLI logic, submit POST
+     ====================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- LAB CONFIG (per §11) ---------- */
+  const CONFIG = {
+    assignmentId: "netplus-lacp-etherchannel",
+    objectives: ["N10-009:2.2", "APNET:3.3"],
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "REPLACE_WITH_COHORT_TOKEN",
+    target: {
+      hostname: "CHPL-DSW1",
+      members: ["Gi0/5","Gi0/6"],   // canonical member ports
+      channelGroup: 20,             // Port-channel 20
+      accessVlan: 40                // archive VLAN
+    }
+  };
+
+  /* ---------- TASKS ---------- */
+  const TASKS = [
+    {id:"config",  label:"Enter privileged EXEC and global configuration mode",
+                   hint:"enable → configure terminal"},
+    {id:"lacp",    label:"Bond Gi0/5 and Gi0/6 into Port-channel 20 using LACP active mode",
+                   hint:"on both interfaces: channel-group 20 mode active"},
+    {id:"access",  label:"Set Port-channel 20 to access mode on VLAN 40",
+                   hint:"interface port-channel 20 → switchport mode access → switchport access vlan 40"},
+    {id:"verify",  label:"Verify the bundle is up with both ports aggregated",
+                   hint:"show etherchannel summary"},
+    {id:"save",    label:"Save the running configuration to startup",
+                   hint:"copy running-config startup-config (or write memory)"}
+  ];
+
+  /* ---------- QUESTIONS + ANSWER KEY (client-side; see Integrity note) ---------- */
+  const QUESTIONS = [
+    {id:"q1", prompt:"Which LACP mode actively starts the negotiation instead of waiting for the other side?",
+              check:a=>norm(a)==="active", answerLabel:"active"},
+    {id:"q2", prompt:"Name the IEEE standard that originally defined LACP. (The current rollup standard is also accepted.)",
+              check:a=>{const n=norm(a); return n.includes("8023ad")||n.includes("8021ax");}, answerLabel:"802.3ad (or 802.1AX)"},
+    {id:"q3", prompt:"In “show etherchannel summary”, which single-letter port flag means the port is bundled in the channel?",
+              check:a=>norm(a)==="p", answerLabel:"P"},
+    {id:"q4", prompt:"With both 1 Gbps members active, what does aggregation give the archive server versus one link? (one phrase)",
+              check:a=>{const n=norm(a); return n.includes("2gbps")||n.includes("2000")||n.includes("doubl")||n.includes("aggreg")||n.includes("combin")||n.includes("twice");},
+              answerLabel:"~2 Gbps of combined/aggregated throughput"}
+  ];
+
+  function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]/g,""); }
+
+  /* ---------- SWITCH STATE ---------- */
+  const T = CONFIG.target;
+  function freshState(){
+    return {
+      mode:"user",                 // user | priv | config | if
+      ctxIfs:[],                   // interfaces currently being configured
+      ctxPo:null,                  // port-channel number if in po interface ctx
+      ifs:{ "Gi0/5":{}, "Gi0/6":{} },
+      po:{},                       // {20:{members:[],lacp:"active"|"on"|"passive",swMode,accessVlan}}
+      saved:false,
+      enteredConfig:false,
+      ranVerify:false,
+      history:[]
+    };
+  }
+  let S = freshState();
+
+  /* canonicalize an interface token to "Gi0/5" form, or null */
+  function canonIf(tok){
+    if(!tok) return null;
+    const m = norm(tok).match(/^(?:gi|gig|gigabitethernet|g)?(\d)\/(\d{1,2})$/);
+    if(!m) return null;
+    const id = "Gi"+m[1]+"/"+m[2];
+    return (id==="Gi0/5"||id==="Gi0/6") ? id : id; // allow others; pass-logic checks membership
+  }
+
+  /* ---------- DOM ---------- */
+  const out = document.getElementById("out");
+  const cmd = document.getElementById("cmd");
+  const promptEl = document.getElementById("prompt");
+  let histIdx = -1;
+
+  function promptStr(){
+    const h = T.hostname;
+    if(S.mode==="user")   return h+">";
+    if(S.mode==="priv")   return h+"#";
+    if(S.mode==="config") return h+"(config)#";
+    if(S.mode==="if"){
+      if(S.ctxPo!=null) return h+"(config-if)#";
+      if(S.ctxIfs.length>1) return h+"(config-if-range)#";
+      return h+"(config-if)#";
+    }
+    return h+">";
+  }
+  function setPrompt(){ promptEl.textContent = promptStr(); }
+
+  function echo(text, cls){
+    const span=document.createElement("span");
+    if(cls) span.className=cls;
+    span.textContent=text+"\n";
+    out.appendChild(span);
+    out.scrollTop=out.scrollHeight;
+  }
+  function echoCmd(raw){ echo(promptStr()+" "+raw); }
+
+  /* ---------- CLI PARSER ---------- */
+  function handle(raw){
+    const line = raw.trim();
+    echoCmd(raw);
+    if(line==="") return;
+    S.history.push(line);
+
+    const low = line.toLowerCase();
+    const parts = line.split(/\s+/);
+    const p0 = parts[0].toLowerCase();
+
+    // universal helpers
+    if(p0==="?"){ return showHelp(); }
+    if(p0==="history"){ S.history.forEach((h,i)=>echo("  "+(i+1)+"  "+h,"dim")); return; }
+    if(p0==="clear"||p0==="cls"){ out.innerHTML=""; return; }
+
+    // navigation
+    if(low==="end"){ if(S.mode!=="user"){S.mode="priv";S.ctxIfs=[];S.ctxPo=null;} return done(); }
+    if(low==="exit"||low==="quit"){
+      if(S.mode==="if"){ S.mode="config"; S.ctxIfs=[]; S.ctxPo=null; }
+      else if(S.mode==="config"){ S.mode="priv"; }
+      else if(S.mode==="priv"){ S.mode="user"; }
+      return done();
+    }
+
+    switch(S.mode){
+      case "user":   return userMode(low,parts);
+      case "priv":   return privMode(low,parts,line);
+      case "config": return configMode(low,parts,line);
+      case "if":     return ifMode(low,parts,line);
+    }
+  }
+
+  function userMode(low,parts){
+    if(low==="enable"||low==="en"){ S.mode="priv"; return done(); }
+    if(parts[0].toLowerCase()==="show") return showCmd(parts, /*priv*/false);
+    if(low==="configure terminal"||low==="conf t"||low==="config")
+      return err("% You must enter privileged EXEC mode first. Type: enable");
+    return invalid();
+  }
+
+  function privMode(low,parts,line){
+    if(low==="configure terminal"||low==="conf t"||low==="config t"){ S.mode="config"; S.enteredConfig=true; return done(); }
+    if(low==="configure"){ return incomplete(); }
+    if(parts[0].toLowerCase()==="show") return showCmd(parts,true);
+    if(/^copy\s+running-config\s+startup-config$/.test(low) || low==="copy run start"){
+      S.saved=true; echo("Destination filename [startup-config]? ","dim"); echo("Building configuration...","dim"); echo("[OK]","ok"); return done();
+    }
+    if(low==="write memory"||low==="wr"||low==="write"){ S.saved=true; echo("Building configuration...","dim"); echo("[OK]","ok"); return done(); }
+    return invalid();
+  }
+
+  function configMode(low,parts,line){
+    // interface range g0/5 - 6  | interface range gi0/5-6
+    let m = low.match(/^interface\s+range\s+(.+)$/);
+    if(m){
+      const spec = m[1];
+      const rng = spec.match(/^(?:gi|gig|gigabitethernet|g)?(\d)\/(\d{1,2})\s*-\s*(\d{1,2})$/);
+      if(rng){
+        const a=parseInt(rng[2],10), b=parseInt(rng[3],10), base="Gi"+rng[1]+"/";
+        if(b<a) return err("% Invalid range: end port is lower than start port.");
+        S.ctxIfs=[]; for(let i=a;i<=b;i++){ const id=base+i; ensureIf(id); S.ctxIfs.push(id); }
+        S.ctxPo=null; S.mode="if"; return done();
+      }
+      // comma form: gi0/5, gi0/6
+      const ids = spec.split(",").map(s=>canonIf(s.trim())).filter(Boolean);
+      if(ids.length){ ids.forEach(ensureIf); S.ctxIfs=ids; S.ctxPo=null; S.mode="if"; return done(); }
+      return err("% Invalid input detected at '^' marker. Try: interface range gi0/5 - 6");
+    }
+    // interface port-channel 20
+    m = low.match(/^interface\s+(?:po|port-?channel)\s*(\d+)$/);
+    if(m){ const n=parseInt(m[1],10); ensurePo(n); S.ctxIfs=[]; S.ctxPo=n; S.mode="if"; return done(); }
+    // single interface
+    m = low.match(/^interface\s+(\S+)$/);
+    if(m){
+      const id=canonIf(m[1]);
+      if(!id) return err("% Invalid input detected at '^' marker.  (try: interface gi0/5)");
+      ensureIf(id); S.ctxIfs=[id]; S.ctxPo=null; S.mode="if"; return done();
+    }
+    if(low==="interface"||low==="interface range") return incomplete();
+    if(parts[0].toLowerCase()==="show") return showCmd(parts,true);
+    return invalid();
+  }
+
+  function ifMode(low,parts,line){
+    // channel-group N mode active|passive|on
+    let m = low.match(/^channel-group\s+(\d+)\s+mode\s+(active|passive|on|auto|desirable)$/);
+    if(m){
+      if(S.ctxPo!=null) return err("% channel-group is set on physical interfaces, not on a port-channel.");
+      const n=parseInt(m[1],10), mode=m[2];
+      ensurePo(n);
+      if(mode==="active"||mode==="passive") S.po[n].lacp=mode;
+      else if(mode==="on") S.po[n].lacp="on";
+      else S.po[n].lacp="pagp"; // auto/desirable = PAgP, not LACP
+      S.ctxIfs.forEach(id=>{ ensureIf(id); S.ifs[id].channelGroup=n; S.ifs[id].channelMode=mode;
+        if(S.po[n].members.indexOf(id)<0) S.po[n].members.push(id); });
+      echo("Creating a port-channel interface Port-channel "+n,"dim");
+      if(mode==="on") echo("% NOTE: mode 'on' forces a static bundle with no LACP negotiation.","dim");
+      if(mode==="auto"||mode==="desirable") echo("% NOTE: auto/desirable use PAgP, not LACP.","dim");
+      return done();
+    }
+    if(/^channel-group/.test(low)) return err("% Incomplete or bad syntax. Try: channel-group 20 mode active");
+
+    if(low==="switchport mode access"){
+      if(S.ctxPo==null) return err("% Apply switchport settings to the Port-channel, not a member. Try: interface port-channel "+T.channelGroup);
+      S.po[S.ctxPo].swMode="access"; return done();
+    }
+    if(low==="switchport mode trunk"){ if(S.ctxPo!=null) S.po[S.ctxPo].swMode="trunk"; return done(); }
+    m = low.match(/^switchport\s+access\s+vlan\s+(\d+)$/);
+    if(m){
+      if(S.ctxPo==null) return err("% Set the access VLAN on the Port-channel, not a member port.");
+      S.po[S.ctxPo].accessVlan=parseInt(m[1],10); return done();
+    }
+    if(low==="no shutdown"||low==="no shut"){ return done(); }
+    if(low==="shutdown"){ return done(); }
+    if(parts[0].toLowerCase()==="switchport") return incomplete();
+    return invalid();
+  }
+
+  function ensureIf(id){ if(!S.ifs[id]) S.ifs[id]={}; }
+  function ensurePo(n){ if(!S.po[n]) S.po[n]={members:[],lacp:null,swMode:null,accessVlan:null}; }
+
+  /* ---------- show commands ---------- */
+  function showCmd(parts,priv){
+    const sub = parts.slice(1).join(" ").toLowerCase();
+    if(/^etherchannel(\s+summary)?$/.test(sub) || sub==="etherchannel sum"){ S.ranVerify=true; return showEtherchannel(); }
+    if(/^interfaces?\s+(?:po|port-?channel)\s*\d+/.test(sub)){ S.ranVerify=true; return showPoIface(sub); }
+    if(sub==="running-config"||sub==="run"){ return showRun(); }
+    if(sub===""||sub==="?") return echo("show etherchannel summary | show running-config | show interfaces port-channel <n>","dim");
+    return err("% Unsupported show option in this lab. Try: show etherchannel summary");
+  }
+
+  function bundleState(n){
+    const po=S.po[n]; if(!po) return null;
+    const lacpUp = po.lacp==="active"||po.lacp==="passive";
+    const members = po.members.slice();
+    return {lacp:po.lacp, lacpUp, members, swMode:po.swMode, accessVlan:po.accessVlan};
+  }
+
+  function showEtherchannel(){
+    const keys=Object.keys(S.po);
+    if(!keys.length){ echo("Flags:  P - bundled in port-channel   D - down","dim"); echo("Number of channel-groups in use: 0","dim"); return done(); }
+    echo("Flags:  D - down        P - bundled in port-channel","dim");
+    echo("        I - stand-alone s - suspended","dim");
+    echo("        s - LACP slow   p - LACP fast","dim");
+    echo("Number of channel-groups in use: "+keys.length);
+    echo("Group  Port-channel  Protocol    Ports");
+    echo("------+-------------+-----------+------------------------------");
+    keys.forEach(k=>{
+      const b=bundleState(k);
+      const proto = b.lacp==="active"||b.lacp==="passive" ? "LACP" : (b.lacp==="on"?"-":(b.lacp==="pagp"?"PAgP":"-"));
+      const flag  = b.lacpUp||b.lacp==="on" ? "(SU)" : "(SD)";
+      const ports = b.members.length
+        ? b.members.map(m=> m+"("+( (b.lacpUp||b.lacp==="on") ? "P":"D")+")").join(" ")
+        : "—";
+      echo("  "+k+"     Po"+k+flag+"     "+(proto+"        ").slice(0,9)+"   "+ports);
+    });
+    return done();
+  }
+  function showPoIface(sub){
+    const n=(sub.match(/(\d+)\s*$/)||[])[1];
+    const b=n&&S.po[n]?bundleState(n):null;
+    if(!b){ echo("              Port-channel"+(n||"")+" does not exist","dim"); return done(); }
+    const up=b.lacpUp||b.lacp==="on";
+    echo("Port-channel"+n+" is "+(up?"up":"down")+", line protocol is "+(up?"up":"down"));
+    echo("  Members in this channel: "+(b.members.join(" ")||"none"));
+    echo("  Switchport mode: "+(b.swMode||"trunk (default)")+(b.accessVlan?("   Access VLAN: "+b.accessVlan):""));
+    return done();
+  }
+  function showRun(){
+    echo("Building configuration...","dim");
+    echo("hostname "+T.hostname);
+    Object.keys(S.po).forEach(k=>{
+      const b=bundleState(k);
+      echo("interface Port-channel"+k);
+      if(b.swMode) echo(" switchport mode "+b.swMode);
+      if(b.accessVlan) echo(" switchport access vlan "+b.accessVlan);
+    });
+    Object.keys(S.ifs).forEach(id=>{
+      const i=S.ifs[id]; if(i.channelGroup==null) return;
+      echo("interface "+id.replace("Gi","GigabitEthernet"));
+      echo(" channel-group "+i.channelGroup+" mode "+i.channelMode);
+    });
+    echo("end");
+    return done();
+  }
+
+  /* ---------- error helpers (realistic) ---------- */
+  function err(msg){ echo(msg,"err"); }
+  function invalid(){ echo("% Invalid input detected at '^' marker.","err"); echo("   Type ? for the commands available here.","dim"); }
+  function incomplete(){ echo("% Incomplete command.","err"); }
+  function showHelp(){
+    const help={
+      user:["enable","show etherchannel summary","? / history / clear"],
+      priv:["configure terminal","show running-config","show etherchannel summary","copy running-config startup-config","exit"],
+      config:["interface range gi0/5 - 6","interface port-channel 20","interface gi0/5","exit"],
+      if:["channel-group 20 mode active","switchport mode access","switchport access vlan 40","exit / end"]
+    }[S.mode]||[];
+    echo("Available here:","dim"); help.forEach(h=>echo("  "+h,"dim"));
+  }
+
+  /* ---------- task evaluation ---------- */
+  function poTarget(){ return S.po[T.channelGroup]; }
+  function evalTasks(){
+    const po=poTarget();
+    const membersOk = po && T.members.every(m=>po.members.includes(m));
+    const lacpOk    = po && (po.lacp==="active"); // task requires ACTIVE specifically
+    const status={
+      config: S.enteredConfig,
+      lacp:   !!(membersOk && lacpOk),
+      access: !!(po && po.swMode==="access" && po.accessVlan===T.accessVlan),
+      verify: !!(S.ranVerify && po && po.lacp==="active" && T.members.every(m=>po.members.includes(m))),
+      save:   S.saved
+    };
+    return status;
+  }
+
+  /* ---------- render ---------- */
+  function renderTasks(){
+    const st=evalTasks();
+    const ul=document.getElementById("taskList"); ul.innerHTML="";
+    let done=0;
+    TASKS.forEach(t=>{
+      const ok=st[t.id]; if(ok) done++;
+      const li=document.createElement("li"); if(ok) li.className="done";
+      li.innerHTML='<span class="box" aria-hidden="true">'+(ok?'✓':'')+'</span>'+
+        '<span class="t">'+escapeHtml(t.label)+'<small class="mono">'+escapeHtml(t.hint)+'</small></span>';
+      ul.appendChild(li);
+    });
+    document.getElementById("taskCount").textContent=done+"/"+TASKS.length;
+    // LED + pill
+    const g5=S.ifs["Gi0/5"]||{}, g6=S.ifs["Gi0/6"]||{};
+    const po=poTarget();
+    setLed("ledg5", g5.channelGroup===T.channelGroup, st.verify || st.lacp);
+    setLed("ledg6", g6.channelGroup===T.channelGroup, st.verify || st.lacp);
+    const pill=document.getElementById("lagPill");
+    if(st.lacp){ pill.classList.add("live"); pill.textContent="Po20 — LACP up · "+(po?po.members.length:0)+" links"; }
+    else { pill.classList.remove("live"); pill.textContent="Po20 — down"; }
+    return st;
+  }
+  function setLed(id, up, bundled){
+    const el=document.getElementById(id); el.classList.toggle("up", !!up && !bundled);
+    el.classList.toggle("bundled", !!bundled && !!up);
+  }
+
+  let qStateCorrect = {};
+  function renderQuestions(){
+    const list=document.getElementById("qList"); list.innerHTML="";
+    QUESTIONS.forEach(q=>{
+      const wrap=document.createElement("div"); wrap.className="q";
+      wrap.innerHTML=
+        '<p>'+escapeHtml(q.prompt)+'</p>'+
+        '<div class="qrow"><input type="text" id="in_'+q.id+'" autocomplete="off" aria-label="answer" placeholder="your answer">'+
+        '<button type="button" data-q="'+q.id+'">Check</button></div>'+
+        '<div class="verdict" id="v_'+q.id+'"></div>';
+      list.appendChild(wrap);
+    });
+    list.querySelectorAll("button[data-q]").forEach(b=>{
+      b.addEventListener("click",()=>checkQ(b.getAttribute("data-q")));
+    });
+    list.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); checkQ(inp.id.slice(3)); } });
+    });
+  }
+  function checkQ(id){
+    const q=QUESTIONS.find(x=>x.id===id);
+    const val=document.getElementById("in_"+id).value;
+    const v=document.getElementById("v_"+id);
+    const ok=q.check(val);
+    qStateCorrect[id]=ok;
+    v.className="verdict "+(ok?"ok":"no");
+    v.textContent=ok ? "✓ Correct." : "✗ Not quite — re-check using the console output. Expected: "+q.answerLabel;
+    updateScore();
+  }
+  function qCorrectCount(){ return QUESTIONS.filter(q=>qStateCorrect[q.id]).length; }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+  /* ---------- score + submit gating ---------- */
+  function tasksPassed(){ const st=evalTasks(); return TASKS.filter(t=>st[t.id]).length; }
+  function totalPoints(){ return TASKS.length + QUESTIONS.length; }
+  function earnedPoints(){ return tasksPassed() + qCorrectCount(); }
+
+  function updateScore(){
+    const st=renderTasks();
+    const earned=earnedPoints(), total=totalPoints();
+    document.getElementById("qCount").textContent=qCorrectCount()+"/"+QUESTIONS.length;
+    document.getElementById("scoreChip").textContent="Score "+earned+" / "+total;
+    const ready = (tasksPassed()===TASKS.length) && (qCorrectCount()===QUESTIONS.length);
+    const btn=document.getElementById("submitBtn");
+    btn.disabled=!ready;
+    const status=document.getElementById("status");
+    if(ready && status.dataset.state!=="sent"){ status.className="status ok"; status.textContent="All tasks and questions complete — ready to submit."; }
+    else if(status.dataset.state!=="sent"){ status.className="status"; status.textContent="Finish every task and question to enable submission. ("+earned+"/"+total+")"; }
+  }
+  function done(){ updateScore(); }
+
+  /* ---------- SUBMISSION (per §4/§5) ---------- */
+  async function submit(){
+    const status=document.getElementById("status");
+    const handle=(document.getElementById("handle").value||"").trim();
+    if(!handle){ status.className="status no"; status.textContent="Enter a callsign first (no real names)."; document.getElementById("handle").focus(); return; }
+
+    status.className="status work"; status.textContent="Capturing screenshot and submitting…";
+    document.getElementById("submitBtn").disabled=true;
+
+    let shot="";
+    try{
+      const node=document.getElementById("labArea");
+      if(window.html2canvas){ const c=await window.html2canvas(node,{backgroundColor:"#0f1620",scale:1}); shot=c.toDataURL("image/png"); }
+      else { shot=await window.__capturePNG(node); }
+    }catch(e){ shot=""; }
+
+    const st=evalTasks();
+    const payload={
+      assignmentId: CONFIG.assignmentId,
+      handle: handle.slice(0,40),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(t=>({id:t.id,label:t.label,passed:!!st[t.id]})),
+      questions: QUESTIONS.map(q=>({id:q.id,prompt:q.prompt,answer:(document.getElementById("in_"+q.id)||{}).value||"",correct:!!qStateCorrect[q.id]})),
+      score: {earned: earnedPoints(), total: totalPoints()},
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    try{
+      // Simple request: no custom headers, default text/plain — avoids CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+      const outJson=await res.json();
+      if(outJson && outJson.success){
+        status.dataset.state="sent"; status.className="status ok";
+        status.innerHTML="Submitted ✓ — "+(outJson.docUrl?('<a href="'+outJson.docUrl+'" target="_blank" rel="noopener">open your submission</a>'):"recorded.");
+      }else{
+        status.className="status no"; status.textContent="Submission rejected: "+((outJson&&outJson.error)||"unknown error")+". Check with your instructor.";
+        document.getElementById("submitBtn").disabled=false;
+      }
+    }catch(e){
+      // Fallback: fire-and-forget if the response can't be read in a locked-down context.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+        status.dataset.state="sent"; status.className="status ok";
+        status.textContent="Submitted (could not read confirmation) — confirm receipt with your instructor.";
+      }catch(e2){
+        status.className="status no"; status.textContent="Network error — could not submit. Check your connection and the Apps Script URL.";
+        document.getElementById("submitBtn").disabled=false;
+      }
+    }
+  }
+
+  /* ---------- wire up ---------- */
+  cmd.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ const v=cmd.value; cmd.value=""; histIdx=-1; handle(v); setPrompt(); }
+    else if(e.key==="ArrowUp"){ if(S.history.length){ histIdx=histIdx<0?S.history.length-1:Math.max(0,histIdx-1); cmd.value=S.history[histIdx]||""; e.preventDefault(); } }
+    else if(e.key==="ArrowDown"){ if(histIdx>=0){ histIdx++; if(histIdx>=S.history.length){histIdx=-1;cmd.value="";} else cmd.value=S.history[histIdx]; e.preventDefault(); } }
+  });
+  document.getElementById("submitBtn").addEventListener("click",submit);
+  document.getElementById("resetBtn").addEventListener("click",()=>{
+    S=freshState(); out.innerHTML=""; qStateCorrect={};
+    document.getElementById("status").dataset.state="";
+    renderQuestions(); setPrompt();
+    echo("Console reset. You are at CHPL-DSW1>  — type ? to see what's available.","dim");
+    updateScore(); cmd.focus();
+  });
+
+  /* ---------- boot ---------- */
+  renderQuestions();
+  setPrompt();
+  echo("CHPL-DSW1 console ready.","dim");
+  echo("Goal: bond Gi0/5 + Gi0/6 into Port-channel 20 with LACP, place it on VLAN 40, verify, and save.","dim");
+  echo("Type ? at any prompt to see available commands.","dim");
+  updateScore();
+  cmd.focus();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-screened-subnet.html",title:"Stand Up a Screened Subnet for a Public Service"}, NEXT={href:"index_netplus-switch-mgmt-ip.html",title:"Lab \u2014 Bring a Branch Access Switch Online"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

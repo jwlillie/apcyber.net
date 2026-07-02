@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — The Drop That Went Dark: Restore a Failed Link</title>
+<!--
+  ============================================================================
+  Network+ / AP Networking Lab Library
+  Lab: The Drop That Went Dark — Restore a Failed Physical Link
+  assignmentId: netplus-phys-link-down
+
+  © 2026 [AUTHOR / ORG — set me]. All rights reserved.
+  Licensed to the purchasing instructor for classroom use only. Not for
+  redistribution. This lab is an ORIGINAL clean-room work built from the public
+  CompTIA N10-009 objectives and the public College Board AP Networking
+  framework. No third-party lab's wording, scenario, hostnames, addressing,
+  question phrasing, ordering, or screenshots were used.
+  ============================================================================
+-->
+<style id="lab-css">
+  :root{
+    --bg:#0c1116; --panel:#121a22; --panel-2:#0f161d; --edge:#1e2a36;
+    --ink:#dfe9f0; --ink-dim:#8aa0b2; --ink-faint:#5c7184;
+    --signal:#39d98a;       /* link up */
+    --signal-off:#33404c;   /* link off */
+    --alert:#ff6b5e;        /* fault */
+    --warn:#ffc14d;         /* caution / apipa */
+    --cyan:#46c7ff;         /* accent / interactive */
+    --console-bg:#070b0f; --console-ink:#cfe9d6;
+    --focus:#7fdcff;
+    --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Inter, Arial, sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  a{color:var(--cyan)}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 16px 80px}
+  header.lab-head{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--edge);padding-bottom:16px;margin-bottom:18px}
+  .title-block h1{font-size:1.5rem;margin:0 0 4px;letter-spacing:.2px}
+  .title-block .sub{color:var(--ink-dim);font-size:.95rem;max-width:62ch}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .tag{font-family:var(--mono);font-size:.72rem;color:var(--cyan);border:1px solid var(--edge);background:var(--panel-2);padding:2px 8px;border-radius:999px}
+  .tag.ap{color:var(--warn)}
+  .grid{display:grid;grid-template-columns:300px 1fr 320px;gap:14px}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);overflow:hidden}
+  .panel > h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-dim);
+    margin:0;padding:11px 14px;border-bottom:1px solid var(--edge);background:var(--panel-2);font-weight:700}
+  .panel .body{padding:12px 14px}
+
+  /* ---- Status board ---- */
+  .node{display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px dashed var(--edge)}
+  .node:last-child{border-bottom:0}
+  .led{width:12px;height:12px;border-radius:50%;background:var(--signal-off);flex:0 0 auto;box-shadow:0 0 0 1px #000 inset}
+  .led.up{background:var(--signal);box-shadow:0 0 8px var(--signal)}
+  .led.fault{background:var(--alert);box-shadow:0 0 8px var(--alert)}
+  .led.act{animation:blink 1.1s steps(2,end) infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .node .nm{font-family:var(--mono);font-size:.86rem}
+  .node .meta{margin-left:auto;text-align:right;color:var(--ink-faint);font-family:var(--mono);font-size:.72rem}
+  .node.down .nm{color:var(--alert)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;color:var(--ink-faint);font-size:.74rem}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+
+  /* ---- Console ---- */
+  .console{background:var(--console-bg);border-radius:8px;border:1px solid #04303a;display:flex;flex-direction:column;min-height:300px}
+  .console .out{flex:1;overflow:auto;padding:12px 14px;font-family:var(--mono);font-size:.82rem;color:var(--console-ink);white-space:pre-wrap;word-break:break-word;max-height:360px}
+  .console .out .err{color:var(--alert)}
+  .console .out .ok{color:var(--signal)}
+  .console .out .warnln{color:var(--warn)}
+  .console .out .cmd{color:var(--cyan)}
+  .console .inputline{display:flex;align-items:center;gap:8px;border-top:1px solid #04303a;padding:8px 12px;font-family:var(--mono)}
+  .console .prompt{color:var(--cyan);font-size:.82rem;flex:0 0 auto}
+  .console input{flex:1;background:transparent;border:0;color:var(--console-ink);font-family:var(--mono);font-size:.82rem;outline:none}
+  .hint{color:var(--ink-faint);font-size:.74rem;margin-top:8px}
+
+  /* ---- Physical panel ---- */
+  .drop-path{font-family:var(--mono);font-size:.78rem;color:var(--ink-dim);background:var(--panel-2);border:1px solid var(--edge);border-radius:8px;padding:10px;margin-bottom:12px}
+  .drop-path b{color:var(--ink)}
+  .cable-state{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px solid var(--edge);background:var(--panel-2);margin-bottom:12px}
+  .cable-state .dot{width:10px;height:10px;border-radius:50%;background:var(--alert);box-shadow:0 0 8px var(--alert)}
+  .cable-state.good .dot{background:var(--signal);box-shadow:0 0 8px var(--signal)}
+  .cable-state .lbl{font-family:var(--mono);font-size:.8rem}
+  .shelf{display:flex;flex-direction:column;gap:8px}
+  .spare{display:flex;flex-direction:column;gap:2px;text-align:left;width:100%;cursor:pointer;
+    background:var(--panel-2);border:1px solid var(--edge);border-radius:8px;padding:9px 11px;color:var(--ink)}
+  .spare:hover{border-color:var(--cyan)}
+  .spare .s-name{font-family:var(--mono);font-size:.82rem}
+  .spare .s-desc{color:var(--ink-faint);font-size:.72rem}
+  .spare:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---- Tasks / questions ---- */
+  .full{grid-column:1/-1}
+  .check{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px dashed var(--edge)}
+  .check:last-child{border-bottom:0}
+  .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--ink-faint);flex:0 0 auto;margin-top:1px;display:grid;place-items:center;font-size:.72rem;color:#04130b}
+  .check.pass .box{background:var(--signal);border-color:var(--signal)}
+  .check .tlabel{font-size:.9rem}
+  .check .tlabel small{display:block;color:var(--ink-faint);font-size:.76rem;margin-top:2px}
+  fieldset.q{border:1px solid var(--edge);border-radius:8px;margin:0 0 12px;padding:10px 12px}
+  fieldset.q legend{font-size:.88rem;padding:0 6px;color:var(--ink)}
+  fieldset.q label{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:.86rem;color:var(--ink-dim);cursor:pointer}
+  fieldset.q label:hover{color:var(--ink)}
+  fieldset.q input{margin-top:3px}
+  fieldset.q.correct{border-color:var(--signal)}
+  fieldset.q.wrong{border-color:var(--alert)}
+  .q-status{font-family:var(--mono);font-size:.74rem;margin-top:4px}
+  .q-status.correct{color:var(--signal)} .q-status.wrong{color:var(--alert)}
+
+  select,input[type=text]{background:var(--panel-2);border:1px solid var(--edge);color:var(--ink);
+    border-radius:7px;padding:7px 9px;font-family:var(--mono);font-size:.84rem}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  label.fld{display:flex;flex-direction:column;gap:5px;font-size:.78rem;color:var(--ink-dim)}
+
+  /* ---- Buttons & submit bar ---- */
+  button{font-family:var(--sans)}
+  .btn{background:var(--cyan);color:#042231;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:.92rem}
+  .btn:hover{filter:brightness(1.07)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;filter:none}
+  .btn.ghost{background:transparent;color:var(--ink-dim);border:1px solid var(--edge)}
+  .btn.ghost:hover{color:var(--ink);border-color:var(--cyan)}
+  .scorebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px}
+  .score-pill{font-family:var(--mono);font-size:.9rem;background:var(--panel-2);border:1px solid var(--edge);border-radius:999px;padding:6px 14px}
+  .submitbar{position:sticky;bottom:0;margin-top:18px;background:linear-gradient(180deg,transparent,var(--bg) 24%);padding-top:14px}
+  .submitbar .inner{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);padding:14px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  .status{font-family:var(--mono);font-size:.8rem;min-width:200px;flex:1}
+  .status.ok{color:var(--signal)} .status.err{color:var(--alert)} .status.busy{color:var(--warn)}
+
+  /* focus visibility for keyboard users */
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.spare:focus-visible{
+    outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+  @media (prefers-reduced-motion: reduce){
+    .led.act,.console *{animation:none !important}
+    *{scroll-behavior:auto !important;transition:none !important}
+  }
+  .foot{color:var(--ink-faint);font-size:.74rem;margin-top:26px;border-top:1px solid var(--edge);padding-top:12px}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-phys-link-down", "title": "Lab — The Drop That Went Dark: Restore a Failed Link", "version": "1.0.0", "objectives": ["N10-009:5.2", "APNET:3.6"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+  <!-- ===================== captured area starts ===================== -->
+  <div id="lab">
+    <header class="lab-head">
+      <div class="title-block">
+        <h1>The Drop That Went Dark</h1>
+        <div class="sub">Studio B at <b>Riverbend Drafting Co.</b> went silent after a desk shuffle this morning. The drafter there can reach nothing on the network. Work the problem from your bench station, restore the link, and verify it.</div>
+        <div class="tags" id="tagrow"></div>
+      </div>
+      <button class="btn ghost" id="resetBtn" type="button" title="Reset the lab to its starting state">Reset lab</button>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: status board -->
+      <section class="panel" aria-labelledby="board-h">
+        <h2 id="board-h">Link status board · rb-sw-core</h2>
+        <div class="body">
+          <div id="board" role="list"></div>
+          <div class="legend" aria-hidden="true">
+            <span><i class="led up" style="width:10px;height:10px"></i>link up</span>
+            <span><i class="led fault" style="width:10px;height:10px"></i>fault</span>
+            <span><i class="led" style="width:10px;height:10px"></i>no link</span>
+          </div>
+          <div class="hint">Each row is a switchport on <code>rb-sw-core</code>. An unlit indicator points to a faulty port, a faulty cable, or an unplugged cable.</div>
+        </div>
+      </section>
+
+      <!-- CENTER: console -->
+      <section class="panel" aria-labelledby="con-h">
+        <h2 id="con-h">Diagnostics console · rb-tech (10.27.4.30)</h2>
+        <div class="body">
+          <div class="console">
+            <div class="out" id="conOut" role="log" aria-live="polite" aria-label="Console output"></div>
+            <div class="inputline">
+              <span class="prompt" aria-hidden="true">rb-tech&gt;</span>
+              <label for="conIn" class="visually-hidden" style="position:absolute;left:-9999px">Console command</label>
+              <input id="conIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a command — try: help">
+            </div>
+          </div>
+          <div class="hint">Available: <code>help</code>, <code>ping &lt;host|ip&gt;</code>, <code>ipconfig [host]</code>, <code>clear</code>. The console reports agent data from managed endpoints, so you can read another host's address without leaving your bench.</div>
+        </div>
+      </section>
+
+      <!-- RIGHT: physical layer -->
+      <section class="panel" aria-labelledby="phys-h">
+        <h2 id="phys-h">Physical layer · Studio B drop</h2>
+        <div class="body">
+          <div class="drop-path">
+            <b>Studio B floor box</b> → patch panel <b>port 14</b> → <b>rb-sw-core</b> Gi0/14
+          </div>
+          <div class="cable-state" id="cableState">
+            <span class="dot"></span>
+            <span class="lbl" id="cableLbl">Installed: Cat6 patch — jacket split at the connector (pinched under the desk leg)</span>
+          </div>
+          <div style="font-size:.74rem;color:var(--ink-dim);margin-bottom:6px">Known-good spares on the shelf:</div>
+          <div class="shelf" id="shelf"></div>
+          <div class="hint" id="physMsg" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Tasks + identify control -->
+    <section class="panel full" aria-labelledby="task-h" style="margin-top:14px">
+      <h2 id="task-h">Lab tasks</h2>
+      <div class="body">
+        <div class="row" style="margin-bottom:12px">
+          <label class="fld">Report the affected host
+            <select id="affected">
+              <option value="">— select —</option>
+            </select>
+          </label>
+        </div>
+        <div id="tasks"></div>
+      </div>
+    </section>
+
+    <!-- Questions -->
+    <section class="panel full" aria-labelledby="q-h" style="margin-top:14px">
+      <h2 id="q-h">Check your understanding</h2>
+      <div class="body">
+        <div id="questions"></div>
+        <div class="scorebar">
+          <button class="btn ghost" id="gradeBtn" type="button">Check answers</button>
+          <span class="score-pill" id="scorePill">Score 0 / 0</span>
+        </div>
+      </div>
+    </section>
+  </div>
+  <!-- ===================== captured area ends ===================== -->
+
+  <!-- Submission bar -->
+  <div class="submitbar">
+    <div class="inner">
+      <label class="fld" style="flex:0 0 220px">Callsign (no real names)
+        <input id="handle" type="text" maxlength="32" placeholder="e.g. switch-whisperer" autocomplete="off">
+      </label>
+      <button class="btn" id="submitBtn" type="button">Submit completed lab</button>
+      <div class="status" id="status" role="status" aria-live="polite">Finish the tasks and questions, then submit. Your callsign keeps you anonymous — never enter your real name.</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    © 2026 [AUTHOR / ORG — set me]. Original clean-room lab for CompTIA Network+ (N10-009) &amp; AP Networking pilot. Licensed for classroom use; not for redistribution.
+    No PII is collected. Client-side scoring is self-reported and is intended for formative practice.
+  </div>
+</div>
+
+<!-- =======================================================================
+     SCRIPT BLOCK 1 — INLINE html2canvas
+     -----------------------------------------------------------------------
+     PRODUCTION: paste the minified html2canvas source between the markers
+     below so the file is fully dependency-free and pixel-faithful, per the
+     library spec. (It is ~150 KB; it could not be fetched in this build
+     environment because outbound network was disabled, so it is left as a
+     drop-in slot.) When window.html2canvas exists, the capture routine uses
+     it automatically. Until then, a built-in SVG/foreignObject fallback
+     produces a usable PNG so the lab still submits out of the box.
+     Source: https://html2canvas.hertzen.com  (MIT License, © Niklas von Hertzen)
+======================================================================== -->
+<script>/* ===== PASTE MINIFIED html2canvas HERE ===== */</script>
+
+<!-- =======================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, capture, submit
+======================================================================== -->
+<script>
+"use strict";
+
+/* ----------------------------- LAB CONFIG ----------------------------- */
+const CONFIG = {
+  assignmentId: "netplus-phys-link-down",
+  title: "The Drop That Went Dark — Restore a Failed Physical Link",
+  // Both blueprints. N10-009 primary; N10-007 equivalents live in labs.json.
+  objectives: ["N10-009:5.2", "APNET:3.6"],
+  // Deploy the shared Apps Script web app and paste its /exec URL here:
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  // Per-cohort secret; must match the Script Property on the server. Rotate per cohort.
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  passThreshold: "all-tasks-and-all-questions"
+};
+
+/* --------------------------- network model ---------------------------- */
+// Original addressing plan: Riverbend Drafting Co., 10.27.4.0/24
+const SUBNET = "10.27.4", MASK = "255.255.255.0", GW = "10.27.4.1";
+const NODES = [
+  { host:"rb-sw-core", ip:"10.27.4.1",  role:"Core switch / default gateway", port:"—",      up:true,  fixed:true },
+  { host:"rb-files01", ip:"10.27.4.10", role:"File server",                    port:"Gi0/2",  up:true,  fixed:true },
+  { host:"rb-recep",   ip:"10.27.4.20", role:"Reception PC",                   port:"Gi0/8",  up:true,  fixed:true },
+  { host:"rb-studioa", ip:"10.27.4.21", role:"Studio A workstation",          port:"Gi0/12", up:true,  fixed:true },
+  { host:"rb-studiob", ip:"10.27.4.22", role:"Studio B workstation (faulted)",port:"Gi0/14", up:false, fixed:false },
+  { host:"rb-estim",   ip:"10.27.4.23", role:"Estimating workstation",        port:"Gi0/16", up:true,  fixed:true },
+  { host:"rb-tech",    ip:"10.27.4.30", role:"Your bench station",            port:"Gi0/22", up:true,  fixed:true }
+];
+const APIPA = "169.254.11.87";        // what Studio B self-assigns with no DHCP reachable
+const LEASE_AFTER_FIX = "10.27.4.25"; // DHCP hands a fresh lease once link returns (expected to differ from .22)
+
+const state = {
+  fixedLink: false,            // is Studio B's physical link restored?
+  installedCable: "damaged",   // 'damaged' | 'good'
+  ev: { identified:false, pingDownObserved:false, ipconfigApipaObserved:false, cableReplaced:false, verified:false }
+};
+
+function studioB(){ return NODES.find(n=>n.host==="rb-studiob"); }
+function nodeUp(n){ return n.host==="rb-studiob" ? state.fixedLink : n.up; }
+function studioBIP(){ return state.fixedLink ? LEASE_AFTER_FIX : APIPA; }
+
+/* ------------------------------- tasks -------------------------------- */
+const TASKS = [
+  { id:"identify",  label:"Identify the host that lost connectivity",
+    sub:"Read the status board and report the affected workstation.",
+    done:()=>state.ev.identified },
+  { id:"ping-fail", label:"Confirm the outage with ping",
+    sub:"From rb-tech, ping the affected host and observe 100% loss.",
+    done:()=>state.ev.pingDownObserved },
+  { id:"ipconfig",  label:"Read the affected host's address",
+    sub:"Use ipconfig to see its self-assigned (APIPA) address — the sign DHCP was unreachable.",
+    done:()=>state.ev.ipconfigApipaObserved },
+  { id:"replace",   label:"Restore the physical link",
+    sub:"Swap the damaged cable for the correct known-good spare.",
+    done:()=>state.ev.cableReplaced },
+  { id:"verify",    label:"Verify full functionality",
+    sub:"Re-ping the host and confirm a reply plus a valid 10.27.4.x lease.",
+    done:()=>state.ev.verified }
+];
+
+/* ------------------------- questions + key ---------------------------- */
+const QUESTIONS = [
+  { id:"q1", prompt:"What is the lowest OSI layer responsible for this outage?",
+    options:[
+      {k:"a",t:"Layer 1 — Physical"},
+      {k:"b",t:"Layer 2 — Data Link"},
+      {k:"c",t:"Layer 3 — Network"},
+      {k:"d",t:"Layer 4 — Transport"}],
+    answer:"a" },
+  { id:"q2", prompt:"Before the fix, rb-studiob showed 169.254.11.87. What does that tell you?",
+    options:[
+      {k:"a",t:"A valid static address was set by hand"},
+      {k:"b",t:"An APIPA self-assignment — no DHCP server was reachable"},
+      {k:"c",t:"A routable public address from the ISP"},
+      {k:"d",t:"The loopback address for local testing"}],
+    answer:"b" },
+  { id:"q3", prompt:"Which spare restores the link on this edge port to the switch?",
+    options:[
+      {k:"a",t:"Cat6 straight-through patch cable"},
+      {k:"b",t:"Cat5e crossover cable"},
+      {k:"c",t:"Rollover (console) cable"},
+      {k:"d",t:"LC fiber patch cable"}],
+    answer:"a" },
+  { id:"q4", prompt:"After you verify full functionality, what is the final step of the structured troubleshooting process?",
+    options:[
+      {k:"a",t:"Establish a theory of probable cause"},
+      {k:"b",t:"Duplicate the problem"},
+      {k:"c",t:"Document findings, actions, and outcomes"},
+      {k:"d",t:"Escalate to a senior technician"}],
+    answer:"c" }
+];
+const answered = {}; // qid -> chosen key
+
+/* ------------------------------ spares -------------------------------- */
+const SPARES = [
+  { id:"good",      name:"Cat6 straight-through (tested good)", desc:"Solid copper, T568B both ends, continuity verified.", correct:true },
+  { id:"crossover", name:"Cat5e crossover", desc:"Pairs swapped end-to-end for legacy NIC-to-NIC links.", correct:false,
+    msg:"Link did not come up. This edge run is a host-to-switch port — a straight-through is the right pin-out here." },
+  { id:"fiber",     name:"LC duplex fiber patch", desc:"Multimode OM4, LC connectors.", correct:false,
+    msg:"No physical fit. Gi0/14 is a copper RJ-45 access port with no fiber transceiver — fiber can't terminate here." },
+  { id:"reseat",   name:"Reseat the existing cable", desc:"Unplug and firmly reseat the current patch.", correct:false,
+    msg:"Link flapped, then dropped again. Reseating won't help a cable whose jacket and a pair are physically damaged." }
+];
+
+/* ============================ RENDERING ============================== */
+const $ = sel => document.querySelector(sel);
+
+function renderTags(){
+  const row = $("#tagrow");
+  row.innerHTML = "";
+  CONFIG.objectives.forEach(o=>{
+    const s=document.createElement("span");
+    s.className = "tag" + (o.startsWith("APNET")?" ap":"");
+    s.textContent = o;
+    row.appendChild(s);
+  });
+}
+
+function renderBoard(){
+  const b = $("#board"); b.innerHTML="";
+  NODES.forEach(n=>{
+    const up = nodeUp(n);
+    const row=document.createElement("div");
+    row.className="node"+(up?"":" down");
+    row.setAttribute("role","listitem");
+    const led=document.createElement("span");
+    led.className="led "+(up?"up act":(n.host==="rb-studiob"?"fault":""));
+    const nm=document.createElement("span"); nm.className="nm"; nm.textContent=n.host;
+    const meta=document.createElement("span"); meta.className="meta";
+    meta.innerHTML = (n.port==="—"?"":n.port+" · ") + (up? "link up" : "no link");
+    row.append(led,nm,meta);
+    b.appendChild(row);
+  });
+}
+
+function renderAffectedOptions(){
+  const sel=$("#affected");
+  NODES.filter(n=>n.host!=="rb-tech").forEach(n=>{
+    const o=document.createElement("option"); o.value=n.host; o.textContent=n.host; sel.appendChild(o);
+  });
+  sel.addEventListener("change",e=>{
+    state.ev.identified = (e.target.value==="rb-studiob");
+    if(e.target.value && e.target.value!=="rb-studiob"){
+      flashStatus("That host's link is up. Re-read the board for the unlit indicator.", "");
+    }
+    renderTasks();
+  });
+}
+
+function renderShelf(){
+  const sh=$("#shelf"); sh.innerHTML="";
+  SPARES.forEach(sp=>{
+    const btn=document.createElement("button");
+    btn.type="button"; btn.className="spare";
+    btn.disabled = state.fixedLink;
+    btn.innerHTML = `<span class="s-name">${sp.name}</span><span class="s-desc">${sp.desc}</span>`;
+    btn.addEventListener("click",()=>chooseSpare(sp));
+    sh.appendChild(btn);
+  });
+  const cs=$("#cableState"), lbl=$("#cableLbl");
+  if(state.fixedLink){ cs.classList.add("good"); lbl.textContent="Installed: Cat6 straight-through (tested good) — link established on Gi0/14"; }
+  else { cs.classList.remove("good"); lbl.textContent="Installed: Cat6 patch — jacket split at the connector (pinched under the desk leg)"; }
+}
+
+function chooseSpare(sp){
+  const msg=$("#physMsg");
+  if(sp.correct){
+    state.fixedLink=true; state.installedCable="good"; state.ev.cableReplaced=true;
+    msg.style.color="var(--signal)";
+    msg.textContent="Link light came up on Gi0/14. Studio B is pulling a DHCP lease — re-check the board and re-ping to verify.";
+    renderBoard(); renderShelf(); renderTasks();
+  } else {
+    msg.style.color="var(--alert)";
+    msg.textContent=sp.msg;
+  }
+}
+
+function renderTasks(){
+  const t=$("#tasks"); t.innerHTML="";
+  TASKS.forEach(task=>{
+    const passed=task.done();
+    const row=document.createElement("div");
+    row.className="check"+(passed?" pass":"");
+    row.innerHTML=`<span class="box" aria-hidden="true">${passed?"✓":""}</span>
+      <span class="tlabel">${task.label}<small>${task.sub}</small></span>`;
+    t.appendChild(row);
+  });
+}
+
+function renderQuestions(){
+  const q=$("#questions"); q.innerHTML="";
+  QUESTIONS.forEach(item=>{
+    const fs=document.createElement("fieldset"); fs.className="q"; fs.id="fs-"+item.id;
+    const lg=document.createElement("legend"); lg.textContent=item.prompt; fs.appendChild(lg);
+    item.options.forEach(opt=>{
+      const id=item.id+"-"+opt.k;
+      const lab=document.createElement("label"); lab.setAttribute("for",id);
+      const inp=document.createElement("input");
+      inp.type="radio"; inp.name=item.id; inp.id=id; inp.value=opt.k;
+      inp.addEventListener("change",()=>{ answered[item.id]=opt.k; });
+      lab.append(inp,document.createTextNode(opt.t));
+      fs.appendChild(lab);
+    });
+    const st=document.createElement("div"); st.className="q-status"; st.id="qs-"+item.id;
+    fs.appendChild(st);
+    q.appendChild(fs);
+  });
+}
+
+function gradeQuestions(){
+  let correct=0;
+  QUESTIONS.forEach(item=>{
+    const fs=$("#fs-"+item.id), st=$("#qs-"+item.id);
+    fs.classList.remove("correct","wrong"); st.classList.remove("correct","wrong");
+    const chosen=answered[item.id];
+    if(!chosen){ st.textContent="No answer selected."; return; }
+    if(chosen===item.answer){ correct++; fs.classList.add("correct"); st.classList.add("correct"); st.textContent="Correct."; }
+    else { fs.classList.add("wrong"); st.classList.add("wrong"); st.textContent="Not quite — review and try again."; }
+  });
+  $("#scorePill").textContent=`Score ${correct} / ${QUESTIONS.length}`;
+  return correct;
+}
+
+/* ============================== CONSOLE =============================== */
+const conOut=()=>$("#conOut");
+function print(html, cls){
+  const div=document.createElement("div");
+  if(cls) div.className=cls;
+  div.innerHTML=html;
+  conOut().appendChild(div);
+  conOut().scrollTop=conOut().scrollHeight;
+}
+function resolve(token){
+  if(!token) return null;
+  const byHost=NODES.find(n=>n.host.toLowerCase()===token.toLowerCase());
+  if(byHost) return {host:byHost.host, ip:(byHost.host==="rb-studiob"?studioBIP():byHost.ip), node:byHost};
+  const byIp=NODES.find(n=>(n.host==="rb-studiob"?studioBIP():n.ip)===token);
+  if(byIp) return {host:byIp.host, ip:(byIp.host==="rb-studiob"?studioBIP():byIp.ip), node:byIp};
+  if(token==="8.8.8.8") return {host:"dns.outside", ip:"8.8.8.8", node:{external:true, up:true}};
+  return null;
+}
+function rint(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+function cmdPing(arg){
+  if(!arg){ print("Usage: ping &lt;host|ip&gt;","err"); return; }
+  const r=resolve(arg);
+  if(!r){ print(`Ping request could not find host ${escapeHtml(arg)}. Check the name and try again.`,"err"); return; }
+  const reachable = r.node.external ? true : nodeUp(r.node);
+  print(`Pinging ${r.host} [${r.ip}] with 32 bytes of data:`);
+  if(reachable){
+    let total=0;
+    for(let i=0;i<4;i++){ const ms=rint(1,r.node.external?22:4); total+=ms; print(`Reply from ${r.ip}: bytes=32 time${ms<1?"<1":"="+ms}ms TTL=128`,"ok"); }
+    print(`Ping statistics for ${r.ip}: Sent = 4, Received = 4, Lost = 0 (0% loss)`,"ok");
+    if(r.host==="rb-studiob" && state.fixedLink){ state.ev.verified=true; renderTasks(); }
+  } else {
+    for(let i=0;i<4;i++) print("Request timed out.","warnln");
+    print(`Ping statistics for ${r.ip}: Sent = 4, Received = 0, Lost = 4 (100% loss)`,"err");
+    if(r.host==="rb-studiob" && !state.fixedLink){ state.ev.pingDownObserved=true; renderTasks(); }
+  }
+}
+function cmdIpconfig(arg){
+  const target = arg ? resolve(arg) : {host:"rb-tech", ip:"10.27.4.30", node:NODES.find(n=>n.host==="rb-tech")};
+  if(!target){ print(`No managed endpoint named ${escapeHtml(arg)}.`,"err"); return; }
+  print(`Windows IP Configuration — ${target.host}`);
+  if(target.host==="rb-studiob" && !state.fixedLink){
+    print("   Media State . . . . . . . . . . : up (autoconfigured)","warnln");
+    print(`   Autoconfiguration IPv4 Address. : ${APIPA}(Preferred)`,"warnln");
+    print("   Subnet Mask . . . . . . . . . . : 255.255.0.0","warnln");
+    print("   Default Gateway . . . . . . . . :","warnln");
+    print("   DHCP Server . . . . . . . . . . : (none reachable)","warnln");
+    state.ev.ipconfigApipaObserved=true; renderTasks();
+  } else if(target.node && target.node.external){
+    print("   External host — no local configuration available.","err");
+  } else {
+    const ip = target.host==="rb-studiob" ? studioBIP() : target.ip;
+    print(`   IPv4 Address. . . . . . . . . . : ${ip}(Preferred)`,"ok");
+    print(`   Subnet Mask . . . . . . . . . . : ${MASK}`);
+    print(`   Default Gateway . . . . . . . . : ${GW}`);
+    print(`   DHCP Server . . . . . . . . . . : ${GW}`);
+  }
+}
+function runCommand(raw){
+  const line=raw.trim();
+  if(!line) return;
+  print(`rb-tech&gt; ${escapeHtml(line)}`,"cmd");
+  const [cmd,...rest]=line.split(/\s+/);
+  const arg=rest.join(" ");
+  switch(cmd.toLowerCase()){
+    case "help":
+      print("Commands:\n  ping &lt;host|ip&gt;   test reachability (try a host name or an address)\n  ipconfig [host]   show a managed endpoint's IP configuration\n  clear             clear the console\nKnown hosts: "+NODES.map(n=>n.host).join(", "));
+      break;
+    case "ping": cmdPing(arg); break;
+    case "ipconfig": case "ifconfig": cmdIpconfig(arg); break;
+    case "clear": case "cls": conOut().innerHTML=""; break;
+    default:
+      print(`'${escapeHtml(cmd)}' is not recognized as a command. Type 'help' for the list.`,"err");
+  }
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+/* ============================ SCREENSHOT ============================= */
+// Uses inlined html2canvas when present; otherwise an SVG/foreignObject
+// fallback that snapshots the all-DOM lab (no external assets => exportable).
+async function captureLab(){
+  const node=$("#lab");
+  if(typeof window.html2canvas==="function"){
+    const canvas=await window.html2canvas(node,{backgroundColor:getComputedStyle(document.body).backgroundColor,scale:1});
+    return canvas.toDataURL("image/png");
+  }
+  // Fallback
+  try{
+    const rect=node.getBoundingClientRect();
+    const w=Math.ceil(rect.width), h=Math.ceil(node.scrollHeight);
+    const css=document.getElementById("lab-css").textContent;
+    const clone=node.cloneNode(true);
+    // copy live form state into the clone so checkboxes/radios render checked
+    clone.querySelectorAll("input").forEach((inp,i)=>{ /* radios reflect attribute below */ });
+    const xhtml=new XMLSerializer().serializeToString(clone);
+    const bg=getComputedStyle(document.body).backgroundColor || "#0c1116";
+    const svg=
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+      `<foreignObject width="100%" height="100%">`+
+      `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:${bg}">`+
+      `<style>${css}</style>${xhtml}</div></foreignObject></svg>`;
+    const url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+    const img=new Image();
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=url; });
+    const canvas=document.createElement("canvas"); canvas.width=w; canvas.height=h;
+    const ctx=canvas.getContext("2d"); ctx.fillStyle=bg; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0);
+    return canvas.toDataURL("image/png");
+  }catch(e){
+    // Last resort: a tiny placeholder so submission isn't blocked.
+    const c=document.createElement("canvas"); c.width=8; c.height=8;
+    return c.toDataURL("image/png");
+  }
+}
+
+/* ============================ SUBMISSION ============================= */
+function flashStatus(msg,kind){
+  const s=$("#status"); s.textContent=msg; s.className="status"+(kind?" "+kind:"");
+}
+function buildPayload(screenshot){
+  const correctCount=gradeQuestions();
+  const tasksPayload=TASKS.map(t=>({id:t.id,label:t.label,passed:!!t.done()}));
+  const qPayload=QUESTIONS.map(q=>({
+    id:q.id, prompt:q.prompt, answer:answered[q.id]||null, correct:answered[q.id]===q.answer
+  }));
+  const tasksPassed=tasksPayload.filter(t=>t.passed).length;
+  return {
+    assignmentId: CONFIG.assignmentId,
+    handle: ($("#handle").value||"").trim(),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: tasksPayload,
+    questions: qPayload,
+    score: { earned: tasksPassed + correctCount, total: TASKS.length + QUESTIONS.length },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+}
+function gateOk(){
+  const allTasks=TASKS.every(t=>t.done());
+  const allQ=QUESTIONS.every(q=>answered[q.id]===q.answer);
+  return {allTasks, allQ, ok:allTasks&&allQ};
+}
+async function submit(){
+  const handle=($("#handle").value||"").trim();
+  if(!handle){ flashStatus("Enter a callsign first (a pseudonym — not your real name).","err"); $("#handle").focus(); return; }
+  gradeQuestions();
+  const g=gateOk();
+  if(!g.ok){
+    const miss=[]; if(!g.allTasks) miss.push("all tasks"); if(!g.allQ) miss.push("all questions correct");
+    flashStatus(`Not ready: you still need ${miss.join(" and ")}. You can submit once those pass.`,"err");
+    return;
+  }
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    flashStatus("This lab isn't wired to a server yet — the instructor must set APPS_SCRIPT_URL. Your work is complete.","busy");
+    return;
+  }
+  flashStatus("Capturing your lab and submitting…","busy");
+  $("#submitBtn").disabled=true;
+  try{
+    const screenshot=await captureLab();
+    const payload=buildPayload(screenshot);
+    // Simple request: no custom headers; default text/plain avoids a CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+    const out=await res.json();
+    if(out && out.success){
+      flashStatus("Submitted. "+(out.docUrl?("Your record: "+out.docUrl):"Your instructor has the record."),"ok");
+    }else{
+      flashStatus("The server rejected the submission: "+((out&&out.error)||"unknown error")+". Tell your instructor.","err");
+      $("#submitBtn").disabled=false;
+    }
+  }catch(err){
+    // Locked-down contexts may block reading the response; fire-and-forget fallback.
+    try{
+      const screenshot=await captureLab();
+      await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(buildPayload(screenshot))});
+      flashStatus("Submission sent, but the response couldn't be read here. Confirm with your instructor that it arrived.","busy");
+    }catch(e2){
+      flashStatus("Couldn't reach the submission server. Check your connection and try again, or tell your instructor.","err");
+      $("#submitBtn").disabled=false;
+    }
+  }
+}
+
+/* ============================== RESET =============================== */
+function resetLab(){
+  state.fixedLink=false; state.installedCable="damaged";
+  state.ev={identified:false,pingDownObserved:false,ipconfigApipaObserved:false,cableReplaced:false,verified:false};
+  for(const k in answered) delete answered[k];
+  $("#affected").value="";
+  $("#physMsg").textContent="";
+  conOut().innerHTML="";
+  renderBoard(); renderShelf(); renderTasks(); renderQuestions();
+  $("#scorePill").textContent="Score 0 / 0";
+  flashStatus("Lab reset to its starting state.","");
+  bootConsole();
+}
+
+/* ============================== BOOT =============================== */
+function bootConsole(){
+  print("Riverbend Drafting Co. — bench diagnostics, rb-tech");
+  print("Type 'help' to list commands. Ticket: Studio B reports no network access.");
+}
+function init(){
+  renderTags(); renderBoard(); renderAffectedOptions(); renderShelf();
+  renderTasks(); renderQuestions(); bootConsole();
+  const input=$("#conIn");
+  input.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ runCommand(input.value); input.value=""; }
+  });
+  $("#gradeBtn").addEventListener("click",gradeQuestions);
+  $("#submitBtn").addEventListener("click",submit);
+  $("#resetBtn").addEventListener("click",resetLab);
+}
+document.addEventListener("DOMContentLoaded",init);
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-physical-conn-tshoot.html",title:"Lab \u2014 Restore Physical Connectivity at the Cedar Hollow Branch"}, NEXT={href:"index_netplus-physical-link-fault.html",title:"Lab: Restore the Front-Desk Link \u2014 Marigold Press"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.6";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

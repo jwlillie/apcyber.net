@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Time Sync Bench — Northwind Audio Network Lab</title>
+<!--
+  ============================================================================
+  NORTHWIND AUDIO · TIME SYNC BENCH
+  assignmentId: netplus-ntp-timesync
+  ----------------------------------------------------------------------------
+  Blueprint tags
+    · CompTIA Network+ N10-007 : 1.1  (ports & protocols -> NTP 123)        [verified in project]
+    · CompTIA Network+ N10-007 : 1.8  (functions of network services -> NTP) [verified in project]
+    · CompTIA Network+ N10-009 : 1.4  (common ports/protocols/services)      *** PROVISIONAL
+        Derived from memory of the current N10-009 blueprint, NOT from a project
+        PDF. Re-map this one data value once the official N10-009 objectives
+        file is added to the project. Nothing in the lab needs rebuilding.
+    · AP Networking (pilot V.1) : 3.3  (Making It Work: Connecting,
+        Configuring, and Verifying Access)                                   [from framework]
+  ----------------------------------------------------------------------------
+  CLEAN-ROOM NOTICE
+    This lab teaches the factual procedure of synchronizing host clocks with a
+    LAN time source (install + enable a time service on Linux; point a Windows
+    host at that source with w32tm; verify both). All scenario, persona,
+    hostnames, IP plan, values, task wording, questions, and UI are original and
+    self-drawn. No third-party lab's expression — wording, scenario, character
+    names, hostnames, addressing, file names, paths, values, question phrasing,
+    ordering, or screenshots — was copied from any vendor.
+
+  © 2026 <AUTHOR / ORGANIZATION>. All rights reserved.
+  Licensed for instructional use within the Network+ / AP Networking Lab Library.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#14110d;            /* warm near-black, like a dim live room */
+    --panel:#1d1a14;
+    --panel-2:#26221a;
+    --ink:#efe7d6;           /* warm off-white */
+    --muted:#a79c86;
+    --line:#34301f;
+    --amber:#e8a33d;         /* REC-light amber: the one bold accent */
+    --amber-dim:#9a6e23;
+    --teal:#5fb3a1;          /* "in sync" / pass */
+    --red:#e07a6b;           /* fault / error */
+    --term-bg:#0c0a07;
+    --term-ink:#d9efe4;
+    --focus:#ffd27a;
+    --radius:10px;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #241f15 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans);
+    line-height:1.5; padding:22px; min-height:100vh;
+  }
+  a{color:var(--amber)}
+  .wrap{max-width:1100px;margin:0 auto}
+
+  /* ---- masthead ---- */
+  .mast{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+  .reclight{width:13px;height:13px;border-radius:50%;background:var(--amber);
+    box-shadow:0 0 0 3px rgba(232,163,61,.18),0 0 14px 2px rgba(232,163,61,.55);
+    align-self:center;animation:pulse 2.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+  .mast h1{font-size:1.16rem;letter-spacing:.02em;margin:0;font-weight:650}
+  .mast .kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);margin:0 0 2px}
+  .mast .meta{margin-left:auto;font-family:var(--mono);font-size:.72rem;color:var(--muted);text-align:right}
+
+  /* ---- brief ---- */
+  .brief{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:18px}
+  .brief h2{font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 8px}
+  .brief p{margin:0 0 8px;font-size:.94rem}
+  .brief p:last-child{margin-bottom:0}
+  .brief code{font-family:var(--mono);background:var(--panel-2);padding:1px 6px;
+    border-radius:5px;color:var(--amber);font-size:.85em}
+
+  .grid{display:grid;grid-template-columns:1.35fr .9fr;gap:18px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  /* ---- consoles ---- */
+  .bench{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .tabs{display:flex;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .tab{appearance:none;background:transparent;border:0;color:var(--muted);
+    font-family:var(--mono);font-size:.8rem;padding:11px 16px;cursor:pointer;
+    border-bottom:2px solid transparent}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--amber)}
+  .tab:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+  .term{display:none;background:var(--term-bg);color:var(--term-ink);font-family:var(--mono)}
+  .term[data-active="true"]{display:block}
+  .termhead{display:flex;align-items:center;gap:8px;padding:7px 12px;
+    border-bottom:1px solid #1a160f;color:var(--muted);font-size:.7rem;letter-spacing:.08em}
+  .dot{width:9px;height:9px;border-radius:50%;background:#3a3526}
+  .termout{height:300px;overflow:auto;padding:12px 14px;font-size:.82rem;white-space:pre-wrap;word-break:break-word}
+  .termout .pmt{color:var(--amber)}
+  .termout .ok{color:var(--teal)}
+  .termout .err{color:var(--red)}
+  .termout .dim{color:#8a8a78}
+  .termline{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid #1a160f}
+  .termline .ps{color:var(--amber);font-size:.82rem;white-space:nowrap}
+  .termline input{flex:1;background:transparent;border:0;color:var(--term-ink);
+    font-family:var(--mono);font-size:.82rem;padding:4px 0}
+  .termline input:focus{outline:none}
+  .termline input::placeholder{color:#5d584a}
+
+  /* ---- side panel ---- */
+  .side{display:flex;flex-direction:column;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .card h3{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  .checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .checks li{display:flex;gap:10px;align-items:flex-start;font-size:.86rem}
+  .box{flex:0 0 18px;height:18px;border:1.5px solid var(--amber-dim);border-radius:5px;
+    margin-top:1px;display:grid;place-items:center;font-size:.7rem;color:var(--bg);transition:.18s}
+  .checks li[data-pass="true"] .box{background:var(--teal);border-color:var(--teal)}
+  .checks li[data-pass="true"] .box::after{content:"✓"}
+  .checks li[data-pass="true"] .lbl{color:var(--muted)}
+  .lbl b{font-weight:600;color:var(--ink)}
+  .lbl .hint{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+
+  .q{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+  .q:first-of-type{border-top:0;padding-top:0;margin-top:0}
+  .q label{display:block;font-size:.86rem;margin-bottom:6px}
+  .q .row{display:flex;gap:8px}
+  .q input[type=text]{flex:1;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--ink);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:.85rem}
+  .q input:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+  .q button{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:7px;padding:0 12px;cursor:pointer;font-size:.82rem}
+  .q button:hover{border-color:var(--amber-dim)}
+  .q .verdict{font-size:.78rem;margin-top:6px;min-height:1em}
+  .q[data-correct="true"] .verdict{color:var(--teal)}
+  .q[data-correct="false"] .verdict{color:var(--red)}
+
+  /* ---- submit bar ---- */
+  .submit{margin-top:18px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .submit .field{display:flex;flex-direction:column;gap:4px}
+  .submit label{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .submit input{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:7px;padding:9px 11px;font-family:var(--mono);font-size:.9rem;min-width:180px}
+  .submit input:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+  .score-pill{font-family:var(--mono);font-size:.8rem;color:var(--muted);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:7px 13px}
+  .score-pill b{color:var(--amber)}
+  .grow{flex:1}
+  .btn{border:0;border-radius:8px;padding:10px 16px;font-size:.9rem;font-weight:600;cursor:pointer}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .btn-ghost:hover{color:var(--ink);border-color:var(--amber-dim)}
+  .btn-primary{background:var(--amber);color:#231a08}
+  .btn-primary:hover{filter:brightness(1.07)}
+  .btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .status{flex-basis:100%;margin:4px 0 0;font-family:var(--mono);font-size:.82rem;color:var(--muted)}
+  .status.good{color:var(--teal)} .status.bad{color:var(--red)}
+
+  .legal{margin-top:16px;color:var(--muted);font-size:.74rem;line-height:1.5}
+  .legal code{font-family:var(--mono);color:var(--amber-dim)}
+
+  @media (prefers-reduced-motion:reduce){
+    .reclight{animation:none}
+    *{transition:none!important}
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-ntp-timesync", "title": "Time Sync Bench — Northwind Audio Network Lab", "version": "1.0.0", "objectives": ["N10-009:3.4", "APNET:4.2"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="mast">
+    <span class="reclight" aria-hidden="true"></span>
+    <div>
+      <p class="kicker">Network+ · AP Networking — Lab</p>
+      <h1>Time Sync Bench &middot; Northwind Audio</h1>
+    </div>
+    <div class="meta">
+      net 172.22.14.0/24<br>assignmentId: netplus-ntp-timesync
+    </div>
+  </header>
+
+  <section class="brief" id="capture-extra">
+    <h2>The job</h2>
+    <p>Northwind Audio books three live rooms by the hour. The booking log lives on the
+      Linux host <code>nw-loghost</code>; the front desk takes walk-ins on the Windows
+      workstation <code>NW-FRONTDESK</code>. Their clocks have drifted apart, so the same
+      session shows two start times and Studio B keeps getting double-booked.</p>
+    <p>Fix the drift the right way: make <code>nw-loghost</code> a working time source on the
+      LAN, then point the front-desk workstation at it and confirm both ends agree. You're
+      signed in as <code>root</code> on the Linux box and as the desk operator on Windows.</p>
+  </section>
+
+  <div class="grid">
+    <!-- ======================= CONSOLES ======================= -->
+    <section class="bench" id="capture-bench" aria-label="Simulated consoles">
+      <div class="tabs" role="tablist" aria-label="Hosts">
+        <button class="tab" role="tab" id="tab-lnx" aria-controls="term-lnx" aria-selected="true">nw-loghost — bash</button>
+        <button class="tab" role="tab" id="tab-win" aria-controls="term-win" aria-selected="false">NW-FRONTDESK — cmd</button>
+      </div>
+
+      <!-- Linux -->
+      <div class="term" id="term-lnx" role="tabpanel" aria-labelledby="tab-lnx" data-active="true">
+        <div class="termhead"><span class="dot"></span> root@nw-loghost:~ — Rocky Linux 9</div>
+        <div class="termout" id="out-lnx" aria-live="polite"><span class="dim">Type a command and press Enter. Try </span>help<span class="dim"> if you're stuck.</span>
+</div>
+        <div class="termline">
+          <span class="ps">[root@nw-loghost ~]#</span>
+          <label class="sr-only" for="in-lnx">Linux command</label>
+          <input id="in-lnx" autocomplete="off" spellcheck="false" placeholder="install and start the time service…" />
+        </div>
+      </div>
+
+      <!-- Windows -->
+      <div class="term" id="term-win" role="tabpanel" aria-labelledby="tab-win" data-active="false">
+        <div class="termhead"><span class="dot"></span> NW-FRONTDESK — Command Prompt</div>
+        <div class="termout" id="out-win" aria-live="polite"><span class="dim">Microsoft Windows [Version 10.0.22631.4317]
+Type a command and press Enter. Try </span>help<span class="dim"> if you're stuck.</span>
+</div>
+        <div class="termline">
+          <span class="ps">C:\Users\frontdesk&gt;</span>
+          <label class="sr-only" for="in-win">Windows command</label>
+          <input id="in-win" autocomplete="off" spellcheck="false" placeholder="point this PC at the time source…" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= SIDE PANEL ======================= -->
+    <aside class="side">
+      <div class="card">
+        <h3>Task checklist</h3>
+        <ul class="checks" id="checks">
+          <li data-task="t1"><span class="box" aria-hidden="true"></span><span class="lbl"><b>Install the time service</b> on <code>nw-loghost</code><span class="hint">use the dnf package manager</span></span></li>
+          <li data-task="t2"><span class="box" aria-hidden="true"></span><span class="lbl"><b>Enable and start</b> the service<span class="hint">it should come up now and on boot</span></span></li>
+          <li data-task="t3"><span class="box" aria-hidden="true"></span><span class="lbl"><b>Verify it's running</b><span class="hint">check the service state with systemctl</span></span></li>
+          <li data-task="t4"><span class="box" aria-hidden="true"></span><span class="lbl"><b>Find this host's IPv4 address</b><span class="hint">the workstation will need it</span></span></li>
+          <li data-task="t5"><span class="box" aria-hidden="true"></span><span class="lbl"><b>Set the time source</b> on <code>NW-FRONTDESK</code><span class="hint">manual peer = the loghost address</span></span></li>
+          <li data-task="t6"><span class="box" aria-hidden="true"></span><span class="lbl"><b>Restart the Windows time service</b><span class="hint">so the new config takes effect</span></span></li>
+          <li data-task="t7"><span class="box" aria-hidden="true"></span><span class="lbl"><b>Confirm the sync source</b><span class="hint">query status and read the Source line</span></span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Check questions</h3>
+        <div class="q" id="q1" data-correct="">
+          <label for="a1">1. After you check it, what state does the time service report on <code>nw-loghost</code>?</label>
+          <div class="row"><input type="text" id="a1" placeholder="e.g. two words" /><button data-q="q1" type="button">Check</button></div>
+          <p class="verdict" aria-live="polite"></p>
+        </div>
+        <div class="q" id="q2" data-correct="">
+          <label for="a2">2. What IPv4 address must you give the workstation as its time source?</label>
+          <div class="row"><input type="text" id="a2" placeholder="a.b.c.d" /><button data-q="q2" type="button">Check</button></div>
+          <p class="verdict" aria-live="polite"></p>
+        </div>
+        <div class="q" id="q3" data-correct="">
+          <label for="a3">3. NTP carries time over which transport-layer port number?</label>
+          <div class="row"><input type="text" id="a3" placeholder="port #" /><button data-q="q3" type="button">Check</button></div>
+          <p class="verdict" aria-live="polite"></p>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ======================= SUBMIT BAR ======================= -->
+  <section class="submit" aria-label="Submit your work">
+    <div class="field">
+      <label for="handle">Callsign</label>
+      <input id="handle" maxlength="40" autocomplete="off" placeholder="pick a handle (no real name)" />
+    </div>
+    <span class="score-pill">Score <b id="score">0 / 10</b></span>
+    <div class="grow"></div>
+    <button class="btn btn-ghost" id="reset" type="button">Reset lab</button>
+    <button class="btn btn-primary" id="submit" type="button">Submit completed lab</button>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <p class="legal">
+    © 2026 <code>&lt;AUTHOR / ORGANIZATION&gt;</code> — clean-room build from the public CompTIA Network+
+    objectives &amp; the public AP Networking framework (pilot V.1).
+    Tags: <code>N10-007:1.1</code>, <code>N10-007:1.8</code>, <code>N10-009:1.4</code> (provisional),
+    <code>APNET:3.3</code>.
+    Formative lab — the answer key lives in this page, so the score is self-reported; for graded use,
+    have the Apps Script re-score server-side. No personal data is collected — use a callsign only.
+  </p>
+</div>
+
+<!-- ===========================================================================
+     [[ html2canvas insertion point ]]
+     OPTIONAL: paste the official minified html2canvas bundle inside the empty
+     <script> below to enable pixel-perfect capture of the simulated DOM.
+     Pinned source: https://github.com/niklasvh/html2canvas (v1.4.1 dist).
+     captureLabImage() auto-detects window.html2canvas; if absent it falls back
+     to a built-in, dependency-free summary snapshot so the whole submit flow
+     works before you paste the library in.
+============================================================================ -->
+<script>/* paste minified html2canvas here (optional) */</script>
+
+<script>
+"use strict";
+/* =========================================================================
+   CONFIG  —  the ONLY per-lab edits live here
+   ========================================================================= */
+const CONFIG = {
+  assignmentId: "netplus-ntp-timesync",
+  title: "Time Sync Bench — Northwind Audio",
+  objectives: ["N10-009:3.4", "APNET:4.2"],
+  passThreshold: "all tasks + all questions",
+  // instructor fills these two after deploying the shared Apps Script web app:
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+};
+
+/* Original LAN values (clean-room) */
+const LOGHOST_IP = "172.22.14.9";
+
+/* =========================================================================
+   SIM STATE  (in-memory only — no localStorage/sessionStorage)
+   ========================================================================= */
+const S = {
+  lnx:{ installed:false, svc:null /*chronyd|ntpd*/, running:false, statusViewed:false, ipViewed:false },
+  win:{ configured:false, peer:null, restarted:false, queried:false }
+};
+
+/* =========================================================================
+   ANSWER KEY  (client-side & inspectable — fine for formative work)
+   ========================================================================= */
+const KEY = {
+  q1: v => /^(active\s*\(running\)|active|running)$/i.test(v.trim()),
+  q2: v => v.trim() === LOGHOST_IP,
+  q3: v => v.trim() === "123"
+};
+
+/* =========================================================================
+   TERMINAL PLUMBING
+   ========================================================================= */
+function el(id){ return document.getElementById(id); }
+function esc(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function echo(outId, html){ const o=el(outId); o.innerHTML += html + "\n"; o.scrollTop=o.scrollHeight; }
+function cmdEcho(outId, prompt, raw){ echo(outId, '<span class="pmt">'+esc(prompt)+'</span> '+esc(raw)); }
+
+function norm(s){ return s.replace(/\s+/g," ").trim(); }
+
+/* ---------- Linux command handler ---------- */
+function runLinux(raw){
+  const c = norm(raw);
+  const lc = c.toLowerCase();
+  if(c==="") return;
+  if(lc==="help"){
+    echo("out-lnx",'<span class="dim">Useful here: </span>dnf install -y &lt;pkg&gt;  ·  systemctl enable --now &lt;svc&gt;  ·  systemctl status &lt;svc&gt;  ·  ip addr  ·  clear');
+    return;
+  }
+  if(lc==="clear"){ el("out-lnx").innerHTML=""; return; }
+  if(lc==="whoami"){ echo("out-lnx","root"); return; }
+  if(lc==="pwd"){ echo("out-lnx","/root"); return; }
+
+  // dnf install
+  let m = lc.match(/^dnf\s+install\s+(?:-y\s+)?(.+)$/);
+  if(lc.startsWith("dnf install")){
+    if(!m || !m[1].trim()){
+      echo("out-lnx",'<span class="err">Error: Need to pass a list of pkgs to install.</span>');
+      return;
+    }
+    const pkg = m[1].trim().split(/\s+/)[0];
+    if(pkg==="chrony" || pkg==="ntp"){
+      S.lnx.installed = true;
+      S.lnx.svc = (pkg==="chrony") ? "chronyd" : "ntpd";
+      echo("out-lnx",
+        '<span class="dim">Dependencies resolved.</span>\n'+
+        'Installing : '+esc(pkg)+'  ............  <span class="ok">[ OK ]</span>\n'+
+        '<span class="ok">Complete!</span>  <span class="dim">(service unit: '+S.lnx.svc+')</span>');
+      refresh();
+    } else {
+      echo("out-lnx",'<span class="err">No match for argument: '+esc(pkg)+'</span>\n<span class="dim">Try a time service such as </span>chrony<span class="dim"> (or </span>ntp<span class="dim">).</span>');
+    }
+    return;
+  }
+
+  // systemctl
+  m = lc.match(/^systemctl\s+(\S+)(?:\s+(\S+))?/);
+  if(lc.startsWith("systemctl")){
+    const verb = m && m[1];
+    const unit = (m && m[2] ? m[2] : "").replace(/\.service$/,"");
+    const known = ["chronyd","ntpd"];
+    if(verb==="enable" || verb==="start"){
+      // accept "enable --now <svc>" or "start <svc>"
+      const svcArg = (lc.includes("--now") ? (lc.split(/\s+/).pop()) : unit).replace(/\.service$/,"");
+      if(!S.lnx.installed){
+        echo("out-lnx",'<span class="err">Failed to '+esc(verb)+' '+esc(svcArg||"")+'.service: Unit '+esc(svcArg||"")+'.service not found.</span>\n<span class="dim">Install the time service first.</span>');
+        return;
+      }
+      if(known.includes(svcArg) && svcArg===S.lnx.svc){
+        S.lnx.running = true;
+        echo("out-lnx",'<span class="dim">Created symlink /etc/systemd/system/multi-user.target.wants/'+esc(svcArg)+'.service.</span>\n<span class="ok">'+esc(svcArg)+'.service started.</span>');
+        refresh();
+      } else if(known.includes(svcArg)){
+        echo("out-lnx",'<span class="err">Unit '+esc(svcArg)+'.service not found.</span> <span class="dim">(installed service is '+S.lnx.svc+')</span>');
+      } else {
+        echo("out-lnx",'<span class="err">Unit '+esc(svcArg||"?")+'.service not found.</span>');
+      }
+      return;
+    }
+    if(verb==="status"){
+      const svcArg = unit;
+      if(!S.lnx.installed || (svcArg && svcArg!==S.lnx.svc)){
+        echo("out-lnx",'<span class="err">Unit '+esc(svcArg||"?")+'.service could not be found.</span>');
+        return;
+      }
+      if(!S.lnx.running){
+        echo("out-lnx","● "+S.lnx.svc+".service\n   Loaded: loaded\n   Active: <span class=\"err\">inactive (dead)</span>");
+        S.lnx.statusViewed = true; refresh(); return;
+      }
+      echo("out-lnx",
+        "● "+S.lnx.svc+".service - Network Time Service\n"+
+        "     Loaded: loaded (/usr/lib/systemd/system/"+S.lnx.svc+".service; enabled)\n"+
+        "     Active: <span class=\"ok\">active (running)</span> since "+new Date().toUTCString()+"\n"+
+        "   Main PID: 1187 ("+S.lnx.svc+")");
+      S.lnx.statusViewed = true; refresh(); return;
+    }
+    echo("out-lnx",'<span class="dim">systemctl: unsupported verb in this lab. Use enable/start/status.</span>');
+    return;
+  }
+
+  // ip / hostname -I
+  if(/^ip\s+a(ddr(ess)?)?$/.test(lc) || lc==="hostname -i"){
+    echo("out-lnx",
+      "2: ens160: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500\n"+
+      "    inet <b>"+LOGHOST_IP+"</b>/24 brd 172.22.14.255 scope global ens160\n"+
+      "    inet6 fe80::21a:4dff:fe22:1409/64 scope link");
+    S.lnx.ipViewed = true; refresh(); return;
+  }
+
+  echo("out-lnx",'<span class="err">bash: '+esc(c.split(/\s+/)[0])+': command not found</span>');
+}
+
+/* ---------- Windows command handler ---------- */
+function runWin(raw){
+  const c = norm(raw);
+  const lc = c.toLowerCase();
+  if(c==="") return;
+  if(lc==="help"){
+    echo("out-win",'<span class="dim">Useful here: </span>w32tm /config /manualpeerlist:&lt;ip&gt;,0x8 /syncfromflags:MANUAL /update  ·  net stop w32time  ·  net start w32time  ·  w32tm /query /status  ·  cls');
+    return;
+  }
+  if(lc==="cls"){ el("out-win").innerHTML=""; return; }
+  if(lc==="whoami"){ echo("out-win","nw-frontdesk\\frontdesk"); return; }
+
+  // chained "net stop w32time & net start w32time" (cmd uses & ; tolerate &&)
+  if(/net\s+stop\s+w32time/.test(lc) && /net\s+start\s+w32time/.test(lc)){
+    echo("out-win","The Windows Time service is stopping.\nThe Windows Time service was stopped successfully.\n\nThe Windows Time service is starting.\nThe Windows Time service was started successfully.");
+    S.win.restarted = true; refresh(); return;
+  }
+  if(/^net\s+stop\s+w32time$/.test(lc)){
+    echo("out-win","The Windows Time service is stopping.\nThe Windows Time service was stopped successfully.");
+    S.win._stopped = true; return;
+  }
+  if(/^net\s+start\s+w32time$/.test(lc)){
+    echo("out-win","The Windows Time service is starting.\nThe Windows Time service was started successfully.");
+    S.win.restarted = true; refresh(); return;
+  }
+
+  // w32tm /config ...
+  if(/^w32tm\s+\/config/.test(lc)){
+    const peer = (lc.match(/\/manualpeerlist:([0-9.]+)/)||[])[1];
+    const hasManual = /\/syncfromflags:manual/.test(lc);
+    const hasUpdate = /\/update/.test(lc);
+    if(!peer || !hasManual || !hasUpdate){
+      echo("out-win",'<span class="err">w32tm: missing or malformed switches.</span>\n<span class="dim">Expected: /manualpeerlist:&lt;ip&gt;,0x8  /syncfromflags:MANUAL  /update</span>');
+      return;
+    }
+    S.win.configured = true; S.win.peer = peer;
+    echo("out-win","The command completed successfully.");
+    if(peer!==LOGHOST_IP){
+      echo("out-win",'<span class="dim">(configured peer '+esc(peer)+' — note that isn\'t the loghost address)</span>');
+    }
+    refresh(); return;
+  }
+
+  // w32tm /query /status
+  if(/^w32tm\s+\/query\s+\/status/.test(lc)){
+    S.win.queried = true;
+    const src = S.win.configured ? S.win.peer : "Local CMOS Clock";
+    echo("out-win",
+      "Leap Indicator: 0(no warning)\n"+
+      "Stratum: "+(S.win.configured?"3 (secondary reference)":"0 (unspecified)")+"\n"+
+      "Precision: -23\n"+
+      "Source: <b>"+esc(src)+"</b>\n"+
+      "Poll Interval: 6 (64s)");
+    refresh(); return;
+  }
+  if(/^w32tm\s+\/resync/.test(lc)){
+    echo("out-win", S.win.configured ? "Sending resync command to local computer...\nThe command completed successfully." : '<span class="err">The computer did not resync because no time data was available.</span>');
+    return;
+  }
+  if(lc==="ipconfig"){
+    echo("out-win","Ethernet adapter Ethernet:\n   IPv4 Address . . . . : 172.22.14.40\n   Default Gateway  . . : 172.22.14.1");
+    return;
+  }
+
+  echo("out-win",'<span class="err">\''+esc(c.split(/\s+/)[0])+'\' is not recognized as an internal or external command,\noperable program or batch file.</span>');
+}
+
+/* =========================================================================
+   TASK / SCORE EVALUATION
+   ========================================================================= */
+const TASKS = [
+  { id:"t1", label:"Install the time service via dnf",        pass:()=>S.lnx.installed },
+  { id:"t2", label:"Enable and start the time service",       pass:()=>S.lnx.running },
+  { id:"t3", label:"Verify the service is running",           pass:()=>S.lnx.running && S.lnx.statusViewed },
+  { id:"t4", label:"Find the loghost IPv4 address",           pass:()=>S.lnx.ipViewed },
+  { id:"t5", label:"Set the workstation's time source",       pass:()=>S.win.configured && S.win.peer===LOGHOST_IP },
+  { id:"t6", label:"Restart the Windows time service",        pass:()=>S.win.restarted },
+  { id:"t7", label:"Confirm the sync source via query",       pass:()=>S.win.queried && S.win.configured && S.win.peer===LOGHOST_IP }
+];
+const Q = { q1:false, q2:false, q3:false };
+
+function refresh(){
+  // tasks
+  document.querySelectorAll("#checks li").forEach(li=>{
+    const t = TASKS.find(x=>x.id===li.dataset.task);
+    li.dataset.pass = t && t.pass() ? "true" : "false";
+  });
+  // score
+  const tp = TASKS.filter(t=>t.pass()).length;
+  const qp = Object.values(Q).filter(Boolean).length;
+  el("score").textContent = (tp+qp) + " / " + (TASKS.length+3);
+}
+
+/* =========================================================================
+   QUESTION CHECKING
+   ========================================================================= */
+document.querySelectorAll(".q button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    const qid = b.dataset.q;
+    const val = el("a"+qid.slice(1)).value;
+    const ok = KEY[qid](val);
+    Q[qid] = ok;
+    const wrap = el(qid);
+    wrap.dataset.correct = ok ? "true":"false";
+    wrap.querySelector(".verdict").textContent = ok ? "Correct — locked in." : "Not quite — re-check your console output and try again.";
+    refresh();
+  });
+});
+
+/* =========================================================================
+   TAB SWITCHING + INPUT WIRING
+   ========================================================================= */
+function selectTab(which){
+  const lnx = which==="lnx";
+  el("tab-lnx").setAttribute("aria-selected", lnx);
+  el("tab-win").setAttribute("aria-selected", !lnx);
+  el("term-lnx").dataset.active = lnx;
+  el("term-win").dataset.active = !lnx;
+  el(lnx?"in-lnx":"in-win").focus();
+}
+el("tab-lnx").addEventListener("click",()=>selectTab("lnx"));
+el("tab-win").addEventListener("click",()=>selectTab("win"));
+
+el("in-lnx").addEventListener("keydown",e=>{
+  if(e.key==="Enter"){ const v=e.target.value; cmdEcho("out-lnx","[root@nw-loghost ~]#",v); runLinux(v); e.target.value=""; }
+});
+el("in-win").addEventListener("keydown",e=>{
+  if(e.key==="Enter"){ const v=e.target.value; cmdEcho("out-win","C:\\Users\\frontdesk>",v); runWin(v); e.target.value=""; }
+});
+
+/* =========================================================================
+   RESET
+   ========================================================================= */
+el("reset").addEventListener("click",()=>{
+  S.lnx={ installed:false, svc:null, running:false, statusViewed:false, ipViewed:false };
+  S.win={ configured:false, peer:null, restarted:false, queried:false };
+  Q.q1=Q.q2=Q.q3=false;
+  el("out-lnx").innerHTML='<span class="dim">Reset. Type a command and press Enter.</span>\n';
+  el("out-win").innerHTML='<span class="dim">Reset. Type a command and press Enter.</span>\n';
+  ["q1","q2","q3"].forEach(q=>{ el(q).dataset.correct=""; el(q).querySelector(".verdict").textContent=""; });
+  ["a1","a2","a3"].forEach(a=>el(a).value="");
+  setStatus("","");
+  refresh();
+});
+
+/* =========================================================================
+   SCREENSHOT  (html2canvas if present, else dependency-free fallback)
+   ========================================================================= */
+async function captureLabImage(){
+  if(window.html2canvas){
+    try{
+      const canvas = await window.html2canvas(el("capture-bench"), {backgroundColor:"#0c0a07", scale:1});
+      return canvas.toDataURL("image/png");
+    }catch(e){ /* fall through to summary */ }
+  }
+  // ---- fallback: render a compact summary card to canvas ----
+  const W=900,H=560, c=document.createElement("canvas"); c.width=W;c.height=H;
+  const x=c.getContext("2d");
+  x.fillStyle="#14110d"; x.fillRect(0,0,W,H);
+  x.fillStyle="#e8a33d"; x.fillRect(0,0,W,6);
+  x.fillStyle="#efe7d6"; x.font="bold 24px sans-serif";
+  x.fillText("Time Sync Bench — Northwind Audio", 28, 52);
+  x.fillStyle="#a79c86"; x.font="13px monospace";
+  x.fillText("assignmentId: "+CONFIG.assignmentId+"   ·   "+CONFIG.objectives.join("  "), 28, 78);
+  x.fillText("callsign: "+(el("handle").value||"(none)")+"   ·   "+new Date().toISOString(), 28, 98);
+  let y=140; x.font="14px monospace";
+  TASKS.forEach(t=>{
+    const ok=t.pass();
+    x.fillStyle= ok?"#5fb3a1":"#6c6452";
+    x.fillText((ok?"[x] ":"[ ] ")+t.label, 40, y); y+=26;
+  });
+  y+=8; x.fillStyle="#a79c86"; x.fillText("Questions:", 40, y); y+=24;
+  [["Q1 service state",Q.q1],["Q2 time-source IP",Q.q2],["Q3 NTP port",Q.q3]].forEach(([lab,ok])=>{
+    x.fillStyle= ok?"#5fb3a1":"#6c6452"; x.fillText((ok?"[x] ":"[ ] ")+lab, 40, y); y+=24;
+  });
+  x.fillStyle="#9a6e23"; x.font="11px monospace";
+  x.fillText("Fallback snapshot (html2canvas not inlined). Self-reported formative result.", 28, H-22);
+  return c.toDataURL("image/png");
+}
+
+/* =========================================================================
+   SUBMISSION
+   ========================================================================= */
+function setStatus(msg, kind){ const s=el("status"); s.textContent=msg; s.className="status"+(kind?(" "+kind):""); }
+
+function buildPayload(shot){
+  const tasks = TASKS.map(t=>({id:t.id,label:t.label,passed:!!t.pass()}));
+  const questions = [
+    {id:"q1", prompt:"Service state reported on nw-loghost", answer:el("a1").value, correct:Q.q1},
+    {id:"q2", prompt:"IPv4 address of the time source",      answer:el("a2").value, correct:Q.q2},
+    {id:"q3", prompt:"NTP transport-layer port",             answer:el("a3").value, correct:Q.q3}
+  ];
+  const earned = tasks.filter(t=>t.passed).length + questions.filter(q=>q.correct).length;
+  return {
+    assignmentId: CONFIG.assignmentId,
+    handle: el("handle").value.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks, questions,
+    score: { earned, total: tasks.length+questions.length },
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+}
+
+el("submit").addEventListener("click", async ()=>{
+  const handle = el("handle").value.trim();
+  if(!handle){ setStatus("Enter a callsign first (no real name).","bad"); el("handle").focus(); return; }
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_") || CONFIG.submissionToken.startsWith("PASTE_")){
+    setStatus("Submission isn't wired up yet — ask your instructor to set the Apps Script URL and token.","bad");
+    return;
+  }
+  setStatus("Capturing your bench and submitting…","");
+  el("submit").disabled = true;
+  try{
+    const shot = await captureLabImage();
+    const payload = buildPayload(shot);
+    try{
+      // simple request: no custom headers, default text/plain body -> no CORS preflight
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const out = await res.json();
+      if(out && out.success){
+        setStatus("Submitted ✓  Your record: "+(out.docUrl||"(saved)"), "good");
+      } else {
+        setStatus("Server rejected the submission"+(out&&out.error?(": "+out.error):"")+". Check with your instructor.","bad");
+      }
+    }catch(readErr){
+      // locked-down context: fire-and-forget, can't read docUrl
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(buildPayload(shot)) });
+        setStatus("Sent (couldn't read the receipt in this browser). Confirm with your instructor that it arrived.","good");
+      }catch(postErr){
+        setStatus("Couldn't reach the submission server. Check your connection and try again.","bad");
+      }
+    }
+  }catch(e){
+    setStatus("Something went wrong building your submission. Try Reset, redo, and submit again.","bad");
+  }finally{
+    el("submit").disabled = false;
+  }
+});
+
+/* init */
+el("in-lnx").focus();
+refresh();
+</script>
+
+<style>
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-tcp-handshake.html",title:"TraceScope Lab \u2014 Reading a TCP Session Setup (Three-Way Handshake)"}, NEXT={href:"index_netplus-network-discovery.html",title:"Authorized Network Discovery \u2014 Larkfield Community Library"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.2";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

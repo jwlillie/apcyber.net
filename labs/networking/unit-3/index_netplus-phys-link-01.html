@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Down Link · Find and Fix the Dead Drop</title>
+<!--
+  ============================================================================
+  Down Link: Find and Fix the Dead Drop
+  Clean-room simulation lab for CompTIA Network+ (N10-009) and the College Board
+  AP Networking pilot. Physical-connectivity troubleshooting.
+
+  Blueprint tags:
+    N10-009: 5.2 (cabling / physical interface issues)  [provisional — confirm
+             against the official N10-009 objectives PDF; the project copy is
+             N10-007 and numbers domain 5 differently]
+    AP Networking: 2.1.A, 1.1.B, 4.2.C  (root-cause via diagnostic tools;
+             indicator lights; bottom-up OSI troubleshooting)
+
+  This lab is built clean-room from the public exam objectives and the public AP
+  framework. Scenario, persona, hostnames, IP plan, port map, task and question
+  wording, and all UI are original to this file and self-rendered (no captured
+  vendor screenshots, no third-party lab text).
+
+  © 2026 <AUTHOR / ORG NAME>. All rights reserved.
+  Licensed to <LICENSEE> for classroom use. Replace this notice before shipping.
+  Bundled library: html2canvas (MIT, © Niklas von Hertzen) — paste-in below.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0e1419; --bg-2:#101922; --surface:#172230; --surface-2:#1d2b3a;
+    --line:#27384a; --line-bright:#33485d;
+    --ink:#d7e2ec; --ink-dim:#8ea0b1; --ink-faint:#62768a;
+    --accent:#3fb6d3; --accent-ink:#06131a;
+    --up:#3ddc84; --down:#ff5d52; --warn:#f0b429; --idle:#3a4d61;
+    --good-bg:#0f2a1c; --bad-bg:#2a1313; --warn-bg:#2a230f;
+    --radius:10px; --radius-sm:6px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #14202c 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--ui); line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  a{color:var(--accent)}
+  .wrap{max-width:1180px; margin:0 auto; padding:20px 16px 64px}
+
+  /* ---- header ---- */
+  header.lab{
+    display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px 18px;
+    border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:18px;
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 4px;
+  }
+  h1{font-size:clamp(20px,3.6vw,30px); line-height:1.1; margin:0; letter-spacing:-.01em}
+  .tagrow{display:flex; flex-wrap:wrap; gap:6px; margin-left:auto}
+  .tag{
+    font-family:var(--mono); font-size:11px; color:var(--ink-dim);
+    border:1px solid var(--line-bright); border-radius:999px; padding:3px 9px;
+    background:var(--bg-2); white-space:nowrap;
+  }
+  .tag b{color:var(--ink); font-weight:600}
+
+  .grid{display:grid; grid-template-columns:1.35fr 1fr; gap:16px}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+
+  .panel{
+    background:linear-gradient(180deg,var(--surface) 0%, var(--bg-2) 140%);
+    border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  }
+  .panel > h2{
+    margin:0; font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-dim); font-weight:600; font-family:var(--mono);
+    padding:11px 14px; border-bottom:1px solid var(--line);
+    background:var(--bg-2); display:flex; align-items:center; gap:8px;
+  }
+  .panel > h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 8px var(--accent)}
+  .panel .body{padding:14px}
+
+  /* ---- scenario ---- */
+  .scenario p{margin:0 0 8px; color:var(--ink)}
+  .scenario .who{color:var(--ink-dim); font-size:13px}
+  .iptable{width:100%; border-collapse:collapse; margin-top:8px; font-family:var(--mono); font-size:12.5px}
+  .iptable th,.iptable td{text-align:left; padding:5px 8px; border-bottom:1px solid var(--line)}
+  .iptable th{color:var(--ink-faint); font-weight:500; text-transform:uppercase; letter-spacing:.08em; font-size:10.5px}
+  .iptable td.host{color:var(--ink)}
+  .iptable td.ip{color:var(--accent)}
+
+  /* ---- topology ---- */
+  #topo{width:100%; height:auto; display:block; background:
+     repeating-linear-gradient(0deg, transparent 0 23px, rgba(63,182,211,.04) 23px 24px),
+     repeating-linear-gradient(90deg, transparent 0 23px, rgba(63,182,211,.04) 23px 24px),
+     var(--bg);
+  }
+  .node-box{fill:var(--surface-2); stroke:var(--line-bright); stroke-width:1.5}
+  .switch-box{fill:#13202c; stroke:var(--accent); stroke-width:1.5}
+  .node-label{fill:var(--ink); font-family:var(--mono); font-size:11px}
+  .node-sub{fill:var(--ink-faint); font-family:var(--mono); font-size:9.5px}
+  .link{stroke:var(--line-bright); stroke-width:2}
+  .link.up{stroke:var(--up)}
+  .link.down{stroke:var(--down); stroke-dasharray:5 4}
+  .port{cursor:pointer; outline:none}
+  .port rect{fill:#0f1923; stroke:var(--line-bright); stroke-width:1; rx:2}
+  .port:hover rect, .port:focus-visible rect{stroke:var(--accent)}
+  .port:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+  .led{stroke:#0a1015; stroke-width:1}
+  .led.up{fill:var(--up)}
+  .led.down{fill:var(--down)}
+  .led.idle{fill:var(--idle)}
+  @media (prefers-reduced-motion:no-preference){
+    .led.up{animation:pulse 2.4s ease-in-out infinite}
+    .led.down{animation:blink 1s steps(2,end) infinite}
+  }
+  @keyframes pulse{0%,100%{opacity:.65}50%{opacity:1}}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:.35}}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:12px; color:var(--ink-dim)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .portinfo{margin-top:10px; font-family:var(--mono); font-size:12.5px; color:var(--ink-dim);
+    border:1px dashed var(--line-bright); border-radius:var(--radius-sm); padding:8px 10px; min-height:38px}
+  .portinfo b{color:var(--ink)}
+
+  /* ---- terminal ---- */
+  .term{background:#0b1117; border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:7px 10px; background:#0e1620; border-bottom:1px solid var(--line)}
+  .term-bar .b{width:10px;height:10px;border-radius:50%}
+  .term-bar .b1{background:#ff5f56}.term-bar .b2{background:#ffbd2e}.term-bar .b3{background:#27c93f}
+  .term-bar .ttl{font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-left:6px}
+  #cli-output{font-family:var(--mono); font-size:12.5px; white-space:pre-wrap; word-break:break-word;
+    padding:10px 12px; height:230px; overflow:auto; color:#cde3ee; margin:0}
+  #cli-output .c-cmd{color:var(--accent)}
+  #cli-output .c-ok{color:var(--up)}
+  #cli-output .c-bad{color:var(--down)}
+  #cli-output .c-warn{color:var(--warn)}
+  #cli-output .c-dim{color:var(--ink-faint)}
+  .term-input{display:flex; align-items:center; gap:8px; border-top:1px solid var(--line); padding:8px 10px; background:#0e1620}
+  .term-input .ps1{font-family:var(--mono); font-size:12.5px; color:var(--up)}
+  #cli-input{flex:1; background:transparent; border:none; outline:none; color:var(--ink);
+    font-family:var(--mono); font-size:12.5px}
+  .hint{font-size:11.5px; color:var(--ink-faint); margin-top:8px; font-family:var(--mono)}
+
+  /* ---- cabling / shelf ---- */
+  .drop{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px; background:var(--bg-2)}
+  .drop .meta{font-family:var(--mono); font-size:12px}
+  .drop .meta .nm{color:var(--ink)}
+  .drop .meta .st{color:var(--ink-faint)}
+  .pill{font-family:var(--mono); font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid}
+  .pill.bad{color:var(--down); border-color:var(--down); background:var(--bad-bg)}
+  .pill.ok{color:var(--up); border-color:var(--up); background:var(--good-bg)}
+  .pill.warn{color:var(--warn); border-color:var(--warn); background:var(--warn-bg)}
+  .shelf{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
+  .spare{flex:1 1 160px; border:1px solid var(--line-bright); border-radius:var(--radius-sm); padding:9px 10px; background:#10202c}
+  .spare .nm{font-family:var(--mono); font-size:12px; color:var(--ink)}
+  .spare .ds{font-size:11px; color:var(--ink-faint); margin:3px 0 8px}
+
+  button{font-family:var(--ui); cursor:pointer}
+  .btn{
+    background:var(--surface-2); color:var(--ink); border:1px solid var(--line-bright);
+    border-radius:var(--radius-sm); padding:7px 12px; font-size:13px; transition:border-color .12s,background .12s;
+  }
+  .btn:hover{border-color:var(--accent)}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:600}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.small{padding:5px 9px; font-size:12px}
+  .btn:disabled{opacity:.45; cursor:not-allowed; border-color:var(--line)}
+
+  /* ---- tasks ---- */
+  ul.tasks{list-style:none; margin:0; padding:0}
+  ul.tasks li{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px}
+  ul.tasks li:last-child{border-bottom:none}
+  .chk{flex:0 0 auto; width:20px; height:20px; border-radius:5px; border:1px solid var(--line-bright);
+    display:grid; place-items:center; font-size:12px; color:var(--ink-faint); margin-top:1px}
+  .chk.done{background:var(--good-bg); border-color:var(--up); color:var(--up)}
+  ul.tasks li.done .lbl{color:var(--ink-dim)}
+
+  /* ---- questions ---- */
+  .q{border:1px solid var(--line); border-radius:var(--radius-sm); padding:11px 12px; margin-bottom:10px; background:var(--bg-2)}
+  .q .p{font-size:13.5px; margin:0 0 8px}
+  .q .opt{display:flex; gap:9px; align-items:flex-start; padding:5px 0; font-size:13px; cursor:pointer}
+  .q .opt input{margin-top:3px; accent-color:var(--accent)}
+  .q .verdict{font-family:var(--mono); font-size:11.5px; margin-top:6px; min-height:15px}
+  .q.correct{border-color:var(--up)} .q.correct .verdict{color:var(--up)}
+  .q.wrong{border-color:var(--down)} .q.wrong .verdict{color:var(--down)}
+
+  /* ---- submit bar ---- */
+  .submitbar{margin-top:16px; border:1px solid var(--line); border-radius:var(--radius);
+    background:linear-gradient(180deg,var(--surface),var(--bg-2)); padding:14px}
+  .submitbar .row{display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field label{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); font-family:var(--mono)}
+  .field input{background:#0b1117; border:1px solid var(--line-bright); border-radius:var(--radius-sm);
+    color:var(--ink); font-family:var(--mono); font-size:14px; padding:9px 11px; min-width:200px}
+  .field input:focus-visible{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
+  .scorechip{font-family:var(--mono); font-size:13px; color:var(--ink-dim); margin-left:auto;
+    border:1px solid var(--line-bright); border-radius:var(--radius-sm); padding:8px 12px; background:var(--bg-2)}
+  .scorechip b{color:var(--ink)}
+  #submit-status{font-family:var(--mono); font-size:12.5px; margin-top:10px; min-height:18px}
+  #submit-status.ok{color:var(--up)} #submit-status.err{color:var(--down)} #submit-status.work{color:var(--warn)}
+  #submit-status a{color:var(--accent)}
+  .foot{margin-top:22px; padding-top:12px; border-top:1px solid var(--line);
+    font-size:11px; color:var(--ink-faint); font-family:var(--mono); line-height:1.7}
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-phys-link-01", "title": "Down Link · Find and Fix the Dead Drop", "version": "1.0.0", "objectives": ["N10-009:5.2", "APNET:3.6"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab">
+    <div>
+      <p class="eyebrow">Network+ N10-009 · AP Networking · Hands-on lab</p>
+      <h1>Down Link: Find and Fix the Dead Drop</h1>
+    </div>
+    <div class="tagrow" aria-label="Blueprint objectives">
+      <span class="tag"><b>N10-009</b> 5.2</span>
+      <span class="tag"><b>AP NET</b> 2.1.A</span>
+      <span class="tag"><b>AP NET</b> 1.1.B</span>
+      <span class="tag"><b>AP NET</b> 4.2.C</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT COLUMN: simulation -->
+    <div>
+      <section class="panel scenario" aria-labelledby="h-scn">
+        <h2 id="h-scn"><span class="dot"></span>Ticket #4471 — site: Meridian Outfitters HQ</h2>
+        <div class="body">
+          <p>A clerk at <b>FRONT-PC</b> reports that the back-room workstation <b>STOCK-PC</b>
+             stopped responding this morning — files on it won't open and it can't be reached
+             across the floor. Nothing was reconfigured; a cleaning crew was in the wiring closet
+             overnight. You're plugged into the access switch from your diagnostic laptop
+             <b>TECH-LT</b>. Find the fault at the lowest layer first, fix it, and verify.</p>
+          <p class="who">Single flat subnet · all hosts <span style="color:var(--accent)">10.20.5.0/24</span> · gateway 10.20.5.1</p>
+          <table class="iptable" aria-label="Address plan">
+            <thead><tr><th>Location</th><th>Host</th><th>IPv4</th><th>Switchport</th></tr></thead>
+            <tbody>
+              <tr><td>Wiring closet</td><td class="host">TECH-LT</td><td class="ip">10.20.5.9</td><td>Gi1/0/1</td></tr>
+              <tr><td>Front counter</td><td class="host">FRONT-PC</td><td class="ip">10.20.5.40</td><td>Gi1/0/2</td></tr>
+              <tr><td>Admin desk</td><td class="host">ADMIN-PC</td><td class="ip">10.20.5.50</td><td>Gi1/0/3</td></tr>
+              <tr><td>Lead office</td><td class="host">LEAD-PC</td><td class="ip">10.20.5.51</td><td>Gi1/0/4</td></tr>
+              <tr><td>Back room</td><td class="host">STOCK-PC</td><td class="ip">10.20.5.41</td><td>Gi1/0/5</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:16px" aria-labelledby="h-topo">
+        <h2 id="h-topo"><span class="dot"></span>Switch ACC-SW1 — port &amp; link status</h2>
+        <div class="body">
+          <svg id="topo" viewBox="0 0 560 300" role="img"
+               aria-label="Topology of access switch ACC-SW1 with five connected hosts and their link LEDs.">
+            <!-- switch -->
+            <rect class="switch-box" x="150" y="120" width="260" height="56" rx="8"></rect>
+            <text x="280" y="146" text-anchor="middle" class="node-label" style="font-size:12px">ACC-SW1</text>
+            <text x="280" y="162" text-anchor="middle" class="node-sub">access switch · 10.20.5.2</text>
+            <!-- ports + links + hosts injected by JS -->
+            <g id="ports"></g>
+            <g id="links"></g>
+            <g id="hosts"></g>
+          </svg>
+          <div class="legend" aria-hidden="true">
+            <span><i style="background:var(--up)"></i> link up</span>
+            <span><i style="background:var(--down)"></i> link down</span>
+            <span><i style="background:var(--idle)"></i> no device</span>
+            <span style="color:var(--ink-faint)">— select a port for details —</span>
+          </div>
+          <div class="portinfo" id="portinfo" aria-live="polite">No port selected. Click a switchport, or run <b>show ports</b> in the console.</div>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:16px" aria-labelledby="h-cli">
+        <h2 id="h-cli"><span class="dot"></span>TECH-LT — diagnostic console</h2>
+        <div class="body">
+          <div class="term">
+            <div class="term-bar"><span class="b b1"></span><span class="b b2"></span><span class="b b3"></span>
+              <span class="ttl">tech-lt:~ — net-diag shell</span></div>
+            <div id="cli-output" role="log" aria-live="polite" aria-label="Console output"></div>
+            <div class="term-input">
+              <span class="ps1">tech-lt$</span>
+              <input id="cli-input" autocomplete="off" autocapitalize="off" spellcheck="false"
+                     aria-label="Console command input" placeholder="type a command — try: help" />
+            </div>
+          </div>
+          <p class="hint">Commands: help · ping &lt;host|ip&gt; · ipconfig · show ports · cabletest &lt;port#&gt; · clear</p>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:16px" aria-labelledby="h-cable">
+        <h2 id="h-cable"><span class="dot"></span>Patch cabling &amp; spares shelf</h2>
+        <div class="body">
+          <div class="drop">
+            <div class="meta">
+              <div class="nm">Gi1/0/5 → STOCK-PC drop (back room)</div>
+              <div class="st" id="drop-state">Installed cable: original Cat6 patch — under test</div>
+            </div>
+            <span class="pill bad" id="drop-pill">LINK DOWN</span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 12px">
+            <button class="btn small" id="btn-reseat" type="button">Reseat existing cable</button>
+            <button class="btn small" id="btn-pull" type="button">Pull cable for inspection</button>
+          </div>
+          <div style="font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); font-family:var(--mono); margin-bottom:6px">Known-good spares on the shelf</div>
+          <div class="shelf">
+            <div class="spare">
+              <div class="nm">Cat6 patch cable · 7 ft</div>
+              <div class="ds">Factory-terminated, tested good. Correct media for a copper Ethernet drop.</div>
+              <button class="btn small primary" id="btn-spare-cable" type="button">Install on Gi1/0/5</button>
+            </div>
+            <div class="spare">
+              <div class="nm">1000BASE-SX SFP module</div>
+              <div class="ds">Fiber transceiver. Stock for the uplink shelf.</div>
+              <button class="btn small" id="btn-spare-sfp" type="button">Install on Gi1/0/5</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT COLUMN: tasks + questions -->
+    <div>
+      <section class="panel" aria-labelledby="h-tasks">
+        <h2 id="h-tasks"><span class="dot"></span>Lab tasks</h2>
+        <div class="body">
+          <ul class="tasks" id="task-list"></ul>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:16px" aria-labelledby="h-q">
+        <h2 id="h-q"><span class="dot"></span>Check your understanding</h2>
+        <div class="body" id="q-list"></div>
+      </section>
+
+      <div style="display:flex; gap:8px; margin-top:14px">
+        <button class="btn" id="btn-reset" type="button">Reset lab</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBMISSION -->
+  <div class="submitbar" id="lab-capture-root">
+    <div class="row">
+      <div class="field">
+        <label for="handle">Callsign</label>
+        <input id="handle" maxlength="32" autocomplete="off" placeholder="e.g. blue-otter-12"
+               aria-describedby="handle-help" />
+      </div>
+      <button class="btn primary" id="btn-submit" type="button">Submit completed lab</button>
+      <div class="scorechip" id="scorechip" aria-live="polite">Score <b><span id="score-earned">0</span>/<span id="score-total">9</span></b></div>
+    </div>
+    <p id="handle-help" class="hint" style="margin-top:8px">Use a pseudonym — no real names. Your instructor maps callsigns to students on a separate roster.</p>
+    <div id="submit-status" role="status" aria-live="polite"></div>
+  </div>
+
+  <p class="foot">
+    © 2026 &lt;AUTHOR / ORG NAME&gt;. All rights reserved — replace before distribution.
+    Original clean-room lab built from the public N10-009 objectives and the public AP Networking
+    framework. Bundled: html2canvas (MIT). Tags — N10-009 5.2 (provisional); AP Networking 2.1.A / 1.1.B / 4.2.C.
+  </p>
+</div>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 1 — INLINE html2canvas HERE
+     -------------------------------------------------------------------------
+     Paste the FULL minified html2canvas v1.4.1 source between the two markers
+     below. It is ~150 KB and is intentionally NOT loaded from a CDN, because
+     this lab makes no network calls at runtime except the single submission
+     POST. Until you paste it, screenshot capture degrades to a placeholder
+     image and the console logs a warning (the lab still submits).
+     Source: https://github.com/niklasvh/html2canvas  (MIT License)
+     ========================================================================= -->
+<script>
+/* >>>>>>>>>>>>>>>> PASTE html2canvas MINIFIED SOURCE BELOW <<<<<<<<<<<<<<<< */
+
+/* >>>>>>>>>>>>>>>> PASTE html2canvas MINIFIED SOURCE ABOVE <<<<<<<<<<<<<<<< */
+</script>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG + answer key, sim logic, capture + POST
+     ========================================================================= -->
+<script>
+"use strict";
+
+/* ---------------------------- LAB CONFIG --------------------------------- */
+const CONFIG = {
+  assignmentId: "netplus-phys-link-01",
+  title: "Down Link: Find and Fix the Dead Drop",
+  // Both blueprints. N10-009 code is provisional pending the official PDF.
+  objectives: ["N10-009:5.2", "APNET:3.6"],
+  passThreshold: "all",            // all tasks + all questions
+  // Same /exec URL across the whole library:
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  maxScreenshotBytes: 700000       // client-side guard; server also caps
+};
+
+/* ------------------------------- DATA ------------------------------------ */
+// port index -> host. Gi1/0/5 (STOCK-PC) is the faulted copper drop.
+const PORTS = [
+  { id:1, iface:"Gi1/0/1", host:"TECH-LT",  ip:"10.20.5.9",  copper:true,  faulted:false },
+  { id:2, iface:"Gi1/0/2", host:"FRONT-PC", ip:"10.20.5.40", copper:true,  faulted:false },
+  { id:3, iface:"Gi1/0/3", host:"ADMIN-PC", ip:"10.20.5.50", copper:true,  faulted:false },
+  { id:4, iface:"Gi1/0/4", host:"LEAD-PC",  ip:"10.20.5.51", copper:true,  faulted:false },
+  { id:5, iface:"Gi1/0/5", host:"STOCK-PC", ip:"10.20.5.41", copper:true,  faulted:true  }
+];
+const byIp   = {}; PORTS.forEach(p => byIp[p.ip] = p);
+const byHost = {}; PORTS.forEach(p => byHost[p.host.toUpperCase()] = p);
+
+const TASKS = [
+  { id:"identify", label:"Confirm which host is unreachable from TECH-LT (ping it)." },
+  { id:"locate",   label:"Locate the down link using the switchport LED indicators." },
+  { id:"test",     label:"Test the suspect drop cable and confirm a physical-layer fault." },
+  { id:"replace",  label:"Replace the faulty cable with the known-good spare from the shelf." },
+  { id:"verify",   label:"Verify connectivity to the host is restored (ping replies)." }
+];
+
+const QUESTIONS = [
+  { id:"q1",
+    prompt:"A switchport LED stays unlit after a powered workstation is plugged in. What does that most directly point to?",
+    options:[
+      "An application on the workstation is misconfigured",
+      "A physical-layer fault — a bad/unseated cable or a dead port",
+      "The DNS server can't resolve the host name",
+      "The DHCP scope is exhausted"
+    ], answer:1 },
+  { id:"q2",
+    prompt:"A cable tester reports an \"open\" on one wire pair. What has happened on that pair?",
+    options:[
+      "Two pins are crossed end to end",
+      "A conductor is broken or not making contact, so the circuit is incomplete",
+      "The cable is a lower category than required",
+      "The port speed and duplex are mismatched"
+    ], answer:1 },
+  { id:"q3",
+    prompt:"Working a dead copper drop bottom-up through the OSI model, which layer do you check first?",
+    options:[
+      "Layer 1 — Physical (media and connectors)",
+      "Layer 3 — Network (IP addressing and routing)",
+      "Layer 4 — Transport (ports and sessions)",
+      "Layer 7 — Application (the software using the link)"
+    ], answer:0 },
+  { id:"q4",
+    prompt:"After swapping in a good cable, what single action best verifies the fix?",
+    options:[
+      "Reboot the whole switch and wait",
+      "Re-run ping to the previously unreachable host and confirm it replies",
+      "Change the host's IP address",
+      "Reinstall the network adapter driver"
+    ], answer:1 }
+];
+
+/* ----------------------------- STATE ------------------------------------- */
+let S;
+function initState(){
+  S = {
+    fixed:false,          // good cable installed -> Gi1/0/5 link up
+    sfpWrong:false,       // learner tried fiber transceiver on a copper drop
+    pulled:false,         // cable removed for inspection
+    flags:{ pingedDownFail:false, ledFound:false, cableFail:false, spareInstalled:false, pingedUpOk:false },
+    answers:{},           // qid -> selected index
+    selectedPort:null
+  };
+}
+
+/* ----------------------------- HELPERS ----------------------------------- */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function esc(t){ return String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function portUp(p){ return p.host && (!p.faulted || (p.id===5 && S.fixed)); }
+
+/* ----------------------------- TOPOLOGY ---------------------------------- */
+// host node coordinates around the switch
+const HOSTPOS = {
+  1:{x:60,  y:60,  px:175}, 2:{x:235, y:30,  px:235},
+  3:{x:415, y:30,  px:295}, 4:{x:470, y:120, px:355},
+  5:{x:235, y:250, px:280}
+};
+function renderTopo(){
+  const portsG = $("#ports"), linksG = $("#links"), hostsG = $("#hosts");
+  portsG.innerHTML = linksG.innerHTML = hostsG.innerHTML = "";
+  PORTS.forEach(p => {
+    const pos = HOSTPOS[p.id];
+    const up = portUp(p);
+    const ledClass = !p.host ? "idle" : (up ? "up" : "down");
+    // link line from switch port to host
+    const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
+    ln.setAttribute("class","link " + (up?"up":(p.host?"down":"")));
+    ln.setAttribute("x1", pos.px); ln.setAttribute("y1", p.id===5?176:120);
+    ln.setAttribute("x2", pos.x+45); ln.setAttribute("y2", pos.y+18);
+    linksG.appendChild(ln);
+    // host node
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.innerHTML =
+      `<rect class="node-box" x="${pos.x}" y="${pos.y}" width="92" height="36" rx="6"></rect>
+       <text class="node-label" x="${pos.x+46}" y="${pos.y+16}" text-anchor="middle">${esc(p.host)}</text>
+       <text class="node-sub" x="${pos.x+46}" y="${pos.y+28}" text-anchor="middle">${esc(p.ip)}</text>`;
+    hostsG.appendChild(g);
+    // switchport (clickable)
+    const sx = pos.px - 12, sy = p.id===5?176:108;
+    const pg = document.createElementNS("http://www.w3.org/2000/svg","g");
+    pg.setAttribute("class","port"); pg.setAttribute("tabindex","0");
+    pg.setAttribute("role","button");
+    pg.setAttribute("aria-label", `Port ${p.iface}, ${p.host||"no device"}, link ${up?"up":(p.host?"down":"idle")}. Activate for details.`);
+    pg.innerHTML =
+      `<rect x="${sx}" y="${sy}" width="24" height="12" rx="2"></rect>
+       <circle class="led ${ledClass}" cx="${sx+12}" cy="${p.id===5?170:104}" r="4"></circle>`;
+    pg.addEventListener("click", ()=>selectPort(p.id));
+    pg.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectPort(p.id);} });
+    portsG.appendChild(pg);
+  });
+}
+function selectPort(id){
+  const p = PORTS.find(x=>x.id===id); if(!p) return;
+  S.selectedPort = id;
+  const up = portUp(p);
+  let txt;
+  if(!p.host){ txt = `<b>${p.iface}</b> — no device detected.`; }
+  else if(up){ txt = `<b>${p.iface}</b> → ${p.host} (${p.ip}) · LED <b style="color:var(--up)">solid green</b> · link up, 1000/full.`; }
+  else {
+    txt = `<b>${p.iface}</b> → ${p.host} (${p.ip}) · LED <b style="color:var(--down)">unlit</b> · <b>no carrier / link down</b>. An unlit LED on a connected drop means the physical link isn't establishing — suspect the cable or the port.`;
+    if(p.id===5){ S.flags.ledFound = true; }
+  }
+  $("#portinfo").innerHTML = txt;
+  refresh();
+}
+
+/* ------------------------------- CLI ------------------------------------- */
+const out = () => $("#cli-output");
+function println(html, cls){ const d=document.createElement("div"); if(cls) d.className=cls; d.innerHTML=html; out().appendChild(d); out().scrollTop = out().scrollHeight; }
+function echoCmd(cmd){ println(`<span class="c-dim">tech-lt$</span> <span class="c-cmd">${esc(cmd)}</span>`); }
+
+function resolveTarget(arg){
+  if(!arg) return null;
+  const a = arg.trim();
+  if(byIp[a]) return byIp[a];
+  if(byHost[a.toUpperCase()]) return byHost[a.toUpperCase()];
+  // gateway / self for realism
+  if(a==="10.20.5.1") return {host:"GATEWAY", ip:"10.20.5.1", virtual:true, reachable:true};
+  if(a==="127.0.0.1"||a.toUpperCase()==="LOCALHOST") return {host:"loopback", ip:"127.0.0.1", virtual:true, reachable:true};
+  return undefined; // unknown
+}
+function doPing(arg){
+  const t = resolveTarget(arg);
+  if(t===null){ println("usage: ping &lt;host|ip&gt;", "c-warn"); return; }
+  if(t===undefined){ println(`ping: cannot resolve '${esc(arg)}': unknown host on 10.20.5.0/24`, "c-bad"); return; }
+  const reachable = t.virtual ? true : portUp(t);
+  println(`PING ${esc(t.host)} (${t.ip}): 4 packets`);
+  if(reachable){
+    for(let i=0;i<4;i++) println(`64 bytes from ${t.ip}: icmp_seq=${i} ttl=128 time=${(0.3+Math.random()*0.6).toFixed(1)} ms`, "c-ok");
+    println(`--- ${t.host} ping statistics --- 4 sent, 4 received, 0% loss`, "c-ok");
+    if(t===byHost["STOCK-PC"] && S.fixed){ S.flags.pingedUpOk = true; }
+  } else {
+    for(let i=0;i<4;i++) println(`Request timed out (icmp_seq=${i})`, "c-bad");
+    println(`--- ${t.host} ping statistics --- 4 sent, 0 received, 100% loss`, "c-bad");
+    if(t===byHost["STOCK-PC"]){ S.flags.pingedDownFail = true; }
+  }
+  refresh();
+}
+function doIpconfig(){
+  println("Adapter: Ethernet (TECH-LT)");
+  println("  IPv4 Address . . . : 10.20.5.9");
+  println("  Subnet Mask  . . . : 255.255.255.0  (/24)");
+  println("  Default Gateway  . : 10.20.5.1");
+  println("  Physical Address . : 02-4A-9C-10-05-09");
+  println("  Link status  . . . : up, 1000 Mbps full-duplex", "c-ok");
+}
+function doShowPorts(){
+  println("Interface   Connected    Link   LED");
+  println("---------   ----------   ----   --------------");
+  PORTS.forEach(p=>{
+    const up = portUp(p);
+    const led = !p.host ? "(none/idle)" : (up?"green":"unlit");
+    const link = !p.host ? "—   " : (up?"up  ":"down");
+    const cls = !p.host ? "c-dim" : (up?"c-ok":"c-bad");
+    println(`${p.iface}   ${(p.host||"-").padEnd(10)}   ${link}   ${led}`, cls);
+  });
+}
+function doCabletest(arg){
+  const n = parseInt(String(arg).replace(/\D/g,""),10);
+  if(!n || n<1 || n>5){ println("usage: cabletest &lt;port#&gt;   (1-5)", "c-warn"); return; }
+  const p = PORTS.find(x=>x.id===n);
+  println(`cabletest ${p.iface}: TDR sweep on pairs 1-2, 3-6, 4-5, 7-8 ...`);
+  if(p.id===5 && !S.fixed){
+    println("  pair 1-2 ... OK", "c-ok");
+    println("  pair 3-6 ... FAIL — OPEN at 1.7 m (conductor not continuous)", "c-bad");
+    println("  pair 4-5 ... OK", "c-ok");
+    println("  pair 7-8 ... OK", "c-ok");
+    println("RESULT: FAIL — cable has an open pair. Physical-layer fault confirmed; replace the cable.", "c-bad");
+    S.flags.cableFail = true;
+  } else {
+    ["1-2","3-6","4-5","7-8"].forEach(pr=>println(`  pair ${pr} ... OK`, "c-ok"));
+    println("RESULT: PASS — wire map good, no opens or shorts.", "c-ok");
+  }
+  refresh();
+}
+function runCommand(raw){
+  const cmd = raw.trim(); if(!cmd) return;
+  echoCmd(cmd);
+  const [c, ...rest] = cmd.split(/\s+/);
+  const arg = rest.join(" ");
+  switch(c.toLowerCase()){
+    case "help":
+      println("Available commands:");
+      println("  ping &lt;host|ip&gt;   send 4 ICMP echoes to a host on the LAN");
+      println("  ipconfig          show this laptop's IP configuration");
+      println("  show ports        list switchport link state (text view of the LEDs)");
+      println("  cabletest &lt;1-5&gt;   run a TDR cable test on a switchport's drop");
+      println("  clear             clear the screen");
+      break;
+    case "ping":      doPing(arg); break;
+    case "ipconfig":
+    case "ifconfig":  doIpconfig(); break;
+    case "show":      (arg.toLowerCase()==="ports") ? doShowPorts() : println(`unknown argument: show ${esc(arg)}`, "c-bad"); break;
+    case "cabletest": doCabletest(arg); break;
+    case "clear":     out().innerHTML=""; break;
+    default:
+      println(`net-diag: command not found: ${esc(c)}. Type 'help'.`, "c-bad");
+  }
+}
+
+/* --------------------------- CABLE ACTIONS ------------------------------- */
+function setDrop(stateText, pillText, pillClass){
+  $("#drop-state").textContent = stateText;
+  const pill = $("#drop-pill"); pill.textContent = pillText; pill.className = "pill " + pillClass;
+}
+function reseat(){
+  if(S.fixed){ println("(Gi1/0/5 already healthy — reseat not needed.)", "c-dim"); return; }
+  println("Re-seated the existing cable in Gi1/0/5 ... LED still unlit. Link did not come up.", "c-warn");
+  setDrop("Reseated original cable — link still down.", "LINK DOWN", "bad");
+}
+function pullCable(){
+  S.pulled = true;
+  println("Pulled the Gi1/0/5 cable. Visual: a connector latch is cracked and one conductor is pinched. Bag it as bad.", "c-warn");
+  setDrop("Original cable removed — bad (pinched conductor). Port empty.", "NO CABLE", "warn");
+}
+function installSpareCable(){
+  if(S.sfpWrong) S.sfpWrong=false;
+  S.fixed = true; S.flags.spareInstalled = true;
+  println("Installed known-good Cat6 patch on Gi1/0/5 ... LED goes solid green. Link up 1000/full.", "c-ok");
+  setDrop("Known-good Cat6 patch installed — link established.", "LINK UP", "ok");
+  if(S.selectedPort===5) selectPort(5);
+  renderTopo(); refresh();
+}
+function installSfp(){
+  S.sfpWrong = true;
+  println("Inserted a 1000BASE-SX fiber transceiver into a copper drop. No copper port = no link. This is the wrong media for STOCK-PC.", "c-bad");
+  setDrop("Fiber SFP fitted to a copper drop — wrong media, link still down.", "WRONG MEDIA", "bad");
+}
+
+/* ------------------------------ TASKS ------------------------------------ */
+function taskPassed(id){
+  switch(id){
+    case "identify": return S.flags.pingedDownFail;
+    case "locate":   return S.flags.ledFound;
+    case "test":     return S.flags.cableFail;
+    case "replace":  return S.flags.spareInstalled && S.fixed;
+    case "verify":   return S.flags.pingedUpOk;
+  }
+  return false;
+}
+function renderTasks(){
+  const ul = $("#task-list"); ul.innerHTML="";
+  TASKS.forEach((t,i)=>{
+    const done = taskPassed(t.id);
+    const li = document.createElement("li");
+    if(done) li.className="done";
+    li.innerHTML = `<span class="chk ${done?'done':''}" aria-hidden="true">${done?'✓':(i+1)}</span>
+                    <span class="lbl">${esc(t.label)}</span>`;
+    ul.appendChild(li);
+  });
+}
+
+/* ---------------------------- QUESTIONS ---------------------------------- */
+function renderQuestions(){
+  const wrap = $("#q-list"); wrap.innerHTML="";
+  QUESTIONS.forEach((q,qi)=>{
+    const sel = S.answers[q.id];
+    const answered = sel!==undefined;
+    const correct = answered && sel===q.answer;
+    const div = document.createElement("div");
+    div.className = "q" + (answered ? (correct?" correct":" wrong") : "");
+    let opts = q.options.map((o,oi)=>
+      `<label class="opt"><input type="radio" name="${q.id}" value="${oi}" ${sel===oi?"checked":""}>
+        <span>${esc(o)}</span></label>`).join("");
+    const verdict = !answered ? "" : (correct ? "Correct." : "Not quite — re-check at the physical layer.");
+    div.innerHTML = `<p class="p"><b>Q${qi+1}.</b> ${esc(q.prompt)}</p>${opts}
+                     <div class="verdict">${verdict}</div>`;
+    wrap.appendChild(div);
+  });
+  $$('#q-list input[type=radio]').forEach(r=>{
+    r.addEventListener("change", e=>{ S.answers[e.target.name] = parseInt(e.target.value,10); renderQuestions(); refresh(); });
+  });
+}
+
+/* ------------------------------ SCORE ------------------------------------ */
+function computeScore(){
+  let earned=0; const total = TASKS.length + QUESTIONS.length;
+  const tasks = TASKS.map(t=>{ const p=taskPassed(t.id); if(p)earned++; return {id:t.id,label:t.label,passed:p}; });
+  const questions = QUESTIONS.map(q=>{
+    const sel=S.answers[q.id]; const correct = sel===q.answer; if(correct)earned++;
+    return { id:q.id, prompt:q.prompt, answer: sel===undefined?null:q.options[sel], correct:!!correct };
+  });
+  return { earned, total, tasks, questions };
+}
+function refresh(){
+  renderTasks(); 
+  const sc = computeScore();
+  $("#score-earned").textContent = sc.earned;
+  $("#score-total").textContent  = sc.total;
+}
+
+/* --------------------------- SCREENSHOT + POST --------------------------- */
+const BLANK_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+async function capture(el){
+  if(typeof window.html2canvas !== "function"){
+    console.warn("[lab] html2canvas not inlined — submitting a placeholder image. Paste the library into SCRIPT BLOCK 1 to enable real capture.");
+    return BLANK_PNG;
+  }
+  try{
+    const canvas = await window.html2canvas(el, { backgroundColor:"#0e1419", scale:1, logging:false, useCORS:false });
+    let url = canvas.toDataURL("image/png");
+    if(url.length > CONFIG.maxScreenshotBytes){
+      url = canvas.toDataURL("image/jpeg", 0.7); // shrink oversize captures
+    }
+    return url;
+  }catch(err){ console.warn("[lab] capture failed:", err); return BLANK_PNG; }
+}
+
+function setStatus(msg, kind){ const s=$("#submit-status"); s.textContent=""; s.className=kind||""; s.innerHTML=msg; }
+
+async function submitLab(){
+  const handle = $("#handle").value.trim();
+  if(!handle){ setStatus("Enter a callsign before submitting.", "err"); $("#handle").focus(); return; }
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("This lab isn't wired to a server yet — the instructor must paste the deployed /exec URL into CONFIG.APPS_SCRIPT_URL.", "err");
+    return;
+  }
+  const btn=$("#btn-submit"); btn.disabled=true;
+  setStatus("Capturing lab and submitting …", "work");
+
+  const sc = computeScore();
+  const screenshot = await capture($("#lab-capture-root").closest(".wrap"));
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    handle: handle,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: sc.tasks,
+    questions: sc.questions,
+    score: { earned: sc.earned, total: sc.total },
+    screenshot: screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  try{
+    // Simple request: no custom headers, text/plain body -> no CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const data = await res.json();
+    if(data && data.success){
+      const link = data.docUrl ? ` <a href="${data.docUrl}" target="_blank" rel="noopener">Open your submission doc</a>.` : "";
+      setStatus(`Submitted as <b>${esc(handle)}</b> — score ${sc.earned}/${sc.total}.${link}`, "ok");
+    }else{
+      setStatus(`Server rejected the submission${data&&data.error?": "+esc(data.error):""}. Check with your instructor.`, "err");
+      btn.disabled=false;
+    }
+  }catch(err){
+    // Fallback: fire-and-forget if the response can't be read in a locked-down context.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus(`Sent as <b>${esc(handle)}</b> (score ${sc.earned}/${sc.total}), but the confirmation couldn't be read here. Confirm receipt with your instructor.`, "work");
+    }catch(e2){
+      setStatus("Submission failed — no network path to the grading server. Try again or contact your instructor.", "err");
+      btn.disabled=false;
+    }
+  }
+}
+
+/* ------------------------------- BOOT ------------------------------------ */
+function resetLab(){
+  initState();
+  out().innerHTML="";
+  println("net-diag shell ready. You're on TECH-LT (10.20.5.9). Type 'help' to begin.", "c-dim");
+  setDrop("Installed cable: original Cat6 patch — under test", "LINK DOWN", "bad");
+  $("#portinfo").innerHTML = "No port selected. Click a switchport, or run <b>show ports</b> in the console.";
+  $("#handle").value="";
+  setStatus("","");
+  $("#btn-submit").disabled=false;
+  renderTopo(); renderQuestions(); refresh();
+}
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  initState();
+  // wire console
+  $("#cli-input").addEventListener("keydown", e=>{
+    if(e.key==="Enter"){ const v=e.target.value; e.target.value=""; runCommand(v); }
+  });
+  // wire buttons
+  $("#btn-reseat").addEventListener("click", reseat);
+  $("#btn-pull").addEventListener("click", pullCable);
+  $("#btn-spare-cable").addEventListener("click", installSpareCable);
+  $("#btn-spare-sfp").addEventListener("click", installSfp);
+  $("#btn-reset").addEventListener("click", resetLab);
+  $("#btn-submit").addEventListener("click", submitLab);
+  resetLab();
+});
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-physical-connectivity.html",title:"Brightwater Clinic \u2014 Physical-Layer Fault Isolation"}, NEXT={href:"index_netplus-physical-conn-tshoot.html",title:"Lab \u2014 Restore Physical Connectivity at the Cedar Hollow Branch"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.6";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

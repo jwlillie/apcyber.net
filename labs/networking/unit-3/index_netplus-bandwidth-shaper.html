@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Edge Bandwidth Manager — QoS Lab</title>
+<!--
+  ============================================================================
+  Lab: Tame the Guest Uplink — Bandwidth Management & QoS
+  assignmentId: netplus-bandwidth-shaper
+  Library: CompTIA Network+ / AP Networking simulation labs
+
+  Blueprint tags (carried in payload + manifest):
+    N10-007:1.3   (Performance concepts: Traffic shaping, QoS, DiffServ, CoS)  [verified in project objectives PDF]
+    N10-009:2.1   (Routing technologies & bandwidth management concepts)        [VERIFY against the real N10-009 PDF before publishing]
+    APNET:2.6.B   (Device grouping to improve performance & security; 2.6.B.4 prioritizing high-bandwidth/low-latency traffic)
+
+  CLEAN-ROOM NOTICE: every scenario, persona, hostname, IP plan, group name,
+  bandwidth value, protocol selection, port, task and question is original
+  expression authored for this library. It is NOT derived from, and must not be
+  compared line-for-line against, any vendor lab (TestOut, Cisco NetAcad/Packet
+  Tracer, pfSense docs, etc.). The underlying procedure (shaping, prioritizing,
+  marking) is factual networking and is taught from the public objectives only.
+
+  © 2026 [REPLACE: Author / Organization]. All rights reserved.
+  License: [REPLACE: e.g., proprietary, or CC BY-NC 4.0 — choose one for the library].
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0c1320; --panel:#121d30; --panel-2:#0f1828; --ink:#e7eefb; --muted:#9fb0c9;
+    --line:#243650; --accent:#39d0a8; --accent-ink:#04241c; --warn:#ffcf66;
+    --bad:#ff6b6b; --good:#5ad17e; --chip:#1b2c46; --focus:#7cc4ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.45;
+    padding:16px;max-width:1180px;margin:0 auto;-webkit-text-size-adjust:100%}
+  h1{font-size:1.25rem;margin:.2rem 0}
+  h2{font-size:1rem;margin:0 0 .5rem;letter-spacing:.02em}
+  a{color:var(--focus)}
+  .sub{color:var(--muted);font-size:.86rem;margin:.1rem 0 .8rem}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .tag{background:var(--chip);border:1px solid var(--line);color:var(--muted);
+    font:600 .72rem/1 var(--mono);padding:5px 8px;border-radius:999px}
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card.console{background:var(--panel-2)}
+  /* device chrome */
+  .device{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .device .titlebar{display:flex;align-items:center;gap:8px;background:#0a1422;
+    padding:8px 12px;border-bottom:1px solid var(--line);font:600 .82rem var(--mono);color:var(--muted)}
+  .dot{width:10px;height:10px;border-radius:50%;background:#33486a}
+  .dot.live{background:var(--accent)}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:8px 8px 0;background:#0a1422}
+  .tab{appearance:none;background:transparent;border:1px solid transparent;border-bottom:none;
+    color:var(--muted);font:600 .8rem var(--sans);padding:7px 11px;border-radius:8px 8px 0 0;cursor:pointer}
+  .tab[aria-selected="true"]{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  .tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .panelbody{padding:14px;background:var(--panel);min-height:230px}
+  label{display:block;font-size:.8rem;color:var(--muted);margin:.55rem 0 .2rem}
+  input[type=text],input[type=number],input[type=password],select{
+    width:100%;background:#0a1422;border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:9px 10px;font:.92rem var(--mono)}
+  input:focus,select:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>div{flex:1;min-width:140px}
+  .btn{appearance:none;cursor:pointer;border-radius:9px;border:1px solid var(--line);
+    background:var(--chip);color:var(--ink);font:600 .86rem var(--sans);padding:9px 13px;margin-top:10px}
+  .btn:hover{border-color:var(--focus)}
+  .btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .btn.go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .btn.ghost{background:transparent}
+  .hint{font-size:.78rem;color:var(--muted);margin-top:6px}
+  .msg{margin-top:10px;font:.82rem var(--mono);padding:8px 10px;border-radius:8px;display:none}
+  .msg.show{display:block}
+  .msg.err{background:#2a1418;color:#ffd7d7;border:1px solid #5a2330}
+  .msg.ok{background:#102a20;color:#cdf6df;border:1px solid #1f5a3f}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font:.82rem var(--mono)}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600}
+  .pill{display:inline-block;font:600 .72rem var(--mono);padding:2px 7px;border-radius:999px;
+    background:var(--chip);border:1px solid var(--line)}
+  .pill.hi{background:#13322a;border-color:#1f6b53;color:#aef2d6}
+  .tinybtn{appearance:none;cursor:pointer;background:transparent;border:1px solid var(--line);
+    color:var(--muted);border-radius:7px;padding:3px 8px;font:.74rem var(--mono)}
+  .tinybtn:hover{border-color:var(--bad);color:#ffc9c9}
+  /* checklist + questions */
+  .check{list-style:none;margin:0;padding:0}
+  .check li{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .check li:last-child{border-bottom:none}
+  .box{flex:0 0 18px;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);
+    margin-top:2px;display:grid;place-items:center;font-size:.8rem;color:transparent}
+  .box.done{background:var(--good);border-color:var(--good);color:#06210f}
+  .ck-label{font-size:.84rem}
+  .ck-label small{display:block;color:var(--muted);font:.75rem var(--mono)}
+  fieldset{border:1px solid var(--line);border-radius:9px;margin:10px 0;padding:10px 12px}
+  legend{font-size:.82rem;color:var(--ink);padding:0 6px}
+  .opt{display:flex;gap:8px;align-items:center;margin:5px 0;font-size:.85rem}
+  .opt input{width:auto}
+  .scorebar{display:flex;justify-content:space-between;align-items:center;margin-top:8px;
+    font:600 .85rem var(--mono);color:var(--muted)}
+  /* submit */
+  .submit{margin-top:14px}
+  .submit .row>div{min-width:160px}
+  .status{margin-top:10px;font:.83rem var(--mono);min-height:1.2em}
+  .status.ok{color:var(--good)} .status.err{color:var(--bad)} .status.work{color:var(--warn)}
+  .foot{margin-top:18px;color:var(--muted);font-size:.74rem;border-top:1px solid var(--line);padding-top:10px}
+  code.k{background:#0a1422;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:.85em var(--mono)}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-bandwidth-shaper", "title": "Edge Bandwidth Manager — QoS Lab", "version": "1.0.0", "objectives": ["N10-009:5.4", "APNET:3.5"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+
+<header>
+  <h1>Tame the Guest Uplink — Bandwidth Management &amp; QoS</h1>
+  <p class="sub">Scenario: <strong>Harborview Makerspace</strong> shares one internet uplink across staff and a busy
+  public guest Wi-Fi. A couple of guest devices are streaming so hard that the front-desk VoIP phones break up. You're
+  the volunteer network admin. Open the edge router's <em>Bandwidth Manager</em>, cap the guest network, protect voice,
+  and throttle the two worst offenders.</p>
+  <div class="tags" aria-label="Blueprint objectives">
+    <span class="tag">N10-007 · 1.3 Performance concepts</span>
+    <span class="tag">N10-009 · 2.1 Bandwidth mgmt (verify)</span>
+    <span class="tag">AP Networking · 2.6.B</span>
+  </div>
+</header>
+
+<div class="grid">
+  <!-- ===================== SIMULATED DEVICE ===================== -->
+  <section class="card console" aria-label="Edge router console">
+    <div class="device">
+      <div class="titlebar"><span class="dot" id="linkDot"></span> hbv-edge-01 · Bandwidth Manager
+        <span style="margin-left:auto;color:var(--muted)" id="sessionLbl">not signed in</span></div>
+
+      <!-- LOGIN GATE -->
+      <div id="loginView" class="panelbody">
+        <h2>Sign in to the console</h2>
+        <p class="hint">Local admin credentials are printed on the router label in the wiring closet.</p>
+        <div class="row">
+          <div><label for="user">Username</label><input id="user" type="text" autocomplete="off" spellcheck="false"></div>
+          <div><label for="pass">Password</label><input id="pass" type="password" autocomplete="off"></div>
+        </div>
+        <button class="btn go" id="loginBtn">Sign in</button>
+        <div class="msg" id="loginMsg" role="alert"></div>
+      </div>
+
+      <!-- CONSOLE -->
+      <div id="appView" hidden>
+        <div class="tabs" role="tablist" aria-label="Bandwidth Manager sections">
+          <button class="tab" role="tab" id="t-grp" aria-controls="p-grp" aria-selected="true">Address Groups</button>
+          <button class="tab" role="tab" id="t-shp" aria-controls="p-shp" aria-selected="false">Shaping</button>
+          <button class="tab" role="tab" id="t-pri" aria-controls="p-pri" aria-selected="false">Priority Rules</button>
+        </div>
+
+        <!-- ADDRESS GROUPS -->
+        <div class="panelbody" id="p-grp" role="tabpanel" aria-labelledby="t-grp">
+          <h2>Address group</h2>
+          <p class="hint">Bundle the heavy-use guest devices into one named group so a single policy can throttle them.</p>
+          <div class="row">
+            <div><label for="grpName">Group name</label><input id="grpName" type="text" placeholder="e.g. HIGHUSE" spellcheck="false"></div>
+            <div><label for="grpDesc">Description</label><input id="grpDesc" type="text" placeholder="short note" spellcheck="false"></div>
+          </div>
+          <label for="grpIp">Add member IPv4 address</label>
+          <div class="row">
+            <div><input id="grpIp" type="text" placeholder="10.40.7.x" spellcheck="false"></div>
+            <div style="flex:0 0 auto"><button class="btn" id="grpAddIp">Add IP</button></div>
+          </div>
+          <table aria-label="Group members"><thead><tr><th>Group</th><th>Members</th><th></th></tr></thead>
+            <tbody id="grpRows"><tr><td colspan="3" style="color:var(--muted)">No group saved yet.</td></tr></tbody></table>
+          <button class="btn go" id="grpSave">Save group</button>
+          <div class="msg" id="grpMsg" role="alert"></div>
+        </div>
+
+        <!-- SHAPING -->
+        <div class="panelbody" id="p-shp" role="tabpanel" aria-labelledby="t-shp" hidden>
+          <h2>Interface shaping policy</h2>
+          <p class="hint">Set the ceiling for the guest interface, then reserve a slice for real-time voice and a tiny
+            slice for the throttled group.</p>
+          <label for="ifSel">Interface</label>
+          <select id="ifSel">
+            <option value="">— choose —</option>
+            <option value="WAN-UPLINK">WAN-UPLINK</option>
+            <option value="STAFF-LAN">STAFF-LAN</option>
+            <option value="GUEST-WIFI">GUEST-WIFI</option>
+          </select>
+          <div class="row">
+            <div><label for="shDown">Guest download ceiling (Mbps)</label><input id="shDown" type="number" min="0" step="1" inputmode="numeric"></div>
+            <div><label for="shUp">Guest upload ceiling (Mbps)</label><input id="shUp" type="number" min="0" step="1" inputmode="numeric"></div>
+          </div>
+          <fieldset>
+            <legend>Voice queue (guaranteed for VoIP)</legend>
+            <div class="row">
+              <div><label for="vUp">Voice upload (Mbps)</label><input id="vUp" type="number" min="0" step="1" inputmode="numeric"></div>
+              <div><label for="vDown">Voice download (Mbps)</label><input id="vDown" type="number" min="0" step="1" inputmode="numeric"></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Throttle group</legend>
+            <div class="row">
+              <div><label for="penGrp">Group to penalize</label><input id="penGrp" type="text" placeholder="group name" spellcheck="false"></div>
+              <div><label for="penPct">Allowed share of bandwidth (%)</label><input id="penPct" type="number" min="0" max="100" step="1" inputmode="numeric"></div>
+            </div>
+          </fieldset>
+          <button class="btn go" id="shSave">Apply shaping</button>
+          <div class="msg" id="shMsg" role="alert"></div>
+        </div>
+
+        <!-- PRIORITY RULES -->
+        <div class="panelbody" id="p-pri" role="tabpanel" aria-labelledby="t-pri" hidden>
+          <h2>Priority (high-queue) rules</h2>
+          <p class="hint">Promote latency-sensitive protocols into the high queue. The remote-desktop service here runs on
+            a non-default port, so you'll need to correct it after adding the rule.</p>
+          <div class="row">
+            <div>
+              <label for="prProto">Protocol / service</label>
+              <select id="prProto">
+                <option value="">— choose —</option>
+                <option value="SIP" data-port="5060">SIP (voice signaling) · 5060</option>
+                <option value="RTP" data-port="16384">RTP (voice media) · 16384</option>
+                <option value="SSH" data-port="22">SSH (remote admin) · 22</option>
+                <option value="RDP" data-port="3389">RDP (remote desktop) · 3389</option>
+                <option value="HTTP" data-port="80">HTTP (bulk web) · 80</option>
+                <option value="FTP" data-port="20">FTP (bulk transfer) · 20</option>
+              </select>
+            </div>
+            <div style="flex:0 0 auto"><label>&nbsp;</label><button class="btn" id="prAdd">Add to high queue</button></div>
+          </div>
+          <table aria-label="Priority rules"><thead><tr><th>Service</th><th>Interface</th><th>Dest. port</th><th>Queue</th><th></th></tr></thead>
+            <tbody id="prRows"><tr><td colspan="5" style="color:var(--muted)">No priority rules yet.</td></tr></tbody></table>
+          <div class="msg" id="prMsg" role="alert"></div>
+          <h2 style="margin-top:14px">Edit a rule's destination port</h2>
+          <div class="row">
+            <div><label for="edProto">Rule</label>
+              <select id="edProto"><option value="">— choose a rule —</option></select></div>
+            <div><label for="edPort">New destination port</label><input id="edPort" type="number" min="1" max="65535" inputmode="numeric"></div>
+            <div style="flex:0 0 auto"><label>&nbsp;</label><button class="btn" id="edSave">Update port</button></div>
+          </div>
+          <div class="msg" id="edMsg" role="alert"></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn ghost" id="resetBtn" style="margin-top:12px">Reset lab</button>
+  </section>
+
+  <!-- ===================== TASK + QUESTION PANEL ===================== -->
+  <aside class="card" aria-label="Tasks and questions">
+    <h2>Lab tasks</h2>
+    <ul class="check" id="taskList"></ul>
+
+    <h2 style="margin-top:14px">Concept check</h2>
+    <form id="qForm">
+      <fieldset>
+        <legend>1. On a congested uplink, which technique buffers and <em>delays</em> excess packets to smooth a flow toward its target rate, rather than dropping them outright?</legend>
+        <label class="opt"><input type="radio" name="q1" value="policing"> Traffic policing</label>
+        <label class="opt"><input type="radio" name="q1" value="shaping"> Traffic shaping</label>
+        <label class="opt"><input type="radio" name="q1" value="mirroring"> Port mirroring</label>
+        <label class="opt"><input type="radio" name="q1" value="agg"> Link aggregation</label>
+      </fieldset>
+      <fieldset>
+        <legend>2. Real-time voice is sensitive to latency and jitter. Compared with a background file sync, how should its queue be treated?</legend>
+        <label class="opt"><input type="radio" name="q2" value="lower"> Lower priority</label>
+        <label class="opt"><input type="radio" name="q2" value="equal"> Equal priority</label>
+        <label class="opt"><input type="radio" name="q2" value="higher"> Higher priority (expedited)</label>
+        <label class="opt"><input type="radio" name="q2" value="blocked"> Blocked entirely</label>
+      </fieldset>
+      <fieldset>
+        <legend>3. Which IPv4/IPv6 header marking do routers inspect to classify a packet into a DiffServ class such as expedited forwarding?</legend>
+        <label class="opt"><input type="radio" name="q3" value="ttl"> TTL</label>
+        <label class="opt"><input type="radio" name="q3" value="dscp"> DSCP (DiffServ field)</label>
+        <label class="opt"><input type="radio" name="q3" value="mac"> Source MAC address</label>
+        <label class="opt"><input type="radio" name="q3" value="win"> TCP window size</label>
+      </fieldset>
+      <button type="button" class="btn" id="checkQ">Check answers</button>
+      <div class="msg" id="qMsg" role="status"></div>
+    </form>
+
+    <div class="scorebar"><span>Tasks: <span id="taskScore">0/7</span></span><span>Questions: <span id="qScore">0/3</span></span></div>
+
+    <!-- SUBMISSION -->
+    <div class="submit">
+      <h2>Submit completed lab</h2>
+      <div class="row">
+        <div><label for="handle">Callsign (no real names)</label><input id="handle" type="text" maxlength="40" placeholder="e.g. blue-otter-7" spellcheck="false"></div>
+        <div style="flex:0 0 auto"><label>&nbsp;</label><button class="btn go" id="submitBtn">Submit completed lab</button></div>
+      </div>
+      <p class="hint">Use a pseudonym, never your real name. Your instructor matches callsigns to the roster separately.</p>
+      <div class="status" id="subStatus" role="status" aria-live="polite"></div>
+    </div>
+  </aside>
+</div>
+
+<p class="foot">
+  Capture region for the submission screenshot is the simulated console and task panel only.
+  Client-side scoring is self-reported (answer key is visible in dev tools) — fine for formative work; the Apps Script
+  can re-score server-side if a grade must be trustworthy. No data is stored in the browser; the only network call is the
+  single submission POST.<br>
+  © 2026 [REPLACE: Author / Organization] · License: [REPLACE]. Clean-room original for the Network+/AP Networking lab library.
+</p>
+
+<!-- ============================================================
+     SCRIPT BLOCK 1 — self-contained DOM screenshot (no CDN).
+     Uses the native SVG <foreignObject> path. This is dependency-free
+     and reproduces the self-drawn DOM faithfully. If you prefer the
+     full html2canvas library, paste its minified source between the
+     markers below and set USE_HTML2CANVAS = true.
+     ============================================================ -->
+<script>
+/* ---- PASTE html2canvas MINIFIED SOURCE HERE (optional) ----
+   ...
+   ---- END html2canvas ---- */
+var USE_HTML2CANVAS = false;
+
+async function captureNode(node){
+  if (USE_HTML2CANVAS && window.html2canvas){
+    const c = await window.html2canvas(node, {backgroundColor:'#0c1320', scale:1.4});
+    return c.toDataURL('image/png');
+  }
+  // --- foreignObject fallback (default) ---
+  const rect = node.getBoundingClientRect();
+  const w = Math.ceil(rect.width), h = Math.ceil(rect.height);
+  const clone = node.cloneNode(true);
+  // mirror live <input>/<select> values onto attributes so they render in the snapshot
+  const liveCtl = node.querySelectorAll('input,select,textarea');
+  const cloneCtl = clone.querySelectorAll('input,select,textarea');
+  liveCtl.forEach((el,i)=>{
+    const cl = cloneCtl[i]; if(!cl) return;
+    if (el.tagName === 'SELECT'){ if(el.selectedIndex>=0 && cl.options[el.selectedIndex]) cl.options[el.selectedIndex].setAttribute('selected','selected'); }
+    else { cl.setAttribute('value', el.value || ''); }
+  });
+  let css='';
+  for (const sheet of document.styleSheets){
+    try{ for (const r of sheet.cssRules){ css += r.cssText + '\n'; } }catch(e){}
+  }
+  const xhtml = new XMLSerializer().serializeToString(clone);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+    '<foreignObject x="0" y="0" width="100%" height="100%">'+
+    '<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px;background:#0c1320">'+
+    '<style>'+css+'</style>'+xhtml+'</div></foreignObject></svg>';
+  const url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  const img = new Image();
+  await new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error('snapshot render failed')); img.src=url; });
+  const scale = Math.min(1.6, window.devicePixelRatio||1);
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(w*scale); cv.height = Math.round(h*scale);
+  const ctx = cv.getContext('2d');
+  ctx.scale(scale,scale);
+  ctx.fillStyle = '#0c1320'; ctx.fillRect(0,0,w,h);
+  ctx.drawImage(img,0,0);
+  let data = cv.toDataURL('image/png');
+  // soft cap: if very large, re-encode smaller
+  if (data.length > 1500000){ data = cv.toDataURL('image/jpeg',0.7); }
+  return data;
+}
+</script>
+
+<!-- ============================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, answer key, checking, POST
+     ============================================================ -->
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== CONFIG (per-lab edits live here) ===================== */
+  const CONFIG = {
+    assignmentId: "netplus-bandwidth-shaper",
+    objectives: ["N10-009:5.4", "APNET:3.5"],
+    // Same /exec URL across the whole library:
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "REPLACE_WITH_PER_COHORT_TOKEN"
+  };
+
+  /* ===================== ANSWER KEY (clean-room originals) ===================== */
+  const KEY = {
+    login:    { user:"admin", pass:"Uplink#42" },
+    group:    { name:"HIGHUSE", members:["10.40.7.62","10.40.7.118"] }, // description: any non-empty
+    shaping:  { iface:"GUEST-WIFI", down:45, up:6 },
+    voice:    { up:4, down:10 },
+    penalty:  { group:"HIGHUSE", pct:4 },
+    priority: ["SIP","RTP","SSH","RDP"],
+    rdpPort:  3395,
+    quiz:     { q1:"shaping", q2:"higher", q3:"dscp" }
+  };
+
+  /* ===================== STATE ===================== */
+  const S = {
+    loggedIn:false,
+    group:{ name:"", desc:"", members:[] },
+    shaping:{ iface:"", down:null, up:null },
+    voice:{ up:null, down:null },
+    penalty:{ group:"", pct:null },
+    priority:[],          // [{proto, port, iface}]
+    quiz:{ q1:null, q2:null, q3:null }
+  };
+
+  const $ = id => document.getElementById(id);
+  const norm = s => (s||"").trim();
+  function flash(el, text, kind){ el.textContent=text; el.className="msg show "+(kind||"ok"); }
+  function clearMsg(el){ el.className="msg"; el.textContent=""; }
+  function isIPv4(s){
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(norm(s));
+    if(!m) return false;
+    return m.slice(1).every(o=>{ const n=+o; return n>=0 && n<=255 && String(n)===o; });
+  }
+
+  /* ===================== LOGIN ===================== */
+  $("loginBtn").addEventListener("click", ()=>{
+    const u = norm($("user").value), p = $("pass").value;
+    if(!u || !p){ flash($("loginMsg"),"Enter both a username and password.","err"); return; }
+    if(u!==KEY.login.user || p!==KEY.login.pass){
+      flash($("loginMsg"),"Authentication failed: bad username or password. Check the label in the wiring closet.","err");
+      return;
+    }
+    S.loggedIn = true;
+    $("loginView").hidden = true;
+    $("appView").hidden = false;
+    $("linkDot").classList.add("live");
+    $("sessionLbl").textContent = "signed in as admin";
+    clearMsg($("loginMsg"));
+    refresh();
+  });
+
+  /* ===================== TABS ===================== */
+  const tabs = [["t-grp","p-grp"],["t-shp","p-shp"],["t-pri","p-pri"]];
+  tabs.forEach(([t,p])=>{
+    $(t).addEventListener("click", ()=>selectTab(t,p));
+    $(t).addEventListener("keydown", e=>{
+      const i = tabs.findIndex(x=>x[0]===t);
+      if(e.key==="ArrowRight"){ const n=tabs[(i+1)%tabs.length]; $(n[0]).focus(); selectTab(n[0],n[1]); }
+      if(e.key==="ArrowLeft"){ const n=tabs[(i-1+tabs.length)%tabs.length]; $(n[0]).focus(); selectTab(n[0],n[1]); }
+    });
+  });
+  function selectTab(t,p){
+    tabs.forEach(([tt,pp])=>{ $(tt).setAttribute("aria-selected", String(tt===t)); $(pp).hidden = pp!==p; });
+  }
+
+  /* ===================== ADDRESS GROUP ===================== */
+  let pendingIps = [];
+  $("grpAddIp").addEventListener("click", ()=>{
+    const ip = norm($("grpIp").value);
+    if(!isIPv4(ip)){ flash($("grpMsg"),"Invalid IPv4 address: need four octets 0–255, e.g. 10.40.7.62.","err"); return; }
+    if(pendingIps.includes(ip)){ flash($("grpMsg"),"That address is already in the group.","err"); return; }
+    pendingIps.push(ip);
+    $("grpIp").value="";
+    drawGroupRows();
+    clearMsg($("grpMsg"));
+  });
+  function drawGroupRows(){
+    const name = norm($("grpName").value) || "(unnamed)";
+    const body = $("grpRows");
+    if(pendingIps.length===0 && S.group.members.length===0){
+      body.innerHTML = '<tr><td colspan="3" style="color:var(--muted)">No group saved yet.</td></tr>'; return;
+    }
+    const list = pendingIps.length ? pendingIps : S.group.members;
+    body.innerHTML = '<tr><td>'+name+'</td><td>'+list.map(ip=>'<span class="pill">'+ip+'</span>').join(" ")+
+      '</td><td>'+list.map((ip,i)=>'<button class="tinybtn" data-rm="'+i+'">remove</button>').join(" ")+'</td></tr>';
+    body.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener("click",()=>{
+      const i=+b.getAttribute("data-rm");
+      if(pendingIps.length){ pendingIps.splice(i,1); } else { S.group.members.splice(i,1); }
+      drawGroupRows(); refresh();
+    }));
+  }
+  $("grpSave").addEventListener("click", ()=>{
+    const name = norm($("grpName").value), desc = norm($("grpDesc").value);
+    const ips = pendingIps.length ? pendingIps.slice() : S.group.members.slice();
+    if(!name){ flash($("grpMsg"),"Group name is required.","err"); return; }
+    if(!desc){ flash($("grpMsg"),"Add a short description so others know what this group is for.","err"); return; }
+    if(ips.length<2){ flash($("grpMsg"),"Add at least the two heavy-use devices before saving.","err"); return; }
+    S.group = { name, desc, members:ips };
+    pendingIps = [];
+    flash($("grpMsg"),"Group \""+name+"\" saved with "+ips.length+" members.","ok");
+    drawGroupRows(); refresh();
+  });
+
+  /* ===================== SHAPING ===================== */
+  $("shSave").addEventListener("click", ()=>{
+    const iface = $("ifSel").value;
+    const down = $("shDown").value, up = $("shUp").value;
+    const vUp = $("vUp").value, vDown = $("vDown").value;
+    const penGrp = norm($("penGrp").value), penPct = $("penPct").value;
+    if(!iface){ flash($("shMsg"),"Choose the interface to shape.","err"); return; }
+    if(down===""||up===""){ flash($("shMsg"),"Enter both a download and upload ceiling in Mbps.","err"); return; }
+    if(+down<=0||+up<=0){ flash($("shMsg"),"Bandwidth ceilings must be positive numbers.","err"); return; }
+    if(vUp===""||vDown===""){ flash($("shMsg"),"Reserve a voice upload and download amount.","err"); return; }
+    if(+vUp>+up||+vDown>+down){ flash($("shMsg"),"Voice reservation can't exceed the interface ceiling. Lower the voice values.","err"); return; }
+    if(!penGrp){ flash($("shMsg"),"Name the group to penalize (the one you saved under Address Groups).","err"); return; }
+    if(penPct===""||+penPct<0||+penPct>100){ flash($("shMsg"),"Allowed share must be a percent between 0 and 100.","err"); return; }
+    S.shaping = { iface, down:+down, up:+up };
+    S.voice   = { up:+vUp, down:+vDown };
+    S.penalty = { group:penGrp, pct:+penPct };
+    flash($("shMsg"),"Shaping applied to "+iface+": "+down+"↓/"+up+"↑ Mbps, voice protected, "+penGrp+" capped at "+penPct+"%.","ok");
+    refresh();
+  });
+
+  /* ===================== PRIORITY RULES ===================== */
+  function defaultPortFor(sel){
+    const o = sel.options[sel.selectedIndex];
+    return o ? +o.getAttribute("data-port") : null;
+  }
+  $("prAdd").addEventListener("click", ()=>{
+    const sel = $("prProto"); const proto = sel.value;
+    if(!proto){ flash($("prMsg"),"Choose a protocol to promote into the high queue.","err"); return; }
+    if(S.priority.some(r=>r.proto===proto)){ flash($("prMsg"),proto+" is already in the high queue.","err"); return; }
+    S.priority.push({ proto, port:defaultPortFor(sel), iface:"GUEST-WIFI" });
+    flash($("prMsg"),proto+" added to the high-priority queue on GUEST-WIFI.","ok");
+    drawPriRows(); refresh();
+  });
+  function drawPriRows(){
+    const body = $("prRows");
+    if(S.priority.length===0){ body.innerHTML='<tr><td colspan="5" style="color:var(--muted)">No priority rules yet.</td></tr>'; }
+    else{
+      body.innerHTML = S.priority.map((r,i)=>'<tr><td>'+r.proto+'</td><td>'+r.iface+'</td><td>'+r.port+
+        '</td><td><span class="pill hi">HIGH</span></td><td><button class="tinybtn" data-prm="'+i+'">remove</button></td></tr>').join("");
+      body.querySelectorAll('[data-prm]').forEach(b=>b.addEventListener("click",()=>{
+        S.priority.splice(+b.getAttribute("data-prm"),1); drawPriRows(); fillEditSelect(); refresh();
+      }));
+    }
+    fillEditSelect();
+  }
+  function fillEditSelect(){
+    const sel = $("edProto"); const cur = sel.value;
+    sel.innerHTML = '<option value="">— choose a rule —</option>'+
+      S.priority.map(r=>'<option value="'+r.proto+'">'+r.proto+' (port '+r.port+')</option>').join("");
+    if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  }
+  $("edSave").addEventListener("click", ()=>{
+    const proto = $("edProto").value, port = $("edPort").value;
+    if(!proto){ flash($("edMsg"),"Choose which rule to edit.","err"); return; }
+    if(port===""||+port<1||+port>65535){ flash($("edMsg"),"Destination port must be 1–65535.","err"); return; }
+    const r = S.priority.find(x=>x.proto===proto);
+    r.port = +port;
+    flash($("edMsg"),proto+" destination port updated to "+port+" on "+r.iface+".","ok");
+    drawPriRows(); refresh();
+  });
+
+  /* ===================== QUESTIONS ===================== */
+  $("checkQ").addEventListener("click", ()=>{
+    ["q1","q2","q3"].forEach(q=>{
+      const sel = document.querySelector('input[name="'+q+'"]:checked');
+      S.quiz[q] = sel ? sel.value : null;
+    });
+    const got = qCorrect();
+    if(Object.values(S.quiz).some(v=>v===null)){ flash($("qMsg"),"Answer all three questions, then check.","err"); }
+    else if(got===3){ flash($("qMsg"),"All three correct.","ok"); }
+    else { flash($("qMsg"),got+"/3 correct — review the ones still unmarked and try again.","err"); }
+    refresh();
+  });
+  function qCorrect(){ return ["q1","q2","q3"].reduce((n,q)=>n+(S.quiz[q]===KEY.quiz[q]?1:0),0); }
+
+  /* ===================== TASK EVALUATION ===================== */
+  function tasks(){
+    const g = S.group, sh = S.shaping, v = S.voice, p = S.penalty;
+    const memOK = KEY.group.members.every(ip=>g.members.includes(ip)) && g.members.length>=2;
+    const prSet = new Set(S.priority.map(r=>r.proto));
+    const priOK = KEY.priority.every(pr=>prSet.has(pr));
+    const rdp = S.priority.find(r=>r.proto==="RDP");
+    return [
+      { id:"login",   label:"Sign in to the Bandwidth Manager", sub:"admin / console password", passed:S.loggedIn },
+      { id:"group",   label:"Create address group \"HIGHUSE\" with a description", sub:"named group + note", passed: g.name.toUpperCase()===KEY.group.name && !!g.desc },
+      { id:"members", label:"Add both heavy-use devices to the group", sub:"10.40.7.62 and 10.40.7.118", passed: memOK },
+      { id:"shape",   label:"Shape GUEST-WIFI to 45↓ / 6↑ Mbps", sub:"interface ceiling", passed: sh.iface===KEY.shaping.iface && sh.down===KEY.shaping.down && sh.up===KEY.shaping.up },
+      { id:"voice",   label:"Reserve the voice queue (4↑ / 10↓ Mbps)", sub:"protect VoIP", passed: v.up===KEY.voice.up && v.down===KEY.voice.down },
+      { id:"penalty", label:"Throttle HIGHUSE to 4% of bandwidth", sub:"penalize the offenders", passed: p.group.toUpperCase()===KEY.penalty.group && p.pct===KEY.penalty.pct },
+      { id:"priority",label:"Promote SIP, RTP, SSH, RDP to the high queue, RDP on port 3395", sub:"prioritize + fix RDP port", passed: priOK && !!rdp && rdp.port===KEY.rdpPort }
+    ];
+  }
+
+  /* ===================== RENDER ===================== */
+  function renderTasks(list){
+    $("taskList").innerHTML = list.map(t=>
+      '<li><span class="box '+(t.passed?'done':'')+'" aria-hidden="true">'+(t.passed?'✓':'')+'</span>'+
+      '<span class="ck-label">'+t.label+'<small>'+t.sub+'</small></span></li>').join("");
+  }
+  function refresh(){
+    const list = tasks();
+    renderTasks(list);
+    const tp = list.filter(t=>t.passed).length;
+    $("taskScore").textContent = tp+"/"+list.length;
+    $("qScore").textContent = qCorrect()+"/3";
+  }
+
+  /* ===================== RESET ===================== */
+  $("resetBtn").addEventListener("click", ()=>{
+    S.loggedIn=false; S.group={name:"",desc:"",members:[]}; S.shaping={iface:"",down:null,up:null};
+    S.voice={up:null,down:null}; S.penalty={group:"",pct:null}; S.priority=[]; S.quiz={q1:null,q2:null,q3:null};
+    pendingIps=[];
+    ["user","pass","grpName","grpDesc","grpIp","shDown","shUp","vUp","vDown","penGrp","penPct","edPort","handle"].forEach(id=>{ if($(id)) $(id).value=""; });
+    $("ifSel").value=""; $("prProto").value=""; $("edProto").innerHTML='<option value="">— choose a rule —</option>';
+    document.querySelectorAll('#qForm input[type=radio]').forEach(r=>r.checked=false);
+    ["loginMsg","grpMsg","shMsg","prMsg","edMsg","qMsg"].forEach(id=>clearMsg($(id)));
+    drawGroupRows(); drawPriRows();
+    $("appView").hidden=true; $("loginView").hidden=false; $("linkDot").classList.remove("live");
+    $("sessionLbl").textContent="not signed in"; $("subStatus").textContent=""; $("subStatus").className="status";
+    selectTab("t-grp","p-grp"); refresh();
+  });
+
+  /* ===================== SUBMIT ===================== */
+  $("submitBtn").addEventListener("click", submit);
+  async function submit(){
+    const status = $("subStatus");
+    const handle = norm($("handle").value);
+    if(!handle){ status.className="status err"; status.textContent="Enter a callsign before submitting."; return; }
+    if(handle.length>40){ status.className="status err"; status.textContent="Callsign too long (40 char max)."; return; }
+
+    const list = tasks();
+    const earned = list.filter(t=>t.passed).length + qCorrect();
+    const total = list.length + 3;
+
+    status.className="status work"; status.textContent="Capturing snapshot…";
+    let shot="";
+    try{ shot = await captureNode($("appView").hidden ? $("loginView").parentElement : document.querySelector(".grid")); }
+    catch(e){ shot=""; }
+
+    const payload = {
+      assignmentId: CONFIG.assignmentId,
+      handle: handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: list.map(t=>({ id:t.id, label:t.label, passed:t.passed })),
+      questions: [
+        { id:"q1", prompt:"Technique that delays excess packets to a target rate", answer:S.quiz.q1, correct:S.quiz.q1===KEY.quiz.q1 },
+        { id:"q2", prompt:"How voice queue should be treated vs background sync", answer:S.quiz.q2, correct:S.quiz.q2===KEY.quiz.q2 },
+        { id:"q3", prompt:"Header marking used to classify DiffServ class", answer:S.quiz.q3, correct:S.quiz.q3===KEY.quiz.q3 }
+      ],
+      score: { earned, total },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    status.textContent="Submitting…";
+    try{
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body:JSON.stringify(payload) }); // text/plain, no preflight
+      const out = await res.json();
+      if(out && out.success){
+        status.className="status ok";
+        status.innerHTML = "Submitted — score "+earned+"/"+total+". "+(out.docUrl?('<a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your lab record</a>'):"");
+      } else {
+        status.className="status err";
+        status.textContent = "Submission rejected"+(out && out.error?(": "+out.error):"")+". Check with your instructor.";
+      }
+    } catch(e){
+      // Locked-down fallback: fire-and-forget; can't read docUrl.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+        status.className="status ok";
+        status.textContent = "Sent (no confirmation available in this browser). Confirm receipt with your instructor.";
+      } catch(e2){
+        status.className="status err";
+        status.textContent = "Could not reach the submission service. Check your connection and the APPS_SCRIPT_URL.";
+      }
+    }
+  }
+
+  /* init */
+  drawGroupRows(); drawPriRows(); refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-std-acl-deny-hosts.html",title:"Standard ACL Deny Specific Sources, Permit the Rest"}, NEXT={href:"index_netplus-conn-triage.html",title:"Connectivity Triage \u2014 Network+ / AP Networking Lab"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.5";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

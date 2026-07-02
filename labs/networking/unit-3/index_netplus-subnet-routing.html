@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Lab: Subnets &amp; the Router Between Them — Cedar Hollow Media Lab</title>
+<!--
+  ============================================================================
+  Cedar Hollow Media Lab — "Three Rooms, One Router"
+  IP subnet investigation + inter-subnet routing (clean-room original).
+
+  Blueprint tags:
+    AP Networking (Framework V.1):  3.3.A, 3.3.B, 3.4.C
+    CompTIA Network+ N10-009:       1.7 (subnetting / IP schemes), 5.x (connectivity tshoot)
+        NOTE: N10-009 tag is best-effort. The objectives PDF currently in the
+        project is N10-007. Re-map in labs.json once the N10-009 PDF is added —
+        this is a data edit, not a rebuild.
+
+  © 2026 [AUTHOR / ORG — replace before distribution].
+  Original work. Not derived from, and not a reskin of, any vendor lab
+  (TestOut Network Pro, Cisco NetAcad / Packet Tracer, or others). All scenario
+  text, hostnames, IP plan, task ordering, and question wording are original.
+  License: distribute within your institution; do not resell without permission.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#151b24;
+    --panel-2:#1c232e;
+    --line:#2b3543;
+    --ink:#e6edf3;
+    --ink-dim:#9aa7b4;
+    --accent:#ffb454;        /* amber — the one signature color (patch-panel glow) */
+    --accent-ink:#1a1206;
+    --ok:#56d364;
+    --bad:#f8736b;
+    --link:#6cb6ff;
+    --mono:"SFMono-Regular",ui-monospace,"Cascadia Code","Consolas",monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(255,180,84,.08), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 18px 64px}
+  header.lab-head{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    padding:18px 20px;
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 6px
+  }
+  h1{font-size:clamp(20px,3.4vw,28px);margin:0 0 6px;letter-spacing:-.01em}
+  .subtitle{color:var(--ink-dim);margin:0;max-width:62ch}
+  .tags{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .tag{
+    font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px;background:var(--panel)
+  }
+  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{
+    border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);
+    overflow:hidden
+  }
+  .card > h2{
+    font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);
+    margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel-2);
+    font-family:var(--mono)
+  }
+  .card .body{padding:14px 16px}
+
+  /* ---- Terminal ---- */
+  .term-host{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  label.field-label{font-size:13px;color:var(--ink-dim)}
+  select,input[type=text]{
+    font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--bg);
+    border:1px solid var(--line);border-radius:6px;padding:7px 9px
+  }
+  select:focus-visible,input:focus-visible,button:focus-visible,.cable-btn:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px
+  }
+  #screen{
+    font-family:var(--mono);font-size:13px;background:#0a0e14;border:1px solid var(--line);
+    border-radius:8px;height:280px;overflow:auto;padding:12px;white-space:pre-wrap;color:#cfe0d6
+  }
+  #screen .cmd{color:var(--accent)}
+  #screen .err{color:var(--bad)}
+  #screen .good{color:var(--ok)}
+  #screen .dim{color:var(--ink-dim)}
+  .term-input{display:flex;gap:8px;margin-top:10px}
+  .term-input .prompt{font-family:var(--mono);color:var(--accent);align-self:center}
+  .term-input input{flex:1}
+
+  button{
+    font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;
+    color:var(--ink);background:var(--panel-2);border:1px solid var(--line);
+    border-radius:7px;padding:8px 14px
+  }
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  button.ghost{background:transparent}
+
+  /* ---- Topology ---- */
+  .topo-svg{width:100%;height:auto;display:block;background:#0a0e14;border-radius:8px;border:1px solid var(--line)}
+  .node-label{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+  .node-sub{font-family:var(--mono);font-size:9px;fill:var(--ink-dim)}
+  .cable-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:13px}
+  .cable-row .iface{font-family:var(--mono);color:var(--accent);min-width:52px}
+  .cable-btn{
+    font-family:var(--mono);font-size:12px;border:1px dashed var(--line);background:transparent;
+    color:var(--ink-dim);border-radius:6px;padding:5px 9px;cursor:pointer
+  }
+  .cable-btn[aria-pressed=true]{border-style:solid;border-color:var(--ok);color:var(--ok)}
+  .hint{font-size:12px;color:var(--ink-dim);margin:8px 0 0}
+
+  /* ---- Tasks / Questions ---- */
+  ol.tasks{list-style:none;margin:0;padding:0;counter-reset:t}
+  ol.tasks li{
+    counter-increment:t;display:flex;gap:10px;align-items:flex-start;
+    padding:9px 0;border-bottom:1px solid var(--line)
+  }
+  ol.tasks li:last-child{border-bottom:0}
+  .chk{
+    flex:none;width:22px;height:22px;border-radius:6px;border:1px solid var(--line);
+    display:grid;place-items:center;font-size:13px;color:var(--ink-dim);background:var(--bg)
+  }
+  li.done .chk{background:var(--ok);border-color:var(--ok);color:#06210d}
+  .t-text{font-size:14px}
+  li.done .t-text{color:var(--ink-dim)}
+
+  .q{padding:12px 0;border-bottom:1px solid var(--line)}
+  .q:last-of-type{border-bottom:0}
+  .q .prompt{font-size:14px;margin:0 0 8px}
+  .q .qmeta{font-family:var(--mono);font-size:11px;color:var(--accent);margin-right:6px}
+  .q .answer-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .q input[type=text]{flex:1;min-width:180px}
+  .q .verdict{font-family:var(--mono);font-size:12px}
+  .q .verdict.ok{color:var(--ok)}
+  .q .verdict.no{color:var(--bad)}
+  fieldset.mc{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  fieldset.mc label{display:flex;gap:8px;align-items:flex-start;font-size:14px;cursor:pointer}
+
+  /* ---- Submission bar ---- */
+  .subbar{
+    margin-top:18px;border:1px solid var(--line);border-radius:var(--radius);
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));padding:16px
+  }
+  .subbar .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+  .subbar .grow{flex:1;min-width:200px}
+  .score-pill{
+    font-family:var(--mono);font-size:13px;border:1px solid var(--line);border-radius:999px;
+    padding:6px 12px;color:var(--ink-dim)
+  }
+  .score-pill b{color:var(--ink)}
+  #status{margin-top:10px;font-size:14px;min-height:1.4em}
+  #status.ok{color:var(--ok)}
+  #status.err{color:var(--bad)}
+  #status a{color:var(--link)}
+  .legal{margin-top:22px;font-size:11px;color:var(--ink-dim);line-height:1.6}
+  .legal code{color:var(--ink)}
+  .visually-hidden{position:absolute;width:1px;height:1px;clip:rect(0 0 0 0);overflow:hidden}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-subnet-routing", "title": "Lab: Subnets &amp; the Router Between Them — Cedar Hollow Media Lab", "version": "1.0.0", "objectives": ["N10-009:1.7", "N10-009:2.1", "APNET:3.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab-head">
+    <p class="eyebrow">Cedar Hollow Media Lab · Networking practical</p>
+    <h1>Three Rooms, One Router</h1>
+    <p class="subtitle">
+      The Studio, the Workshop, and the Lobby each sit on their own IP subnet. Inspect the
+      hosts, work out which ones share a network, then discover why a cable between two
+      switches still isn&rsquo;t enough to move a packet from one room to another.
+    </p>
+    <div class="tags" aria-label="Blueprint coverage">
+      <span class="tag">N10-009 · 1.7</span>
+      <span class="tag">N10-009 · 5 (tshoot)</span>
+      <span class="tag">APNET · 3.3.A</span>
+      <span class="tag">APNET · 3.3.B</span>
+      <span class="tag">APNET · 3.4.C</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: simulation -->
+    <div>
+      <section class="card" aria-labelledby="term-h">
+        <h2 id="term-h">Host console</h2>
+        <div class="body">
+          <div class="term-host">
+            <label class="field-label" for="hostsel">Logged in to</label>
+            <select id="hostsel" aria-label="Choose which host you are working on"></select>
+            <button class="ghost" id="clearbtn" type="button">Clear screen</button>
+          </div>
+          <div id="screen" role="log" aria-live="polite" aria-label="Console output" tabindex="0"></div>
+          <div class="term-input">
+            <span class="prompt" aria-hidden="true">&gt;</span>
+            <label class="visually-hidden" for="cmd">Type a command</label>
+            <input id="cmd" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="try: ipconfig   ·   ping 198.51.100.50   ·   help">
+            <button class="primary" id="runbtn" type="button">Run</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="topo-h" style="margin-top:16px">
+        <h2 id="topo-h">Patch panel &amp; topology</h2>
+        <div class="body">
+          <svg class="topo-svg" id="topo" viewBox="0 0 520 300" role="img"
+               aria-label="Network topology: three switches, four hosts, and a three-port router.">
+            <!-- drawn by script -->
+          </svg>
+
+          <p class="hint" id="patchstate"></p>
+          <button class="ghost" id="patchbtn" type="button" style="margin-top:4px"></button>
+
+          <p class="hint" style="margin-top:14px;color:var(--accent);font-family:var(--mono)">GW-RTR router ports</p>
+          <div class="cable-row">
+            <span class="iface">g0/0</span>
+            <span aria-hidden="true">→</span>
+            <button class="cable-btn" data-iface="g0/0" data-sw="studio" type="button" aria-pressed="false">connect to Studio-SW</button>
+          </div>
+          <div class="cable-row">
+            <span class="iface">g0/1</span>
+            <span aria-hidden="true">→</span>
+            <button class="cable-btn" data-iface="g0/1" data-sw="workshop" type="button" aria-pressed="false">connect to Workshop-SW</button>
+          </div>
+          <div class="cable-row">
+            <span class="iface">g0/2</span>
+            <span aria-hidden="true">→</span>
+            <button class="cable-btn" data-iface="g0/2" data-sw="lobby" type="button" aria-pressed="false">connect to Lobby-SW</button>
+          </div>
+          <p class="hint">Each router port carries one subnet&rsquo;s gateway. A port does nothing until it&rsquo;s cabled to that room&rsquo;s switch.</p>
+          <button class="ghost" id="resetbtn" type="button" style="margin-top:6px">Reset lab</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: tasks + questions -->
+    <div>
+      <section class="card" aria-labelledby="task-h">
+        <h2 id="task-h">Tasks</h2>
+        <div class="body">
+          <ol class="tasks" id="tasklist"></ol>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="q-h" style="margin-top:16px">
+        <h2 id="q-h">Questions</h2>
+        <div class="body" id="qlist"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- SUBMISSION -->
+  <section class="subbar" aria-labelledby="sub-h">
+    <h2 id="sub-h" class="visually-hidden">Submit your lab</h2>
+    <div class="row">
+      <div class="grow">
+        <label class="field-label" for="handle">Callsign (no real names)</label><br>
+        <input id="handle" type="text" maxlength="40" autocomplete="off" spellcheck="false"
+               placeholder="e.g. amber-otter-12" style="width:100%;margin-top:4px">
+      </div>
+      <div class="score-pill" id="scorepill">Score <b id="earned">0</b> / <b id="total">0</b></div>
+      <button class="primary" id="submitbtn" type="button">Submit completed lab</button>
+    </div>
+    <div id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <p class="legal">
+    © 2026 <code>[AUTHOR / ORG]</code>. Original clean-room lab built from the public AP Networking
+    framework and the CompTIA Network+ objectives. Not derived from any vendor lab. Pseudonymous
+    submission only — do not enter real names, emails, or student IDs anywhere in this page.
+    Client-side scoring is self-reported and inspectable; treat as formative unless re-scored
+    server-side.
+  </p>
+</div>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 1 — html2canvas (inline)
+     -------------------------------------------------------------------------
+     The master spec requires html2canvas to be inlined so the file is
+     dependency-free. The full minified library (~150 KB) cannot be reproduced
+     accurately from memory, so it is NOT pasted here. Two honest options:
+
+       (A) PASTE the official minified source between the markers below. Get it
+           from https://html2canvas.hertzen.com (v1.4.1) and paste verbatim.
+           Then captureScreenshot() will produce a true pixel screenshot of the
+           lab DOM, exactly as the spec intends.
+
+       (B) Leave it empty. A built-in fallback renderer (in block 2) draws a
+           structured PNG "evidence card" — callsign, every task/question state,
+           score, timestamp — onto a canvas, so submission always sends a valid
+           screenshot. Lower fidelity, zero dependency, still verifiable.
+
+     Either way the submission flow is unchanged.
+     ===================================================================== -->
+<script>
+/* >>> PASTE html2canvas v1.4.1 MINIFIED SOURCE BELOW THIS LINE <<< */
+
+/* >>> PASTE html2canvas MINIFIED SOURCE ABOVE THIS LINE <<< */
+</script>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, scoring, submission
+     ===================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------------------- CONFIG -------------------------------- */
+  const CONFIG = {
+    assignmentId: "netplus-subnet-routing",
+    objectives: ["N10-009:1.7", "N10-009:2.1", "APNET:3.4"],
+    // Deployed Apps Script /exec URL (same across the library). Placeholder:
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    maskBits: 27,
+    maskDotted: "255.255.255.224"
+  };
+
+  /* ------------------------- NETWORK MODEL ----------------------------- */
+  // Three /27 subnets out of 198.51.100.0/24 (RFC 5737 documentation range).
+  const SUBNETS = {
+    studio:   { name:"Studio",   network:"198.51.100.0",  gw:"198.51.100.1",  bcast:"198.51.100.31" },
+    workshop: { name:"Workshop", network:"198.51.100.32", gw:"198.51.100.33", bcast:"198.51.100.63" },
+    lobby:    { name:"Lobby",    network:"198.51.100.64", gw:"198.51.100.65", bcast:"198.51.100.95" }
+  };
+  // Hosts. Note MIC-07 and TILE-09 are deliberately in the SAME /27 despite
+  // different last octets (.20 vs .28) — that's the same-network drill.
+  const HOSTS = {
+    "MIC-07":   { ip:"198.51.100.20", sub:"studio",   sw:"studio",   mac:"02:CE:DA:07:1A:20" },
+    "TILE-09":  { ip:"198.51.100.28", sub:"studio",   sw:"studio",   mac:"02:CE:DA:09:1A:28" },
+    "LATHE-03": { ip:"198.51.100.50", sub:"workshop", sw:"workshop", mac:"02:CE:DA:03:2B:32" },
+    "KIOSK-02": { ip:"198.51.100.70", sub:"lobby",    sw:"lobby",    mac:"02:CE:DA:02:3C:46" }
+  };
+  const IP_TO_HOST = {};
+  Object.keys(HOSTS).forEach(h => IP_TO_HOST[HOSTS[h].ip] = h);
+
+  /* ------------------------- SIM STATE --------------------------------- */
+  const state = {
+    activeHost: "MIC-07",
+    patchLink: true,                  // Studio-SW <-> Workshop-SW L2 cable present at start
+    router: { "g0/0":null, "g0/1":null, "g0/2":null },  // iface -> switch key when cabled
+    inspected: {},                    // host -> true once ipconfig run there
+    pingedFail: false,                // observed a cross-subnet ping fail
+    pingOkLathe: false,
+    pingOkKiosk: false
+  };
+
+  /* --------------------- REACHABILITY LOGIC ---------------------------- */
+  function routerHasSubnet(subKey){
+    return Object.keys(state.router).some(i => state.router[i] === subKey);
+  }
+  // True if the router currently routes between the two given subnets.
+  function routedBetween(a,b){ return routerHasSubnet(a) && routerHasSubnet(b); }
+
+  // canReach returns {ok, reason}
+  function canReach(srcHost, dstIp){
+    const dstHost = IP_TO_HOST[dstIp];
+    if(!dstHost) return { ok:false, reason:"no-such-host" };
+    if(dstHost === srcHost) return { ok:false, reason:"self" };
+    const s = HOSTS[srcHost], d = HOSTS[dstHost];
+    if(s.sub === d.sub){
+      // same subnet: reachable if on same L2 segment. All same-subnet hosts here
+      // share a switch, so they're reachable regardless of the router.
+      return { ok:true, reason:"same-subnet" };
+    }
+    // different subnets — needs L3 routing. The switch-to-switch patch cable does
+    // NOT help: it only joins broadcast domains, it does not route between subnets.
+    if(routedBetween(s.sub, d.sub)) return { ok:true, reason:"routed" };
+    return { ok:false, reason:"no-route" };
+  }
+
+  /* --------------------------- TERMINAL -------------------------------- */
+  const screenEl = document.getElementById("screen");
+  function out(text, cls){
+    const span = document.createElement("span");
+    if(cls) span.className = cls;
+    span.textContent = text + "\n";
+    screenEl.appendChild(span);
+    screenEl.scrollTop = screenEl.scrollHeight;
+  }
+  function banner(){
+    out("Cedar Hollow Media Lab — host console", "dim");
+    out("Type 'help' for commands. You are on " + state.activeHost + ".", "dim");
+    out("", "");
+  }
+
+  function cmd_ipconfig(){
+    const h = HOSTS[state.activeHost];
+    const s = SUBNETS[h.sub];
+    out("> ipconfig", "cmd");
+    out("");
+    out("Host name . . . . . . . : " + state.activeHost);
+    out("Physical Address  . . . : " + h.mac);
+    out("IPv4 Address  . . . . . : " + h.ip);
+    out("Subnet Mask . . . . . . : " + CONFIG.maskDotted + "  (/" + CONFIG.maskBits + ")");
+    out("Default Gateway . . . . : " + s.gw);
+    out("");
+    state.inspected[state.activeHost] = true;
+    refresh();
+  }
+
+  function isValidIp(ip){
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip||"");
+    if(!m) return false;
+    return m.slice(1).every(o => +o >= 0 && +o <= 255);
+  }
+
+  function cmd_ping(arg){
+    out("> ping " + arg, "cmd");
+    if(!arg){ out("ping: missing target. Usage: ping <ip-address>", "err"); return; }
+    if(!isValidIp(arg)){
+      out("ping: '" + arg + "' is not a valid IPv4 address. Example: ping 198.51.100.50", "err");
+      return;
+    }
+    const r = canReach(state.activeHost, arg);
+    const src = HOSTS[state.activeHost];
+    if(r.reason === "self"){ out("ping: cannot ping the host's own address.", "err"); return; }
+    if(r.reason === "no-such-host"){
+      out("Pinging " + arg + " ...");
+      out("Request timed out. (No device on this network answers to " + arg + ".)", "err");
+      return;
+    }
+    out("Pinging " + arg + " from " + src.ip + " ...");
+    if(r.ok){
+      out("Reply from " + arg + ": bytes=32 time=1ms TTL=" + (r.reason==="routed"?"63":"64"), "good");
+      out("Reply from " + arg + ": bytes=32 time=1ms TTL=" + (r.reason==="routed"?"63":"64"), "good");
+      out((r.reason==="routed" ? "Routed via GW-RTR." : "Delivered on the local subnet."), "dim");
+      const dstHost = IP_TO_HOST[arg];
+      if(dstHost === "LATHE-03") state.pingOkLathe = true;
+      if(dstHost === "KIOSK-02") state.pingOkKiosk = true;
+    } else {
+      // no-route: different subnet, router not bridging it
+      out("Reply from " + src.ip + ": Destination host unreachable.", "err");
+      out("That target is on a different subnet. A switch link between rooms stays at", "dim");
+      out("Layer 2 — it can't move a packet to another subnet. A router has to route it.", "dim");
+      state.pingedFail = true;
+    }
+    refresh();
+  }
+
+  function runCommand(raw){
+    const line = (raw||"").trim();
+    if(!line) return;
+    const parts = line.split(/\s+/);
+    const verb = parts[0].toLowerCase();
+    if(verb === "help"){
+      out("> help","cmd");
+      out("  ipconfig            show this host's IP, mask and gateway");
+      out("  ping <ip>           test reachability to an address");
+      out("  clear               clear the screen");
+      out("");
+      return;
+    }
+    if(verb === "clear"){ screenEl.textContent=""; banner(); return; }
+    if(verb === "ipconfig" || verb === "ifconfig" || verb === "ip"){ cmd_ipconfig(); return; }
+    if(verb === "ping"){ cmd_ping(parts[1]); return; }
+    out("> " + line, "cmd");
+    out("'" + verb + "' is not a recognized command. Try: ipconfig, ping <ip>, help.", "err");
+  }
+
+  /* ----------------------------- TASKS --------------------------------- */
+  const TASKS = [
+    { id:"inspect",   label:"Run ipconfig on all four hosts (MIC-07, TILE-09, LATHE-03, KIOSK-02).",
+      pass:()=> Object.keys(HOSTS).every(h => state.inspected[h]) },
+    { id:"ping_fail", label:"From MIC-07, ping a host in another room and watch it fail (switch link only).",
+      pass:()=> state.pingedFail },
+    { id:"remove_link", label:"Remove the Studio-SW to Workshop-SW patch cable.",
+      pass:()=> state.patchLink === false },
+    { id:"cable_router", label:"Cable GW-RTR: g0/0→Studio-SW, g0/1→Workshop-SW, g0/2→Lobby-SW.",
+      pass:()=> state.router["g0/0"]==="studio" && state.router["g0/1"]==="workshop" && state.router["g0/2"]==="lobby" },
+    { id:"ping_ok_lathe", label:"From MIC-07, ping LATHE-03 (198.51.100.50) successfully.",
+      pass:()=> state.pingOkLathe },
+    { id:"ping_ok_kiosk", label:"From MIC-07, ping KIOSK-02 (198.51.100.70) successfully.",
+      pass:()=> state.pingOkKiosk }
+  ];
+
+  /* --------------------------- QUESTIONS ------------------------------- */
+  // Answer key derived from the IP plan above. norm() makes text checks forgiving.
+  function norm(s){ return (s||"").trim().toLowerCase().replace(/\s+/g,""); }
+  const QUESTIONS = [
+    { id:"q1", type:"text", meta:"3.4.C",
+      prompt:"What is the network (subnet) address of the Studio subnet, where MIC-07 lives?",
+      answer:"198.51.100.0", check:v=> norm(v)===norm("198.51.100.0") },
+    { id:"q2", type:"text", meta:"3.4.C",
+      prompt:"What is the broadcast address of the Studio subnet?",
+      answer:"198.51.100.31", check:v=> norm(v)===norm("198.51.100.31") },
+    { id:"q3", type:"text", meta:"3.4.C",
+      prompt:"How many usable host addresses does a /27 subnet provide?",
+      answer:"30", check:v=> norm(v)==="30" },
+    { id:"q4", type:"mc", meta:"3.3.B",
+      prompt:"MIC-07 is 198.51.100.20 and TILE-09 is 198.51.100.28, both /27. Same subnet?",
+      options:["Yes — both fall in 198.51.100.0/27","No — the last octets differ"],
+      answer:0 },
+    { id:"q5", type:"mc", meta:"3.3.B",
+      prompt:"MIC-07 (198.51.100.20/27) and LATHE-03 (198.51.100.50/27): same subnet?",
+      options:["Yes","No — .20 is in 198.51.100.0/27 and .50 is in 198.51.100.32/27"],
+      answer:1 },
+    { id:"q6", type:"text", meta:"3.3.A",
+      prompt:"What default gateway is configured on LATHE-03?",
+      answer:"198.51.100.33", check:v=> norm(v)===norm("198.51.100.33") },
+    { id:"q7", type:"mc", meta:"3.3.A / N10-009 5",
+      prompt:"With only a switch-to-switch cable joining the rooms, why couldn't MIC-07 reach LATHE-03?",
+      options:[
+        "The cable was the wrong category",
+        "A switch works at Layer 2 and does not route between different IP subnets — a router is required",
+        "The hosts had duplicate IP addresses"
+      ],
+      answer:1 },
+    { id:"q8", type:"mc", meta:"3.4.C",
+      prompt:"Which device restored connectivity between the three subnets?",
+      options:["A second switch","The GW-RTR router","A DNS server"],
+      answer:1 }
+  ];
+
+  /* --------------------------- RENDERING ------------------------------- */
+  function buildHostSelect(){
+    const sel = document.getElementById("hostsel");
+    Object.keys(HOSTS).forEach(h=>{
+      const o=document.createElement("option"); o.value=h; o.textContent=h+"  ("+HOSTS[h].ip+")";
+      sel.appendChild(o);
+    });
+    sel.value = state.activeHost;
+    sel.addEventListener("change",()=>{ state.activeHost=sel.value;
+      out("","");out("--- now logged in to "+state.activeHost+" ---","dim"); });
+  }
+
+  function buildTasks(){
+    const ol=document.getElementById("tasklist");
+    TASKS.forEach(t=>{
+      const li=document.createElement("li"); li.id="task-"+t.id;
+      li.innerHTML='<span class="chk" aria-hidden="true">○</span><span class="t-text">'+
+        t.label+'</span>';
+      ol.appendChild(li);
+    });
+  }
+
+  function buildQuestions(){
+    const box=document.getElementById("qlist");
+    QUESTIONS.forEach(q=>{
+      const div=document.createElement("div"); div.className="q"; div.id="q-"+q.id;
+      let inner='<p class="prompt"><span class="qmeta">'+q.meta+'</span>'+q.prompt+'</p>';
+      if(q.type==="text"){
+        inner+='<div class="answer-row">'+
+          '<label class="visually-hidden" for="in-'+q.id+'">Answer for question</label>'+
+          '<input id="in-'+q.id+'" type="text" autocomplete="off" spellcheck="false">'+
+          '<button class="ghost" data-check="'+q.id+'" type="button">Check</button>'+
+          '<span class="verdict" id="v-'+q.id+'"></span></div>';
+      } else {
+        inner+='<fieldset class="mc">';
+        q.options.forEach((opt,i)=>{
+          inner+='<label><input type="radio" name="'+q.id+'" value="'+i+'"> <span>'+opt+'</span></label>';
+        });
+        inner+='</fieldset><div class="answer-row"><button class="ghost" data-check="'+q.id+
+          '" type="button">Check</button><span class="verdict" id="v-'+q.id+'"></span></div>';
+      }
+      div.innerHTML=inner;
+      box.appendChild(div);
+    });
+    box.addEventListener("click",e=>{
+      const id=e.target && e.target.getAttribute && e.target.getAttribute("data-check");
+      if(id) checkQuestion(id);
+    });
+  }
+
+  const qResult = {}; // id -> {answer, correct}
+  function checkQuestion(id){
+    const q=QUESTIONS.find(x=>x.id===id);
+    const v=document.getElementById("v-"+id);
+    let given, correct;
+    if(q.type==="text"){
+      given=document.getElementById("in-"+id).value;
+      correct=q.check(given);
+    } else {
+      const sel=document.querySelector('input[name="'+id+'"]:checked');
+      given= sel ? q.options[+sel.value] : "";
+      correct= sel ? (+sel.value===q.answer) : false;
+    }
+    qResult[id]={answer:given, correct:correct};
+    v.textContent = correct ? "✓ correct" : (given==="" ? "choose an answer" : "✗ try again");
+    v.className = "verdict " + (correct?"ok":"no");
+    refresh();
+  }
+
+  /* ----------------------------- TOPOLOGY SVG -------------------------- */
+  function drawTopo(){
+    const svg=document.getElementById("topo");
+    const sw={studio:[110,70],workshop:[260,70],lobby:[410,70]};
+    const hostPos={ "MIC-07":[70,150],"TILE-09":[150,150],"LATHE-03":[260,150],"KIOSK-02":[410,150] };
+    const router=[260,250];
+    let s='';
+    // cables: router -> switches (if cabled)
+    Object.keys(state.router).forEach(i=>{
+      const k=state.router[i]; if(!k) return;
+      const [x,y]=sw[k];
+      s+='<line x1="'+router[0]+'" y1="'+router[1]+'" x2="'+x+'" y2="'+(y+18)+
+         '" stroke="var(--ok)" stroke-width="2.5"/>';
+    });
+    // patch link studio<->workshop
+    if(state.patchLink){
+      s+='<line x1="'+(sw.studio[0]+22)+'" y1="'+sw.studio[1]+'" x2="'+(sw.workshop[0]-22)+
+         '" y2="'+sw.workshop[1]+'" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4"/>';
+      s+='<text x="185" y="58" class="node-sub" text-anchor="middle">L2 patch</text>';
+    }
+    // host -> own switch
+    Object.keys(hostPos).forEach(h=>{
+      const [hx,hy]=hostPos[h]; const [sx,sy]=sw[HOSTS[h].sw];
+      s+='<line x1="'+hx+'" y1="'+(hy-12)+'" x2="'+sx+'" y2="'+(sy+18)+'" stroke="var(--line)" stroke-width="1.5"/>';
+    });
+    // switches
+    Object.keys(sw).forEach(k=>{
+      const [x,y]=sw[k];
+      s+='<rect x="'+(x-36)+'" y="'+(y-16)+'" width="72" height="32" rx="6" fill="var(--panel-2)" stroke="var(--line)"/>';
+      s+='<text x="'+x+'" y="'+(y+4)+'" class="node-label" text-anchor="middle">'+SUBNETS[k].name+'-SW</text>';
+    });
+    // hosts
+    Object.keys(hostPos).forEach(h=>{
+      const [x,y]=hostPos[h];
+      const on = state.inspected[h];
+      s+='<rect x="'+(x-34)+'" y="'+(y-12)+'" width="68" height="26" rx="5" fill="'+(on?'#13251a':'var(--panel)')+
+         '" stroke="'+(on?'var(--ok)':'var(--line)')+'"/>';
+      s+='<text x="'+x+'" y="'+(y+5)+'" class="node-label" text-anchor="middle">'+h+'</text>';
+    });
+    // router
+    s+='<rect x="'+(router[0]-50)+'" y="'+(router[1]-16)+'" width="100" height="32" rx="8" fill="var(--panel-2)" stroke="var(--accent)"/>';
+    s+='<text x="'+router[0]+'" y="'+(router[1]+4)+'" class="node-label" text-anchor="middle" fill="var(--accent)">GW-RTR</text>';
+    svg.innerHTML=s;
+  }
+
+  /* ---------------------------- SCORING -------------------------------- */
+  function computeScore(){
+    let earned=0;
+    const total = TASKS.length + QUESTIONS.length;
+    TASKS.forEach(t=>{ if(t.pass()) earned++; });
+    QUESTIONS.forEach(q=>{ if(qResult[q.id] && qResult[q.id].correct) earned++; });
+    return { earned, total };
+  }
+
+  function refresh(){
+    // tasks
+    TASKS.forEach(t=>{
+      const li=document.getElementById("task-"+t.id);
+      const done=t.pass();
+      li.classList.toggle("done",done);
+      li.querySelector(".chk").textContent = done ? "✓" : "○";
+    });
+    // patch button + label
+    const pb=document.getElementById("patchbtn");
+    const ps=document.getElementById("patchstate");
+    if(state.patchLink){
+      ps.textContent="A patch cable currently links Studio-SW and Workshop-SW (Layer 2 only).";
+      pb.textContent="Remove Studio-SW ↔ Workshop-SW cable";
+    } else {
+      ps.textContent="The switch-to-switch patch cable has been removed.";
+      pb.textContent="Re-add Studio-SW ↔ Workshop-SW cable";
+    }
+    // router buttons
+    document.querySelectorAll(".cable-btn").forEach(b=>{
+      const iface=b.getAttribute("data-iface");
+      const connected = state.router[iface]===b.getAttribute("data-sw");
+      b.setAttribute("aria-pressed", connected?"true":"false");
+      b.textContent = connected ? ("cabled to "+b.getAttribute("data-sw").replace(/^./,c=>c.toUpperCase())+"-SW (click to unplug)")
+                                : ("connect to "+b.getAttribute("data-sw").replace(/^./,c=>c.toUpperCase())+"-SW");
+    });
+    // score
+    const sc=computeScore();
+    document.getElementById("earned").textContent=sc.earned;
+    document.getElementById("total").textContent=sc.total;
+    drawTopo();
+  }
+
+  /* --------------------------- SCREENSHOT ------------------------------ */
+  async function captureScreenshot(){
+    const target=document.querySelector(".wrap");
+    if(window.html2canvas){
+      try{
+        const canvas=await window.html2canvas(target,{backgroundColor:"#0d1117",scale:1});
+        return canvas.toDataURL("image/png");
+      }catch(e){ /* fall through to fallback */ }
+    }
+    return fallbackEvidenceCard();
+  }
+  // Dependency-free fallback: render a structured PNG summarizing the attempt.
+  function fallbackEvidenceCard(){
+    const W=640,H=520,c=document.createElement("canvas");
+    c.width=W;c.height=H;const x=c.getContext("2d");
+    x.fillStyle="#0d1117";x.fillRect(0,0,W,H);
+    x.fillStyle="#ffb454";x.font="bold 18px monospace";
+    x.fillText("Cedar Hollow Media Lab — submission evidence",20,34);
+    x.fillStyle="#9aa7b4";x.font="12px monospace";
+    x.fillText("assignment: "+CONFIG.assignmentId,20,56);
+    x.fillText("callsign: "+(document.getElementById("handle").value||"(none)"),20,74);
+    x.fillText("time: "+new Date().toISOString(),20,92);
+    let y=126;x.fillStyle="#e6edf3";x.font="bold 13px monospace";x.fillText("TASKS",20,y);y+=20;
+    x.font="12px monospace";
+    TASKS.forEach(t=>{const ok=t.pass();x.fillStyle=ok?"#56d364":"#f8736b";
+      x.fillText((ok?"[x] ":"[ ] ")+t.label.slice(0,70),20,y);y+=18;});
+    y+=12;x.fillStyle="#e6edf3";x.font="bold 13px monospace";x.fillText("QUESTIONS",20,y);y+=20;
+    x.font="12px monospace";
+    QUESTIONS.forEach(q=>{const r=qResult[q.id];const ok=r&&r.correct;
+      x.fillStyle=ok?"#56d364":"#f8736b";
+      x.fillText((ok?"[x] ":"[ ] ")+q.id+": "+String((r&&r.answer)||"").slice(0,46),20,y);y+=18;});
+    const sc=computeScore();
+    x.fillStyle="#ffb454";x.font="bold 15px monospace";
+    x.fillText("Score "+sc.earned+" / "+sc.total,20,H-24);
+    return c.toDataURL("image/png");
+  }
+
+  /* --------------------------- SUBMISSION ------------------------------ */
+  async function submit(){
+    const status=document.getElementById("status");
+    const handle=document.getElementById("handle").value.trim();
+    status.className="";status.textContent="";
+    if(!handle){ status.className="err"; status.textContent="Enter a callsign first (a pseudonym — never your real name)."; return; }
+    if(handle.length>40){ status.className="err"; status.textContent="Callsign must be 40 characters or fewer."; return; }
+    const btn=document.getElementById("submitbtn");
+    btn.disabled=true; status.textContent="Capturing lab and submitting…";
+
+    const sc=computeScore();
+    let shot="";
+    try{ shot=await captureScreenshot(); }catch(e){ shot=""; }
+
+    const payload={
+      assignmentId: CONFIG.assignmentId,
+      handle: handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(t=>({id:t.id,label:t.label,passed:!!t.pass()})),
+      questions: QUESTIONS.map(q=>({
+        id:q.id, prompt:q.prompt,
+        answer:(qResult[q.id]?qResult[q.id].answer:""),
+        correct:!!(qResult[q.id]&&qResult[q.id].correct)
+      })),
+      score:{ earned:sc.earned, total:sc.total },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    try{
+      // SIMPLE request: no custom headers, default text/plain body -> no CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+      const out=await res.json();
+      if(out && out.success){
+        status.className="ok";
+        status.innerHTML="Submitted. Score "+sc.earned+"/"+sc.total+". "+
+          (out.docUrl?'<a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your lab record</a>':"");
+      }else{
+        status.className="err";
+        status.textContent="The server rejected the submission"+(out&&out.error?(": "+out.error):".")+
+          " Check with your instructor.";
+      }
+    }catch(e){
+      // Locked-down context fallback: fire-and-forget, can't read docUrl.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+        status.className="ok";
+        status.textContent="Submitted (offline mode — no receipt returned). Confirm with your instructor that it arrived.";
+      }catch(e2){
+        status.className="err";
+        status.textContent="Couldn't reach the submission server. Check your connection and try again.";
+      }
+    }finally{
+      btn.disabled=false;
+    }
+  }
+
+  /* ----------------------------- WIRE-UP ------------------------------- */
+  function resetLab(){
+    state.activeHost="MIC-07"; state.patchLink=true;
+    state.router={ "g0/0":null,"g0/1":null,"g0/2":null };
+    state.inspected={}; state.pingedFail=false; state.pingOkLathe=false; state.pingOkKiosk=false;
+    Object.keys(qResult).forEach(k=>delete qResult[k]);
+    document.getElementById("hostsel").value="MIC-07";
+    document.querySelectorAll('.q input[type=text]').forEach(i=>i.value="");
+    document.querySelectorAll('.q input[type=radio]').forEach(i=>i.checked=false);
+    document.querySelectorAll('.q .verdict').forEach(v=>{v.textContent="";v.className="verdict";});
+    screenEl.textContent=""; banner(); refresh();
+  }
+
+  buildHostSelect();
+  buildTasks();
+  buildQuestions();
+  banner();
+  refresh();
+
+  document.getElementById("runbtn").addEventListener("click",()=>{
+    const i=document.getElementById("cmd"); runCommand(i.value); i.value=""; i.focus();
+  });
+  document.getElementById("cmd").addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ runCommand(e.target.value); e.target.value=""; }
+  });
+  document.getElementById("clearbtn").addEventListener("click",()=>{ screenEl.textContent=""; banner(); });
+  document.getElementById("patchbtn").addEventListener("click",()=>{ state.patchLink=!state.patchLink; refresh(); });
+  document.querySelectorAll(".cable-btn").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const iface=b.getAttribute("data-iface"), sw=b.getAttribute("data-sw");
+      state.router[iface] = (state.router[iface]===sw) ? null : sw;
+      refresh();
+    });
+  });
+  document.getElementById("resetbtn").addEventListener("click",resetLab);
+  document.getElementById("submitbtn").addEventListener("click",submit);
+
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-captive-portal.html",title:"OpenGate Firewall \u2014 Captive Portal Lab"}, NEXT={href:"index_netplus-screened-subnet-design.html",title:"Design a Screened Subnet"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.4";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

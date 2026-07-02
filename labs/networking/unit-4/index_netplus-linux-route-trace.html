@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Tracing the Path: Linux Route &amp; Name-Resolution Troubleshooting</title>
+<!--
+  ============================================================================
+  Network+ (N10-009) / AP Networking pilot — Simulation Lab
+  assignmentId : netplus-linux-route-trace
+  Objectives   : N10-009:5.5 (network tools/commands), N10-009:5.3 (services);
+                 APNET:4.4.C (traceroute hops/delays/points of failure),
+                 APNET:4.4.A (how data travel between networks)
+
+  CLEAN-ROOM ORIGINAL WORK. Scenario, persona, hostnames, IP plan, VLAN/SSID
+  values, task wording, and question wording are original to this library and
+  were authored from the public N10-009 objectives and the public AP Networking
+  Course Framework V.1. No third-party lab's wording, scenario, characters,
+  hostnames, addressing, file paths, values, question phrasing, ordering, or
+  screenshots were used. All UI is self-rendered (no captured product images).
+
+  © 2026 {{LICENSE_HOLDER}}. All rights reserved. Replace {{LICENSE_HOLDER}}
+  with your name/organization and your chosen license before distribution.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* "field diagnostics console" identity — amber-on-slate ops terminal */
+    --bg:#0c1116;
+    --panel:#121a22;
+    --panel-2:#0f161d;
+    --edge:#243240;
+    --edge-soft:#1a2530;
+    --ink:#cdd7df;
+    --ink-dim:#8a98a5;
+    --amber:#e9a23b;       /* primary signal */
+    --amber-soft:#7a5a26;
+    --cyan:#5fd0c8;        /* hostnames / links */
+    --green:#74d68a;       /* pass / success */
+    --red:#e57373;         /* fail / error */
+    --term-bg:#070b0f;
+    --term-ink:#d7e2c9;    /* phosphor-ish */
+    --focus:#7fb6ff;
+    --mono:"SFMono-Regular",ui-monospace,"Cascadia Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--cyan)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px clamp(12px,3vw,28px) 60px}
+
+  header.lab-head{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end;
+    border-bottom:1px solid var(--edge);padding-bottom:14px;margin-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--amber);margin:0 0 4px}
+  h1{font-size:clamp(18px,2.6vw,24px);margin:0;font-weight:650;letter-spacing:-.01em}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+    border:1px solid var(--edge);border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .tag b{color:var(--amber);font-weight:600}
+
+  .scenario{background:var(--panel-2);border:1px solid var(--edge-soft);border-left:3px solid var(--amber);
+    border-radius:var(--radius);padding:13px 16px;margin:0 0 18px;color:var(--ink)}
+  .scenario b{color:var(--cyan)}
+  .scenario .role{font-family:var(--mono);font-size:12px;color:var(--ink-dim);
+    text-transform:uppercase;letter-spacing:.14em;display:block;margin-bottom:6px}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:920px){.grid{grid-template-columns:1fr}}
+
+  /* ---- terminal ---- */
+  .console{background:var(--term-bg);border:1px solid var(--edge);border-radius:var(--radius);
+    overflow:hidden;display:flex;flex-direction:column;min-height:420px;position:relative}
+  .console .bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0b1218;
+    border-bottom:1px solid var(--edge);font-family:var(--mono);font-size:12px;color:var(--ink-dim)}
+  .dot{width:10px;height:10px;border-radius:50%;background:#33414c;display:inline-block}
+  .dot.live{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .console .bar .name{color:var(--term-ink)}
+  .console .bar .hint{margin-left:auto;color:var(--amber-soft)}
+  .screen{flex:1;overflow:auto;padding:12px 14px;font-family:var(--mono);font-size:13px;line-height:1.45;
+    color:var(--term-ink);position:relative}
+  .screen .line{white-space:pre-wrap;word-break:break-word}
+  .screen .cmd{color:#fff}
+  .screen .cmd .ps1{color:var(--green)}
+  .screen .ok{color:var(--green)}
+  .screen .err{color:var(--red)}
+  .screen .em{color:var(--amber)}
+  .screen .dim{color:#7f8c79}
+  .screen .host{color:var(--cyan)}
+  .inputrow{display:flex;align-items:center;gap:8px;border-top:1px solid var(--edge);
+    background:#060a0d;padding:9px 12px;font-family:var(--mono);font-size:13px}
+  .inputrow .ps1{color:var(--green);white-space:nowrap}
+  #cmd{flex:1;background:transparent;border:0;outline:none;color:var(--term-ink);
+    font-family:var(--mono);font-size:13px;caret-color:var(--amber)}
+  /* phosphor scanlines — disabled for reduced motion / kept subtle */
+  .screen::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(180deg,rgba(255,255,255,.015) 0 1px,transparent 1px 3px)}
+
+  /* ---- side panels ---- */
+  .side{display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);padding:14px 15px}
+  .card h2{font-size:13px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;
+    color:var(--amber);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .card h2 .meta{margin-left:auto;font-size:11px;color:var(--ink-dim);letter-spacing:0;text-transform:none}
+
+  ul.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  ul.tasks li{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;
+    background:var(--panel-2);border:1px solid var(--edge-soft)}
+  .chk{flex:none;width:20px;height:20px;border-radius:5px;border:1.5px solid var(--edge);
+    display:grid;place-items:center;font-size:13px;color:var(--ink-dim);margin-top:1px}
+  li.done .chk{background:rgba(116,214,138,.14);border-color:var(--green);color:var(--green)}
+  li.done .t-label{color:var(--ink)}
+  .t-label{font-size:13.5px;color:var(--ink-dim)}
+  .t-sub{display:block;font-size:11.5px;color:var(--ink-dim);font-family:var(--mono);margin-top:2px}
+
+  .q{padding:10px 0;border-top:1px dashed var(--edge-soft)}
+  .q:first-of-type{border-top:0;padding-top:2px}
+  .q .qp{font-size:13.5px;margin:0 0 7px}
+  .q .qid{font-family:var(--mono);color:var(--amber);font-size:11px;margin-right:6px}
+  .q input[type=text],.q input[type=number],.q select{width:100%;background:var(--panel-2);
+    border:1px solid var(--edge);border-radius:7px;color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:13px}
+  .opts{display:flex;flex-direction:column;gap:5px}
+  .opts label{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-dim);
+    padding:5px 7px;border:1px solid var(--edge-soft);border-radius:7px;cursor:pointer}
+  .opts label:hover{border-color:var(--edge)}
+  .opts input{margin-top:3px;accent-color:var(--amber)}
+  .qfeed{font-family:var(--mono);font-size:11.5px;margin-top:6px;min-height:1em}
+  .qfeed.good{color:var(--green)} .qfeed.bad{color:var(--red)}
+
+  .check-btn,.btn{font-family:var(--sans);font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;
+    border:1px solid var(--edge);background:var(--panel-2);color:var(--ink);padding:8px 14px}
+  .btn.ghost{background:transparent}
+  .btn:hover,.check-btn:hover{border-color:var(--amber)}
+  .check-btn{margin-top:10px;width:100%}
+
+  /* ---- submission bar ---- */
+  .subbar{margin-top:18px;background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);
+    padding:14px 16px;display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+  .field input{background:var(--panel-2);border:1px solid var(--edge);border-radius:8px;color:var(--ink);
+    padding:9px 11px;font-family:var(--mono);font-size:14px;min-width:200px}
+  .scorebox{font-family:var(--mono);font-size:13px;color:var(--ink-dim)}
+  .scorebox b{color:var(--amber);font-size:16px}
+  .submit{margin-left:auto;background:var(--amber);color:#1a1306;border:1px solid var(--amber);
+    font-weight:700;font-size:14px;padding:11px 20px;border-radius:9px;cursor:pointer}
+  .submit:disabled{opacity:.5;cursor:not-allowed}
+  .status{flex-basis:100%;font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);min-height:1.2em}
+  .status.good{color:var(--green)} .status.bad{color:var(--red)} .status.busy{color:var(--amber)}
+  .status a{color:var(--cyan)}
+
+  .footer{margin-top:22px;font-size:11px;color:var(--ink-dim);font-family:var(--mono);line-height:1.6}
+
+  /* focus + a11y */
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{
+    outline:2px solid var(--focus);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){
+    .screen::after{display:none}
+    *{animation:none !important;transition:none !important}
+  }
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-linux-route-trace", "title": "Lab — Tracing the Path: Linux Route &amp; Name-Resolution Troubleshooting", "version": "1.0.0", "objectives": ["N10-009:5.3", "N10-009:5.5", "APNET:4.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab-head">
+    <div>
+      <p class="eyebrow">Network Diagnostics · Field Lab 14</p>
+      <h1>Tracing the Path — Linux Route &amp; Name-Resolution Troubleshooting</h1>
+    </div>
+    <div class="tags" aria-label="Blueprint coverage">
+      <span class="tag"><b>N10-009</b> 5.5</span>
+      <span class="tag"><b>N10-009</b> 5.3</span>
+      <span class="tag"><b>AP NET</b> 4.4.C</span>
+      <span class="tag"><b>AP NET</b> 4.4.A</span>
+    </div>
+  </header>
+
+  <p class="scenario">
+    <span class="role">Ticket #2287 · on-call technician</span>
+    Staff at <b>Brindle Creek Public Library</b> report the reference-desk Linux workstation
+    <b>refdesk-lx</b> (172.20.6.45) is slow to reach the catalog's cloud sync service, while local
+    look-ups feel fine. Your job: confirm which DNS resolver the workstation is using, trace the path
+    to it, trace the path to the internal catalog database, and decide where the delay actually lives.
+    Work entirely from the console. Type <span style="font-family:var(--mono);color:var(--amber)">help</span> to list available commands.
+  </p>
+
+  <div class="grid">
+    <!-- ============ SIMULATED CONSOLE ============ -->
+    <section class="console" aria-label="Simulated Linux terminal">
+      <div class="bar">
+        <span class="dot live" aria-hidden="true"></span>
+        <span class="name">tech@refdesk-lx</span>
+        <span>— bash — 96×28</span>
+        <span class="hint">ICMP/UDP path tracing enabled</span>
+      </div>
+      <div id="screen" class="screen" role="log" aria-live="polite" aria-label="Terminal output" tabindex="0"></div>
+      <div class="inputrow">
+        <span class="ps1" aria-hidden="true">tech@refdesk-lx:~$</span>
+        <label class="visually-hidden" for="cmd">Command input</label>
+        <input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false"
+               aria-describedby="cmdhelp" placeholder="type a command, then Enter">
+      </div>
+    </section>
+
+    <!-- ============ TASKS + QUESTIONS ============ -->
+    <aside class="side">
+      <div class="card">
+        <h2>Tasks <span class="meta" id="taskmeta">0 / 3</span></h2>
+        <ul class="tasks" id="tasklist"></ul>
+        <p id="cmdhelp" class="t-sub" style="margin-top:10px">
+          Tasks auto-complete as the console reflects the correct result.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Questions <span class="meta" id="qmeta">0 / 6</span></h2>
+        <div id="questions"></div>
+        <button class="check-btn" id="checkBtn" type="button">Check answers</button>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+          <button class="btn ghost" id="clearBtn" type="button">Clear console</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============ SUBMISSION BAR ============ -->
+  <div class="subbar">
+    <div class="field">
+      <label for="handle">Callsign / handle (no real names)</label>
+      <input id="handle" maxlength="40" autocomplete="off" placeholder="e.g. north-quoll-7">
+    </div>
+    <div class="scorebox">Score&nbsp; <b id="scoreNow">0</b> / 9</div>
+    <button class="submit" id="submitBtn" type="button" disabled>Submit completed lab</button>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </div>
+
+  <p class="footer">
+    © 2026 {{LICENSE_HOLDER}} — original clean-room lab. N10-009:5.5/5.3 · APNET:4.4.C/4.4.A.
+    Pseudonymous submission only; do not enter real names, emails, or student IDs.
+  </p>
+</div>
+
+<!-- ====================================================================
+     SCRIPT BLOCK 1 — screenshot capture
+     The library standard inlines html2canvas here. A full ~150KB minified
+     bundle cannot be authored by hand, so this file ships a self-contained
+     native canvas renderer that captures the simulated DOM (terminal text +
+     task/question state + score) with zero dependencies. It will AUTOMATICALLY
+     prefer html2canvas if you paste it where indicated below.
+     -------------------------------------------------------------------- -->
+<script>
+/* OPTIONAL: paste the minified html2canvas source on the next line to enable
+   pixel-perfect full-DOM capture for richer labs. Leaving it absent is fine —
+   the native renderer below handles this terminal lab faithfully.            */
+/* >>> PASTE html2canvas MINIFIED SOURCE HERE <<< */
+</script>
+
+<!-- ====================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, sim, capture, POST
+     -------------------------------------------------------------------- -->
+<script>
+"use strict";
+(function(){
+
+/* ----------------------------- CONFIG ----------------------------- */
+const CONFIG = {
+  assignmentId : "netplus-linux-route-trace",
+  title        : "Tracing the Path: Linux Route & Name-Resolution Troubleshooting",
+  objectives   : ["N10-009:5.3", "N10-009:5.5", "APNET:4.3"],
+  // Same /exec URL across the whole library; per-cohort token.
+  APPS_SCRIPT_URL : "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken : "PASTE_PER_COHORT_TOKEN_HERE",
+  maxScreenshotBytes : 1_400_000   // client-side guard; server enforces its own cap
+};
+
+/* --------------------- SIMULATED ENVIRONMENT ---------------------- */
+/* Original addressing plan for this lab (documentation/private ranges). */
+const ENV = {
+  host:"refdesk-lx", user:"tech", cwd:"~",
+  selfIP:"172.20.6.45", cidr:"172.20.6.0/24", gateway:"172.20.6.1",
+  dns:"198.51.100.53", searchDomain:"brindle.lan",
+  catdb:"172.20.6.30", cloud:"198.51.100.80"
+};
+
+/* Resolver: maps any user-typed target to a canonical kind. */
+function resolveTarget(raw){
+  const t = (raw||"").trim().toLowerCase();
+  if(!t) return {kind:"empty"};
+  const dnsNames = ["198.51.100.53","resolver.tideline-isp.net"];
+  const cloudNames = ["sync.catalog.cloud","198.51.100.80"];
+  const catNames = ["172.20.6.30","cat-db","cat-db.brindle.lan"];
+  const gwNames  = ["172.20.6.1","gw.brindle.lan"];
+  const selfNames= ["172.20.6.45","refdesk-lx","localhost","127.0.0.1"];
+  if(dnsNames.includes(t))   return {kind:"dns",   ip:ENV.dns,   name:"resolver.tideline-isp.net"};
+  if(cloudNames.includes(t)) return {kind:"cloud", ip:ENV.cloud, name:"sync.catalog.cloud"};
+  if(catNames.includes(t))   return {kind:"cat",   ip:ENV.catdb, name:"cat-db.brindle.lan"};
+  if(gwNames.includes(t))    return {kind:"gw",    ip:ENV.gateway,name:"gw.brindle.lan"};
+  if(selfNames.includes(t))  return {kind:"self",  ip:ENV.selfIP,name:"refdesk-lx"};
+  return {kind:"unknown", raw:t};
+}
+
+/* Canonical traceroute outputs (original hostnames/IPs/latencies). */
+function tracerouteLines(target){
+  const r = resolveTarget(target);
+  if(r.kind==="empty") return [["err","traceroute: missing host operand"]];
+  if(r.kind==="unknown") return [["err",`traceroute: ${r.raw}: Name or service not known`]];
+  const head = [["dim",`traceroute to ${r.name} (${r.ip}), 30 hops max, 60 byte packets`]];
+  if(r.kind==="cat"){
+    return head.concat([["line"," 1  <span class='host'>cat-db.brindle.lan</span> (172.20.6.30)  0.402 ms  0.388 ms  0.377 ms"]]);
+  }
+  if(r.kind==="gw"){
+    return head.concat([["line"," 1  <span class='host'>gw.brindle.lan</span> (172.20.6.1)  0.611 ms  0.540 ms  0.522 ms"]]);
+  }
+  if(r.kind==="self"){
+    return head.concat([["line"," 1  <span class='host'>refdesk-lx</span> (172.20.6.45)  0.041 ms  0.030 ms  0.028 ms"]]);
+  }
+  // external path (dns or cloud) — shared first three hops, congested at hop 3
+  const tail = r.kind==="dns"
+    ? " 4  <span class='host'>resolver.tideline-isp.net</span> (198.51.100.53)  142.0 ms  140.4 ms  141.8 ms"
+    : " 4  <span class='host'>sync.catalog.cloud</span> (198.51.100.80)  149.7 ms  151.2 ms  148.3 ms";
+  return head.concat([
+    ["line"," 1  <span class='host'>gw.brindle.lan</span> (172.20.6.1)  0.842 ms  0.611 ms  0.598 ms"],
+    ["line"," 2  100.64.0.1 (100.64.0.1)  8.91 ms  9.20 ms  8.77 ms"],
+    ["em"  ," 3  edge1.tideline-isp.net (198.51.100.1)  141.6 ms  138.9 ms  144.2 ms"],
+    ["line",tail]
+  ]);
+}
+
+/* --------------------------- COMMANDS ----------------------------- */
+const HELP = [
+  ["dim","Available commands in this lab:"],
+  ["line","  help                         show this list"],
+  ["line","  cat /etc/resolv.conf         show the DNS resolver configuration"],
+  ["line","  cat /etc/hosts               show static host entries"],
+  ["line","  ip addr                      show interface addresses"],
+  ["line","  ip route                     show the routing table / default gateway"],
+  ["line","  ping &lt;host&gt;                  send 4 ICMP echo requests"],
+  ["line","  traceroute &lt;host&gt;            trace the path to a host (also: tracepath)"],
+  ["line","  dig &lt;name&gt;                   resolve a name (also: nslookup &lt;name&gt;)"],
+  ["line","  hostname / whoami / pwd / ls  basic system info"],
+  ["line","  clear                        clear the screen"]
+];
+
+function pingLines(target){
+  const r = resolveTarget(target);
+  if(r.kind==="empty") return [["err","ping: usage error: Destination address required"]];
+  if(r.kind==="unknown") return [["err",`ping: ${r.raw}: Name or service not known`]];
+  const ext = (r.kind==="dns"||r.kind==="cloud");
+  const t = ext ? [141,144,139,142] : (r.kind==="cat"||r.kind==="gw") ? [0.41,0.39,0.44,0.40] : [0.05,0.04,0.05,0.04];
+  const out = [["dim",`PING ${r.name} (${r.ip}) 56(84) bytes of data.`]];
+  t.forEach((ms,i)=>out.push(["line",`64 bytes from ${r.ip}: icmp_seq=${i+1} ttl=${ext?54:64} time=${ms} ms`]));
+  const avg = (t.reduce((a,b)=>a+b,0)/t.length).toFixed(2);
+  out.push(["dim",`--- ${r.name} ping statistics ---`]);
+  out.push(["line",`4 packets transmitted, 4 received, 0% packet loss, time 3004ms`]);
+  out.push(["line",`rtt min/avg/max/mdev = ${Math.min(...t)}/${avg}/${Math.max(...t)}/0.7 ms`]);
+  return out;
+}
+
+function digLines(name){
+  const r = resolveTarget(name);
+  if(r.kind==="empty") return [["err","dig: couldn't get address: no name supplied"]];
+  if(r.kind==="unknown") return [
+    ["dim",`; <<>> DiG 9.18.24 <<>> ${r.raw}`],
+    ["dim",";; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 51344"],
+    ["dim",";; QUESTION SECTION:"],
+    ["line",`;${r.raw}.\t\t\tIN\tA`],
+    ["em",  ";; no answer — name does not exist"],
+    ["dim",`;; SERVER: ${ENV.dns}#53(${ENV.dns})`]
+  ];
+  return [
+    ["dim",`; <<>> DiG 9.18.24 <<>> ${r.name}`],
+    ["dim",";; QUESTION SECTION:"],
+    ["line",`;${r.name}.\t\tIN\tA`],
+    ["dim",";; ANSWER SECTION:"],
+    ["line",`<span class='host'>${r.name}.</span>\t300\tIN\tA\t${r.ip}`],
+    ["dim",`;; Query time: ${r.kind==='cat'||r.kind==='gw'?2:138} msec`],
+    ["dim",`;; SERVER: ${ENV.dns}#53(${ENV.dns})`]
+  ];
+}
+function nslookupLines(name){
+  const r = resolveTarget(name);
+  if(r.kind==="unknown") return [
+    ["line",`Server:\t\t${ENV.dns}`],["line",`Address:\t${ENV.dns}#53`],["em",`** server can't find ${r.raw}: NXDOMAIN`]];
+  if(r.kind==="empty") return [["err","nslookup: missing name to resolve"]];
+  return [["line",`Server:\t\t${ENV.dns}`],["line",`Address:\t${ENV.dns}#53`],["line",""],
+          ["line",`Name:\t${r.name}`],["line",`Address: ${r.ip}`]];
+}
+
+const STATE = { ranResolv:false, tracedDns:false, tracedCat:false, lines:[] };
+
+function runCommand(input){
+  const raw = input.trim();
+  pushCmd(raw);
+  if(raw==="") return [];
+  const parts = raw.split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  const argRaw = raw.slice(parts[0].length).trim();   // preserve case for display
+  const arg = parts.slice(1).join(" ");
+
+  switch(cmd){
+    case "help": case "?": return HELP;
+    case "clear": clearScreen(); return null;
+    case "pwd": return [["line","/home/tech"]];
+    case "ls": return [["line","Desktop  diag-notes.txt  resolv-backup"]];
+    case "whoami": return [["line","tech"]];
+    case "hostname": return [["line","refdesk-lx"]];
+    case "cat":{
+      const f = arg.toLowerCase();
+      if(f==="/etc/resolv.conf"){
+        STATE.ranResolv = true;
+        return [
+          ["dim","# Generated by NetworkManager — do not edit by hand"],
+          ["line",`search ${ENV.searchDomain}`],
+          ["ok",  `nameserver ${ENV.dns}`],
+          ["line","options edns0 trust-ad"]
+        ];
+      }
+      if(f==="/etc/hosts") return [
+        ["line","127.0.0.1   localhost"],
+        ["line","127.0.1.1   refdesk-lx"],
+        ["line",`172.20.6.30 cat-db.brindle.lan cat-db`]
+      ];
+      if(!arg) return [["err","cat: missing file operand"]];
+      return [["err",`cat: ${arg}: No such file or directory`]];
+    }
+    case "ip":{
+      const sub = (parts[1]||"").toLowerCase();
+      if(sub==="addr"||sub==="address"||sub==="a") return [
+        ["dim","1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536"],
+        ["line","    inet 127.0.0.1/8 scope host lo"],
+        ["dim","2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 state UP"],
+        ["ok",  `    inet ${ENV.selfIP}/24 brd 172.20.6.255 scope global dynamic eth0`]
+      ];
+      if(sub==="route"||sub==="r") return [
+        ["ok",  `default via ${ENV.gateway} dev eth0 proto dhcp metric 100`],
+        ["line",`${ENV.cidr} dev eth0 proto kernel scope link src ${ENV.selfIP} metric 100`]
+      ];
+      return [["err",`ip: unknown command "${sub||""}" (try: ip addr | ip route)`]];
+    }
+    case "ping": return pingLines(arg);
+    case "traceroute": case "tracepath":{
+      const out = tracerouteLines(arg);
+      const r = resolveTarget(arg);
+      if(r.kind==="dns")  STATE.tracedDns = true;
+      if(r.kind==="cat")  STATE.tracedCat = true;
+      return out;
+    }
+    case "dig": return digLines(arg);
+    case "nslookup": return nslookupLines(arg);
+    case "ifconfig": return [["err","ifconfig: command not found (try: ip addr)"]];
+    case "tracert": return [["err","tracert: command not found — that's the Windows tool; on Linux use: traceroute"]];
+    case "exit": case "logout": return [["dim","(session stays open for this lab)"]];
+    default: return [["err",`${cmd}: command not found`]];
+  }
+}
+
+/* ----------------------- TERMINAL RENDERING ----------------------- */
+const screen = document.getElementById("screen");
+const cmdInput = document.getElementById("cmd");
+
+function esc(s){return String(s).replace(/&(?!#?\w+;)/g,"&amp;");} // keep our intentional spans
+
+function pushCmd(raw){
+  const div=document.createElement("div");
+  div.className="line cmd";
+  div.innerHTML=`<span class='ps1'>tech@refdesk-lx:~$</span> ${escapeText(raw)}`;
+  screen.appendChild(div);
+  STATE.lines.push("$ "+raw);
+}
+function escapeText(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function emit(rows){
+  if(rows===null) return;            // command handled its own output (e.g. clear)
+  rows.forEach(([cls,html])=>{
+    const div=document.createElement("div");
+    div.className="line "+(cls==="line"?"":cls);
+    div.innerHTML=html;              // html already prepared (with intentional spans / escaped where needed)
+    screen.appendChild(div);
+    STATE.lines.push(div.textContent);
+  });
+  screen.scrollTop=screen.scrollHeight;
+}
+function clearScreen(){ screen.innerHTML=""; STATE.lines=[]; }
+
+cmdInput.addEventListener("keydown",e=>{
+  if(e.key!=="Enter") return;
+  const v=cmdInput.value; cmdInput.value="";
+  const out=runCommand(v);
+  emit(out);
+  refreshTasks();
+});
+
+/* ----------------------------- TASKS ----------------------------- */
+const TASKS = [
+  {id:"resolv", label:"Reveal the resolver configuration",
+   sub:"cat /etc/resolv.conf", pass:()=>STATE.ranResolv},
+  {id:"trace-dns", label:"Trace the path to the external DNS server",
+   sub:"traceroute 198.51.100.53", pass:()=>STATE.tracedDns},
+  {id:"trace-cat", label:"Trace the path to the internal catalog server",
+   sub:"traceroute 172.20.6.30", pass:()=>STATE.tracedCat}
+];
+const tasklist=document.getElementById("tasklist");
+TASKS.forEach(t=>{
+  const li=document.createElement("li"); li.id="task-"+t.id;
+  li.innerHTML=`<span class="chk" aria-hidden="true"></span>
+    <span class="t-label">${t.label}<span class="t-sub">${t.sub}</span></span>`;
+  tasklist.appendChild(li);
+});
+function refreshTasks(){
+  let n=0;
+  TASKS.forEach(t=>{
+    const li=document.getElementById("task-"+t.id);
+    const done=t.pass();
+    li.classList.toggle("done",done);
+    li.querySelector(".chk").textContent = done?"✓":"";
+    if(done) n++;
+  });
+  document.getElementById("taskmeta").textContent=`${n} / ${TASKS.length}`;
+  updateScore();
+}
+
+/* --------------------------- QUESTIONS --------------------------- */
+const QUESTIONS = [
+  {id:"q1", type:"text",
+   prompt:"What is the IPv4 address of the resolver configured on refdesk-lx?",
+   answer:"198.51.100.53",
+   norm:v=>v.replace(/\s+/g,"")},
+  {id:"q2", type:"number",
+   prompt:"How many hops does the path to the DNS server take to reach it?",
+   answer:4},
+  {id:"q3", type:"choice",
+   prompt:"At which hop does round-trip time first rise above 80 ms (the congested hop)?",
+   options:["Hop 1 — gw.brindle.lan","Hop 2 — 100.64.0.1","Hop 3 — edge1.tideline-isp.net","Hop 4 — the DNS server"],
+   answer:"Hop 3 — edge1.tideline-isp.net"},
+  {id:"q4", type:"number",
+   prompt:"How many hops does the path to the internal catalog server (172.20.6.30) take?",
+   answer:1},
+  {id:"q5", type:"choice",
+   prompt:"Based on both traces, where does the slowdown live?",
+   options:["The internal LAN segment","The upstream path toward the internet","The workstation's own NIC"],
+   answer:"The upstream path toward the internet"},
+  {id:"q6", type:"choice",
+   prompt:"Which protocol lets traceroute and ping report hop round-trip times and errors?",
+   options:["ARP","TCP","ICMP","DHCP"],
+   answer:"ICMP"}
+];
+const qWrap=document.getElementById("questions");
+QUESTIONS.forEach(q=>{
+  const div=document.createElement("div"); div.className="q"; div.id="q-"+q.id;
+  let control="";
+  if(q.type==="text") control=`<input type="text" id="in-${q.id}" autocomplete="off" aria-label="${q.prompt}">`;
+  else if(q.type==="number") control=`<input type="number" id="in-${q.id}" min="0" aria-label="${q.prompt}">`;
+  else{
+    control=`<div class="opts" role="radiogroup" aria-label="${q.prompt}">`+
+      q.options.map((o,i)=>`<label><input type="radio" name="${q.id}" value="${o.replace(/"/g,'&quot;')}"> <span>${o}</span></label>`).join("")+`</div>`;
+  }
+  div.innerHTML=`<p class="qp"><span class="qid">${q.id.toUpperCase()}</span>${q.prompt}</p>${control}
+    <div class="qfeed" id="fb-${q.id}" aria-live="polite"></div>`;
+  qWrap.appendChild(div);
+});
+
+function readAnswer(q){
+  if(q.type==="choice"){
+    const sel=document.querySelector(`input[name="${q.id}"]:checked`);
+    return sel?sel.value:"";
+  }
+  return (document.getElementById("in-"+q.id).value||"");
+}
+function isCorrect(q){
+  const v=readAnswer(q);
+  if(q.type==="number") return v!=="" && Number(v)===q.answer;
+  if(q.type==="text"){ const n=q.norm?q.norm:(x=>x.trim().toLowerCase());
+    return n(v)===n(q.answer); }
+  return v===q.answer;
+}
+function checkQuestions(){
+  let n=0;
+  QUESTIONS.forEach(q=>{
+    const fb=document.getElementById("fb-"+q.id);
+    const v=readAnswer(q);
+    if(v===""){ fb.textContent="— not answered"; fb.className="qfeed"; return; }
+    if(isCorrect(q)){ fb.textContent="✓ correct"; fb.className="qfeed good"; n++; }
+    else{ fb.textContent="✗ check your console output and try again"; fb.className="qfeed bad"; }
+  });
+  document.getElementById("qmeta").textContent=`${n} / ${QUESTIONS.length}`;
+  updateScore();
+  return n;
+}
+document.getElementById("checkBtn").addEventListener("click",checkQuestions);
+
+/* ---------------------------- SCORING ---------------------------- */
+function tasksPassed(){return TASKS.filter(t=>t.pass()).length;}
+function questionsPassed(){return QUESTIONS.filter(isCorrect).length;}
+function updateScore(){
+  const earned=tasksPassed()+questionsPassed();
+  const total=TASKS.length+QUESTIONS.length;
+  document.getElementById("scoreNow").textContent=earned;
+  document.getElementById("qmeta").textContent=`${questionsPassed()} / ${QUESTIONS.length}`;
+  const ready = earned===total && document.getElementById("handle").value.trim().length>0;
+  document.getElementById("submitBtn").disabled=!ready;
+  return {earned,total};
+}
+document.getElementById("handle").addEventListener("input",updateScore);
+
+/* ----------------------------- RESET ----------------------------- */
+function bootBanner(){
+  emit([
+    ["dim","Brindle Creek PL — diagnostics console (lab build 14)"],
+    ["dim","Linux refdesk-lx 6.8.0  x86_64  ·  type 'help' to begin"],
+    ["line",""]
+  ]);
+}
+document.getElementById("clearBtn").addEventListener("click",()=>{clearScreen();bootBanner();});
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  STATE.ranResolv=STATE.tracedDns=STATE.tracedCat=false; STATE.lines=[];
+  clearScreen(); bootBanner();
+  QUESTIONS.forEach(q=>{
+    const fb=document.getElementById("fb-"+q.id); fb.textContent=""; fb.className="qfeed";
+    if(q.type==="choice"){const c=document.querySelector(`input[name="${q.id}"]:checked`); if(c)c.checked=false;}
+    else document.getElementById("in-"+q.id).value="";
+  });
+  document.getElementById("status").textContent=""; document.getElementById("status").className="status";
+  refreshTasks(); cmdInput.focus();
+});
+
+/* ----------------- SCREENSHOT (native, dependency-free) ----------- */
+async function captureLabPNG(){
+  // Prefer html2canvas if an instructor pasted it into SCRIPT BLOCK 1.
+  if(window.html2canvas){
+    try{
+      const target=document.querySelector(".wrap");
+      const canvas=await window.html2canvas(target,{backgroundColor:"#0c1116",scale:1});
+      return canvas.toDataURL("image/png");
+    }catch(e){ /* fall through to native renderer */ }
+  }
+  // Native renderer: draws a results card + recent console lines.
+  const W=900, lineH=18, recent=STATE.lines.slice(-18);
+  const H=300 + recent.length*lineH;
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const x=c.getContext("2d");
+  x.fillStyle="#0c1116"; x.fillRect(0,0,W,H);
+  x.fillStyle="#e9a23b"; x.font="600 18px monospace";
+  x.fillText("NETWORK+ / AP NETWORKING — LAB SUBMISSION", 24, 34);
+  x.strokeStyle="#243240"; x.beginPath(); x.moveTo(24,46); x.lineTo(W-24,46); x.stroke();
+  x.font="13px monospace"; x.fillStyle="#cdd7df";
+  const handle=document.getElementById("handle").value.trim()||"(none)";
+  const ts=new Date().toISOString();
+  let y=72;
+  const put=(t,col)=>{x.fillStyle=col||"#cdd7df"; x.fillText(t,24,y); y+=20;};
+  put("assignment : "+CONFIG.assignmentId);
+  put("handle     : "+handle,"#5fd0c8");
+  put("client time: "+ts+"  (server time is authoritative)","#8a98a5");
+  put("objectives : "+CONFIG.objectives.join("  "),"#8a98a5");
+  y+=6;
+  put("TASKS","#e9a23b");
+  TASKS.forEach(t=>put(("  "+(t.pass()?"PASS":"open ")+"  "+t.label), t.pass()?"#74d68a":"#8a98a5"));
+  y+=4; put("QUESTIONS","#e9a23b");
+  QUESTIONS.forEach(q=>put(("  "+(isCorrect(q)?"OK ":"--- ")+"  "+q.id.toUpperCase()+"  "+q.prompt.slice(0,58)),
+                            isCorrect(q)?"#74d68a":"#8a98a5"));
+  const s=updateScore(); y+=6;
+  put("SCORE      : "+s.earned+" / "+s.total,"#e9a23b");
+  y+=10; put("RECENT CONSOLE","#e9a23b"); y-=2;
+  x.fillStyle="#070b0f"; x.fillRect(24,y-4,W-48,recent.length*lineH+12);
+  x.font="12px monospace"; x.fillStyle="#d7e2c9";
+  recent.forEach(l=>{ x.fillText(("  "+l).slice(0,118), 28, y+12); y+=lineH; });
+  return c.toDataURL("image/png");
+}
+
+/* ---------------------------- SUBMIT ----------------------------- */
+const statusEl=document.getElementById("status");
+function setStatus(msg,cls){statusEl.innerHTML=msg;statusEl.className="status"+(cls?" "+cls:"");}
+
+document.getElementById("submitBtn").addEventListener("click",async()=>{
+  const handle=document.getElementById("handle").value.trim();
+  if(!handle){setStatus("Enter a callsign first.","bad");return;}
+  checkQuestions(); refreshTasks();
+  const score=updateScore();
+  if(score.earned!==score.total){
+    setStatus("Finish all tasks and questions before submitting.","bad");return;
+  }
+  const btn=document.getElementById("submitBtn"); btn.disabled=true;
+  setStatus("Capturing lab and submitting…","busy");
+
+  let screenshot="";
+  try{ screenshot=await captureLabPNG(); }catch(e){ screenshot=""; }
+  if(screenshot && screenshot.length>CONFIG.maxScreenshotBytes){
+    screenshot="";  // drop oversized image rather than fail; server caps too
+  }
+
+  const payload={
+    assignmentId:CONFIG.assignmentId,
+    handle:handle.slice(0,40),
+    clientTimestamp:new Date().toISOString(),
+    objectives:CONFIG.objectives,
+    tasks:TASKS.map(t=>({id:t.id,label:t.label,passed:t.pass()})),
+    questions:QUESTIONS.map(q=>({id:q.id,prompt:q.prompt,answer:readAnswer(q),correct:isCorrect(q)})),
+    score:score,
+    screenshot:screenshot,
+    submissionToken:CONFIG.submissionToken
+  };
+
+  try{
+    // Simple request: NO custom headers, text/plain body → no CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+    const out=await res.json();
+    if(out && out.success){
+      const link=out.docUrl?` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission doc</a>`:"";
+      setStatus("✓ Submitted. Server recorded your lab."+link,"good");
+    }else{
+      setStatus("Submission rejected: "+((out&&out.error)||"unknown error")+". Tell your instructor.","bad");
+      btn.disabled=false;
+    }
+  }catch(err){
+    // Locked-down fallback: fire-and-forget; cannot read docUrl.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+      setStatus("Submitted (no confirmation available in this browser). Confirm with your instructor.","busy");
+    }catch(e2){
+      setStatus("Network error — could not reach the submission server. Check your connection / URL.","bad");
+      btn.disabled=false;
+    }
+  }
+});
+
+/* ----------------------------- INIT ------------------------------ */
+bootBanner(); refreshTasks(); cmdInput.focus();
+
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-ping-traceroute-gateway.html",title:"Lab \u2014 Tracing a Broken Path: Default-Gateway Triage"}, NEXT={href:"index_netplus-packet-trace.html",title:"Branch Capture \u2014 Display Filters Lab"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

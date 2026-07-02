@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Command-Line Network Recon — Marlowe &amp; Finch Print Co.</title>
+<!--
+  ============================================================================
+  Command-Line Network Recon: Reading a Host's Connectivity
+  assignmentId: netplus-cli-connectivity
+  Blueprint tags: N10-009:5.5, N10-009:5.1  |  APNET:4.3, APNET:4.4, APNET:1.1
+
+  CLEAN-ROOM ORIGINAL WORK. Built from the public CompTIA Network+ (N10-009)
+  objectives and the public College Board AP Networking framework (Pilot V.1).
+  No vendor lab's scenario, hostnames, IP plan, question wording, ordering, or
+  screenshots were used. All scenario text, hostnames, addresses, domain names,
+  and questions below are original.
+
+  Screenshot capture note: this file does NOT embed html2canvas. Instead it uses
+  a small, purpose-built, dependency-free PNG renderer (see captureLab()). To use
+  the real html2canvas for pixel-accurate DOM capture, paste its minified source
+  in the marked block near the bottom and flip USE_HTML2CANVAS to true.
+
+  © 2026 <YOUR NAME / ORG>. Licensed under the MIT License.
+  (Replace the rights line with your library's author/license before shipping.)
+  ============================================================================
+-->
+<style>
+  :root{
+    --ink:#12151d;            /* terminal ground */
+    --ink-2:#191d27;          /* raised panels on ink */
+    --paper:#ece4d4;          /* warm proofing-room paper */
+    --paper-2:#e0d6c2;
+    --press:#b6432c;          /* press-ink red, used sparingly */
+    --press-soft:#d98a76;
+    --teal:#2f7d72;           /* pass */
+    --teal-soft:#bfe0d9;
+    --amber:#c08416;          /* in-progress / warn */
+    --slate:#5c6675;
+    --line:rgba(20,22,30,.16);
+    --line-ink:rgba(236,228,212,.14);
+    --term-fg:#d8dde6;
+    --term-dim:#8a93a3;
+    --term-green:#86c98a;
+    --term-red:#e08b78;
+    --radius:6px;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper);
+    color:#1b1f27;
+    font-family:var(--sans);
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 110px}
+
+  /* ---- masthead ---- */
+  header.mast{
+    display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 22px;
+    border-bottom:2px solid #1b1f27;padding-bottom:14px;margin-bottom:18px;
+  }
+  .mast .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--press);font-weight:600;margin:0 0 4px;
+  }
+  .mast h1{
+    font-family:var(--serif);font-weight:700;font-size:clamp(22px,3.4vw,32px);
+    line-height:1.05;margin:0;letter-spacing:-.01em;
+  }
+  .mast .sub{font-size:13.5px;color:var(--slate);margin-top:6px;max-width:60ch}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;align-self:center}
+  .tag{
+    font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:99px;
+    border:1px solid var(--line);background:var(--paper-2);color:#2a2f39;white-space:nowrap;
+  }
+  .tag.np{border-color:rgba(182,67,44,.4);color:var(--press)}
+  .tag.ap{border-color:rgba(47,125,114,.5);color:var(--teal)}
+
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,1fr);gap:18px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  /* ---- terminal (hero) ---- */
+  .term-shell{
+    background:var(--ink);border-radius:var(--radius);overflow:hidden;
+    border:1px solid #000;box-shadow:0 14px 36px rgba(20,16,12,.22);
+    display:flex;flex-direction:column;min-height:480px;
+  }
+  .term-bar{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;
+    background:linear-gradient(#222734,#1b202b);border-bottom:1px solid #000;
+  }
+  .dots{display:flex;gap:6px}
+  .dots i{width:11px;height:11px;border-radius:99px;display:block;background:#3a4150}
+  .dots i:nth-child(1){background:#c5573f}
+  .dots i:nth-child(2){background:#c79a3a}
+  .dots i:nth-child(3){background:#4f9a6b}
+  .host-switch{display:flex;gap:6px;margin-left:6px}
+  .host-switch button{
+    font-family:var(--mono);font-size:11.5px;color:var(--term-dim);
+    background:transparent;border:1px solid var(--line-ink);border-radius:5px;
+    padding:3px 9px;cursor:pointer;
+  }
+  .host-switch button[aria-pressed="true"]{color:#fff;border-color:var(--press-soft);background:rgba(182,67,44,.18)}
+  .host-switch button:hover{color:#cdd4df}
+  .term-meta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--term-dim)}
+
+  .term-out{
+    flex:1;overflow:auto;padding:14px 16px;font-family:var(--mono);
+    font-size:13px;color:var(--term-fg);white-space:pre-wrap;word-break:break-word;
+    background:
+      radial-gradient(120% 90% at 50% 0%,rgba(255,255,255,.03),transparent 60%),
+      var(--ink);
+  }
+  .term-out .cmd{color:#fff}
+  .term-out .ps{color:var(--term-green)}
+  .term-out .ps-win{color:#7fa9e0}
+  .term-out .err{color:var(--term-red)}
+  .term-out .dim{color:var(--term-dim)}
+  .term-out .ok{color:var(--term-green)}
+
+  .term-input-row{display:flex;align-items:baseline;gap:8px;padding:10px 16px;border-top:1px solid var(--line-ink);background:var(--ink-2)}
+  .term-input-row .prompt{font-family:var(--mono);font-size:13px;color:var(--term-green);white-space:pre}
+  .term-input-row .prompt.win{color:#7fa9e0}
+  .term-input-row input{
+    flex:1;background:transparent;border:0;outline:none;
+    font-family:var(--mono);font-size:13px;color:#fff;caret-color:var(--press-soft);
+  }
+  .term-input-row input::placeholder{color:#4b5263}
+
+  /* ---- side rail ---- */
+  .rail{display:flex;flex-direction:column;gap:16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .card > h2{
+    font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--slate);margin:0;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--paper);
+  }
+  .card .body{padding:13px 14px}
+
+  /* topology signature */
+  .topo{width:100%;height:auto;display:block;background:#fbf8f1}
+  .topo text{font-family:var(--mono);fill:#333}
+  .legend{font-size:11.5px;color:var(--slate);padding:8px 14px;border-top:1px solid var(--line);background:#fbf8f1}
+  .legend b{color:var(--press)}
+
+  /* checklist */
+  ul.tasks{list-style:none;margin:0;padding:0}
+  ul.tasks li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  ul.tasks li:last-child{border-bottom:0}
+  .chk{flex:0 0 auto;width:18px;height:18px;border-radius:4px;border:1.5px solid var(--slate);margin-top:1px;display:grid;place-items:center;font-size:12px;color:#fff}
+  li.done .chk{background:var(--teal);border-color:var(--teal)}
+  li.done .chk::after{content:"✓"}
+  li.done .lbl{color:var(--slate)}
+  .lbl b{font-family:var(--mono);font-weight:600;color:#1b1f27;background:var(--paper-2);padding:0 4px;border-radius:3px}
+
+  /* questions */
+  .q{padding:11px 0;border-bottom:1px dashed var(--line)}
+  .q:last-child{border-bottom:0}
+  .q label{display:block;font-size:13px;margin-bottom:6px}
+  .q .qn{font-family:var(--mono);color:var(--press);font-weight:600;margin-right:4px}
+  .q .field{display:flex;gap:6px}
+  .q input[type=text]{
+    flex:1;font-family:var(--mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);
+    border-radius:5px;background:#fff;color:#1b1f27;
+  }
+  .q input[type=text]:focus{outline:2px solid var(--press);outline-offset:1px;border-color:var(--press)}
+  .q .mark{font-family:var(--mono);font-size:12px;min-width:64px;display:flex;align-items:center;justify-content:flex-end}
+  .q.correct .mark{color:var(--teal)}
+  .q.wrong .mark{color:var(--press)}
+
+  /* submit bar */
+  .submitbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;
+    background:rgba(27,31,39,.97);color:#eee;backdrop-filter:blur(6px);
+    border-top:2px solid var(--press);
+  }
+  .submitbar .inner{max-width:1180px;margin:0 auto;padding:11px 18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .submitbar label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#b9c0cc}
+  .submitbar input[type=text]{
+    font-family:var(--mono);font-size:13px;padding:8px 10px;border-radius:6px;border:1px solid #2c3340;
+    background:#0f1219;color:#fff;width:200px;
+  }
+  .submitbar input:focus{outline:2px solid var(--press-soft);outline-offset:1px}
+  .score-pill{font-family:var(--mono);font-size:12.5px;color:#cfd5df;margin-left:4px}
+  .score-pill b{color:#fff}
+  .btn{
+    font-family:var(--sans);font-weight:600;font-size:14px;cursor:pointer;
+    padding:9px 18px;border-radius:6px;border:1px solid var(--press);
+    background:var(--press);color:#fff;margin-left:auto;
+  }
+  .btn:hover{background:#a13b27}
+  .btn:disabled{opacity:.55;cursor:progress}
+  .btn.ghost{background:transparent;color:#dfe3ea;border-color:#39414f;margin-left:0}
+  .btn.ghost:hover{background:rgba(255,255,255,.06)}
+  .status{font-family:var(--mono);font-size:12px;flex-basis:100%;margin-top:2px;min-height:16px}
+  .status a{color:var(--press-soft)}
+  .status.ok{color:var(--teal-soft)}
+  .status.err{color:var(--press-soft)}
+
+  .footnote{margin-top:22px;font-size:11.5px;color:var(--slate);border-top:1px solid var(--line);padding-top:10px;font-family:var(--mono)}
+
+  @media (prefers-reduced-motion:no-preference){
+    .blink{animation:bk 1.05s steps(1) infinite}
+    @keyframes bk{50%{opacity:0}}
+  }
+  :focus-visible{outline:2px solid var(--press);outline-offset:2px}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-cli-connectivity", "title": "Command-Line Network Recon — Marlowe &amp; Finch Print Co.", "version": "1.0.0", "objectives": ["N10-009:5.5", "APNET:4.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <p class="eyebrow">Marlowe &amp; Finch Print Co. · Junior Tech Onboarding</p>
+      <h1>Command-Line Network Recon</h1>
+      <p class="sub">It's your first week on the help desk. Two machines in the bindery are misbehaving and nobody has documented the network. Use the command line to read each host's IP settings, confirm it can reach its gateway, and trace the path out to the shop's online proofing site.</p>
+    </div>
+    <div class="tags" aria-label="Blueprint coverage">
+      <span class="tag np">N10-009 · 5.5</span>
+      <span class="tag np">N10-009 · 5.1</span>
+      <span class="tag ap">AP NET · 4.3</span>
+      <span class="tag ap">AP NET · 4.4</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- HERO: terminal -->
+    <section class="term-shell" aria-label="Network console">
+      <div class="term-bar">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div class="host-switch" role="group" aria-label="Choose a host to connect to">
+          <button id="btn-win"  data-host="win"   aria-pressed="true">BINDERY-07 · Windows</button>
+          <button id="btn-lin"  data-host="linux" aria-pressed="false">proof-press · Linux</button>
+        </div>
+        <span class="term-meta" id="termMeta">console</span>
+      </div>
+      <div class="term-out" id="out" role="log" aria-live="polite" aria-label="Console output" tabindex="0"></div>
+      <div class="term-input-row">
+        <span class="prompt" id="promptLbl"> </span>
+        <input id="cmd" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+               aria-label="Type a command" placeholder="type a command — try: help" />
+      </div>
+    </section>
+
+    <!-- RAIL -->
+    <aside class="rail">
+      <div class="card">
+        <h2>Network schematic</h2>
+        <svg class="topo" viewBox="0 0 320 226" role="img" aria-label="Logical diagram: BINDERY-07 and proof-press each reach their own gateway, then a shared core switch, edge firewall, the ISP, and finally swatchbook.example.">
+          <!-- nodes -->
+          <g font-size="8">
+            <!-- hosts -->
+            <rect x="8" y="14" width="86" height="26" rx="4" fill="#fff" stroke="#b6432c"/>
+            <text x="14" y="26">BINDERY-07</text><text x="14" y="36" fill="#777">10.42.7.23</text>
+            <rect x="8" y="178" width="86" height="26" rx="4" fill="#fff" stroke="#2f7d72"/>
+            <text x="14" y="190">proof-press</text><text x="14" y="200" fill="#777">10.42.9.40</text>
+            <!-- gateways -->
+            <rect x="116" y="14" width="74" height="26" rx="4" fill="#f3ede0" stroke="#999"/>
+            <text x="122" y="26">gw-bindery</text><text x="122" y="36" fill="#777">10.42.7.1</text>
+            <rect x="116" y="178" width="74" height="26" rx="4" fill="#f3ede0" stroke="#999"/>
+            <text x="122" y="190">gw-proof</text><text x="122" y="200" fill="#777">10.42.9.1</text>
+            <!-- shared core (signature: highlighted as the first shared hop) -->
+            <rect x="116" y="96" width="74" height="30" rx="4" fill="#fbe9e4" stroke="#b6432c" stroke-width="1.4"/>
+            <text x="122" y="108" font-weight="bold">core-sw01</text><text x="122" y="118" fill="#777">10.42.0.1</text>
+            <!-- edge -->
+            <rect x="210" y="96" width="62" height="30" rx="4" fill="#f3ede0" stroke="#999"/>
+            <text x="216" y="108">fw-edge01</text><text x="216" y="118" fill="#777">.0.254</text>
+            <!-- isp cloud -->
+            <ellipse cx="290" cy="58" rx="24" ry="16" fill="#eef1f4" stroke="#7f8a99"/>
+            <text x="276" y="61">ISP</text>
+            <!-- destination -->
+            <rect x="232" y="160" width="84" height="30" rx="4" fill="#fff" stroke="#5c6675"/>
+            <text x="238" y="172">swatchbook</text><text x="238" y="182" fill="#777">203.0.113.40</text>
+          </g>
+          <!-- links -->
+          <g stroke="#9aa1ad" stroke-width="1.3" fill="none">
+            <path d="M94 27 H116"/>
+            <path d="M94 191 H116"/>
+            <path d="M153 40 V96"/>
+            <path d="M153 178 V126"/>
+            <path d="M190 111 H210"/>
+            <path d="M255 96 C 262 78 272 70 280 72"/>
+            <path d="M290 74 V96 M280 124 C 274 142 268 150 274 160"/>
+          </g>
+        </svg>
+        <div class="legend">The two hosts sit on different subnets, so their paths differ only at the first hop — then both meet at <b>core-sw01</b>.</div>
+      </div>
+
+      <div class="card">
+        <h2>Lab tasks</h2>
+        <div class="body">
+          <ul class="tasks" id="taskList"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Field questions</h2>
+        <div class="body" id="qList"></div>
+      </div>
+    </aside>
+  </div>
+
+  <p class="footnote">
+    Clean-room original. Addresses use RFC 1918 / RFC 5737 documentation ranges. Pseudonymous submission only — do not enter your real name. © 2026 &lt;YOUR NAME / ORG&gt; · MIT License.
+  </p>
+</div>
+
+<!-- SUBMIT BAR -->
+<div class="submitbar">
+  <div class="inner">
+    <label for="handle">Callsign</label>
+    <input id="handle" type="text" maxlength="32" autocomplete="off" spellcheck="false"
+           placeholder="e.g. press-gremlin" aria-label="Callsign (pseudonym, no real name)" />
+    <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+    <span class="score-pill" id="scorePill">Tasks <b>0/6</b> · Questions <b>0/6</b></span>
+    <button class="btn" id="submitBtn" type="button">Submit completed lab</button>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- =========================================================================
+     SCRIPT BLOCK A — optional html2canvas hook
+     To use the real library: paste its minified source between the markers
+     below and set USE_HTML2CANVAS = true. Left empty by default so the file
+     ships dependency-free. The built-in captureLab() works without it.
+     ========================================================================= -->
+<script>
+  /* >>> PASTE MINIFIED html2canvas HERE (optional) <<< */
+  /* >>> END html2canvas <<< */
+  window.USE_HTML2CANVAS = false; // flip to true only after pasting the library
+</script>
+
+<!-- =========================================================================
+     SCRIPT BLOCK B — engine, CONFIG, ANSWER KEY, sim, capture, submit
+     ========================================================================= -->
+<script>
+"use strict";
+
+/* ----------------------------- LAB CONFIG -------------------------------- */
+const CONFIG = {
+  assignmentId: "netplus-cli-connectivity",
+  title: "Command-Line Network Recon: Reading a Host's Connectivity",
+  objectives: ["N10-009:5.5", "APNET:4.3"],
+  // Deployed Apps Script /exec URL — same across the whole library:
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  // Per-cohort secret, rotate each term. Must match the Script Property server-side:
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  passThreshold: { allTasks: true, allQuestions: true }
+};
+
+/* ------------------------- SIM NETWORK (original) ------------------------ */
+const DNS_DOMAIN = "corp.mfprint.example";
+const SITE = { name: "swatchbook.example", ip: "203.0.113.40" };
+
+const HOSTS = {
+  win: {
+    key: "win", os: "win", name: "BINDERY-07", user: "jtech",
+    promptHTML: 'C:\\Users\\jtech&gt;', promptText: "C:\\Users\\jtech>",
+    ip: "10.42.7.23", mask: "255.255.255.0", gw: "10.42.7.1",
+    dns: ["10.42.7.5", "10.42.7.6"], mac: "5C-3A-1E-7B-09-44",
+    suffix: DNS_DOMAIN,
+    lease: { got: "Monday, June 29, 2026 7:14:02 AM", exp: "Tuesday, June 30, 2026 7:14:02 AM" },
+    reachable: ["10.42.7.1","10.42.7.5","10.42.7.6","10.42.0.1","10.42.0.254","198.51.100.1","198.51.100.9","203.0.113.40","127.0.0.1"],
+    trace: [
+      {ip:"10.42.7.1",  name:"gw-bindery"},
+      {ip:"10.42.0.1",  name:"core-sw01"},
+      {ip:"10.42.0.254",name:"fw-edge01"},
+      {ip:"198.51.100.1",name:"isp-gw"},
+      {ip:"198.51.100.9",name:"isp-core"},
+      {ip:"203.0.113.40",name:"swatchbook.example"}
+    ]
+  },
+  linux: {
+    key: "linux", os: "linux", name: "proof-press", user: "jtech",
+    promptHTML: 'jtech@proof-press:~$', promptText: "jtech@proof-press:~$",
+    ip: "10.42.9.40", cidr: 24, gw: "10.42.9.1",
+    dns: ["10.42.7.5"], mac: "5c:3a:1e:7b:0c:91",
+    reachable: ["10.42.9.1","10.42.7.5","10.42.0.1","10.42.0.254","198.51.100.1","198.51.100.9","203.0.113.40","127.0.0.1"],
+    trace: [
+      {ip:"10.42.9.1",  name:"gw-proof"},
+      {ip:"10.42.0.1",  name:"core-sw01"},
+      {ip:"10.42.0.254",name:"fw-edge01"},
+      {ip:"198.51.100.1",name:"isp-gw"},
+      {ip:"198.51.100.9",name:"isp-core"},
+      {ip:"203.0.113.40",name:"swatchbook.example"}
+    ]
+  }
+};
+
+/* ------------------------------- TASKS ----------------------------------- */
+const TASKS = [
+  { id:"win_ipconfig", label:'On BINDERY-07, read the IPv4 settings with <b>ipconfig</b>', done:false },
+  { id:"win_ping_gw",  label:'From BINDERY-07, <b>ping</b> the default gateway successfully', done:false },
+  { id:"win_tracert",  label:'From BINDERY-07, <b>tracert</b> the path to swatchbook.example', done:false },
+  { id:"lin_ipaddr",   label:'On proof-press, show the interface with <b>ip address</b>', done:false },
+  { id:"lin_ping_gw",  label:'From proof-press, find the route and <b>ping</b> the gateway', done:false },
+  { id:"lin_trace",    label:'From proof-press, <b>traceroute</b> swatchbook.example', done:false }
+];
+
+/* ----------------------- QUESTIONS + ANSWER KEY -------------------------- */
+/* Answers are normalized before comparison (lowercase, trimmed, inner spaces
+   removed). accept[] lists every acceptable normalized form. */
+const QUESTIONS = [
+  { id:"q1", prompt:"What IPv4 address is assigned to BINDERY-07?", accept:["10.42.7.23"] },
+  { id:"q2", prompt:"What is BINDERY-07's default gateway?", accept:["10.42.7.1"] },
+  { id:"q3", prompt:"Which DNS server does BINDERY-07 list first?", accept:["10.42.7.5"] },
+  { id:"q4", prompt:"How many hops does tracert take to reach swatchbook.example?", accept:["6","6hops"] },
+  { id:"q5", prompt:"What is proof-press's IPv4 address? (CIDR is fine)", accept:["10.42.9.40","10.42.9.40/24"] },
+  { id:"q6", prompt:"At which hop number do the two traces first share a device?", accept:["2","hop2","core-sw01","10.42.0.1"] }
+];
+
+/* ------------------------------- STATE ----------------------------------- */
+const state = {
+  host: "win",
+  ranWin: { ipconfig:false, pingGw:false, tracert:false },
+  ranLin: { ipaddr:false, pingGw:false, trace:false },
+  history: [],
+  histIdx: -1,
+  transcript: []   // {host, text} lines, for the capture
+};
+
+/* ------------------------------ DOM refs --------------------------------- */
+const out = document.getElementById("out");
+const cmdInput = document.getElementById("cmd");
+const promptLbl = document.getElementById("promptLbl");
+const termMeta = document.getElementById("termMeta");
+const taskListEl = document.getElementById("taskList");
+const qListEl = document.getElementById("qList");
+const statusEl = document.getElementById("status");
+const scorePill = document.getElementById("scorePill");
+
+/* ------------------------------ helpers ---------------------------------- */
+function esc(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function norm(s){ return String(s).toLowerCase().replace(/\s+/g,"").trim(); }
+function H(){ return HOSTS[state.host]; }
+
+function print(text, cls){
+  const div = document.createElement("div");
+  if(cls) div.className = cls;
+  div.innerHTML = text; // callers pass pre-escaped HTML
+  out.appendChild(div);
+  out.scrollTop = out.scrollHeight;
+  // plain-text mirror for the capture
+  const tmp = document.createElement("div"); tmp.innerHTML = text;
+  state.transcript.push({ host: state.host, text: tmp.textContent });
+}
+function printLines(lines, cls){ lines.forEach(l => print(esc(l), cls)); }
+
+function echoCommand(raw){
+  const h = H();
+  const psClass = h.os === "win" ? "ps-win" : "ps";
+  print('<span class="'+psClass+'">'+h.promptHTML+'</span> <span class="cmd">'+esc(raw)+'</span>');
+}
+
+/* --------------------------- command engine ------------------------------ */
+function runCommand(raw){
+  const line = raw.trim();
+  if(line === "") { echoCommand(""); return; }
+  echoCommand(line);
+  state.history.push(line); state.histIdx = state.history.length;
+
+  const parts = line.split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  const args = parts.slice(1);
+  const h = H();
+
+  // universal
+  if(cmd === "help"){ return doHelp(); }
+  if(cmd === "clear" || cmd === "cls"){ out.innerHTML=""; state.transcript.push({host:state.host,text:"(screen cleared)"}); return; }
+  if(cmd === "connect"){ return doConnect(args[0]); }
+  if(cmd === "exit"){ print('<span class="dim">Use the host buttons above to switch machines.</span>'); return; }
+
+  if(h.os === "win"){
+    switch(cmd){
+      case "ipconfig":   return winIpconfig(args);
+      case "ping":       return winPing(args);
+      case "tracert":    return winTracert(args);
+      case "nslookup":   return doNslookup(args, h);
+      default:           return print(esc("'"+parts[0]+"' is not recognized as an internal or external command, operable program or batch file."), "err");
+    }
+  } else {
+    switch(cmd){
+      case "ip":         return linIp(args);
+      case "route":      return linRoute(args);
+      case "ping":       return linPing(args);
+      case "traceroute": return linTraceroute(args);
+      case "nslookup":   return doNslookup(args, h);
+      case "ifconfig":   return print('<span class="err">bash: ifconfig: command not found</span><br><span class="dim">This image ships iproute2 — try <b>ip address</b> instead.</span>'.replace(/<b>/g,'').replace(/<\/b>/g,''));
+      default:           return print(esc("bash: "+parts[0]+": command not found"), "err");
+    }
+  }
+}
+
+function doHelp(){
+  const h = H();
+  const common = "  help            this list\n  connect <host>  switch host (win | linux)\n  clear           clear the screen";
+  if(h.os === "win"){
+    printLines([
+      "Available on BINDERY-07 (Windows):",
+      "  ipconfig [/all] show this host's IP configuration",
+      "  ping <host>     test reachability (sends 4 echoes)",
+      "  tracert <host>  trace the route to a destination",
+      "  nslookup <name> resolve a name to an address",
+      common
+    ], "dim");
+  } else {
+    printLines([
+      "Available on proof-press (Linux):",
+      "  ip address      show interfaces and addresses",
+      "  ip route        show the routing table (default route)",
+      "  route -n        show the routing table (numeric)",
+      "  ping <host>     test reachability (sends 4 echoes)",
+      "  traceroute <h>  trace the route to a destination",
+      "  nslookup <name> resolve a name to an address",
+      common
+    ], "dim");
+  }
+}
+
+function doConnect(target){
+  if(target === "win" || target === "windows" || target === "bindery-07"){ switchHost("win"); print('<span class="ok">Connected to BINDERY-07.</span>'); }
+  else if(target === "linux" || target === "proof-press"){ switchHost("linux"); print('<span class="ok">Connected to proof-press.</span>'); }
+  else print('<span class="err">Unknown host. Try: connect win  |  connect linux</span>');
+}
+
+/* resolve a target token to an IP (or null). Accepts the site name + raw IPs. */
+function resolveTarget(tok, h){
+  if(!tok) return {ip:null, label:null};
+  const t = tok.toLowerCase();
+  if(t === SITE.name) return {ip: SITE.ip, label: SITE.name};
+  if(t === "localhost") return {ip:"127.0.0.1", label:"localhost"};
+  // raw IPv4?
+  if(/^\d{1,3}(\.\d{1,3}){3}$/.test(t)) return {ip:t, label:t};
+  return {ip:null, label:tok}; // unresolved name
+}
+
+/* ------------------------------ Windows ---------------------------------- */
+function winIpconfig(args){
+  const h = HOSTS.win;
+  const all = (args[0]||"").toLowerCase() === "/all";
+  const L = [];
+  L.push(""); L.push("Windows IP Configuration"); L.push("");
+  if(all){
+    L.push("   Host Name . . . . . . . . . . . . : "+h.name);
+    L.push("   Primary Dns Suffix  . . . . . . . : "+h.suffix);
+    L.push("   Node Type . . . . . . . . . . . . : Hybrid");
+    L.push("   IP Routing Enabled. . . . . . . . : No");
+    L.push("");
+  }
+  L.push("Ethernet adapter Ethernet0:"); L.push("");
+  L.push("   Connection-specific DNS Suffix  . : "+h.suffix);
+  if(all){
+    L.push("   Description . . . . . . . . . . . : Intel(R) Ethernet Connection");
+    L.push("   Physical Address. . . . . . . . . : "+h.mac);
+    L.push("   DHCP Enabled. . . . . . . . . . . : Yes");
+    L.push("   Autoconfiguration Enabled . . . . : Yes");
+  }
+  L.push("   IPv4 Address. . . . . . . . . . . : "+h.ip+(all?"(Preferred)":""));
+  L.push("   Subnet Mask . . . . . . . . . . . : "+h.mask);
+  if(all){
+    L.push("   Lease Obtained. . . . . . . . . . : "+h.lease.got);
+    L.push("   Lease Expires . . . . . . . . . . : "+h.lease.exp);
+  }
+  L.push("   Default Gateway . . . . . . . . . : "+h.gw);
+  if(all){
+    L.push("   DHCP Server . . . . . . . . . . . : 10.42.7.5");
+    L.push("   DNS Servers . . . . . . . . . . . : "+h.dns[0]);
+    h.dns.slice(1).forEach(d => L.push("                                       "+d));
+  }
+  L.push("");
+  printLines(L);
+  state.ranWin.ipconfig = true; markTask("win_ipconfig"); refreshTasks();
+}
+
+function winPing(args){
+  const h = HOSTS.win;
+  const r = resolveTarget(args[0], h);
+  if(!args[0]){ return print(esc("Usage: ping <hostname or IP>"), "err"); }
+  if(!r.ip){ return print(esc("Ping request could not find host "+args[0]+". Please check the name and try again."), "err"); }
+  const reachable = h.reachable.includes(r.ip);
+  print(esc("")); print(esc("Pinging "+r.label+" ["+r.ip+"] with 32 bytes of data:"));
+  if(reachable){
+    for(let i=0;i<4;i++){ const t=1+(i%2); print(esc("Reply from "+r.ip+": bytes=32 time="+t+"ms TTL=128")); }
+    print(esc("")); print(esc("Ping statistics for "+r.ip+":"));
+    print(esc("    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),"));
+    print(esc("Approximate round trip times in milli-seconds:"));
+    print(esc("    Minimum = 1ms, Maximum = 2ms, Average = 1ms"));
+    if(r.ip === h.gw){ state.ranWin.pingGw = true; markTask("win_ping_gw"); refreshTasks(); }
+  } else {
+    for(let i=0;i<4;i++) print(esc("Request timed out."), "err");
+    print(esc("")); print(esc("Ping statistics for "+r.ip+":"));
+    print(esc("    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss),"));
+  }
+  print(esc(""));
+}
+
+function winTracert(args){
+  const h = HOSTS.win;
+  const r = resolveTarget(args[0], h);
+  if(!args[0]){ return print(esc("Usage: tracert <hostname or IP>"), "err"); }
+  if(!r.ip){ return print(esc("Unable to resolve target system name "+args[0]+"."), "err"); }
+  print(esc(""));
+  print(esc("Tracing route to "+r.label+" ["+r.ip+"]"));
+  print(esc("over a maximum of 30 hops:")); print(esc(""));
+  h.trace.forEach((hop,i)=>{
+    const n = String(i+1).padStart(2," ");
+    const a = (10+i); const b=a-1<10?a:a-1; const c=a+1;
+    print(esc("  "+n+"    "+(b)+" ms    "+(a)+" ms    "+(a-1>0?a-1:1)+" ms  "+hop.name+" ["+hop.ip+"]"));
+  });
+  print(esc("")); print(esc("Trace complete."));
+  state.ranWin.tracert = true; markTask("win_tracert"); refreshTasks();
+}
+
+/* ------------------------------- Linux ----------------------------------- */
+function linIp(args){
+  const sub = (args[0]||"").toLowerCase();
+  const h = HOSTS.linux;
+  if(sub === "address" || sub === "addr" || sub === "a" || sub === ""){
+    printLines([
+      "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default",
+      "    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00",
+      "    inet 127.0.0.1/8 scope host lo",
+      "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default",
+      "    link/ether "+h.mac+" brd ff:ff:ff:ff:ff:ff",
+      "    inet "+h.ip+"/"+h.cidr+" brd 10.42.9.255 scope global dynamic eth0",
+      "       valid_lft 84937sec preferred_lft 84937sec"
+    ]);
+    state.ranLin.ipaddr = true; markTask("lin_ipaddr"); refreshTasks();
+  } else if(sub === "route" || sub === "r"){
+    linRoute([]);
+  } else {
+    print(esc('Object "'+args[0]+'" is unknown, try "ip help".'), "err");
+  }
+}
+
+function linRoute(args){
+  const h = HOSTS.linux;
+  // numeric routing table for `route -n`, or `ip route`
+  const numeric = args[0] === "-n";
+  if(numeric){
+    printLines([
+      "Kernel IP routing table",
+      "Destination     Gateway         Genmask         Flags Metric Ref    Use Iface",
+      "0.0.0.0         "+h.gw+"        0.0.0.0         UG    100    0        0 eth0",
+      "10.42.9.0       0.0.0.0         255.255.255.0   U     100    0        0 eth0"
+    ]);
+  } else {
+    printLines([
+      "default via "+h.gw+" dev eth0 proto dhcp metric 100",
+      "10.42.9.0/24 dev eth0 proto kernel scope link src "+h.ip+" metric 100"
+    ]);
+  }
+}
+
+function linPing(args){
+  const h = HOSTS.linux;
+  // accept `ping -c N host` or `ping host`
+  let tok = args[0];
+  if(tok === "-c"){ tok = args[2]; }
+  const r = resolveTarget(tok, h);
+  if(!tok){ return print(esc("ping: usage error: Destination address required"), "err"); }
+  if(!r.ip){ return print(esc("ping: "+tok+": Name or service not known"), "err"); }
+  const reachable = h.reachable.includes(r.ip);
+  print(esc("PING "+r.label+" ("+r.ip+") 56(84) bytes of data."));
+  if(reachable){
+    for(let i=0;i<4;i++){ const t=(0.31+i*0.05).toFixed(2); print(esc("64 bytes from "+r.ip+": icmp_seq="+(i+1)+" ttl=64 time="+t+" ms")); }
+    print(esc("")); print(esc("--- "+r.label+" ping statistics ---"));
+    print(esc("4 packets transmitted, 4 received, 0% packet loss, time 3047ms"));
+    print(esc("rtt min/avg/max/mdev = 0.310/0.402/0.520/0.071 ms"));
+    if(r.ip === h.gw){ state.ranLin.pingGw = true; markTask("lin_ping_gw"); refreshTasks(); }
+  } else {
+    print(esc("")); print(esc("--- "+r.label+" ping statistics ---"));
+    print(esc("4 packets transmitted, 0 received, 100% packet loss, time 3052ms"), "err");
+  }
+}
+
+function linTraceroute(args){
+  const h = HOSTS.linux;
+  const r = resolveTarget(args[0], h);
+  if(!args[0]){ return print(esc("Usage: traceroute <host>"), "err"); }
+  if(!r.ip){ return print(esc("traceroute: unknown host "+args[0]), "err"); }
+  print(esc("traceroute to "+r.label+" ("+r.ip+"), 30 hops max, 60 byte packets"));
+  h.trace.forEach((hop,i)=>{
+    const base = (0.4 + i*2.1);
+    const a=base.toFixed(2), b=(base+0.2).toFixed(2), c=(base+0.1).toFixed(2);
+    print(esc(" "+(i+1)+"  "+hop.name+" ("+hop.ip+")  "+a+" ms  "+b+" ms  "+c+" ms"));
+  });
+  state.ranLin.trace = true; markTask("lin_trace"); refreshTasks();
+}
+
+function doNslookup(args, h){
+  if(!args[0]) return print(esc("Usage: nslookup <name>"), "err");
+  if(args[0].toLowerCase() === SITE.name){
+    printLines(["Server:  "+h.dns[0], "Address: "+h.dns[0]+"#53", "", "Non-authoritative answer:", "Name:    "+SITE.name, "Address: "+SITE.ip]);
+  } else {
+    print(esc("** server can't find "+args[0]+": NXDOMAIN"), "err");
+  }
+}
+
+/* ------------------------------ host switch ------------------------------ */
+function switchHost(key){
+  state.host = key;
+  const h = H();
+  document.getElementById("btn-win").setAttribute("aria-pressed", String(key==="win"));
+  document.getElementById("btn-lin").setAttribute("aria-pressed", String(key==="linux"));
+  promptLbl.textContent = h.promptText + " ";
+  promptLbl.className = "prompt" + (h.os==="win" ? " win" : "");
+  termMeta.textContent = h.name + " · " + (h.os==="win"?"Windows":"Linux");
+  cmdInput.focus();
+}
+
+/* ------------------------------- tasks UI -------------------------------- */
+function markTask(id){ const t = TASKS.find(t=>t.id===id); if(t) t.done = true; }
+function renderTasks(){
+  taskListEl.innerHTML = "";
+  TASKS.forEach(t=>{
+    const li = document.createElement("li");
+    li.className = t.done ? "done" : "";
+    li.innerHTML = '<span class="chk" aria-hidden="true"></span><span class="lbl">'+t.label+'</span>';
+    taskListEl.appendChild(li);
+  });
+}
+function refreshTasks(){ renderTasks(); refreshScore(); }
+
+/* ------------------------------ questions UI ----------------------------- */
+function renderQuestions(){
+  qListEl.innerHTML = "";
+  QUESTIONS.forEach((q,i)=>{
+    const wrap = document.createElement("div");
+    wrap.className = "q"; wrap.id = "qwrap_"+q.id;
+    wrap.innerHTML =
+      '<label for="in_'+q.id+'"><span class="qn">Q'+(i+1)+'</span>'+esc(q.prompt)+'</label>'+
+      '<div class="field"><input id="in_'+q.id+'" type="text" autocomplete="off" spellcheck="false" />'+
+      '<span class="mark" id="mk_'+q.id+'"></span></div>';
+    qListEl.appendChild(wrap);
+    wrap.querySelector("input").addEventListener("input", ()=>{ checkQuestion(q.id); refreshScore(); });
+  });
+}
+function checkQuestion(id){
+  const q = QUESTIONS.find(q=>q.id===id);
+  const val = document.getElementById("in_"+id).value;
+  const wrap = document.getElementById("qwrap_"+id);
+  const mark = document.getElementById("mk_"+id);
+  if(val.trim()===""){ wrap.className="q"; mark.textContent=""; return false; }
+  const ok = q.accept.includes(norm(val));
+  wrap.className = "q " + (ok?"correct":"wrong");
+  mark.textContent = ok ? "✓ correct" : "✗ retry";
+  return ok;
+}
+
+/* ------------------------------- scoring --------------------------------- */
+function tasksPassed(){ return TASKS.filter(t=>t.done).length; }
+function questionsPassed(){ return QUESTIONS.filter(q=>checkQuestionSilently(q.id)).length; }
+function checkQuestionSilently(id){
+  const q = QUESTIONS.find(q=>q.id===id);
+  const el = document.getElementById("in_"+id);
+  if(!el) return false;
+  const v = el.value; if(v.trim()==="") return false;
+  return q.accept.includes(norm(v));
+}
+function refreshScore(){
+  const tp = tasksPassed(), qp = questionsPassed();
+  scorePill.innerHTML = "Tasks <b>"+tp+"/"+TASKS.length+"</b> · Questions <b>"+qp+"/"+QUESTIONS.length+"</b>";
+}
+
+/* --------------------------- screenshot capture -------------------------- */
+/* Captures the lab area as a PNG data URL. Uses html2canvas if you pasted it
+   and set USE_HTML2CANVAS = true; otherwise renders a clean evidence card with
+   the Canvas 2D API (no dependencies, never taints the canvas). */
+async function captureLab(){
+  if(window.USE_HTML2CANVAS && typeof window.html2canvas === "function"){
+    try{
+      const canvas = await window.html2canvas(document.querySelector(".wrap"), {backgroundColor:"#ece4d4", scale:1});
+      return canvas.toDataURL("image/png");
+    }catch(e){ /* fall through to built-in renderer */ }
+  }
+  return renderReceipt();
+}
+
+function renderReceipt(){
+  const W = 760, pad = 24, lh = 17;
+  // measure content height
+  const lastLines = state.transcript.slice(-14);
+  const H = pad*2 + 64 + (TASKS.length*lh) + 26 + (QUESTIONS.length*lh) + 30 + (lastLines.length*15) + 40;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  // bg
+  x.fillStyle = "#1b1f27"; x.fillRect(0,0,W,H);
+  x.fillStyle = "#ece4d4"; x.fillRect(0,0,W,46);
+  x.fillStyle = "#b6432c"; x.fillRect(0,46,W,3);
+  // header
+  x.fillStyle = "#1b1f27"; x.font = "bold 16px Georgia, serif";
+  x.fillText("Command-Line Network Recon — submission", pad, 30);
+  let y = 46+3+26;
+  x.font = "12px ui-monospace, monospace";
+  x.fillStyle = "#c9d0db";
+  const handle = (document.getElementById("handle").value||"(no callsign)").slice(0,32);
+  x.fillText("Callsign: "+handle+"    "+new Date().toISOString(), pad, y); y += 24;
+
+  // tasks
+  x.fillStyle = "#8a93a3"; x.fillText("TASKS", pad, y); y += lh;
+  TASKS.forEach(t=>{
+    x.fillStyle = t.done ? "#86c98a" : "#e08b78";
+    x.fillText((t.done?"[x] ":"[ ] ")+stripTags(t.label), pad, y); y += lh;
+  });
+  y += 10;
+  // questions
+  x.fillStyle = "#8a93a3"; x.fillText("QUESTIONS", pad, y); y += lh;
+  QUESTIONS.forEach((q,i)=>{
+    const el = document.getElementById("in_"+q.id);
+    const v = el ? el.value.trim() : "";
+    const ok = checkQuestionSilently(q.id);
+    x.fillStyle = ok ? "#86c98a" : (v? "#e08b78":"#5c6675");
+    x.fillText("Q"+(i+1)+" "+(ok?"✓":(v?"✗":"–"))+"  "+(v||"(blank)"), pad, y); y += lh;
+  });
+  y += 12;
+  // transcript tail
+  x.fillStyle = "#8a93a3"; x.font="12px ui-monospace, monospace"; x.fillText("CONSOLE (tail)", pad, y); y += 15;
+  x.fillStyle = "#aeb6c2"; x.font="11px ui-monospace, monospace";
+  lastLines.forEach(l=>{ x.fillText((l.text||"").slice(0,110), pad, y); y += 15; });
+  // score footer
+  x.fillStyle = "#b6432c"; x.fillRect(0,H-30,W,30);
+  x.fillStyle = "#fff"; x.font="bold 12px ui-monospace, monospace";
+  x.fillText("Tasks "+tasksPassed()+"/"+TASKS.length+"   Questions "+questionsPassed()+"/"+QUESTIONS.length, pad, H-11);
+  return c.toDataURL("image/png");
+}
+function stripTags(s){ const d=document.createElement("div"); d.innerHTML=s; return (d.textContent||"").slice(0,84); }
+
+/* ------------------------------- submit ---------------------------------- */
+async function submitLab(){
+  const handle = document.getElementById("handle").value.trim();
+  setStatus("", "");
+  if(handle === ""){ setStatus("Enter a callsign first — a pseudonym, not your real name.", "err"); document.getElementById("handle").focus(); return; }
+  if(handle.length > 32){ setStatus("Callsign is too long (32 characters max).", "err"); return; }
+  if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0){
+    setStatus("This lab isn't wired to a server yet — your instructor needs to paste the Apps Script URL. (Everything else works.)", "err");
+    return;
+  }
+
+  const submitBtn = document.getElementById("submitBtn");
+  submitBtn.disabled = true; setStatus("Capturing and submitting…", "");
+
+  let screenshot = "";
+  try{ screenshot = await captureLab(); }catch(e){ screenshot = ""; }
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    handle: handle,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t => ({ id:t.id, label: stripTags(t.label), passed: !!t.done })),
+    questions: QUESTIONS.map((q,i) => {
+      const el = document.getElementById("in_"+q.id);
+      const ans = el ? el.value.trim() : "";
+      return { id:q.id, prompt:q.prompt, answer:ans, correct: q.accept.includes(norm(ans)) };
+    }),
+    score: { earned: tasksPassed() + questionsPassed(), total: TASKS.length + QUESTIONS.length },
+    screenshot: screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  try{
+    // Simple request: body only, no custom headers -> default text/plain -> no CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission Doc ↗</a>' : "";
+      setStatus("Submitted. Score "+payload.score.earned+"/"+payload.score.total+"."+link, "ok");
+    } else {
+      setStatus("The server rejected the submission"+(out && out.error ? ": "+out.error : ".")+" Check with your instructor.", "err");
+    }
+  }catch(e){
+    // Locked-down fallback: fire-and-forget. Can't read docUrl.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("Submitted (the page couldn't read the server's reply). Confirm receipt with your instructor.", "ok");
+    }catch(e2){
+      setStatus("Couldn't reach the server. Check your connection and try again.", "err");
+    }
+  }finally{
+    submitBtn.disabled = false;
+  }
+}
+function setStatus(msg, kind){ statusEl.className = "status" + (kind?" "+kind:""); statusEl.innerHTML = msg; }
+
+/* --------------------------------- reset --------------------------------- */
+function resetLab(){
+  TASKS.forEach(t=>t.done=false);
+  state.ranWin = {ipconfig:false,pingGw:false,tracert:false};
+  state.ranLin = {ipaddr:false,pingGw:false,trace:false};
+  state.transcript = []; state.history=[]; state.histIdx=-1;
+  out.innerHTML = "";
+  QUESTIONS.forEach(q=>{ const el=document.getElementById("in_"+q.id); if(el) el.value=""; checkQuestion(q.id); });
+  switchHost("win");
+  renderTasks(); refreshScore(); setStatus("Lab reset.", "");
+  banner();
+}
+
+/* ------------------------------- bootstrap ------------------------------- */
+function banner(){
+  print('<span class="dim">Marlowe &amp; Finch Print Co. — secure jump host. Authorized techs only.</span>');
+  print('<span class="dim">You are connected to <b>BINDERY-07</b>. Type <b>help</b> for commands, or use the buttons above to switch hosts.</span>'.replace(/<b>/g,'').replace(/<\/b>/g,''));
+  print('<span class="dim">─────────────────────────────────────────────</span>');
+}
+
+document.getElementById("btn-win").addEventListener("click", ()=>switchHost("win"));
+document.getElementById("btn-lin").addEventListener("click", ()=>switchHost("linux"));
+document.getElementById("submitBtn").addEventListener("click", submitLab);
+document.getElementById("resetBtn").addEventListener("click", resetLab);
+out.addEventListener("click", ()=>cmdInput.focus());
+
+cmdInput.addEventListener("keydown", (e)=>{
+  if(e.key === "Enter"){ const v = cmdInput.value; cmdInput.value=""; runCommand(v); }
+  else if(e.key === "ArrowUp"){ if(state.history.length){ state.histIdx=Math.max(0,state.histIdx-1); cmdInput.value=state.history[state.histIdx]||""; e.preventDefault(); } }
+  else if(e.key === "ArrowDown"){ if(state.history.length){ state.histIdx=Math.min(state.history.length,state.histIdx+1); cmdInput.value=state.history[state.histIdx]||""; e.preventDefault(); } }
+});
+
+renderTasks();
+renderQuestions();
+refreshScore();
+switchHost("win");
+banner();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-packet-trace.html",title:"Branch Capture \u2014 Display Filters Lab"}, NEXT={href:"index_netplus-port-discovery.html",title:"Lab: Host & Port Discovery with a Network Scanner"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

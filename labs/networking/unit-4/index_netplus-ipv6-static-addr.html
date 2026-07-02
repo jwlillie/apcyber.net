@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Saltmarsh Labs · Bring the Tide Pool Online (IPv6 static addressing)</title>
+<!--
+  ============================================================================
+  Saltmarsh Labs — Network+ / AP Networking simulation lab
+  Lab: Bring the Tide Pool Online — manually assign a static IPv6 address
+  assignmentId: netplus-ipv6-static-addr
+  Blueprints: N10-009:1.4  |  APNET:2.2.B, APNET:2.3.C  (touches APNET:2.1.A.4)
+  (Project objectives PDF is N10-007; equivalent there is 1.3 + 1.4. See manifest.)
+
+  © 2026 <AUTHOR / RIGHTSHOLDER NAME>. All rights reserved.
+  Original clean-room work built from the public CompTIA N10-009 objectives and
+  the public College Board AP Networking course framework. Not derived from, and
+  contains no expression copied from, any third-party lab product. Licensed to
+  the purchasing institution for classroom instructional use; redistribution or
+  resale prohibited. Replace this notice with your own license terms.
+
+  All hostnames, the persona, and every address value below are original and use
+  the RFC 3849 IPv6 documentation prefix (2001:db8::/32) so nothing collides with
+  any real or vendor allocation.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Tidewater palette — chosen for a coastal science-center brief */
+    --abyss:#06262b;        /* deepest ink */
+    --tide:#0e7c86;         /* primary teal */
+    --tide-deep:#0a5961;
+    --shoal:#7fd1cf;        /* pale aqua */
+    --sand:#f3ede1;         /* warm paper */
+    --sand-edge:#e4dac6;
+    --coral:#e0623f;        /* single warm action accent */
+    --coral-deep:#c44e2e;
+    --kelp:#2f8f5b;         /* success */
+    --rust:#c0392b;         /* error */
+    --amber:#caa53d;        /* pending */
+    --ink:#10242a;
+    --muted:#5b6f72;
+    --line:#d7cdba;
+    --console-bg:#08171b;
+    --console-fg:#bfeae6;
+    --radius:14px;
+    --focus:#1d9bff;
+    --shadow:0 10px 30px rgba(6,38,43,.14);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 480px at 80% -10%, rgba(127,209,207,.28), transparent 60%),
+      radial-gradient(900px 420px at -10% 110%, rgba(14,124,134,.18), transparent 55%),
+      var(--sand);
+    color:var(--ink);
+    font:16px/1.5 ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 18px 64px}
+  a{color:var(--tide-deep)}
+
+  /* ---------- Masthead ---------- */
+  header.mast{
+    display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;
+    border-bottom:2px solid var(--line);padding-bottom:18px;margin-bottom:22px;
+  }
+  .crest{
+    flex:0 0 auto;width:58px;height:58px;border-radius:16px;
+    background:linear-gradient(150deg,var(--tide),var(--tide-deep));
+    box-shadow:var(--shadow);display:grid;place-items:center;
+  }
+  .crest svg{width:34px;height:34px}
+  .mast h1{
+    margin:0;font-size:clamp(20px,3.4vw,29px);letter-spacing:-.01em;line-height:1.1;
+    font-weight:800;color:var(--abyss);
+  }
+  .mast .eyebrow{
+    font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--tide-deep);
+    margin:0 0 7px;
+  }
+  .mast .sub{margin:6px 0 0;color:var(--muted);max-width:60ch}
+  .tags{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-self:center}
+  .tag{
+    font:600 11px/1 ui-monospace,monospace;letter-spacing:.04em;
+    background:#fff;border:1px solid var(--line);color:var(--tide-deep);
+    padding:6px 9px;border-radius:999px;
+  }
+  .tag.ap{color:var(--coral-deep);border-color:#eccdc3}
+
+  /* ---------- Briefing ---------- */
+  .brief{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;box-shadow:var(--shadow);margin-bottom:22px;
+  }
+  .brief h2{margin:0 0 8px;font-size:15px;letter-spacing:.02em;text-transform:uppercase;color:var(--tide-deep)}
+  .brief p{margin:0 0 10px}
+  .brief .spec{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px;
+  }
+  .spec .cell{background:var(--sand);border:1px solid var(--sand-edge);border-radius:10px;padding:9px 11px}
+  .spec .k{font:600 11px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .spec .v{font:600 15px/1.3 ui-monospace,monospace;color:var(--abyss);margin-top:3px;word-break:break-all}
+
+  /* ---------- Layout grid ---------- */
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .panel{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden;
+  }
+  .panel > .bar{
+    background:#fbf8f1;border-bottom:1px solid var(--line);
+    padding:10px 14px;display:flex;align-items:center;gap:9px;
+  }
+  .panel > .bar .dot{width:10px;height:10px;border-radius:50%;background:var(--shoal)}
+  .panel > .bar h3{margin:0;font-size:13.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--tide-deep)}
+  .panel .body{padding:16px}
+
+  /* ---------- Adapter config (self-drawn "settings" UI) ---------- */
+  .adapter-list{display:flex;flex-direction:column;gap:8px;margin:0 0 14px}
+  .adapter{
+    display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+    border:1px solid var(--line);background:var(--sand);border-radius:10px;
+    padding:10px 12px;cursor:pointer;color:var(--ink);font:inherit;
+  }
+  .adapter:hover{border-color:var(--tide)}
+  .adapter[aria-pressed="true"]{border-color:var(--tide);background:#eaf6f5;box-shadow:0 0 0 2px rgba(14,124,134,.18)}
+  .adapter .ic{width:30px;height:30px;flex:0 0 auto;border-radius:8px;background:#fff;border:1px solid var(--line);display:grid;place-items:center}
+  .adapter .ic svg{width:18px;height:18px}
+  .adapter .name{font-weight:700}
+  .adapter .meta{font:12px/1.2 ui-monospace,monospace;color:var(--muted)}
+  .adapter .state{margin-left:auto;font:600 11px/1 ui-monospace,monospace;color:var(--muted)}
+
+  .props{border:1px dashed var(--line);border-radius:10px;padding:14px;background:#fcfaf4}
+  .props[hidden]{display:none}
+  .props legend{font:600 12px/1 ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--tide-deep);padding:0 6px}
+  fieldset.props{margin:0}
+  .radio-row{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px}
+  .radio-row label{display:flex;gap:9px;align-items:flex-start;cursor:pointer}
+  .radio-row input{margin-top:4px}
+  .field{display:grid;grid-template-columns:128px 1fr;gap:10px;align-items:center;margin:9px 0}
+  @media (max-width:520px){.field{grid-template-columns:1fr}}
+  .field label{font:600 12.5px/1.2 ui-monospace,monospace;color:var(--ink)}
+  .field input[type=text]{
+    font:14px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);width:100%;
+  }
+  .field input:disabled{background:#efeadf;color:var(--muted)}
+  .actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+
+  button.btn{
+    font:700 14px/1 ui-sans-serif,system-ui;border:0;border-radius:10px;
+    padding:11px 16px;cursor:pointer;background:var(--tide);color:#fff;
+  }
+  button.btn:hover{background:var(--tide-deep)}
+  button.btn.coral{background:var(--coral)}
+  button.btn.coral:hover{background:var(--coral-deep)}
+  button.btn.ghost{background:#fff;color:var(--tide-deep);border:1px solid var(--line)}
+  button.btn.ghost:hover{border-color:var(--tide)}
+  button.btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* ---------- Console ---------- */
+  .console{
+    background:var(--console-bg);border-radius:10px;border:1px solid #0d2b30;
+    font:13.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color:var(--console-fg);overflow:hidden;
+  }
+  .console .scroll{padding:12px 14px;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  .console .scroll .err{color:#ff9b86}
+  .console .scroll .ok{color:#86e8c0}
+  .console .scroll .dim{color:#5c8a8e}
+  .console .promptline{display:flex;align-items:center;gap:8px;border-top:1px solid #0d2b30;padding:8px 12px;background:#06141880}
+  .console .ps{color:#7fd1cf;flex:0 0 auto}
+  .console input{
+    flex:1;background:transparent;border:0;outline:none;color:var(--console-fg);
+    font:inherit;
+  }
+
+  /* ---------- Tasks / questions ---------- */
+  .checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .checklist li{
+    display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);
+    border-radius:10px;padding:9px 11px;background:#fff;
+  }
+  .checklist li .box{
+    flex:0 0 auto;width:22px;height:22px;border-radius:6px;border:2px solid var(--line);
+    display:grid;place-items:center;font-weight:800;color:#fff;background:#fff;margin-top:1px;
+  }
+  .checklist li.pass .box{background:var(--kelp);border-color:var(--kelp)}
+  .checklist li.pass{border-color:#bfe3cd;background:#f3fbf6}
+  .checklist li .txt small{display:block;color:var(--muted);font-weight:400;margin-top:2px}
+
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:11px;background:#fff}
+  .q .prompt{font-weight:600;margin-bottom:9px}
+  .q.bonus .prompt::after{content:" · bonus";color:var(--coral-deep);font:600 11px/1 ui-monospace,monospace;letter-spacing:.06em}
+  .q .opts{display:flex;flex-direction:column;gap:6px}
+  .q .opts label{display:flex;gap:9px;align-items:flex-start;cursor:pointer;padding:6px 8px;border:1px solid transparent;border-radius:8px}
+  .q .opts label:hover{background:var(--sand)}
+  .q input[type=text]{
+    font:14px/1.3 ui-monospace,monospace;padding:9px 11px;border:1px solid var(--line);
+    border-radius:9px;width:100%;background:#fff;color:var(--ink);
+  }
+  .q .verdict{margin-top:8px;font:600 12.5px/1.3 ui-monospace,monospace;display:none}
+  .q.correct{border-color:#bfe3cd;background:#f3fbf6}
+  .q.correct .verdict{display:block;color:var(--kelp)}
+  .q.incorrect{border-color:#eccac4}
+  .q.incorrect .verdict{display:block;color:var(--rust)}
+
+  /* ---------- Submission bar ---------- */
+  .submit{
+    margin-top:22px;background:linear-gradient(180deg,#0e7c86,#0a5961);
+    border-radius:var(--radius);box-shadow:var(--shadow);color:#eafaf9;
+    padding:18px 20px;
+  }
+  .submit h3{margin:0 0 4px;font-size:16px;color:#fff}
+  .submit p{margin:0 0 14px;color:#cfeeec;font-size:13.5px}
+  .submit .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .submit .row .grp{display:flex;flex-direction:column;gap:5px}
+  .submit label{font:600 11px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#bfe9e6}
+  .submit input[type=text]{
+    font:15px/1.2 ui-monospace,monospace;padding:11px 13px;border:0;border-radius:10px;min-width:220px;color:var(--ink);
+  }
+  .score-pill{
+    margin-left:auto;background:#06343a;border:1px solid #0c5860;border-radius:999px;
+    padding:9px 14px;font:700 13px/1 ui-monospace,monospace;color:#9fe6e0;align-self:center;
+  }
+  .status{margin-top:12px;font-size:13.5px;min-height:20px}
+  .status.good{color:#b7f5cf}
+  .status.bad{color:#ffc6b6}
+  .status a{color:#dff6ff;font-weight:700}
+
+  /* focus visibility */
+  a:focus-visible,button:focus-visible,input:focus-visible,.adapter:focus-visible{
+    outline:3px solid var(--focus);outline-offset:2px;border-radius:8px;
+  }
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  footer.legal{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.5;border-top:1px solid var(--line);padding-top:14px}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-ipv6-static-addr", "title": "Saltmarsh Labs · Bring the Tide Pool Online (IPv6 static addressing)", "version": "1.0.0", "objectives": ["N10-009:1.8", "APNET:4.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <!-- ===================== MASTHEAD ===================== -->
+  <header class="mast">
+    <div class="crest" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#eafaf9" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 16c2.2 0 2.2-2 4.4-2s2.2 2 4.4 2 2.2-2 4.4-2 2.2 2 4.4 2"/>
+        <path d="M3 11c2.2 0 2.2-2 4.4-2s2.2 2 4.4 2 2.2-2 4.4-2 2.2 2 4.4 2"/>
+        <circle cx="12" cy="5" r="1.4"/>
+      </svg>
+    </div>
+    <div>
+      <p class="eyebrow">Saltmarsh Labs · Network+ / AP Networking</p>
+      <h1>Bring the Tide Pool Online</h1>
+      <p class="sub">Statically assign a global IPv6 address to an exhibit server, then verify it from the command line.</p>
+    </div>
+    <div class="tags" aria-label="Blueprint coverage">
+      <span class="tag">N10-009 · 1.4</span>
+      <span class="tag ap">APNET · 2.2.B</span>
+      <span class="tag ap">APNET · 2.3.C</span>
+    </div>
+  </header>
+
+  <!-- ===================== BRIEFING ===================== -->
+  <section class="brief" aria-labelledby="brief-h">
+    <h2 id="brief-h">Scenario</h2>
+    <p>You volunteer as the network admin for the <strong>Saltmarsh Tide Pool Aquarium</strong>, a small coastal science center. Your regional registry just allocated the aquarium a globally routable IPv6 <strong>/48</strong> block, and you want to start testing IPv6 on the exhibit network. The upstream router is not yet sending Router Advertisements, so Stateless Address Autoconfiguration won't help &mdash; you'll configure the server's address by hand.</p>
+    <p>Carve your <em>first</em> internal subnet out of the /48 by setting the subnet field to <code>0010</code>, giving a /64. Configure the address on the server's <strong>LAN&#8209;Exhibit</strong> adapter, set the gateway to the router's link&#8209;local address, then confirm with <code>ipconfig</code>.</p>
+    <div class="spec" aria-label="Addressing plan you must apply">
+      <div class="cell"><div class="k">Host</div><div class="v">reef-data01</div></div>
+      <div class="cell"><div class="k">/48 allocation</div><div class="v">2001:db8:7a3c::/48</div></div>
+      <div class="cell"><div class="k">Target address</div><div class="v">2001:db8:7a3c:10::a17:5e</div></div>
+      <div class="cell"><div class="k">Prefix length</div><div class="v">64</div></div>
+      <div class="cell"><div class="k">Default gateway</div><div class="v">fe80::1</div></div>
+    </div>
+  </section>
+
+  <!-- ===================== SIMULATION ===================== -->
+  <div class="grid">
+
+    <!-- LEFT: adapter settings + console (this whole column is what gets screenshotted) -->
+    <div id="labArea">
+
+      <section class="panel" aria-labelledby="net-h" style="margin-bottom:20px">
+        <div class="bar"><span class="dot"></span><h3 id="net-h">Network Adapter Settings — reef-data01</h3></div>
+        <div class="body">
+
+          <div class="adapter-list" role="group" aria-label="Network adapters">
+            <button class="adapter" type="button" data-adapter="LAN-Exhibit" aria-pressed="false">
+              <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#0e7c86" stroke-width="1.7"><rect x="3" y="9" width="18" height="9" rx="1.5"/><path d="M7 9V6h10v3M9 18v2M15 18v2"/></svg></span>
+              <span><span class="name">LAN-Exhibit</span><span class="meta">Wired · exhibit VLAN · IPv4 10.40.12.6/24</span></span>
+              <span class="state" data-state-for="LAN-Exhibit">No IPv6</span>
+            </button>
+            <button class="adapter" type="button" data-adapter="Wi-Fi-Staff" aria-pressed="false">
+              <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#0e7c86" stroke-width="1.7" stroke-linecap="round"><path d="M5 12a10 10 0 0 1 14 0M8 15a6 6 0 0 1 8 0"/><circle cx="12" cy="18" r="1.2" fill="#0e7c86" stroke="none"/></svg></span>
+              <span><span class="name">Wi-Fi-Staff</span><span class="meta">Wireless · staff VLAN · DHCP</span></span>
+              <span class="state" data-state-for="Wi-Fi-Staff">Auto</span>
+            </button>
+          </div>
+
+          <fieldset class="props" id="props" hidden>
+            <legend>IPv6 properties — <span id="propsAdapter">—</span></legend>
+
+            <div class="radio-row" role="radiogroup" aria-label="IPv6 assignment method">
+              <label><input type="radio" name="ipmode" value="auto" checked> Obtain an IPv6 address automatically</label>
+              <label><input type="radio" name="ipmode" value="static"> Use the following IPv6 address</label>
+            </div>
+
+            <div class="field">
+              <label for="f-addr">IPv6 address</label>
+              <input id="f-addr" type="text" inputmode="text" autocomplete="off" spellcheck="false"
+                     placeholder="e.g. 2001:db8:7a3c:10::a17:5e" disabled
+                     aria-describedby="addr-help">
+            </div>
+            <div class="field">
+              <label for="f-prefix">Subnet prefix length</label>
+              <input id="f-prefix" type="text" inputmode="numeric" autocomplete="off" spellcheck="false"
+                     placeholder="64" disabled>
+            </div>
+            <div class="field">
+              <label for="f-gw">Default gateway</label>
+              <input id="f-gw" type="text" autocomplete="off" spellcheck="false"
+                     placeholder="fe80::1" disabled>
+            </div>
+            <p id="addr-help" class="sr">Enter the full IPv6 address. Shorthand with :: is accepted.</p>
+
+            <div class="actions">
+              <button class="btn coral" type="button" id="applyBtn">Apply settings</button>
+              <button class="btn ghost" type="button" id="clearBtn">Clear fields</button>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="con-h">
+        <div class="bar"><span class="dot"></span><h3 id="con-h">Command console — reef-data01</h3></div>
+        <div class="body" style="padding:12px">
+          <div class="console">
+            <div class="scroll" id="conScroll" aria-live="polite" role="log"><span class="dim">Saltmarsh OS [Version 11.0.260]
+Type a command, then press Enter.  Try: ipconfig   (also: help, clear)
+</span></div>
+            <div class="promptline">
+              <span class="ps" aria-hidden="true">reef-data01&gt;</span>
+              <label class="sr" for="conInput">Console command</label>
+              <input id="conInput" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="ipconfig">
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: tasks + questions -->
+    <div>
+      <section class="panel" aria-labelledby="task-h" style="margin-bottom:20px">
+        <div class="bar"><span class="dot"></span><h3 id="task-h">Tasks</h3></div>
+        <div class="body">
+          <ul class="checklist" id="taskList">
+            <li data-task="select"><span class="box" aria-hidden="true">✓</span><span class="txt">Open IPv6 properties for <strong>LAN&#8209;Exhibit</strong><small>Select the wired exhibit adapter.</small></span></li>
+            <li data-task="static"><span class="box" aria-hidden="true">✓</span><span class="txt">Switch to <strong>manual</strong> assignment<small>"Use the following IPv6 address."</small></span></li>
+            <li data-task="addr"><span class="box" aria-hidden="true">✓</span><span class="txt">Enter the address <strong>2001:db8:7a3c:10::a17:5e</strong><small>Shorthand with :: is fine.</small></span></li>
+            <li data-task="prefix"><span class="box" aria-hidden="true">✓</span><span class="txt">Set prefix length to <strong>64</strong><small>Standard IPv6 LAN subnet size.</small></span></li>
+            <li data-task="gw"><span class="box" aria-hidden="true">✓</span><span class="txt">Set gateway to <strong>fe80::1</strong><small>The router's link-local address.</small></span></li>
+            <li data-task="apply"><span class="box" aria-hidden="true">✓</span><span class="txt">Apply the settings<small>Commit the configuration.</small></span></li>
+            <li data-task="verify"><span class="box" aria-hidden="true">✓</span><span class="txt">Run <strong>ipconfig</strong> and see the address<small>Verification step.</small></span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="quiz-h">
+        <div class="bar"><span class="dot"></span><h3 id="quiz-h">Check your understanding</h3></div>
+        <div class="body" id="quiz">
+          <div class="q" data-q="q1">
+            <div class="prompt">1. How many bits long is the interface ID in a standard IPv6 unicast subnet like this one?</div>
+            <div class="opts" role="radiogroup" aria-label="Question 1">
+              <label><input type="radio" name="q1" value="a"> 16 bits</label>
+              <label><input type="radio" name="q1" value="b"> 32 bits</label>
+              <label><input type="radio" name="q1" value="c"> 64 bits</label>
+              <label><input type="radio" name="q1" value="d"> 128 bits</label>
+            </div>
+            <div class="verdict"></div>
+          </div>
+
+          <div class="q" data-q="q2">
+            <div class="prompt">2. In <code>2001:db8:7a3c:10::a17:5e</code>, which portion is the subnet (network) prefix?</div>
+            <div class="opts" role="radiogroup" aria-label="Question 2">
+              <label><input type="radio" name="q2" value="a"> The first 64 bits: 2001:db8:7a3c:10</label>
+              <label><input type="radio" name="q2" value="b"> The last 64 bits: ::a17:5e</label>
+              <label><input type="radio" name="q2" value="c"> Only the first 16 bits: 2001</label>
+              <label><input type="radio" name="q2" value="d"> The whole 128-bit address</label>
+            </div>
+            <div class="verdict"></div>
+          </div>
+
+          <div class="q" data-q="q3">
+            <div class="prompt">3. Even with no manual config and no router, the OS still self-assigns one IPv6 address for on-link traffic. Which kind?</div>
+            <div class="opts" role="radiogroup" aria-label="Question 3">
+              <label><input type="radio" name="q3" value="a"> A global unicast address (2000::/3)</label>
+              <label><input type="radio" name="q3" value="b"> A link-local address (fe80::/10)</label>
+              <label><input type="radio" name="q3" value="c"> A loopback address (::1)</label>
+              <label><input type="radio" name="q3" value="d"> A multicast address (ff00::/8)</label>
+            </div>
+            <div class="verdict"></div>
+          </div>
+
+          <div class="q bonus" data-q="q4">
+            <div class="prompt">4. The adapter's MAC is <code>02:1a:2b:3c:4d:5e</code>. Using EUI-64 (insert ff:fe in the middle, flip the 7th bit), what interface ID results?</div>
+            <div class="opts" role="radiogroup" aria-label="Question 4">
+              <label><input type="radio" name="q4" value="a"> 021a:2bff:fe3c:4d5e</label>
+              <label><input type="radio" name="q4" value="b"> 001a:2bff:fe3c:4d5e</label>
+              <label><input type="radio" name="q4" value="c"> 021a:2b3c:4d5e:fffe</label>
+              <label><input type="radio" name="q4" value="d"> 2001:db8:7a3c:10</label>
+            </div>
+            <div class="verdict"></div>
+          </div>
+
+          <div class="actions">
+            <button class="btn" type="button" id="checkBtn">Check answers</button>
+            <button class="btn ghost" type="button" id="resetBtn">Reset lab</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== SUBMISSION ===================== -->
+  <section class="submit" aria-labelledby="sub-h">
+    <h3 id="sub-h">Submit completed lab</h3>
+    <p>Enter a <strong>callsign</strong> (a nickname &mdash; no real names, no email). Your instructor matches callsigns to the roster privately.</p>
+    <div class="row">
+      <div class="grp">
+        <label for="handle">Callsign</label>
+        <input id="handle" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="e.g. reef-runner">
+      </div>
+      <button class="btn coral" type="button" id="submitBtn">Submit completed lab</button>
+      <div class="score-pill" id="scorePill" aria-live="polite">Score 0 / 11</div>
+    </div>
+    <div class="status" id="status" role="status"></div>
+  </section>
+
+  <footer class="legal">
+    © 2026 &lt;AUTHOR / RIGHTSHOLDER NAME&gt; · Saltmarsh Labs. Original clean-room instructional content built from public CompTIA N10-009 and College Board AP Networking blueprints. All addresses use the RFC 3849 documentation range. Not affiliated with or derived from any third-party lab product. Replace with your own license notice.
+  </footer>
+</div>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 1 — html2canvas (OPTIONAL inline)
+     The spec calls for an inlined, dependency-free screenshot library. The full
+     minified html2canvas source (~150 KB) is meant to be pasted between the two
+     markers below by the library maintainer (pin v1.4.1). It is intentionally
+     NOT reproduced here, because pasting a large library from memory risks
+     silent corruption. If the markers stay empty, the lab still works: it falls
+     back to a built-in, dependency-free DOM→PNG capture (captureFallback) that
+     handles this self-contained, inline-styled DOM in modern browsers.
+
+     To inline it: download html2canvas@1.4.1 (dist/html2canvas.min.js) and paste
+     its contents between BEGIN and END so that window.html2canvas is defined.
+     ========================================================================= -->
+<script>/* === HTML2CANVAS:BEGIN ===            (paste html2canvas.min.js here, optional)             === HTML2CANVAS:END === */</script>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, answer key, checking, capture, POST
+     ========================================================================= -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------------------- LAB CONFIG ----------------------------- */
+  var CONFIG = {
+    assignmentId: "netplus-ipv6-static-addr",
+    objectives: ["N10-009:1.8", "APNET:4.4"],
+    // Deployed Apps Script /exec URL — same across the whole library:
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    // Per-cohort secret; rotate each term. Must match the script's Property.
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    target: {
+      adapter: "LAN-Exhibit",
+      address: "2001:db8:7a3c:10::a17:5e",
+      prefix: "64",
+      gateway: "fe80::1",
+      host: "reef-data01",
+      ipv4: "10.40.12.6",
+      ipv4mask: "255.255.255.0",
+      mac: "02-1A-2B-3C-4D-5E"
+    }
+  };
+
+  // Answer key for the questions (inspectable by design — formative work).
+  var KEY = { q1:"c", q2:"a", q3:"b", q4:"b" };
+  var BONUS = { q4:true };
+  var TASK_IDS = ["select","static","addr","prefix","gw","apply","verify"];
+  var TOTAL = TASK_IDS.length + Object.keys(KEY).length; // 7 + 4 = 11
+
+  /* ------------------------- IN-MEMORY STATE ---------------------------- */
+  var state = {
+    adapter:null, ipmode:"auto", addr:"", prefix:"", gw:"",
+    applied:false, ranOK:false,
+    tasks:{select:false,static:false,addr:false,prefix:false,gw:false,apply:false,verify:false},
+    qResult:{q1:null,q2:null,q3:null,q4:null}
+  };
+
+  /* --------------------------- IPv6 helpers ----------------------------- */
+  // Expand to 8 groups of 4 hex digits; return array or null if invalid.
+  function expandV6(s){
+    if(!s) return null;
+    s = String(s).trim().toLowerCase().replace(/\s+/g,"");
+    if(!/^[0-9a-f:]+$/.test(s)) return null;
+    if((s.match(/::/g)||[]).length > 1) return null;
+    var head, tail;
+    if(s.indexOf("::") >= 0){
+      var parts = s.split("::");
+      head = parts[0] ? parts[0].split(":") : [];
+      tail = parts[1] ? parts[1].split(":") : [];
+    } else {
+      head = s.split(":"); tail = [];
+      if(head.length !== 8) return null;
+    }
+    if(head.some(emptyGroup) || tail.some(emptyGroup)) return null;
+    var fill = 8 - head.length - tail.length;
+    if(fill < 0) return null;
+    var mids = []; for(var i=0;i<fill;i++) mids.push("0");
+    var all = head.concat(mids, tail);
+    if(all.length !== 8) return null;
+    for(var j=0;j<8;j++){
+      if(!/^[0-9a-f]{1,4}$/.test(all[j])) return null;
+      all[j] = ("0000"+all[j]).slice(-4);
+    }
+    return all;
+    function emptyGroup(g){ return g===""; }
+  }
+  function v6equal(a,b){
+    var x=expandV6(a), y=expandV6(b);
+    return x && y && x.join(":")===y.join(":");
+  }
+  function v6display(s){ var x=expandV6(s); return x ? x.join(":") : "(invalid)"; }
+
+  /* ------------------------------ DOM refs ------------------------------ */
+  var $ = function(sel,root){return (root||document).querySelector(sel);};
+  var $$ = function(sel,root){return Array.prototype.slice.call((root||document).querySelectorAll(sel));};
+  var props=$("#props"), propsAdapter=$("#propsAdapter");
+  var fAddr=$("#f-addr"), fPrefix=$("#f-prefix"), fGw=$("#f-gw");
+  var conScroll=$("#conScroll"), conInput=$("#conInput");
+  var statusEl=$("#status"), scorePill=$("#scorePill");
+
+  /* --------------------------- adapter select --------------------------- */
+  $$(".adapter").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var name = btn.getAttribute("data-adapter");
+      $$(".adapter").forEach(function(b){ b.setAttribute("aria-pressed", b===btn ? "true":"false"); });
+      state.adapter = name;
+      propsAdapter.textContent = name;
+      props.hidden = false;
+      // reflect any saved per-adapter config (only LAN-Exhibit is editable here)
+      var on = (name === CONFIG.target.adapter);
+      setFormEnabled(state.ipmode==="static");
+      if(name===CONFIG.target.adapter){ state.tasks.select = true; }
+      recompute();
+    });
+  });
+
+  /* --------------------------- ip mode radios --------------------------- */
+  $$('input[name="ipmode"]').forEach(function(r){
+    r.addEventListener("change", function(){
+      state.ipmode = r.value;
+      setFormEnabled(state.ipmode==="static");
+      recompute();
+    });
+  });
+  function setFormEnabled(on){
+    [fAddr,fPrefix,fGw].forEach(function(el){ el.disabled = !on; });
+    if(!on){ /* leave values but greyed */ }
+  }
+
+  /* ------------------------------ inputs -------------------------------- */
+  fAddr.addEventListener("input", function(){ state.addr=fAddr.value; markDirty(); });
+  fPrefix.addEventListener("input", function(){ state.prefix=fPrefix.value.trim(); markDirty(); });
+  fGw.addEventListener("input", function(){ state.gw=fGw.value; markDirty(); });
+  function markDirty(){ state.applied=false; recompute(); }
+
+  $("#clearBtn").addEventListener("click", function(){
+    fAddr.value=fPrefix.value=fGw.value="";
+    state.addr=state.prefix=state.gw=""; state.applied=false; recompute();
+  });
+
+  /* ------------------------------ apply --------------------------------- */
+  $("#applyBtn").addEventListener("click", function(){
+    if(state.ipmode!=="static"){ flash("Choose “Use the following IPv6 address” before applying.", true); return; }
+    var bad=[];
+    if(!expandV6(state.addr)) bad.push("the IPv6 address is not valid");
+    if(!/^\d{1,3}$/.test(state.prefix) || +state.prefix<1 || +state.prefix>128) bad.push("the prefix length must be 1–128");
+    if(state.gw && !expandV6(state.gw)) bad.push("the gateway is not a valid IPv6 address");
+    if(bad.length){ flash("Couldn’t apply: " + bad.join("; ") + ".", true); return; }
+    state.applied = true;
+    // update the adapter status chip
+    var chip = $('[data-state-for="'+state.adapter+'"]');
+    if(chip && state.adapter===CONFIG.target.adapter) chip.textContent = "IPv6 set";
+    flash("Settings applied to " + state.adapter + ".", false);
+    recompute();
+  });
+  function flash(msg, bad){
+    statusEl.textContent = msg;
+    statusEl.className = "status " + (bad ? "bad":"good");
+  }
+
+  /* ------------------------------ console ------------------------------- */
+  conInput.addEventListener("keydown", function(e){
+    if(e.key!=="Enter") return;
+    var raw = conInput.value; conInput.value="";
+    runCommand(raw);
+  });
+  function echo(text, cls){
+    var span=document.createElement("span");
+    if(cls) span.className=cls;
+    span.textContent = text + "\n";
+    conScroll.appendChild(span);
+    conScroll.scrollTop = conScroll.scrollHeight;
+  }
+  function runCommand(raw){
+    var cmd = (raw||"").trim();
+    echo("reef-data01> " + cmd, "dim");
+    if(cmd==="") return;
+    var low = cmd.toLowerCase();
+    if(low==="clear" || low==="cls"){ conScroll.innerHTML=""; return; }
+    if(low==="help"){
+      echo("Commands: ipconfig | ipconfig /all | clear | help"); return;
+    }
+    if(low==="ipconfig" || low==="ipconfig /all"){
+      printIpconfig(low.indexOf("/all")>=0); 
+      state.ranOK = true; recompute(); return;
+    }
+    // realistic shell error — this *is* the learning
+    echo("'" + cmd.split(/\s+/)[0] + "' is not recognized as a command. Try 'help'.", "err");
+  }
+  function printIpconfig(all){
+    var t=CONFIG.target;
+    echo("");
+    echo("Saltmarsh OS IP Configuration");
+    echo("");
+    echo("Ethernet adapter LAN-Exhibit:");
+    if(all){
+      echo("   Description . . . . . . . . . : Saltmarsh GbE Exhibit NIC");
+      echo("   Physical Address. . . . . . . : " + t.mac);
+    }
+    var hasV6 = (state.adapter===t.adapter && state.applied && state.ipmode==="static" && expandV6(state.addr));
+    if(hasV6){
+      var pfx = state.prefix || "64";
+      echo("   IPv6 Address. . . . . . . . . : " + state.addr.trim() + "(Preferred)", "ok");
+      echo("   Subnet Prefix Length. . . . . : " + pfx);
+    } else {
+      echo("   IPv6 Address. . . . . . . . . : (none configured)", "dim");
+    }
+    // a link-local always exists — reinforces Q3
+    echo("   Link-local IPv6 Address . . . : fe80::a812:4b3f:9d10:2c77%6");
+    echo("   IPv4 Address. . . . . . . . . : " + t.ipv4);
+    echo("   Subnet Mask . . . . . . . . . : " + t.ipv4mask);
+    if(hasV6 && state.gw){
+      echo("   Default Gateway . . . . . . . : " + state.gw.trim());
+    } else {
+      echo("   Default Gateway . . . . . . . : ");
+    }
+    echo("");
+  }
+
+  /* ---------------------- recompute tasks + score ----------------------- */
+  function recompute(){
+    var T=state.tasks, t=CONFIG.target;
+    T.select = (state.adapter === t.adapter);
+    T.static = T.select && state.ipmode==="static";
+    T.addr   = T.static && v6equal(state.addr, t.address);
+    T.prefix = T.static && state.prefix === t.prefix;
+    T.gw     = T.static && v6equal(state.gw, t.gateway);
+    T.apply  = state.applied && T.addr && T.prefix && T.gw;
+    T.verify = T.apply && state.ranOK;
+
+    $$("#taskList li").forEach(function(li){
+      var id=li.getAttribute("data-task");
+      li.classList.toggle("pass", !!T[id]);
+    });
+    updateScore();
+  }
+
+  function gradeQuestions(reveal){
+    var earned=0;
+    Object.keys(KEY).forEach(function(q){
+      var picked = (document.querySelector('input[name="'+q+'"]:checked')||{}).value || null;
+      var ok = picked!==null && picked===KEY[q];
+      state.qResult[q] = picked===null ? null : ok;
+      var box = document.querySelector('.q[data-q="'+q+'"]');
+      var verdict = box.querySelector(".verdict");
+      box.classList.remove("correct","incorrect");
+      if(reveal && picked!==null){
+        box.classList.add(ok ? "correct":"incorrect");
+        verdict.textContent = ok ? "Correct." : "Not quite — review and try again.";
+      } else if(reveal && picked===null){
+        verdict.textContent = "";
+      }
+      if(ok) earned++;
+    });
+    return earned;
+  }
+
+  function tasksEarned(){ var n=0; TASK_IDS.forEach(function(id){ if(state.tasks[id]) n++; }); return n; }
+
+  function updateScore(){
+    var earned = tasksEarned() + countQ();
+    scorePill.textContent = "Score " + earned + " / " + TOTAL;
+    return earned;
+  }
+  function countQ(){ var n=0; Object.keys(KEY).forEach(function(q){ if(state.qResult[q]===true) n++; }); return n; }
+
+  $("#checkBtn").addEventListener("click", function(){
+    gradeQuestions(true);
+    updateScore();
+  });
+
+  /* ------------------------------ reset --------------------------------- */
+  $("#resetBtn").addEventListener("click", resetLab);
+  function resetLab(){
+    state = {adapter:null,ipmode:"auto",addr:"",prefix:"",gw:"",applied:false,ranOK:false,
+      tasks:{select:false,static:false,addr:false,prefix:false,gw:false,apply:false,verify:false},
+      qResult:{q1:null,q2:null,q3:null,q4:null}};
+    $$(".adapter").forEach(function(b){ b.setAttribute("aria-pressed","false"); });
+    $('[data-state-for="LAN-Exhibit"]').textContent="No IPv6";
+    props.hidden=true; propsAdapter.textContent="—";
+    fAddr.value=fPrefix.value=fGw.value=""; setFormEnabled(false);
+    var autoR=document.querySelector('input[name="ipmode"][value="auto"]'); if(autoR) autoR.checked=true;
+    $$('.q').forEach(function(q){ q.classList.remove("correct","incorrect"); q.querySelector(".verdict").textContent=""; });
+    $$('#quiz input[type=radio]').forEach(function(r){ r.checked=false; });
+    conScroll.innerHTML='<span class="dim">Saltmarsh OS [Version 11.0.260]\nType a command, then press Enter.  Try: ipconfig   (also: help, clear)\n</span>';
+    statusEl.textContent=""; statusEl.className="status";
+    recompute();
+  }
+
+  /* --------------------- screenshot (with fallback) --------------------- */
+  function capture(node){
+    if(typeof window.html2canvas === "function"){
+      return window.html2canvas(node, {backgroundColor:"#f3ede1", scale:1, logging:false})
+        .then(function(c){ return c.toDataURL("image/png"); });
+    }
+    return captureFallback(node);
+  }
+  // Dependency-free DOM→PNG for this self-contained, inline-friendly DOM.
+  function captureFallback(node){
+    return new Promise(function(resolve, reject){
+      try{
+        var rect = node.getBoundingClientRect();
+        var w = Math.max(1, Math.ceil(rect.width));
+        var h = Math.max(1, Math.ceil(rect.height));
+        var clone = node.cloneNode(true);
+        // strip inputs' live focus and copy current values as attributes
+        $$("input", clone).forEach(function(inp, i){
+          var orig = $$("input", node)[i];
+          if(orig){ if(orig.type==="text"){ inp.setAttribute("value", orig.value); } }
+        });
+        var xml = new XMLSerializer().serializeToString(clone);
+        var svg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+          '<foreignObject width="100%" height="100%">'+
+          '<div xmlns="http://www.w3.org/1999/xhtml" style="background:#f3ede1;width:'+w+'px">'+
+          xml + '</div></foreignObject></svg>';
+        var img = new Image();
+        var url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+        img.onload = function(){
+          var cv = document.createElement("canvas");
+          cv.width=w; cv.height=h;
+          var ctx=cv.getContext("2d");
+          ctx.fillStyle="#f3ede1"; ctx.fillRect(0,0,w,h);
+          ctx.drawImage(img,0,0);
+          try{ resolve(cv.toDataURL("image/png")); }
+          catch(e){ resolve(""); } // tainted canvas → submit without screenshot
+        };
+        img.onerror = function(){ resolve(""); };
+        img.src = url;
+      }catch(e){ resolve(""); }
+    });
+  }
+
+  /* ------------------------------ submit -------------------------------- */
+  $("#submitBtn").addEventListener("click", function(){
+    var btn=this;
+    var handle = ($("#handle").value||"").trim();
+    if(!handle){ flash("Enter a callsign first (a nickname — not your real name).", true); $("#handle").focus(); return; }
+    if(handle.length>40){ flash("Callsign is too long (40 characters max).", true); return; }
+
+    gradeQuestions(true);
+    recompute();
+
+    if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      flash("This lab isn’t wired to a submission endpoint yet. Ask your instructor to set APPS_SCRIPT_URL.", true);
+      return;
+    }
+
+    btn.disabled=true; flash("Capturing your work and submitting…", false);
+
+    capture($("#labArea")).then(function(png){
+      var tasks = $$("#taskList li").map(function(li){
+        var id=li.getAttribute("data-task");
+        return { id:id, label:li.querySelector("strong")?li.querySelector("strong").textContent:id, passed:!!state.tasks[id] };
+      });
+      var questions = Object.keys(KEY).map(function(q){
+        var picked=(document.querySelector('input[name="'+q+'"]:checked')||{}).value || "";
+        return { id:q, prompt:document.querySelector('.q[data-q="'+q+'"] .prompt').textContent.trim(),
+                 answer:picked, correct: state.qResult[q]===true, bonus:!!BONUS[q] };
+      });
+      var earned = tasksEarned() + countQ();
+      var payload = {
+        assignmentId: CONFIG.assignmentId,
+        handle: handle,                       // pseudonym only
+        clientTimestamp: new Date().toISOString(),
+        objectives: CONFIG.objectives,
+        tasks: tasks,
+        questions: questions,
+        score: { earned: earned, total: TOTAL },
+        screenshot: png || "",
+        submissionToken: CONFIG.submissionToken
+      };
+
+      // Simple request (no custom headers, text/plain body) → no CORS preflight.
+      fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) })
+        .then(function(res){ return res.json(); })
+        .then(function(out){
+          btn.disabled=false;
+          if(out && out.success){
+            statusEl.className="status good";
+            statusEl.innerHTML = "Submitted as “"+escapeHtml(handle)+"”. " +
+              (out.docUrl ? ('Your record: <a href="'+out.docUrl+'" target="_blank" rel="noopener">open the Doc</a>.') : "");
+          } else {
+            statusEl.className="status bad";
+            statusEl.textContent = "The server rejected the submission" + (out&&out.error?(": "+out.error):".") + " Check with your instructor.";
+          }
+        })
+        .catch(function(){
+          // Locked-down context: fire-and-forget, can't read response.
+          fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) })
+            .then(function(){
+              btn.disabled=false;
+              statusEl.className="status good";
+              statusEl.textContent = "Submitted (could not read the confirmation in this browser). Confirm with your instructor that it arrived.";
+            })
+            .catch(function(){
+              btn.disabled=false;
+              statusEl.className="status bad";
+              statusEl.textContent = "Couldn’t reach the submission server. Check your connection and try again.";
+            });
+        });
+    });
+  });
+
+  function escapeHtml(s){ return s.replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+
+  // init
+  recompute();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-packet-anatomy.html",title:"Trace Lab \u2014 Anatomy of a Frame"}, NEXT={href:"index_netplus-syslog-forwarding.html",title:"Centralize the Logs \u2014 Brightwater Outfitters Network Lab"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.4";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

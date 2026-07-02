@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Standard ACL Lab — Deny Specific Sources, Permit the Rest</title>
+<!--
+  ============================================================================
+  KELP Coastal Radio — Border Router Filtering Lab
+  Library: Network+ (N10-009) / AP Networking pilot — simulation lab library
+  assignmentId: netplus-std-acl-deny-hosts
+  Blueprint tags: N10-009:4.3 (provisional — see note) | APNET:3.5
+  ----------------------------------------------------------------------------
+  CLEAN-ROOM ORIGINAL. Scenario, persona, hostnames, IP plan, ACL number,
+  interface choice, task wording, and questions are this library's own
+  expression. The procedure taught (a standard IPv4 ACL that denies specific
+  source hosts and permits all other traffic, applied inbound on an interface)
+  is factual networking content.
+
+  © 2026 <LIBRARY AUTHOR / RIGHTS HOLDER>. Original code released under the MIT
+  License. Lab scenario and instructional expression © 2026 the author; all
+  rights reserved except as licensed to your institution.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Console (hero) */
+    --ink:        #0c1a2b;   /* deep ink-blue console body            */
+    --ink-2:      #0f2236;   /* console panel / raised surfaces       */
+    --ink-line:   #1d3a55;   /* hairline rules inside console         */
+    --amber:      #ffb454;   /* live prompt / active signal           */
+    --teal:       #3ddc97;   /* pass / success                        */
+    --rose:       #ff7a85;   /* error / fail                          */
+    --slate-txt:  #cfe0f0;   /* console foreground text               */
+    --slate-dim:  #7d97b3;   /* console muted text                    */
+    /* Mission panel (quiet, paper-toned) */
+    --paper:      #f5f3ee;
+    --paper-2:    #eae5db;
+    --paper-line: #d8d0c2;
+    --ink-text:   #1c2733;
+    --ink-soft:   #5b6878;
+    --focus:      #2f6df0;
+    --radius:     10px;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--sans);
+    color:var(--ink-text);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #14304c 0%, transparent 60%),
+      #08121e;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:22px 18px 40px; }
+
+  header.masthead{
+    display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+    padding:6px 4px 16px; color:var(--slate-txt);
+  }
+  .masthead .call{
+    font-family:var(--mono); font-size:12px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--amber);
+    border:1px solid var(--ink-line); border-radius:999px;
+    padding:4px 10px;
+  }
+  .masthead h1{
+    font-size:20px; margin:0; font-weight:650; letter-spacing:-.01em;
+    color:#eaf2fb;
+  }
+  .masthead .sub{ color:var(--slate-dim); font-size:13px; }
+
+  .grid{
+    display:grid; gap:18px;
+    grid-template-columns: 1.25fr .95fr;
+    align-items:start;
+  }
+  @media (max-width:880px){ .grid{ grid-template-columns:1fr; } }
+
+  /* ---------------- Console (hero) ---------------- */
+  .console{
+    background:linear-gradient(180deg, var(--ink-2), var(--ink));
+    border:1px solid var(--ink-line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:0 14px 40px rgba(0,0,0,.45);
+  }
+  .console .bar{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 12px; border-bottom:1px solid var(--ink-line);
+    background:rgba(255,255,255,.02);
+  }
+  .console .bar .dot{ width:9px; height:9px; border-radius:50%; background:#27425f; }
+  .console .bar .name{
+    font-family:var(--mono); font-size:12px; color:var(--slate-dim);
+    letter-spacing:.06em; margin-left:4px;
+  }
+  .console .bar .mode{
+    margin-left:auto; font-family:var(--mono); font-size:11px;
+    color:var(--amber); border:1px solid var(--ink-line);
+    padding:2px 8px; border-radius:6px;
+  }
+  #screen{
+    font-family:var(--mono); font-size:13.5px; line-height:1.5;
+    color:var(--slate-txt);
+    padding:14px 14px 6px;
+    height:420px; overflow-y:auto;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  #screen .echo{ color:#eaf2fb; }
+  #screen .sys{ color:var(--slate-dim); }
+  #screen .ok{ color:var(--teal); }
+  #screen .err{ color:var(--rose); }
+  #screen .amber{ color:var(--amber); }
+
+  .cmdline{
+    display:flex; align-items:center; gap:8px;
+    border-top:1px solid var(--ink-line);
+    padding:10px 12px; background:rgba(255,255,255,.015);
+  }
+  .cmdline .ps{ font-family:var(--mono); font-size:13.5px; color:var(--amber); white-space:pre; }
+  #cmd{
+    flex:1; background:transparent; border:0; outline:none;
+    font-family:var(--mono); font-size:13.5px; color:#eaf2fb;
+    caret-color:var(--amber); padding:4px 2px;
+  }
+  #cmd::placeholder{ color:#3c5a78; }
+  .cmdline:focus-within{ box-shadow:inset 0 0 0 1px var(--focus); border-radius:0 0 var(--radius) var(--radius); }
+
+  .console .hintrow{
+    display:flex; gap:8px; flex-wrap:wrap; padding:10px 12px 14px;
+    border-top:1px solid var(--ink-line);
+  }
+  .chip{
+    font-family:var(--mono); font-size:11.5px; color:var(--slate-dim);
+    background:rgba(255,255,255,.03); border:1px solid var(--ink-line);
+    border-radius:6px; padding:4px 8px; cursor:pointer;
+  }
+  .chip:hover, .chip:focus-visible{ color:var(--amber); border-color:#2c5176; outline:none; }
+
+  /* ---------------- Mission panel ---------------- */
+  .panel{
+    background:var(--paper);
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .panel section{ padding:16px 16px; border-bottom:1px solid var(--paper-line); }
+  .panel section:last-child{ border-bottom:0; }
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--ink-soft); margin:0 0 8px;
+  }
+  .panel h2{ font-size:15px; margin:0 0 8px; letter-spacing:-.01em; }
+  .panel p{ font-size:13.5px; line-height:1.55; color:#33414f; margin:0 0 8px; }
+  .panel .tag{
+    display:inline-block; font-family:var(--mono); font-size:11px;
+    background:var(--paper-2); border:1px solid var(--paper-line);
+    border-radius:6px; padding:2px 7px; margin:2px 4px 2px 0; color:#3a4a5a;
+  }
+  code.k{ font-family:var(--mono); background:#e6efff; color:#173a7a;
+          padding:1px 5px; border-radius:4px; font-size:12.5px; }
+
+  ul.tasks{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  ul.tasks li{
+    display:flex; gap:10px; align-items:flex-start;
+    font-size:13.5px; line-height:1.45;
+    padding:9px 10px; border:1px solid var(--paper-line);
+    border-radius:8px; background:#fbfaf7;
+  }
+  ul.tasks li .box{
+    flex:0 0 auto; width:20px; height:20px; border-radius:5px;
+    border:1.5px solid #b9c0c9; display:grid; place-items:center;
+    font-family:var(--mono); font-size:12px; color:transparent; margin-top:1px;
+  }
+  ul.tasks li.done{ border-color:#bfe8d3; background:#f1fbf6; }
+  ul.tasks li.done .box{ border-color:var(--teal); background:var(--teal); color:#06351f; }
+
+  .q{ display:grid; gap:6px; margin:0 0 14px; }
+  .q .prompt{ font-size:13.5px; line-height:1.45; }
+  .q .opts{ display:grid; gap:5px; }
+  .q label{
+    display:flex; gap:9px; align-items:flex-start; font-size:13px;
+    padding:7px 9px; border:1px solid var(--paper-line); border-radius:7px;
+    background:#fbfaf7; cursor:pointer;
+  }
+  .q label:focus-within{ outline:2px solid var(--focus); outline-offset:1px; }
+  .q input[type=radio]{ margin-top:2px; }
+  .q.correct label.sel{ border-color:var(--teal); background:#f1fbf6; }
+  .q.wrong   label.sel{ border-color:var(--rose); background:#fdf0f1; }
+  .q .verdict{ font-family:var(--mono); font-size:11.5px; min-height:14px; }
+  .q.correct .verdict{ color:#138a5b; }
+  .q.wrong   .verdict{ color:#c23b48; }
+
+  /* ---------------- Submit bar ---------------- */
+  .submit{ background:#fbfaf7; }
+  .field{ display:grid; gap:5px; margin:0 0 12px; }
+  .field label{ font-size:12.5px; color:var(--ink-soft); font-weight:600; }
+  .field input{
+    font-family:var(--mono); font-size:14px; padding:10px 12px;
+    border:1px solid #c7cdd6; border-radius:8px; background:#fff;
+  }
+  .field input:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+  .field .help{ font-size:11.5px; color:var(--ink-soft); }
+
+  .scoreline{
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:var(--mono); font-size:12.5px; color:#33414f;
+    margin:0 0 12px;
+  }
+  .scoreline b{ color:#0e2a52; }
+
+  .btnrow{ display:flex; gap:10px; flex-wrap:wrap; }
+  button{
+    font-family:var(--sans); font-size:13.5px; font-weight:600;
+    border-radius:8px; padding:10px 16px; cursor:pointer; border:1px solid transparent;
+  }
+  button:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+  .btn-primary{ background:#11385f; color:#eaf2fb; }
+  .btn-primary:hover{ background:#0d2c4b; }
+  .btn-primary:disabled{ background:#9fb2c6; cursor:not-allowed; }
+  .btn-ghost{ background:transparent; color:#33414f; border-color:#c7cdd6; }
+  .btn-ghost:hover{ background:#efeada; }
+
+  .status{ margin-top:12px; font-size:13px; line-height:1.5; min-height:18px; }
+  .status a{ color:var(--focus); }
+  .status.ok{ color:#138a5b; }
+  .status.err{ color:#c23b48; }
+  .status.work{ color:var(--ink-soft); }
+
+  .legalbar{ color:var(--slate-dim); font-size:11px; font-family:var(--mono);
+             text-align:center; padding:18px 6px 4px; }
+
+  @media (prefers-reduced-motion: no-preference){
+    .cursor{ animation:blink 1.05s steps(1) infinite; }
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+            overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-std-acl-deny-hosts", "title": "Standard ACL Deny Specific Sources, Permit the Rest", "version": "1.0.0", "objectives": ["N10-009:4.3", "APNET:3.5"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="call">KELP&nbsp;Coastal&nbsp;Radio · NOC</span>
+    <h1>Border Router Filtering — Standard ACL</h1>
+    <span class="sub">Lab&nbsp;netplus-std-acl-deny-hosts</span>
+  </header>
+
+  <div class="grid">
+
+    <!-- ===================== CONSOLE (hero) ===================== -->
+    <div class="console" id="labArea">
+      <div class="bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="name">console 0 — KELP-BORDER</span>
+        <span class="mode" id="modeTag">USER EXEC</span>
+      </div>
+
+      <div id="screen" role="log" aria-live="polite" aria-label="Router console output"></div>
+
+      <form class="cmdline" id="cmdform" autocomplete="off">
+        <span class="ps" id="ps">KELP-BORDER&gt;</span>
+        <input id="cmd" name="cmd" type="text" spellcheck="false"
+               aria-label="Type a router command" placeholder="type a command, then Enter">
+      </form>
+
+      <div class="hintrow" aria-label="Quick reference (click to insert)">
+        <button type="button" class="chip" data-cmd="enable">enable</button>
+        <button type="button" class="chip" data-cmd="configure terminal">configure terminal</button>
+        <button type="button" class="chip" data-cmd="access-list 40 deny host 203.0.113.58">access-list 40 deny host …</button>
+        <button type="button" class="chip" data-cmd="access-list 40 permit any">access-list 40 permit any</button>
+        <button type="button" class="chip" data-cmd="interface gigabitethernet0/1">interface gi0/1</button>
+        <button type="button" class="chip" data-cmd="ip access-group 40 in">ip access-group 40 in</button>
+        <button type="button" class="chip" data-cmd="show access-lists">show access-lists</button>
+        <button type="button" class="chip" data-cmd="?">?</button>
+      </div>
+    </div>
+
+    <!-- ===================== MISSION PANEL ===================== -->
+    <div class="panel">
+
+      <section>
+        <p class="eyebrow">Scenario</p>
+        <p>KELP Coastal Radio streams from a single edge router,
+           <code class="k">KELP-BORDER</code>. Since Saturday, three internet hosts
+           have been hammering the public stream with junk requests. Until your
+           upstream provider sets up scrubbing, block those three sources at the
+           border and let every other host keep listening.</p>
+        <p style="margin-bottom:2px;"><b>Block these sources:</b></p>
+        <p style="margin:0 0 8px;">
+          <code class="k">203.0.113.58</code> ·
+          <code class="k">198.51.100.244</code> ·
+          <code class="k">192.0.2.17</code>
+        </p>
+        <p>Use <b>standard ACL 40</b>, permit all other traffic, and apply it
+           <b>inbound</b> on the WAN interface
+           <code class="k">GigabitEthernet0/1</code>. This is temporary — no need
+           to save the config.</p>
+        <span class="tag">N10-009:4.3 (provisional)</span>
+        <span class="tag">APNET:3.5</span>
+      </section>
+
+      <section>
+        <p class="eyebrow">Tasks — auto-checked</p>
+        <ul class="tasks" id="taskList" aria-live="polite"></ul>
+      </section>
+
+      <section>
+        <p class="eyebrow">Check your understanding</p>
+        <div id="questions"></div>
+      </section>
+
+      <section class="submit">
+        <div class="field">
+          <label for="handle">Callsign (your pseudonym — no real names or emails)</label>
+          <input id="handle" type="text" maxlength="40" inputmode="text"
+                 placeholder="e.g. TIDEPOOL-7" aria-describedby="handleHelp">
+          <span class="help" id="handleHelp">Pick a handle your instructor can match to you privately. Don't enter your name, student ID, or email.</span>
+        </div>
+
+        <div class="scoreline">
+          <span>Tasks <b id="tScore">0/6</b></span>
+          <span>Questions <b id="qScore">0/5</b></span>
+          <span>Total <b id="total">0/11</b></span>
+        </div>
+
+        <div class="btnrow">
+          <button type="button" class="btn-primary" id="submitBtn">Submit completed lab</button>
+          <button type="button" class="btn-ghost" id="resetBtn">Reset lab</button>
+        </div>
+
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="legalbar">
+    © 2026 &lt;LIBRARY AUTHOR&gt; · Original simulation — clean-room build · MIT (code)
+  </div>
+</div>
+
+<!-- ========================================================================
+     SCRIPT BLOCK 1 — screenshot capture
+     This library is dependency-free. A built-in canvas snapshot renders the
+     lab state to PNG with no external library. If you prefer pixel-perfect
+     DOM capture, paste the MINIFIED html2canvas source between the markers
+     below; the engine will detect window.html2canvas and prefer it.
+     >>> PASTE INLINED html2canvas HERE (optional) >>>
+     <<< END html2canvas <<<
+======================================================================== -->
+
+<!-- ========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, sim logic, submit
+======================================================================== -->
+<script>
+"use strict";
+
+/* ============================ LAB CONFIG ============================ */
+const CONFIG = {
+  assignmentId: "netplus-std-acl-deny-hosts",
+  title: "Border Router Filtering — Standard ACL",
+  objectives: ["N10-009:4.3", "APNET:3.5"],   // N10-009 code provisional; see INSTRUCTOR_SETUP
+  hostname: "KELP-BORDER",
+
+  aclNumber: "40",
+  wanInterface: "GigabitEthernet0/1",
+  blockedHosts: ["203.0.113.58", "198.51.100.244", "192.0.2.17"],
+
+  // ---- WIRE THESE UP BEFORE DEPLOY ----
+  APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+};
+
+/* ===== QUESTION BANK (answer key is inspectable — formative use; re-score
+        server-side via the Apps Script key if a grade must be trustworthy) ===== */
+const QUESTIONS = [
+  { id:"q1",
+    prompt:"Standard numbered IPv4 ACLs use which number range(s)?",
+    opts:["1–99 (and 1300–1999)","100–199 (and 2000–2699)","1–4094","Any number 0–65535"],
+    answer:0 },
+  { id:"q2",
+    prompt:"Every ACL ends with an implicit rule that drops anything not matched. What is it — and why does this lab need a permit statement?",
+    opts:["Implicit permit any; the permit is redundant",
+          "Implicit deny any; without an explicit permit, all other hosts would be blocked too",
+          "Implicit log; the permit just records traffic",
+          "Nothing implicit; unmatched traffic is permitted by default"],
+    answer:1 },
+  { id:"q3",
+    prompt:"If 'permit any' were placed ABOVE the three 'deny host' lines, what happens to traffic from 203.0.113.58?",
+    opts:["It is blocked, because deny always wins",
+          "It is permitted — the first matching rule (permit any) executes and the denies are never reached",
+          "The router rejects the config",
+          "It is permitted only on even-numbered ports"],
+    answer:1 },
+  { id:"q4",
+    prompt:"To filter packets arriving from the internet on Gi0/1, the access-group is applied in which direction?",
+    opts:["out","in","both","direction doesn't matter for standard ACLs"],
+    answer:1 },
+  { id:"q5",
+    prompt:"In a standard ACL, which wildcard mask matches exactly one host (equivalent to the 'host' keyword)?",
+    opts:["255.255.255.255","0.0.0.255","0.0.0.0","255.0.0.0"],
+    answer:2 }
+];
+
+/* ============================ SIM STATE ============================ */
+function freshState(){
+  return {
+    mode:"user",                 // user | priv | config | config-if
+    ifContext:null,
+    reachedConfig:false,
+    acl:{},                      // { "40":[ {action,ip,wildcard} ] }
+    interfaces:{
+      "GigabitEthernet0/0":{ accessGroup:null },
+      "GigabitEthernet0/1":{ accessGroup:null }   // accessGroup = {num, dir}
+    }
+  };
+}
+let S = freshState();
+let terminalLines = [];          // {text, cls} — also feeds the snapshot
+const history = []; let histIdx = -1;
+
+/* ============================ DOM refs ============================ */
+const screenEl = document.getElementById("screen");
+const cmdEl    = document.getElementById("cmd");
+const psEl     = document.getElementById("ps");
+const modeTag  = document.getElementById("modeTag");
+const taskListEl = document.getElementById("taskList");
+const questionsEl= document.getElementById("questions");
+
+/* ============================ Console I/O ============================ */
+function print(text, cls){
+  terminalLines.push({text:text, cls:cls||});
+  const div = document.createElement("div");
+  if(cls) div.className = cls;
+  div.textContent = text;
+  screenEl.appendChild(div);
+  screenEl.scrollTop = screenEl.scrollHeight;
+}
+function promptStr(){
+  const h = CONFIG.hostname;
+  if(S.mode==="user")      return h+">";
+  if(S.mode==="priv")      return h+"#";
+  if(S.mode==="config")    return h+"(config)#";
+  if(S.mode==="config-if") return h+"(config-if)#";
+  return h+">";
+}
+function refreshPrompt(){
+  psEl.textContent = promptStr();
+  const labels={user:"USER EXEC",priv:"PRIV EXEC",config:"GLOBAL CONFIG","config-if":"INTERFACE CONFIG"};
+  modeTag.textContent = labels[S.mode];
+}
+
+/* ============================ Helpers ============================ */
+function isValidIp(ip){
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if(!m) return false;
+  return m.slice(1).every(o=>{ const n=+o; return n>=0 && n<=255 && String(n)===String(+o); });
+}
+function normInterface(tok){
+  // accept gi/gig/gigabitethernet/g + 0/1 etc.
+  const t = tok.toLowerCase().replace(/\s+/g,);
+  const m = /^(?:g|gi|gig|gigabitethernet|gigethernet)(\d+\/\d+)$/.exec(t);
+  if(m) return "GigabitEthernet"+m[1];
+  return null;
+}
+function caretError(){
+  print("% Invalid input detected at '^' marker.", "err");
+}
+
+/* ============================ Command engine ============================ */
+function runCommand(raw){
+  const line = raw.trim();
+  print(promptStr()+" "+raw, "echo");
+  if(line===) return;
+
+  const lower = line.toLowerCase();
+  const parts = line.split(/\s+/);
+  const head  = parts[0].toLowerCase();
+
+  // ---- help ----
+  if(line==="?"){ helpForMode(); return; }
+
+  // ---- clear screen ----
+  if(lower==="clear" || lower==="cls"){ screenEl.innerHTML=; terminalLines=[]; return; }
+
+  // ---- show commands (priv EXEC; or 'do show' inside config) ----
+  if(head==="show" || (head==="do" && parts[1] && parts[1].toLowerCase()==="show")){
+    if(S.mode==="user"){ caretError(); return; }
+    const args = (head==="do"? parts.slice(2) : parts.slice(1)).map(s=>s.toLowerCase());
+    handleShow(args); return;
+  }
+
+  // ---- mode movement ----
+  if(lower==="enable" || lower==="en"){
+    if(S.mode==="user"){ S.mode="priv"; refreshPrompt(); }
+    else if(S.mode!=="priv"){ caretError(); }
+    afterCommand(); return;
+  }
+  if(lower==="disable"){ if(S.mode==="priv"){ S.mode="user"; refreshPrompt(); } else caretError(); afterCommand(); return; }
+
+  if(lower==="configure terminal"||lower==="conf t"||lower==="config t"||lower==="config terminal"||lower==="configure t"){
+    if(S.mode==="priv"){
+      S.mode="config"; S.reachedConfig=true; refreshPrompt();
+      print("Enter configuration commands, one per line.  End with CNTL/Z.","sys");
+    } else caretError();
+    afterCommand(); return;
+  }
+  if(lower==="end"){
+    if(S.mode==="config"||S.mode==="config-if"){ S.mode="priv"; S.ifContext=null; refreshPrompt(); }
+    else caretError();
+    afterCommand(); return;
+  }
+  if(lower==="exit" || lower==="quit"){
+    if(S.mode==="config-if"){ S.mode="config"; S.ifContext=null; }
+    else if(S.mode==="config"){ S.mode="priv"; }
+    else if(S.mode==="priv"){ S.mode="user"; }
+    refreshPrompt(); afterCommand(); return;
+  }
+
+  // ---- interface <name> (global config) ----
+  if(head==="interface" || head==="int"){
+    if(S.mode!=="config"){ caretError(); afterCommand(); return; }
+    if(parts.length<2){ print("% Incomplete command.","err"); afterCommand(); return; }
+    const ifn = normInterface(parts.slice(1).join());
+    if(!ifn || !S.interfaces[ifn]){
+      print("% Invalid interface. This router has GigabitEthernet0/0 and GigabitEthernet0/1.","err");
+      afterCommand(); return;
+    }
+    S.mode="config-if"; S.ifContext=ifn; refreshPrompt();
+    afterCommand(); return;
+  }
+
+  // ---- access-list (global config) ----
+  if(head==="access-list"){
+    if(S.mode!=="config"){ caretError(); afterCommand(); return; }
+    handleAccessList(parts); afterCommand(); return;
+  }
+  if(head==="no" && parts[1] && parts[1].toLowerCase()==="access-list"){
+    if(S.mode!=="config"){ caretError(); afterCommand(); return; }
+    const n=parts[2];
+    if(n && S.acl[n]){ delete S.acl[n]; print("ACL "+n+" removed.","sys"); }
+    else print("% ACL not found.","err");
+    afterCommand(); return;
+  }
+
+  // ---- ip access-group (interface config) ----
+  if(head==="ip" && parts[1] && parts[1].toLowerCase()==="access-group"){
+    if(S.mode!=="config-if"){
+      print("% 'ip access-group' must be entered under an interface (interface gi0/1).","err");
+      afterCommand(); return;
+    }
+    const num=parts[2], dir=(parts[3]||).toLowerCase();
+    if(!num || (dir!=="in" && dir!=="out")){
+      print("% Incomplete command. Usage: ip access-group <1-199> {in|out}","err");
+      afterCommand(); return;
+    }
+    if(!S.acl[num]){
+      print("% Warning: access list "+num+" is empty or not defined; applying anyway.","sys");
+    }
+    S.interfaces[S.ifContext].accessGroup={ num:num, dir:dir };
+    afterCommand(); return;
+  }
+
+  // ---- save (temporary lab) ----
+  if(lower==="write"||lower==="write memory"||lower==="wr"||lower==="copy running-config startup-config"||lower==="copy run start"){
+    print("This is a temporary measure — saving is disabled for this lab.","sys");
+    afterCommand(); return;
+  }
+
+  // ---- fallthrough ----
+  caretError();
+  afterCommand();
+}
+
+function handleAccessList(parts){
+  // access-list <n> {deny|permit} <spec>
+  const num = parts[1];
+  if(!/^\d+$/.test(num)){ caretError(); return; }
+  const n = +num;
+  const standard = (n>=1 && n<=99) || (n>=1300 && n<=1999);
+  if(!standard){
+    print("% This lab uses a STANDARD ACL (1–99 or 1300–1999). Number "+num+" is out of range.","err");
+    return;
+  }
+  const action = (parts[2]||).toLowerCase();
+  if(action!=="deny" && action!=="permit"){ print("% Incomplete command. Expected 'deny' or 'permit'.","err"); return; }
+
+  const rest = parts.slice(3);
+  let ip, wildcard;
+  if(rest.length===0){ print("% Incomplete command.","err"); return; }
+
+  if(rest[0].toLowerCase()==="any"){
+    ip="0.0.0.0"; wildcard="255.255.255.255";
+  } else if(rest[0].toLowerCase()==="host"){
+    if(!rest[1] || !isValidIp(rest[1])){ caretError(); return; }
+    ip=rest[1]; wildcard="0.0.0.0";
+  } else if(isValidIp(rest[0])){
+    if(rest[1]){
+      if(!isValidIp(rest[1])){ caretError(); return; }
+      ip=rest[0]; wildcard=rest[1];
+    } else { ip=rest[0]; wildcard="0.0.0.0"; }   // bare host
+  } else { caretError(); return; }
+
+  if(!S.acl[num]) S.acl[num]=[];
+  S.acl[num].push({action:action, ip:ip, wildcard:wildcard});
+}
+
+function handleShow(args){
+  const sub = args[0]||;
+  // show access-lists [n] | show ip access-lists [n]
+  if(sub==="access-lists" || (sub==="ip" && args[1]==="access-lists")){
+    const n = (sub==="ip"? args[2] : args[1]);
+    renderAcl(n);
+    return;
+  }
+  if(sub==="running-config" || sub==="run" || (sub==="running" )){
+    renderRunningConfig(); return;
+  }
+  if(sub==="ip" && args[1]==="interface"){
+    const ifn = args[2] ? normInterface(args[2]) : null;
+    renderIpInterface(ifn); return;
+  }
+  print("% Unsupported show command in this lab. Try: show access-lists, show running-config, show ip interface gi0/1.","sys");
+}
+
+function renderAcl(filterNum){
+  const nums = filterNum ? [filterNum] : Object.keys(S.acl);
+  if(nums.length===0 || nums.every(n=>!S.acl[n])){ print("(no access lists configured)","sys"); return; }
+  nums.forEach(n=>{
+    if(!S.acl[n]) return;
+    print("Standard IP access list "+n,"amber");
+    S.acl[n].forEach((e,i)=>{
+      const seq=(i+1)*10;
+      let target;
+      if(e.ip==="0.0.0.0" && e.wildcard==="255.255.255.255") target="any";
+      else if(e.wildcard==="0.0.0.0") target="host "+e.ip;
+      else target=e.ip+", wildcard bits "+e.wildcard;
+      const act = e.action==="permit" ? "permit" : "deny  ";
+      print("    "+seq+" "+act+" "+target);
+    });
+  });
+}
+function renderRunningConfig(){
+  print("Building configuration...","sys");
+  print("!");
+  print("hostname "+CONFIG.hostname);
+  print("!");
+  const aclNums=Object.keys(S.acl);
+  if(aclNums.length){
+    aclNums.forEach(n=>{
+      S.acl[n].forEach(e=>{
+        let tail;
+        if(e.ip==="0.0.0.0"&&e.wildcard==="255.255.255.255") tail="any";
+        else if(e.wildcard==="0.0.0.0") tail="host "+e.ip;
+        else tail=e.ip+" "+e.wildcard;
+        print("access-list "+n+" "+e.action+" "+tail);
+      });
+    });
+    print("!");
+  }
+  Object.keys(S.interfaces).forEach(ifn=>{
+    print("interface "+ifn);
+    const ag=S.interfaces[ifn].accessGroup;
+    if(ag) print(" ip access-group "+ag.num+" "+ag.dir);
+    print("!");
+  });
+  print("end");
+}
+function renderIpInterface(ifn){
+  const targets = ifn ? [ifn] : Object.keys(S.interfaces);
+  targets.forEach(t=>{
+    if(!S.interfaces[t]){ print("% Invalid interface.","err"); return; }
+    print(t+" is up, line protocol is up","amber");
+    const ag=S.interfaces[t].accessGroup;
+    print("  Inbound  access list is "+ (ag&&ag.dir==="in"  ? ag.num : "not set"));
+    print("  Outgoing access list is "+ (ag&&ag.dir==="out" ? ag.num : "not set"));
+  });
+}
+
+function helpForMode(){
+  const common="  show ?            display state (priv EXEC)\n  ?                 this help\n  clear             clear the screen";
+  if(S.mode==="user"){
+    print("Available:\n  enable            enter privileged EXEC","sys");
+  } else if(S.mode==="priv"){
+    print("Available:\n  configure terminal   enter global config\n  show access-lists    view ACLs\n  show running-config  view the config\n  show ip interface gi0/1\n  disable              back to user EXEC","sys");
+  } else if(S.mode==="config"){
+    print("Available:\n  access-list 40 deny host <ip>\n  access-list 40 permit any\n  interface gi0/1      enter interface config\n  do show ...          run a show command\n  end / exit","sys");
+  } else {
+    print("Available:\n  ip access-group 40 in   apply ACL inbound\n  exit                    back to global config","sys");
+  }
+}
+
+/* ============================ Task checking ============================ */
+function tasks(){
+  const acl = S.acl[CONFIG.aclNumber] || [];
+  const hasDeny = ip => acl.some(e=>e.action==="deny" && e.ip===ip && e.wildcard==="0.0.0.0");
+  const denyIdxs = CONFIG.blockedHosts.map(ip=>acl.findIndex(e=>e.action==="deny"&&e.ip===ip&&e.wildcard==="0.0.0.0"));
+  const permitIdx = acl.findIndex(e=>e.action==="permit"&&e.ip==="0.0.0.0"&&e.wildcard==="255.255.255.255");
+  const ag = S.interfaces[CONFIG.wanInterface].accessGroup;
+
+  const permitAfterDenies = permitIdx>-1 && denyIdxs.every(i=>i>-1 && permitIdx>i);
+
+  return [
+    { id:"config",  label:"Enter global configuration mode.", passed:S.reachedConfig },
+    { id:"deny1",   label:"Deny host "+CONFIG.blockedHosts[0]+" in ACL "+CONFIG.aclNumber+".", passed:hasDeny(CONFIG.blockedHosts[0]) },
+    { id:"deny2",   label:"Deny host "+CONFIG.blockedHosts[1]+" in ACL "+CONFIG.aclNumber+".", passed:hasDeny(CONFIG.blockedHosts[1]) },
+    { id:"deny3",   label:"Deny host "+CONFIG.blockedHosts[2]+" in ACL "+CONFIG.aclNumber+".", passed:hasDeny(CONFIG.blockedHosts[2]) },
+    { id:"permit",  label:"Permit all other traffic, after the deny lines.", passed:permitAfterDenies },
+    { id:"apply",   label:"Apply ACL "+CONFIG.aclNumber+" inbound on "+CONFIG.wanInterface+".",
+                    passed: !!(ag && ag.num===CONFIG.aclNumber && ag.dir==="in") }
+  ];
+}
+
+function renderTasks(){
+  const list = tasks();
+  taskListEl.innerHTML=;
+  list.forEach(t=>{
+    const li=document.createElement("li");
+    li.className = t.passed ? "done" : ;
+    li.innerHTML = '<span class="box" aria-hidden="true">'+(t.passed?"✓":)+'</span>';
+    const span=document.createElement("span");
+    span.textContent=t.label;
+    li.appendChild(span);
+    li.setAttribute("aria-label",(t.passed?"Complete: ":"Pending: ")+t.label);
+    taskListEl.appendChild(li);
+  });
+  updateScore();
+}
+
+function afterCommand(){ renderTasks(); }
+
+/* ============================ Questions ============================ */
+const qState = {};   // id -> selected index
+function renderQuestions(){
+  questionsEl.innerHTML=;
+  QUESTIONS.forEach((q,qi)=>{
+    const wrap=document.createElement("div");
+    wrap.className="q"; wrap.id="wrap-"+q.id;
+    const p=document.createElement("div");
+    p.className="prompt"; p.textContent=(qi+1)+". "+q.prompt;
+    const opts=document.createElement("div"); opts.className="opts";
+    q.opts.forEach((opt,oi)=>{
+      const lab=document.createElement("label");
+      const inp=document.createElement("input");
+      inp.type="radio"; inp.name=q.id; inp.value=oi;
+      inp.addEventListener("change",()=>{ qState[q.id]=oi; markQuestion(q,wrap); updateScore(); });
+      const txt=document.createElement("span"); txt.textContent=opt;
+      lab.appendChild(inp); lab.appendChild(txt);
+      opts.appendChild(lab);
+    });
+    const v=document.createElement("div"); v.className="verdict"; v.id="v-"+q.id;
+    wrap.appendChild(p); wrap.appendChild(opts); wrap.appendChild(v);
+    questionsEl.appendChild(wrap);
+  });
+}
+function markQuestion(q,wrap){
+  const sel=qState[q.id];
+  wrap.querySelectorAll("label").forEach((l,i)=>l.classList.toggle("sel",i===sel));
+  const correct = sel===q.answer;
+  wrap.classList.toggle("correct",correct);
+  wrap.classList.toggle("wrong",!correct);
+  document.getElementById("v-"+q.id).textContent = correct ? "✓ correct" : "✗ not quite — review the rule order";
+}
+
+/* ============================ Scoring ============================ */
+function scoreNow(){
+  const tlist=tasks();
+  const tPass=tlist.filter(t=>t.passed).length;
+  const qResults=QUESTIONS.map(q=>({ id:q.id, prompt:q.prompt,
+                                     answer:(qState[q.id]!=null? q.opts[qState[q.id]] : null),
+                                     correct: qState[q.id]===q.answer }));
+  const qPass=qResults.filter(r=>r.correct).length;
+  return { tlist, tPass, qResults, qPass,
+           earned:tPass+qPass, total:tlist.length+QUESTIONS.length };
+}
+function updateScore(){
+  const s=scoreNow();
+  document.getElementById("tScore").textContent=s.tPass+"/"+s.tlist.length;
+  document.getElementById("qScore").textContent=s.qPass+"/"+QUESTIONS.length;
+  document.getElementById("total").textContent=s.earned+"/"+s.total;
+}
+
+/* ============================ Screenshot ============================ */
+async function captureScreenshot(){
+  // Prefer inlined html2canvas if the instructor pasted it.
+  try{
+    if(window.html2canvas){
+      const c=await window.html2canvas(document.getElementById("labArea"),{backgroundColor:"#0c1a2b",scale:1});
+      return c.toDataURL("image/png");
+    }
+  }catch(e){ /* fall through to built-in snapshot */ }
+  return builtinSnapshot();
+}
+function builtinSnapshot(){
+  // Dependency-free render of the lab state to a PNG.
+  const W=760, pad=24, lh=18; const mono='13px ui-monospace, Menlo, Consolas, monospace';
+  const s=scoreNow();
+  const lines=[];
+  lines.push({t:CONFIG.title, c:"#ffb454", b:true});
+  lines.push({t:"Lab "+CONFIG.assignmentId+"   ·   "+CONFIG.objectives.join("  "), c:"#7d97b3"});
+  lines.push({t:c:"#fff"});
+  lines.push({t:"── Console ─────────────────────────────────────────────", c:"#1d3a55"});
+  const tail=terminalLines.slice(-16);
+  tail.forEach(l=>lines.push({t:l.text.length>92?l.text.slice(0,92)+"…":l.text,
+                              c:l.cls==="ok"?"#3ddc97":l.cls==="err"?"#ff7a85":l.cls==="amber"?"#ffb454":l.cls==="echo"?"#eaf2fb":"#9fb6cf"}));
+  lines.push({t:c:"#fff"});
+  lines.push({t:"── Tasks ("+s.tPass+"/"+s.tlist.length+") ──────────────────────────────────────", c:"#1d3a55"});
+  s.tlist.forEach(t=>lines.push({t:(t.passed?"[x] ":"[ ] ")+t.label, c:t.passed?"#3ddc97":"#9fb6cf"}));
+  lines.push({t:c:"#fff"});
+  lines.push({t:"── Questions ("+s.qPass+"/"+QUESTIONS.length+") ─────────────────────────────", c:"#1d3a55"});
+  s.qResults.forEach((r,i)=>lines.push({t:"Q"+(i+1)+": "+(r.answer==null?"(unanswered)":(r.correct?"correct":"incorrect")), c:r.correct?"#3ddc97":"#ff7a85"}));
+  lines.push({t:c:"#fff"});
+  lines.push({t:"Callsign: "+(document.getElementById("handle").value||"(none)")+"    Score: "+s.earned+"/"+s.total, c:"#eaf2fb", b:true});
+  lines.push({t:"Captured "+new Date().toLocaleString(), c:"#7d97b3"});
+
+  const H=pad*2 + lines.length*lh;
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  const x=cv.getContext("2d");
+  x.fillStyle="#0c1a2b"; x.fillRect(0,0,W,H);
+  x.strokeStyle="#1d3a55"; x.strokeRect(6,6,W-12,H-12);
+  let y=pad+lh;
+  lines.forEach(l=>{
+    x.font=(l.b?"bold ":)+mono; x.fillStyle=l.c||"#cfe0f0";
+    x.fillText(l.t, pad, y); y+=lh;
+  });
+  return cv.toDataURL("image/png");
+}
+
+/* ============================ Submit ============================ */
+const statusEl=document.getElementById("status");
+function setStatus(msg, cls){ statusEl.className="status "+(cls||); statusEl.innerHTML=msg; }
+
+async function submitLab(){
+  const btn=document.getElementById("submitBtn");
+  const handle=document.getElementById("handle").value.trim();
+
+  if(!handle){ setStatus("Enter a callsign first — it's how your instructor matches this to you.","err");
+               document.getElementById("handle").focus(); return; }
+  if(handle.length>40){ setStatus("Callsign is too long (40 characters max).","err"); return; }
+  if(handle.includes("@")){ setStatus("That looks like an email. Use a pseudonym only — no PII.","err"); return; }
+
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("This lab isn't wired to a server yet. Your instructor needs to set APPS_SCRIPT_URL. (Everything else works — your screenshot and score are ready.)","err");
+    return;
+  }
+
+  btn.disabled=true; setStatus("Capturing your work and submitting…","work");
+
+  let screenshot=;
+  try{ screenshot=await captureScreenshot(); }catch(e){ screenshot=; }
+
+  const s=scoreNow();
+  const payload={
+    assignmentId:CONFIG.assignmentId,
+    handle:handle,
+    clientTimestamp:new Date().toISOString(),
+    objectives:CONFIG.objectives,
+    tasks:s.tlist.map(t=>({id:t.id,label:t.label,passed:t.passed})),
+    questions:s.qResults.map(r=>({id:r.id,prompt:r.prompt,answer:r.answer,correct:r.correct})),
+    score:{earned:s.earned,total:s.total},
+    screenshot:screenshot,
+    submissionToken:CONFIG.submissionToken
+  };
+
+  try{
+    // Simple request: NO custom headers, default text/plain body → no CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+    const out=await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission ↗</a>' : ;
+      setStatus("Submitted as <b>"+handle+"</b> — score "+s.earned+"/"+s.total+"."+link, "ok");
+      btn.textContent="Submitted ✓";
+    }else{
+      setStatus("Server rejected the submission"+(out&&out.error?": "+out.error:".")+" Check with your instructor.","err");
+      btn.disabled=false;
+    }
+  }catch(err){
+    // Locked-down context fallback: fire-and-forget, can't read docUrl.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      setStatus("Submitted (delivery confirmed, no receipt link in this browser). Confirm with your instructor that <b>"+handle+"</b> arrived.","ok");
+      btn.textContent="Submitted ✓";
+    }catch(e2){
+      setStatus("Couldn't reach the submission server. Check your connection and try again, or tell your instructor.","err");
+      btn.disabled=false;
+    }
+  }
+}
+
+/* ============================ Reset ============================ */
+function resetLab(){
+  S=freshState(); terminalLines=[]; screenEl.innerHTML=;
+  Object.keys(qState).forEach(k=>delete qState[k]);
+  document.getElementById("submitBtn").disabled=false;
+  document.getElementById("submitBtn").textContent="Submit completed lab";
+  setStatus();
+  refreshPrompt(); renderTasks(); renderQuestions();
+  banner();
+  cmdEl.focus();
+}
+
+/* ============================ Boot ============================ */
+function banner(){
+  print(CONFIG.hostname+" line con 0","sys");
+  print("KELP Coastal Radio border router — temporary filtering window","sys");
+  print("Type ? for help.  Block the three flagged sources in ACL "+CONFIG.aclNumber+", permit the rest,","sys");
+  print("then apply it inbound on "+CONFIG.wanInterface+".","sys");
+  print();
+}
+
+document.getElementById("cmdform").addEventListener("submit",e=>{
+  e.preventDefault();
+  const v=cmdEl.value;
+  if(v.trim()!==){ history.push(v); histIdx=history.length; }
+  runCommand(v); cmdEl.value=;
+});
+cmdEl.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp"){ if(histIdx>0){ histIdx--; cmdEl.value=history[histIdx]; e.preventDefault(); } }
+  else if(e.key==="ArrowDown"){ if(histIdx<history.length-1){ histIdx++; cmdEl.value=history[histIdx]; } else { histIdx=history.length; cmdEl.value=; } }
+});
+document.querySelectorAll(".chip").forEach(c=>{
+  c.addEventListener("click",()=>{ cmdEl.value=c.dataset.cmd; cmdEl.focus(); });
+});
+document.getElementById("submitBtn").addEventListener("click",submitLab);
+document.getElementById("resetBtn").addEventListener("click",resetLab);
+
+refreshPrompt(); renderTasks(); renderQuestions(); banner();
+cmdEl.focus();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-screened-subnet-firewall.html",title:"Edge Console \u2014 Screened-Subnet Firewall Rules Lab"}, NEXT={href:"index_netplus-bandwidth-shaper.html",title:"Edge Bandwidth Manager \u2014 QoS Lab"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.5";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Hands Off the Keyboard — Manage a Server with PowerShell Remoting</title>
+<!--
+  ============================================================================
+  Hands Off the Keyboard: Manage a Server with PowerShell Remoting
+  Network+ / AP Networking simulation lab · assignmentId: netplus-powershell-remoting
+
+  © 2026 [AUTHOR NAME / PUBLISHER]. All rights reserved.
+  Licensed for instructional use within the licensee's institution.
+  Clean-room original work: scenario, persona, hostnames, IP plan, console
+  output, task wording, and question wording are the author's own expression,
+  built from the public CompTIA Network+ objectives and the public College
+  Board AP Networking course framework. The PowerShell cmdlets shown
+  (Enable-PSRemoting, Enter-PSSession, Invoke-Command, Get-Service,
+  Exit-PSSession) are public, documented Microsoft commands. NOT derived from,
+  and not a reskin of, any third-party lab. All IP addresses use IETF
+  documentation/reserved ranges (RFC 5737 / RFC 6598).
+  ============================================================================
+-->
+<style id="lab-styles">
+  :root{
+    --bg:#0c1118;
+    --panel:#121a25;
+    --ink:#dbe6f2;
+    --ink-dim:#8a9bb0;
+    --line:#23303f;
+    --console:#06122c;          /* PowerShell-blue console            */
+    --console-ink:#e9eefc;
+    --accent:#5ad1ff;           /* PS prompt cyan                     */
+    --signal:#4cc6ff;
+    --good:#36d399;
+    --warn:#ffcb5b;
+    --bad:#ff6b6b;
+    --focus:#7aa2ff;
+    --radius:10px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 600px at 80% -10%, #15212e 0%, transparent 60%), var(--bg);
+    color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 56px}
+  header.lab-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;margin-bottom:16px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--signal)}
+  h1{font-size:1.5rem;margin:.1rem 0 0;font-weight:650;letter-spacing:-.01em}
+  .tagline{color:var(--ink-dim);font-size:.92rem;flex-basis:100%;margin-top:2px}
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  /* console */
+  .console-card{background:var(--console);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;min-height:460px}
+  .console-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#040d22;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.74rem;color:var(--ink-dim)}
+  .dot{width:10px;height:10px;border-radius:50%;background:#2b3a4b}
+  .dot.live{background:var(--good);box-shadow:0 0 0 3px rgba(54,211,153,.15)}
+  .console-bar .who{margin-left:auto;color:var(--signal)}
+  .console-out{flex:1;overflow:auto;padding:12px 14px;font-family:var(--mono);font-size:.83rem;color:var(--console-ink);white-space:pre-wrap;word-break:break-word}
+  .console-out .sys{color:var(--ink-dim)}
+  .console-out .ok{color:var(--good)}
+  .console-out .err{color:var(--bad)}
+  .console-out .warnln{color:var(--warn)}
+  .console-out .echo{color:#f3f7ff}
+  .console-out .echo .pr{color:var(--accent)}
+  .console-out .tbl{color:#cfe0ff}
+  .console-in{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);background:#040d22;padding:8px 12px}
+  .prompt{font-family:var(--mono);font-size:.83rem;color:var(--accent);white-space:nowrap}
+  .prompt.remote{color:#ffd479}
+  #cmd{flex:1;background:transparent;border:0;outline:none;color:#f3f7ff;font-family:var(--mono);font-size:.83rem;padding:2px 0}
+  #cmd::placeholder{color:#42558a}
+
+  /* right column */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 15px;margin-bottom:14px}
+  .panel h2{font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 10px}
+  .brief{font-size:.9rem}.brief p{margin:.4rem 0}.brief .name{color:var(--signal)}
+  .hint{font-size:.82rem;color:var(--ink-dim);margin-top:8px;border-left:2px solid var(--line);padding-left:10px}
+
+  ul.tasks{list-style:none;margin:0;padding:0}
+  ul.tasks li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+  ul.tasks li:last-child{border-bottom:0}
+  .check{flex:0 0 20px;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:.8rem;color:transparent;margin-top:1px}
+  li.done .check{background:rgba(54,211,153,.14);border-color:var(--good);color:var(--good)}
+  li.done .tlabel{color:var(--ink)}
+  .tlabel{color:var(--ink-dim)}.tlabel b{color:var(--ink);font-weight:600}
+  code.cmd{font-family:var(--mono);background:#0b1426;border:1px solid var(--line);border-radius:5px;padding:.5px 5px;color:#cfe3ff;font-size:.82em}
+
+  .qblock{padding:10px 0;border-bottom:1px solid var(--line)}.qblock:last-of-type{border-bottom:0}
+  .qprompt{font-size:.9rem;margin-bottom:8px}
+  .opt{display:flex;gap:9px;align-items:flex-start;padding:5px 0;font-size:.88rem;color:var(--ink-dim)}
+  .opt input{margin-top:3px;accent-color:var(--signal)}.opt label{cursor:pointer}
+  .qtext input[type=text]{width:100%;background:var(--console);border:1px solid var(--line);border-radius:7px;color:var(--ink);font-family:var(--mono);padding:8px 10px;font-size:.85rem}
+  .qstate{font-size:.82rem;margin-top:6px;min-height:1.1em}.qstate.right{color:var(--good)}.qstate.wrong{color:var(--bad)}
+
+  .btn{font-family:var(--sans);font-size:.88rem;font-weight:600;border-radius:8px;border:1px solid var(--line);background:#16212e;color:var(--ink);padding:9px 14px;cursor:pointer}
+  .btn:hover{border-color:#33485f}.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .btn.primary{background:linear-gradient(180deg,#2fae80,#1f8c64);border-color:#2fae80;color:#04130d}
+  .btn.primary:disabled{filter:grayscale(.6) opacity(.5);cursor:not-allowed}
+  .btn.ghost{background:transparent}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+  .submitbar{position:sticky;bottom:0;margin-top:6px}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+  .field label{font-size:.8rem;color:var(--ink-dim)}
+  .field input{background:var(--console);border:1px solid var(--line);border-radius:7px;color:var(--ink);font-family:var(--mono);padding:9px 11px;font-size:.88rem}
+  .field input:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+  .score-pill{font-family:var(--mono);font-size:.8rem;color:var(--ink-dim);margin-left:auto}
+  .status{font-size:.85rem;margin-top:10px;min-height:1.2em}
+  .status.ok{color:var(--good)}.status.err{color:var(--bad)}.status.work{color:var(--signal)}.status a{color:var(--signal)}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .tag{font-family:var(--mono);font-size:.68rem;color:var(--ink-dim);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  footer.lic{margin-top:22px;color:#54657a;font-size:.72rem;line-height:1.5}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-powershell-remoting", "title": "Hands Off the Keyboard \u2014 Manage a Server with PowerShell Remoting", "version": "1.0.0", "objectives": ["N10-009:3.5", "N10-009:5.5", "APNET:4.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap">
+  <header class="lab-head">
+    <span class="eyebrow">PowerShell Console · Remote Server Management</span>
+    <h1>Hands Off the Keyboard</h1>
+    <p class="tagline">Manage a Windows server over WinRM — enable remoting, work in a session, then fan out a single command. No RDP.</p>
+  </header>
+
+  <div id="lab-capture">
+  <div class="grid">
+
+    <!-- ============ LEFT: simulated PowerShell console ============ -->
+    <section class="console-card" aria-label="PowerShell console">
+      <div class="console-bar">
+        <span class="dot" id="sessdot" aria-hidden="true"></span>
+        <span>Windows PowerShell</span>
+        <span class="who" id="sesswho">local session</span>
+      </div>
+      <div class="console-out" id="out" role="log" aria-live="polite" aria-label="Console output"></div>
+      <div class="console-in">
+        <span class="prompt" id="promptlabel">PS C:\&gt;</span>
+        <input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false"
+               aria-label="PowerShell command input" placeholder="type a cmdlet — try: Get-Help">
+      </div>
+    </section>
+
+    <!-- ============ RIGHT: brief / tasks / questions / submit ============ -->
+    <div>
+      <section class="panel brief" aria-label="Scenario brief">
+        <h2>Change #CR-2208</h2>
+        <p>You need to run a couple of quick checks on <span class="name">ops-srv-12</span>
+           (management IP 10.30.4.20) — but you don’t want to tie up a graphical RDP
+           session just to read a service state and an IP config.</p>
+        <p class="hint">Enable remoting on the target, drop into an interactive session,
+           verify a service, then pull the server’s IP configuration with a single
+           non-interactive call and disconnect. Bad cmdlets and bad parameters return
+           real error text — read it, that’s the point.</p>
+      </section>
+
+      <section class="panel" aria-label="Tasks">
+        <h2>Tasks</h2>
+        <ul class="tasks" id="tasklist">
+          <li data-task="enable"  data-label="Enable PowerShell remoting on the target"><span class="check" aria-hidden="true">✓</span>
+            <span class="tlabel">Enable remoting on the target — <code class="cmd">Enable-PSRemoting</code></span></li>
+          <li data-task="session" data-label="Open an interactive remote session"><span class="check" aria-hidden="true">✓</span>
+            <span class="tlabel">Open an interactive session — <code class="cmd">Enter-PSSession -ComputerName ops-srv-12</code></span></li>
+          <li data-task="service" data-label="Check a service remotely"><span class="check" aria-hidden="true">✓</span>
+            <span class="tlabel">In the session, check a service — <code class="cmd">Get-Service</code></span></li>
+          <li data-task="invoke"  data-label="Retrieve remote IP config non-interactively"><span class="check" aria-hidden="true">✓</span>
+            <span class="tlabel">Pull the IP config in one non-interactive call — <code class="cmd">Invoke-Command -ComputerName ops-srv-12 -ScriptBlock { ipconfig }</code></span></li>
+          <li data-task="exit"    data-label="Close the remote session"><span class="check" aria-hidden="true">✓</span>
+            <span class="tlabel">Close the session — <code class="cmd">Exit-PSSession</code></span></li>
+        </ul>
+      </section>
+
+      <section class="panel" aria-label="Questions">
+        <h2>Questions</h2>
+
+        <div class="qblock qtext" data-q="q1" data-prompt="Protocol and default port for PS remoting">
+          <div class="qprompt">1. Which protocol and default port does PowerShell remoting use?</div>
+          <input type="text" id="q1" aria-label="Protocol and port" placeholder="e.g. service name + port" autocomplete="off" spellcheck="false">
+          <div class="qstate" id="q1state" aria-live="polite"></div>
+        </div>
+
+        <div class="qblock" data-q="q2" data-prompt="When to use Invoke-Command vs Enter-PSSession">
+          <div class="qprompt">2. When would you use <code class="cmd">Invoke-Command</code> instead of <code class="cmd">Enter-PSSession</code>?</div>
+          <div class="opt"><input type="radio" name="q2" id="q2a" value="a"><label for="q2a">When you need a live interactive prompt on one machine</label></div>
+          <div class="opt"><input type="radio" name="q2" id="q2b" value="b"><label for="q2b">When you want to run a command on one or many hosts without an interactive session</label></div>
+          <div class="opt"><input type="radio" name="q2" id="q2c" value="c"><label for="q2c">Only when RDP is unavailable</label></div>
+          <div class="opt"><input type="radio" name="q2" id="q2d" value="d"><label for="q2d">When the target has no network connection</label></div>
+          <div class="qstate" id="q2state" aria-live="polite"></div>
+        </div>
+
+        <div class="qblock" data-q="q3" data-prompt="Why remoting over RDP at scale">
+          <div class="qprompt">3. Why is remoting preferable to RDP for managing many servers at once?</div>
+          <div class="opt"><input type="radio" name="q3" id="q3a" value="a"><label for="q3a">RDP is encrypted and remoting is not</label></div>
+          <div class="opt"><input type="radio" name="q3" id="q3b" value="b"><label for="q3b">Remoting can script and fan a command out to many hosts — no per-host GUI session</label></div>
+          <div class="opt"><input type="radio" name="q3" id="q3c" value="c"><label for="q3c">RDP cannot reach servers on a LAN</label></div>
+          <div class="opt"><input type="radio" name="q3" id="q3d" value="d"><label for="q3d">Remoting consumes less electricity</label></div>
+          <div class="qstate" id="q3state" aria-live="polite"></div>
+        </div>
+
+        <div class="qblock qtext" data-q="q4" data-prompt="Cmdlet that enables remoting on the target">
+          <div class="qprompt">4. Which cmdlet turns on remoting on the target host?</div>
+          <input type="text" id="q4" aria-label="Cmdlet that enables remoting" placeholder="e.g. Verb-Noun" autocomplete="off" spellcheck="false">
+          <div class="qstate" id="q4state" aria-live="polite"></div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="checkbtn" type="button">Check answers</button>
+          <button class="btn ghost" id="resetbtn" type="button">Reset lab</button>
+        </div>
+      </section>
+
+      <section class="panel submitbar" aria-label="Submit">
+        <h2>Submit</h2>
+        <div class="field">
+          <label for="handle">Callsign (no real names — pseudonym only)</label>
+          <input id="handle" maxlength="40" placeholder="e.g. quartz-owl-07" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="row">
+          <button class="btn primary" id="submitbtn" type="button" disabled>Submit completed lab</button>
+          <span class="score-pill" id="scorepill">0 / 9</span>
+        </div>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+        <div class="tags" aria-label="Objective coverage">
+          <span class="tag">N10-009 · 4.4</span>
+          <span class="tag">N10-009 · 5.5</span>
+          <span class="tag">APNET · 4.3.A</span>
+        </div>
+      </section>
+    </div>
+  </div><!-- /grid -->
+  </div><!-- /lab-capture -->
+
+  <footer class="lic">
+    © 2026 [AUTHOR NAME / PUBLISHER]. Clean-room original; licensed for instructional use.
+    Not affiliated with or derived from any third-party lab product. PowerShell and Windows
+    are trademarks of Microsoft; CompTIA Network+ is a trademark of CompTIA; AP is a trademark
+    of the College Board. IPs use IETF documentation ranges (RFC 5737 / RFC 6598).
+  </footer>
+</div>
+
+<!-- ===== SCRIPT BLOCK 1 — html2canvas (inline; paste minified source here) ===== -->
+<script id="html2canvas-inline">
+/* >>> PASTE html2canvas MINIFIED SOURCE HERE <<< */
+/* >>> END html2canvas <<< (a dependency-free SVG fallback runs if this is empty) */
+</script>
+
+<!-- ===== SCRIPT BLOCK 2 — engine: CONFIG + KEY, sim, capture, POST ===== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------------- LAB CONFIG + ANSWER KEY ---------------------- */
+  const CONFIG = {
+    assignmentId: "netplus-powershell-remoting",
+    title: "Hands Off the Keyboard: Manage a Server with PowerShell Remoting",
+    // AP tag verified against the framework file in-project (Topic 4.3, CLI
+    // commands). N10-009 codes are provisional — confirm against the official
+    // N10-009 PDF once it replaces the N10-007 file in the project.
+    objectives: ["N10-009:3.5", "N10-009:5.5", "APNET:4.3"],
+
+    target:  "ops-srv-12",
+    mgmtIp:  "10.30.4.20",
+    mask:    "255.255.255.0",
+    gw:      "10.30.4.1",
+
+    // ANSWER KEY (client-side; self-reported per spec §7) ----------------
+    q2: "b",
+    q3: "b",
+    q1Accept: /winrm|5985|5986/i,            // WinRM / 5985 (HTTP) / 5986 (HTTPS)
+    q4Accept: /enable[-\s]?psremoting/i,     // Enable-PSRemoting
+
+    APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "REPLACE_WITH_PER_COHORT_TOKEN"
+  };
+
+  /* --------------------------- runtime state --------------------------- */
+  const state = {
+    remotingEnabled: false,
+    inSession: false,
+    tasks:    { enable:false, session:false, service:false, invoke:false, exit:false },
+    questions:{ q1:false, q2:false, q3:false, q4:false }
+  };
+
+  const $ = s => document.querySelector(s);
+  const out = $("#out");
+  const cmd = $("#cmd");
+
+  /* ----------------------------- console io ---------------------------- */
+  function line(text, cls){
+    const div = document.createElement("div");
+    if(cls) div.className = cls;
+    div.textContent = text;
+    out.appendChild(div); out.scrollTop = out.scrollHeight; return div;
+  }
+  function block(text, cls){ text.split("\n").forEach(l=>line(l, cls)); }
+  function promptText(){ return state.inSession ? "[ops-srv-12]: PS C:\\>" : "PS C:\\>"; }
+  function echo(raw){
+    const div = document.createElement("div"); div.className="echo";
+    const pr = document.createElement("span"); pr.className="pr"; pr.textContent = promptText()+" ";
+    div.appendChild(pr); div.appendChild(document.createTextNode(raw)); out.appendChild(div);
+  }
+  function refreshPrompt(){
+    const p = $("#promptlabel");
+    p.innerHTML = state.inSession ? "[ops-srv-12]: PS C:\\&gt;" : "PS C:\\&gt;";
+    p.classList.toggle("remote", state.inSession);
+    $("#sesswho").textContent = state.inSession ? "session · "+CONFIG.target : "local session";
+    $("#sessdot").classList.toggle("live", state.inSession);
+  }
+
+  /* ------------------------- realistic errors -------------------------- */
+  function notRecognized(tok){
+    block(
+      tok + " : The term '" + tok + "' is not recognized as the name of a cmdlet, function,\n" +
+      "script file, or operable program. Check the spelling of the name, or if a path was\n" +
+      "included, verify that the path is correct and try again.\n" +
+      "    + CategoryInfo          : ObjectNotFound: (" + tok + ":String) [], CommandNotFoundException\n" +
+      "    + FullyQualifiedErrorId : CommandNotFoundException", "err");
+  }
+  function badParam(cmdlet, name){
+    block(cmdlet + " : A parameter cannot be found that matches parameter name '" + name + "'.\n" +
+      "    + CategoryInfo          : InvalidArgument: (:) [" + cmdlet + "], ParameterBindingException\n" +
+      "    + FullyQualifiedErrorId : NamedParameterNotFound," + cmdlet, "err");
+  }
+  function connectFailed(host){
+    block("Enter-PSSession : Connecting to remote server " + host + " failed with the following\n" +
+      "error message : WinRM cannot process the request. The host name could not be resolved.\n" +
+      "    + CategoryInfo          : OpenError: (" + host + ":String) [], PSRemotingTransportException", "err");
+  }
+  function accessDenied(cmdlet, host){
+    block(cmdlet + " : Connecting to remote server " + host + " failed : Access is denied.\n" +
+      "Verify that PowerShell remoting is enabled on the target (run Enable-PSRemoting there).\n" +
+      "    + CategoryInfo          : OpenError: (" + host + ":String) [], PSRemotingTransportException", "err");
+  }
+
+  /* ---------------------------- parser --------------------------------- */
+  const KNOWN = {
+    "enable-psremoting":["force","skipnetworkprofilecheck"],
+    "enter-pssession":["computername","cn","port","usessl","credential","configurationname"],
+    "exit-pssession":[],
+    "get-service":["name","displayname","computername","include","exclude"],
+    "invoke-command":["computername","cn","scriptblock","credential","asjob","port","usessl","argumentlist"]
+  };
+  function parse(raw){
+    const t = raw.trim();
+    const cmdlet = (t.split(/\s+/)[0]||);
+    const rest = t.slice(cmdlet.length);
+    const params = {}; let m;
+    const re = /(?:^|\s)-([A-Za-z]+)(?:[ \t]+("[^"]*"|\{[^}]*\}|[^\s-]\S*))?/g;
+    while((m = re.exec(rest))){ params[m[1].toLowerCase()] = (m[2]||).replace(/^"|"$/g,); }
+    const positional = (rest.trim().split(/\s+/).filter(x=>x && x[0] !== "-")[0]) || ;
+    const sb = (rest.match(/\{([^}]*)\}/) || [])[1].trim();
+    return { cmdlet, lc: cmdlet.toLowerCase(), params, positional, sb };
+  }
+  function checkUnknownParams(p){
+    const allow = KNOWN[p.lc]; if(!allow) return false;
+    for(const k of Object.keys(p.params)){
+      if(allow.indexOf(k) === -1){ badParam(p.cmdlet, k.charAt(0).toUpperCase()+k.slice(1)); return true; }
+    }
+    return false;
+  }
+
+  /* --------------------------- cmdlet impls ---------------------------- */
+  function cEnable(p){
+    if(checkUnknownParams(p)) return;
+    block("WinRM has been updated to receive requests.\n" +
+          "WinRM service type changed successfully.\n" +
+          "WinRM service started.\n" +
+          "WinRM has been updated for remote management on " + CONFIG.target + ".\n" +
+          "WinRM firewall exception enabled.", "sys");
+    state.remotingEnabled = true;
+    markTask("enable", true);
+  }
+  function cEnter(p){
+    if(state.inSession){ line("You are already in an interactive session with " + CONFIG.target + ".", "warnln"); return; }
+    if(checkUnknownParams(p)) return;
+    const host = (p.params.computername || p.params.cn || p.positional || ).trim();
+    if(!host){ block("Enter-PSSession : Cannot bind argument — a -ComputerName value is required.", "err"); return; }
+    if(host !== CONFIG.target && host !== CONFIG.mgmtIp){ connectFailed(host); return; }
+    if(!state.remotingEnabled){ accessDenied("Enter-PSSession", host); return; }
+    state.inSession = true; refreshPrompt();
+    line("Interactive session opened to " + CONFIG.target + ".", "ok");
+    markTask("session", true);
+  }
+  function cGetService(p){
+    if(checkUnknownParams(p)) return;
+    const header = "Status   Name               DisplayName";
+    const ruler  = "------   ----               -----------";
+    const rows = [
+      "Running  WinRM              Windows Remote Management (WS-Mgmt)",
+      "Running  Dnscache           DNS Client",
+      "Running  LanmanServer       Server",
+      "Stopped  Spooler            Print Spooler"
+    ];
+    if(!state.inSession){
+      block([header, ruler].concat(rows).join("\n"), "tbl");
+      line("This queried THIS computer, not " + CONFIG.target + ". Open a session first:", "warnln");
+      line("  Enter-PSSession -ComputerName " + CONFIG.target, "warnln");
+      return;
+    }
+    block([header, ruler].concat(rows).join("\n"), "tbl");
+    markTask("service", true);
+  }
+  function cInvoke(p){
+    if(checkUnknownParams(p)) return;
+    const host = (p.params.computername || p.params.cn || ).trim();
+    if(!host){ badParam("Invoke-Command","ComputerName"); return; }
+    if(!p.sb && p.params.scriptblock === undefined){
+      block("Invoke-Command : The -ScriptBlock parameter is required, e.g. -ScriptBlock { ipconfig }.", "err"); return;
+    }
+    if(host !== CONFIG.target && host !== CONFIG.mgmtIp){ connectFailed(host); return; }
+    if(!state.remotingEnabled){ accessDenied("Invoke-Command", host); return; }
+    const inner = (p.sb || p.params.scriptblock || ).toLowerCase();
+    if(/ipconfig|get-netipconfiguration/.test(inner)){
+      block(
+        "Windows IP Configuration\n\n" +
+        "   IPv4 Address. . . . . . . . . . . : " + CONFIG.mgmtIp + "\n" +
+        "   Subnet Mask . . . . . . . . . . . : " + CONFIG.mask + "\n" +
+        "   Default Gateway . . . . . . . . . : " + CONFIG.gw + "\n" +
+        "   PSComputerName  . . . . . . . . . : " + CONFIG.target, "tbl");
+      markTask("invoke", true);
+    } else {
+      line("Command ran on " + CONFIG.target + ", but it didn't return an IP config.", "warnln");
+      line("Pull the IP configuration: -ScriptBlock { ipconfig }", "warnln");
+    }
+  }
+  function cExit(){
+    if(state.inSession){
+      state.inSession = false; refreshPrompt();
+      line("Session to " + CONFIG.target + " closed.", "sys");
+      markTask("exit", true);
+    } else {
+      line("There are no running sessions to exit.", "warnln");
+    }
+  }
+  function cHelp(){
+    line("Cmdlets available in this lab:", "sys");
+    [["Enable-PSRemoting","turn on remoting (run on the target)"],
+     ["Enter-PSSession -ComputerName <host>","open an interactive remote session"],
+     ["Get-Service [-Name <svc>]","list service status (run inside the session)"],
+     ["Invoke-Command -ComputerName <host> -ScriptBlock { ... }","run one command non-interactively"],
+     ["Exit-PSSession","close the interactive session"],
+     ["Clear-Host","clear the screen"]].forEach(r=>line("  " + r[0] + "   —  " + r[1], "sys"));
+  }
+
+  function run(raw){
+    const p = parse(raw);
+    if(p.cmdlet === ) return;
+    switch(p.lc){
+      case "enable-psremoting": cEnable(p); break;
+      case "enter-pssession":   cEnter(p);  break;
+      case "get-service":       cGetService(p); break;
+      case "invoke-command":    cInvoke(p); break;
+      case "exit-pssession":    cExit(); break;
+      case "exit": case "logout":
+        if(state.inSession) cExit(); else line("Nothing to exit — you're at the local prompt.", "warnln");
+        break;
+      case "clear-host": case "cls": case "clear": out.innerHTML=; break;
+      case "get-help": case "help": case "?": cHelp(); break;
+      case "ipconfig":
+        line("This shows the LOCAL IP config. For the server, use:", "warnln");
+        line("  Invoke-Command -ComputerName " + CONFIG.target + " -ScriptBlock { ipconfig }", "warnln");
+        break;
+      default: notRecognized(p.cmdlet);
+    }
+  }
+
+  cmd.addEventListener("keydown", e=>{
+    if(e.key === "Enter"){ const v = cmd.value; echo(v); cmd.value = ; run(v); }
+  });
+
+  /* ----------------------------- tasks UI ------------------------------ */
+  function markTask(id, val){
+    state.tasks[id] = val;
+    const li = document.querySelector('li[data-task="'+id+'"]');
+    if(li) li.classList.toggle("done", val);
+    updateScore();
+  }
+
+  /* --------------------------- question check -------------------------- */
+  function setQ(id, ok, msg){
+    state.questions[id] = ok;
+    const el = $("#"+id+"state");
+    el.textContent = msg;
+    el.className = "qstate " + (ok ? "right" : (msg && !/Enter|Choose/.test(msg) ? "wrong" : ));
+  }
+  function checkAnswers(){
+    const a1 = ($("#q1").value||).trim();
+    const ok1 = CONFIG.q1Accept.test(a1);
+    setQ("q1", ok1, a1 ? (ok1 ? "Correct — WinRM over 5985 (HTTP) / 5986 (HTTPS)." : "Not quite — name the management protocol and its port.") : "Enter the protocol and port.");
+
+    const a2 = (document.querySelector('input[name="q2"]:checked')||{}).value;
+    setQ("q2", a2===CONFIG.q2, a2 ? (a2===CONFIG.q2 ? "Correct — Invoke-Command runs without an interactive session, across many hosts." : "Re-check: which option needs no interactive prompt?") : "Choose an option.");
+
+    const a3 = (document.querySelector('input[name="q3"]:checked')||{}).value;
+    setQ("q3", a3===CONFIG.q3, a3 ? (a3===CONFIG.q3 ? "Correct — scriptable, no per-host GUI session." : "Re-check: what does RDP force you to do per server?") : "Choose an option.");
+
+    const a4 = ($("#q4").value||).trim();
+    const ok4 = CONFIG.q4Accept.test(a4);
+    setQ("q4", ok4, a4 ? (ok4 ? "Correct." : "Not quite — it's a Verb-Noun cmdlet that enables WinRM.") : "Enter the cmdlet name.");
+    updateScore();
+  }
+  $("#checkbtn").addEventListener("click", checkAnswers);
+
+  /* ------------------------------ scoring ------------------------------ */
+  function tally(){
+    const t = Object.values(state.tasks).filter(Boolean).length;
+    const q = Object.values(state.questions).filter(Boolean).length;
+    return { earned: t+q, total: 9 };
+  }
+  function updateScore(){
+    const s = tally();
+    $("#scorepill").textContent = s.earned + " / " + s.total;
+    $("#submitbtn").disabled = $("#handle").value.trim().length === 0;
+  }
+  $("#handle").addEventListener("input", updateScore);
+
+  /* ------------------------------- reset ------------------------------- */
+  $("#resetbtn").addEventListener("click", ()=>{
+    state.remotingEnabled=false; state.inSession=false;
+    state.tasks={enable:false,session:false,service:false,invoke:false,exit:false};
+    state.questions={q1:false,q2:false,q3:false,q4:false};
+    out.innerHTML=; cmd.value=;
+    document.querySelectorAll('li[data-task]').forEach(li=>li.classList.remove("done"));
+    document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+    $("#q1").value=; $("#q4").value=;
+    ["q1","q2","q3","q4"].forEach(id=>{ $("#"+id+"state").textContent=; $("#"+id+"state").className="qstate"; });
+    $("#status").textContent=; $("#status").className="status";
+    refreshPrompt(); boot(); updateScore();
+  });
+
+  /* --------------------------- screenshot ------------------------------ */
+  async function capturePng(){
+    const node = $("#lab-capture");
+    if(window.html2canvas){
+      try{ const c = await window.html2canvas(node,{backgroundColor:"#0c1118",scale:1,logging:false}); return c.toDataURL("image/png"); }
+      catch(e){ /* fall through */ }
+    }
+    return await svgFallback(node);
+  }
+  async function svgFallback(node){
+    try{
+      const css = document.getElementById("lab-styles").textContent;
+      const r = node.getBoundingClientRect();
+      const w = Math.min(1200, Math.ceil(r.width)), h = Math.ceil(r.height);
+      const clone = node.cloneNode(true);
+      clone.querySelectorAll("input").forEach(i=>i.setAttribute("value", i.value||));
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+        '<foreignObject width="100%" height="100%">'+
+        '<div xmlns="http://www.w3.org/1999/xhtml" style="background:#0c1118;width:'+w+'px">'+
+        '<style>'+css+'</style>'+xml+'</div></foreignObject></svg>';
+      const url = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+      const img = new Image();
+      await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
+      const cv = document.createElement("canvas"); cv.width=w; cv.height=h;
+      const ctx = cv.getContext("2d"); ctx.fillStyle="#0c1118"; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0);
+      return cv.toDataURL("image/png");
+    }catch(e){
+      const cv=document.createElement("canvas"); cv.width=480; cv.height=80;
+      const ctx=cv.getContext("2d"); ctx.fillStyle="#0c1118"; ctx.fillRect(0,0,480,80);
+      ctx.fillStyle="#8a9bb0"; ctx.font="13px monospace"; ctx.fillText("screenshot unavailable in this browser",16,44);
+      return cv.toDataURL("image/png");
+    }
+  }
+
+  /* ------------------------------ submit ------------------------------- */
+  function setStatus(msg, cls){ const s=$("#status"); s.textContent=msg; s.className="status "+(cls||); }
+  async function submit(){
+    const handle = $("#handle").value.trim().slice(0,40);
+    if(!handle){ setStatus("Enter a callsign first.","err"); return; }
+    $("#submitbtn").disabled = true; setStatus("Capturing your work and submitting…","work");
+
+    let screenshot=; try{ screenshot = await capturePng(); }catch(e){ screenshot=; }
+    const sc = tally();
+
+    const tasks = Array.from(document.querySelectorAll('li[data-task]')).map(li=>{
+      const id = li.getAttribute("data-task");
+      return { id, label: li.getAttribute("data-label")||id, passed: !!state.tasks[id] };
+    });
+    const answerFor = id => id==="q1" ? ($("#q1").value||).trim()
+      : id==="q4" ? ($("#q4").value||).trim()
+      : ((document.querySelector('input[name="'+id+'"]:checked')||{}).value||);
+    const questions = Array.from(document.querySelectorAll('[data-q]')).map(el=>{
+      const id = el.getAttribute("data-q");
+      return { id, prompt: el.getAttribute("data-prompt")||id, answer: answerFor(id), correct: !!state.questions[id] };
+    });
+
+    const payload = {
+      assignmentId: CONFIG.assignmentId,
+      handle, clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks, questions,
+      score: { earned: sc.earned, total: sc.total },
+      screenshot, submissionToken: CONFIG.submissionToken
+    };
+
+    try{
+      // Simple request (no headers, text/plain body) — avoids CORS preflight.
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const data = await res.json();
+      if(data && data.success){
+        if(data.docUrl){
+          $("#status").innerHTML = "Submitted as “"+handle+"” — "+sc.earned+"/"+sc.total+". " +
+            '<a href="'+data.docUrl+'" target="_blank" rel="noopener">Open your submission</a>';
+          $("#status").className = "status ok";
+        } else {
+          setStatus("Submitted as “"+handle+"” — "+sc.earned+"/"+sc.total+". Your instructor has the record.","ok");
+        }
+      } else {
+        setStatus("Submission rejected: "+((data&&data.error)||"unknown error")+". Check with your instructor.","err");
+        $("#submitbtn").disabled=false;
+      }
+    }catch(err){
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        setStatus("Sent (no confirmation available in this browser). Confirm receipt with your instructor.","work");
+      }catch(e2){
+        setStatus("Could not reach the submission server. Check your connection and try again.","err");
+        $("#submitbtn").disabled=false;
+      }
+    }
+  }
+  $("#submitbtn").addEventListener("click", submit);
+
+  /* ------------------------------- boot -------------------------------- */
+  function boot(){
+    line("Windows PowerShell — local console ready.", "sys");
+    line("Change #CR-2208 open. Type 'Get-Help' to see the cmdlets for this lab.", "sys");
+  }
+  refreshPrompt(); boot(); updateScore(); cmd.focus();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-nslookup-mail-routing.html",title:"DNS Detective \u2014 Verifying Mail Routing with nslookup"}, NEXT={href:"index_netplus-find-rogue-port.html",title:"Port Audit \u2014 Lantern & Quill Network"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

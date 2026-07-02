@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Lab: Bring a Branch Access Switch Online (Management SVI + Gateway)
+  assignmentId: netplus-switch-mgmt-ip
+  Library: Network+ (N10-009) / AP Networking simulation labs
+  Blueprint tags:
+    N10-009: 2.2 (configure switching features), 3.5 (network access &
+             management methods), 1.7 (IPv4 addressing)  [PROVISIONAL — see manifest]
+    APNET:   3.3.C.3 (assign switch IP/subnet via CLI),
+             3.3.A.5 (verify IP + default gateway settings)
+  Clean-room original. No third-party lab wording, hostnames, IP plans,
+  ordering, or screenshots were used.
+  © 2026 {{AUTHOR}} — Licensed under {{LICENSE}}.  Replace before distribution.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Bring a Branch Access Switch Online</title>
+<style id="labstyle">
+  :root{
+    --bg:#0a1418; --panel:#0e1d24; --panel-2:#102730; --rail:#0c191f;
+    --ink:#cfe7e2; --ink-dim:#7fa39c; --line:#1d3a42;
+    --phosphor:#f4b740;       /* amber console accent */
+    --signal:#34d6a4;         /* link/ok green */
+    --fault:#ff6b5e;          /* fault red */
+    --focus:#7fd6ff;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #11323b 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:20px 18px 40px}
+  a{color:var(--focus)}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+
+  /* ---- masthead ---- */
+  header.lab{
+    display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;
+    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px;
+  }
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--phosphor)}
+  h1{font-size:22px;line-height:1.15;margin:.15em 0 0;font-weight:650}
+  .tags{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:6px}
+  .tags b{color:var(--ink)}
+  .scenario{flex:1 1 360px;min-width:280px;font-size:14px;color:var(--ink)}
+  .scenario p{margin:.4em 0}
+
+  /* ---- 3-column working area ---- */
+  .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    overflow:hidden}
+  .card > h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    font-family:var(--mono);color:var(--ink-dim);margin:0;padding:11px 14px;
+    border-bottom:1px solid var(--line);background:var(--panel-2)}
+
+  /* ---- console ---- */
+  .console{display:flex;flex-direction:column;min-height:420px}
+  .screen{flex:1;background:#06120f;color:#d7f5e8;font-family:var(--mono);
+    font-size:13px;padding:12px 14px;overflow:auto;white-space:pre-wrap;
+    word-break:break-word;min-height:300px;max-height:46vh}
+  .screen .echo{color:#bfe9d6}
+  .screen .err{color:var(--fault)}
+  .screen .note{color:var(--phosphor)}
+  .cmdline{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);
+    background:#06120f;padding:8px 12px}
+  .cmdline .pfx{font-family:var(--mono);font-size:13px;color:var(--signal);
+    white-space:nowrap}
+  .cmdline input{flex:1;background:transparent;border:0;color:#eafff6;
+    font-family:var(--mono);font-size:13px;caret-color:var(--phosphor)}
+  .cmdline input:focus{outline:none}
+  .hint{font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+    padding:7px 14px;border-top:1px solid var(--line);background:var(--panel-2)}
+
+  /* ---- right rail: device front panel + tasks + questions ---- */
+  .rail{display:flex;flex-direction:column;gap:16px}
+  .panel-lights{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}
+  .lamp{display:flex;align-items:center;gap:9px;background:var(--rail);
+    border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+  .led{width:11px;height:11px;border-radius:50%;background:#243b40;flex:none;
+    box-shadow:inset 0 0 0 1px #0006}
+  .led.on{background:var(--signal);box-shadow:0 0 9px var(--signal)}
+  .led.amber.on{background:var(--phosphor);box-shadow:0 0 9px var(--phosphor)}
+  .lamp .lab-l{font-family:var(--mono);font-size:11px;letter-spacing:.06em}
+  .lamp .lab-l small{display:block;color:var(--ink-dim);letter-spacing:0}
+
+  ol.tasks,.qs{list-style:none;margin:0;padding:8px 14px 14px}
+  ol.tasks li{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  ol.tasks li:last-child{border-bottom:0}
+  .chk{width:18px;height:18px;flex:none;border-radius:5px;border:1px solid var(--line);
+    display:grid;place-items:center;font-size:12px;color:#06120f;margin-top:1px}
+  .chk.done{background:var(--signal);border-color:var(--signal)}
+  .t-txt{font-size:13px}
+  .t-txt code{font-family:var(--mono);background:#08161a;border:1px solid var(--line);
+    border-radius:4px;padding:0 4px;color:var(--phosphor);font-size:12px}
+  .t-txt small{display:block;color:var(--ink-dim);margin-top:2px}
+
+  .qs .q{padding:11px 0;border-bottom:1px dashed var(--line)}
+  .qs .q:last-child{border-bottom:0}
+  .qs .q p{margin:0 0 7px;font-size:13px}
+  .qs label{display:flex;gap:8px;align-items:flex-start;font-size:13px;
+    padding:4px 0;cursor:pointer}
+  .qs input[type=text]{width:100%;background:#08161a;border:1px solid var(--line);
+    color:var(--ink);font-family:var(--mono);font-size:13px;border-radius:7px;
+    padding:8px 10px}
+  .verdict{font-family:var(--mono);font-size:11px;margin-top:6px}
+  .verdict.ok{color:var(--signal)} .verdict.no{color:var(--fault)}
+
+  /* ---- submission bar ---- */
+  .submit{margin-top:18px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:14px;display:flex;flex-wrap:wrap;gap:12px;
+    align-items:center}
+  .submit .field{display:flex;flex-direction:column;gap:4px}
+  .submit label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink-dim)}
+  .submit input{background:#08161a;border:1px solid var(--line);color:var(--ink);
+    font-family:var(--mono);font-size:14px;border-radius:8px;padding:9px 11px;min-width:200px}
+  .score{font-family:var(--mono);font-size:13px;color:var(--ink);margin-left:auto}
+  .score b{color:var(--phosphor)}
+  button{font:inherit;cursor:pointer;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--ink);padding:10px 14px}
+  button.primary{background:var(--phosphor);color:#1a1206;border-color:var(--phosphor);
+    font-weight:650}
+  button.primary:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent}
+  .status{flex-basis:100%;font-family:var(--mono);font-size:12.5px;min-height:1.2em}
+  .status.ok{color:var(--signal)} .status.no{color:var(--fault)}
+  .status a{word-break:break-all}
+
+  footer.lic{margin-top:22px;font-family:var(--mono);font-size:11px;
+    color:var(--ink-dim);border-top:1px solid var(--line);padding-top:12px}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-switch-mgmt-ip", "title": "Lab — Bring a Branch Access Switch Online", "version": "1.0.0", "objectives": ["N10-009:2.2", "N10-009:3.5", "APNET:3.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap" id="labroot">
+  <header class="lab">
+    <div style="flex:1 1 320px;min-width:280px">
+      <div class="eyebrow">Network Operations · CLI Simulation</div>
+      <h1>Bring a Branch Access Switch Online</h1>
+      <div class="tags">
+        <b>N10-009</b> 2.2 · 3.5 · 1.7 &nbsp;|&nbsp; <b>AP&nbsp;Networking</b> 3.3.C.3 · 3.3.A.5
+      </div>
+    </div>
+    <div class="scenario">
+      <p>The <b>Tidewater Makers Collective</b> just finished wiring the upstairs
+      loft workshop. The new access switch <code>MK-SW-LOFT</code> powers on with a
+      blank management config — it can switch frames, but no one can reach it
+      remotely to monitor or update it.</p>
+      <p>Your job: give the switch a reachable identity on the management network
+      and a way out. The upstream router <code>MK-RTR-CORE</code> is already up and
+      advertising itself over LLDP — use that to find your gateway, then make the
+      change stick across a reboot.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ====== CONSOLE ====== -->
+    <section class="card console" aria-label="Switch console">
+      <h2>Console — MK-SW-LOFT (115200 8N1)</h2>
+      <div class="screen" id="screen" role="log" aria-live="polite" aria-label="Console output"></div>
+      <div class="cmdline">
+        <span class="pfx" id="prompt">MK-SW-LOFT&gt;</span>
+        <label class="sr-only" for="cmd">Console command</label>
+        <input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false"
+               aria-label="Type a console command and press Enter" />
+      </div>
+      <div class="hint">Type <code>?</code> for a command list at any mode. Start with <code>enable</code>.</div>
+    </section>
+
+    <!-- ====== RIGHT RAIL ====== -->
+    <div class="rail">
+      <section class="card" aria-label="Device status panel">
+        <h2>Front panel — config state</h2>
+        <div class="panel-lights">
+          <div class="lamp"><span class="led amber" id="led-lldp"></span>
+            <span class="lab-l">NEIGHBOR<small>LLDP discovered</small></span></div>
+          <div class="lamp"><span class="led" id="led-svi"></span>
+            <span class="lab-l">MGMT IP<small>Vlan20 up</small></span></div>
+          <div class="lamp"><span class="led" id="led-gw"></span>
+            <span class="lab-l">GATEWAY<small>default route</small></span></div>
+          <div class="lamp"><span class="led" id="led-save"></span>
+            <span class="lab-l">SAVED<small>startup-config</small></span></div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Lab tasks">
+        <h2>Tasks</h2>
+        <ol class="tasks" id="tasklist"></ol>
+      </section>
+
+      <section class="card" aria-label="Lab questions">
+        <h2>Questions</h2>
+        <div class="qs" id="questions"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ====== SUBMISSION ====== -->
+  <section class="submit" aria-label="Submit lab">
+    <div class="field">
+      <label for="handle">Callsign / handle (no real names)</label>
+      <input id="handle" maxlength="40" placeholder="e.g. loft-owl-7" autocomplete="off" />
+    </div>
+    <div class="score" id="scoreReadout">Score <b>0</b> / 6</div>
+    <button class="primary" id="submitBtn" disabled>Submit completed lab</button>
+    <button class="ghost" id="resetBtn" type="button">Reset lab</button>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <footer class="lic">
+    © 2026 {{AUTHOR}} — Licensed under {{LICENSE}}. Clean-room original lab for
+    CompTIA Network+ (N10-009) &amp; College Board AP Networking. Not affiliated
+    with or derived from any vendor lab product.
+  </footer>
+</div>
+
+<!-- ===================================================================== -->
+<!-- SCRIPT BLOCK 1 — screenshot capture                                    -->
+<!--                                                                        -->
+<!-- The master spec calls for an INLINED html2canvas paste here. Because   -->
+<!-- this lab renders ONLY self-drawn DOM (no captured images, no external  -->
+<!-- assets), we ship a dependency-free SVG<->canvas capture below so the   -->
+<!-- file works out of the box with zero network calls. If you prefer       -->
+<!-- html2canvas specifically, paste its minified source above this comment -->
+<!-- (it sets window.html2canvas) and capture() will use it automatically.  -->
+<!-- ===================================================================== -->
+<script>
+(function(){
+  // Reflect live form values into attributes so the DOM clone serializes them.
+  function freezeInputs(node){
+    node.querySelectorAll('input').forEach(function(el){
+      if(el.type==='radio'||el.type==='checkbox'){
+        if(el.checked) el.setAttribute('checked','checked'); else el.removeAttribute('checked');
+      } else { el.setAttribute('value', el.value||''); }
+    });
+  }
+
+  // Primary: serialize the lab DOM into an SVG <foreignObject>, raster to PNG.
+  async function captureViaSVG(el){
+    var css = (document.getElementById('labstyle')||{}).textContent||'';
+    var rect = el.getBoundingClientRect();
+    var w = Math.min(Math.ceil(rect.width), 1200);
+    var h = Math.ceil(rect.height);
+    var clone = el.cloneNode(true);
+    freezeInputs(clone);
+    var xml = new XMLSerializer().serializeToString(clone);
+    var svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject width="100%" height="100%">'+
+      '<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px">'+
+      '<style>'+css+'</style>'+xml+'</div>'+
+      '</foreignObject></svg>';
+    var blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    try{
+      var img = await new Promise(function(res,rej){
+        var i=new Image(); i.onload=function(){res(i)}; i.onerror=rej; i.src=url;
+      });
+      var dpr = Math.min(window.devicePixelRatio||1, 2);
+      var c = document.createElement('canvas');
+      c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr);
+      var ctx=c.getContext('2d'); ctx.scale(dpr,dpr);
+      ctx.fillStyle='#0a1418'; ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img,0,0,w,h);
+      return c.toDataURL('image/png');
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  // Fallback: plain canvas summary of the graded state (always succeeds).
+  function captureFallback(summary){
+    var W=720, H=60+summary.lines.length*22+30;
+    var c=document.createElement('canvas'); c.width=W; c.height=H;
+    var x=c.getContext('2d');
+    x.fillStyle='#0a1418'; x.fillRect(0,0,W,H);
+    x.fillStyle='#f4b740'; x.font='bold 16px monospace';
+    x.fillText('Lab submission — '+summary.assignmentId, 18, 30);
+    x.font='13px monospace'; var y=58;
+    summary.lines.forEach(function(l){
+      x.fillStyle = l.ok===true?'#34d6a4':(l.ok===false?'#ff6b5e':'#cfe7e2');
+      x.fillText(l.text, 18, y); y+=22;
+    });
+    return c.toDataURL('image/png');
+  }
+
+  window.LabCapture = async function(el, summary){
+    try{
+      if(window.html2canvas){
+        var canvas = await window.html2canvas(el, {backgroundColor:'#0a1418', scale:2});
+        return canvas.toDataURL('image/png');
+      }
+      return await captureViaSVG(el);
+    }catch(e){
+      try{ return captureFallback(summary); }catch(_){ return ''; }
+    }
+  };
+})();
+</script>
+
+<!-- ===================================================================== -->
+<!-- SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, CLI logic, submission     -->
+<!-- ===================================================================== -->
+<script>
+(function(){
+"use strict";
+
+/* ----------------------------- CONFIG ------------------------------------ */
+const CONFIG = {
+  assignmentId: "netplus-switch-mgmt-ip",
+  title: "Bring a Branch Access Switch Online (Management SVI + Gateway)",
+  objectives: ["N10-009:2.2", "N10-009:3.5", "APNET:3.3"],
+
+  // ----- ANSWER KEY (original values; inspectable — see §7 of the spec) -----
+  hostname:   "MK-SW-LOFT",
+  mgmtVlan:   20,
+  sviIp:      "10.40.20.12",
+  sviMask:    "255.255.255.0",
+  gateway:    "10.40.20.1",         // = MK-RTR-CORE management address (via LLDP)
+  neighbor: {
+    name:"MK-RTR-CORE", localIntf:"Gi0/1", remotePort:"Gi0/0",
+    chassis:"0c4d.e9a1.2b30", mgmt:"10.40.20.1",
+    desc:"Tidewater Makers Core Router, Software v3.8.2"
+  },
+
+  // ----- DEPLOYMENT (fill per cohort) -----
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "REPLACE_WITH_COHORT_TOKEN"
+};
+
+const TASKS = [
+  {id:"lldp",  label:'Discover the upstream router with <code>show lldp neighbors detail</code> and read its management address.',
+               sub:"In privileged EXEC.", test:s=>s.lldpViewed},
+  {id:"svi",   label:'Configure <code>interface vlan 20</code> with IP <code>10.40.20.12 / 255.255.255.0</code> and bring it up with <code>no shutdown</code>.',
+               test:s=>s.svi.ip===CONFIG.sviIp && s.svi.mask===CONFIG.sviMask && s.svi.up===true},
+  {id:"gw",    label:'Point the switch at its gateway: <code>ip default-gateway 10.40.20.1</code>.',
+               test:s=>s.gateway===CONFIG.gateway},
+  {id:"save",  label:'Persist the change: <code>copy running-config startup-config</code> (or <code>write memory</code>).',
+               sub:"Save after the IP and gateway are set.", test:s=>s.saved && s.startupOK}
+];
+
+const QUESTIONS = [
+  {id:"q1", type:"text",
+   prompt:"From the LLDP detail output, what is the management IP address of the upstream router (your default gateway)?",
+   check:v=>norm(v)===CONFIG.gateway},
+  {id:"q2", type:"choice",
+   prompt:"MK-SW-LOFT is a Layer 2 access switch — it forwards frames by MAC and never routes packets. Why does it still need a default gateway?",
+   options:[
+     {k:"a",t:"Without one it can't build its MAC address table."},
+     {k:"b",t:"So its own management traffic (SSH, SNMP, syslog) can reach admins and servers on other subnets."},
+     {k:"c",t:"A gateway is required before any port will pass user traffic."},
+     {k:"d",t:"It lets the switch assign IP addresses to connected hosts."}
+   ], answer:"b"}
+];
+
+/* --------------------------- ENGINE STATE -------------------------------- */
+const init = () => ({
+  mode:"user", ifName:null,
+  svi:{ip:null,mask:null,up:false},
+  gateway:null, saved:false, startupOK:false, lldpViewed:false
+});
+let S = init();
+
+const elScreen = document.getElementById('screen');
+const elPrompt = document.getElementById('prompt');
+const elCmd    = document.getElementById('cmd');
+
+function promptStr(){
+  const h=CONFIG.hostname;
+  if(S.mode==="user")   return h+">";
+  if(S.mode==="priv")   return h+"#";
+  if(S.mode==="config") return h+"(config)#";
+  if(S.mode==="if")     return h+"(config-if)#";
+  return h+">";
+}
+function refreshPrompt(){ elPrompt.textContent = promptStr(); }
+
+function print(text, cls){
+  const span=document.createElement('span');
+  if(cls) span.className=cls;
+  span.textContent=text+"\n";
+  elScreen.appendChild(span);
+  elScreen.scrollTop=elScreen.scrollHeight;
+}
+function echo(line){ print(promptStr()+" "+line, 'echo'); }
+
+/* ----- IPv4 helpers ----- */
+function validIp(s){ return /^\d{1,3}(\.\d{1,3}){3}$/.test(s) &&
+  s.split('.').every(o=>+o>=0 && +o<=255); }
+function validMask(s){
+  if(!validIp(s)) return false;
+  // contiguous ones followed by zeros
+  const bits=s.split('.').map(o=>(+o).toString(2).padStart(8,'0')).join('');
+  return /^1*0*$/.test(bits) && bits.indexOf('1')!==-1;
+}
+function norm(s){ return (s||"").trim().toLowerCase(); }
+
+/* ----- command abbreviation match (Cisco-style prefix) ----- */
+function isPfx(token, full){ token=token.toLowerCase();
+  return token.length>0 && full.indexOf(token)===0; }
+
+/* ----- error helpers (realistic IOS text) ----- */
+function invalid(raw, badIndex){
+  // caret under the offending token
+  const pad = (promptStr()+" ").length + (badIndex||0);
+  print(" ".repeat(pad)+"^");
+  print("% Invalid input detected at '^' marker.", 'err');
+}
+function incomplete(){ print("% Incomplete command.", 'err'); }
+
+/* ----------------------------- COMMAND RUNNER ---------------------------- */
+function run(raw){
+  const line=raw.trim();
+  echo(line);
+  if(line==="") return;
+
+  const toks=line.split(/\s+/);
+  const t0=toks[0].toLowerCase();
+
+  if(t0==="?" || line==="?"){ return help(); }
+
+  // ---------- USER EXEC ----------
+  if(S.mode==="user"){
+    if(isPfx(t0,"enable")){ S.mode="priv"; return; }
+    if(isPfx(t0,"show"))  { print("% This command is available in privileged EXEC. Type 'enable' first.", 'note'); return; }
+    return invalid(raw, 0);
+  }
+
+  // ---------- shared: end / exit ----------
+  if(t0==="end"){ if(S.mode==="config"||S.mode==="if"){S.mode="priv"; S.ifName=null;} return; }
+  if(t0==="exit"){
+    if(S.mode==="if"){ S.mode="config"; S.ifName=null; return; }
+    if(S.mode==="config"){ S.mode="priv"; return; }
+    if(S.mode==="priv"){ S.mode="user"; return; }
+    return;
+  }
+  if(isPfx(t0,"disable") && S.mode==="priv"){ S.mode="user"; return; }
+
+  // ---------- PRIVILEGED EXEC ----------
+  if(S.mode==="priv"){
+    if(isPfx(t0,"configure")){
+      if(toks[1]&&isPfx(toks[1],"terminal")){ S.mode="config"; return; }
+      if(!toks[1]){ S.mode="config"; return; } // accept bare 'configure'
+      return invalid(raw, toks[0].length+1);
+    }
+    if(isPfx(t0,"show")){ return showCmd(toks, raw); }
+    if(isPfx(t0,"copy")){ return copyCmd(toks); }
+    if(isPfx(t0,"write")||t0==="wr"){ return writeMem(); }
+    return invalid(raw, 0);
+  }
+
+  // ---------- GLOBAL CONFIG ----------
+  if(S.mode==="config"){
+    if(isPfx(t0,"interface")||t0==="int"){
+      return interfaceCmd(toks, raw);
+    }
+    if(t0==="ip"){
+      if(toks[1]&&isPfx(toks[1],"default-gateway")){
+        const gw=toks[2];
+        if(!gw) return incomplete();
+        if(!validIp(gw)){ print("% Invalid IP address.", 'err'); return; }
+        S.gateway=gw; print("Default gateway set to "+gw+".", 'note'); return;
+      }
+      return invalid(raw, toks[0].length+1);
+    }
+    if(isPfx(t0,"hostname")){
+      if(toks[1]){ CONFIG.hostname=toks[1]; refreshPrompt(); return; }
+      return incomplete();
+    }
+    return invalid(raw, 0);
+  }
+
+  // ---------- INTERFACE CONFIG ----------
+  if(S.mode==="if"){
+    if(t0==="ip"){
+      if(toks[1]&&isPfx(toks[1],"address")){
+        const ip=toks[2], mask=toks[3];
+        if(!ip||!mask) return incomplete();
+        if(!validIp(ip)){ print("% Invalid IP address.", 'err'); return; }
+        if(!validMask(mask)){ print("% Invalid mask. Use a contiguous mask, e.g. 255.255.255.0", 'err'); return; }
+        S.svi.ip=ip; S.svi.mask=mask;
+        print("IP address "+ip+" "+mask+" assigned to "+S.ifName+".", 'note'); return;
+      }
+      return invalid(raw, toks[0].length+1);
+    }
+    if(t0==="no"){
+      if(toks[1]&&isPfx(toks[1],"shutdown")){
+        S.svi.up=true;
+        print("%LINK-3-UPDOWN: Interface "+S.ifName+", changed state to up", 'note'); return;
+      }
+      return invalid(raw, toks[0].length+1);
+    }
+    if(isPfx(t0,"shutdown")){
+      S.svi.up=false;
+      print("%LINK-5-CHANGED: Interface "+S.ifName+", changed state to administratively down", 'note'); return;
+    }
+    if(isPfx(t0,"description")){ return; } // accepted, no-op
+    return invalid(raw, 0);
+  }
+}
+
+/* ----- interface vlan N ----- */
+function interfaceCmd(toks, raw){
+  // forms: interface vlan 20 | interface vlan20 | int vlan20
+  let rest=toks.slice(1).join(" ").toLowerCase();
+  if(!rest) return incomplete();
+  let m=rest.match(/^vlan\s*(\d+)$/);
+  if(!m){ print("% Use 'interface vlan <number>' for the management SVI.", 'err'); return; }
+  const n=+m[1];
+  S.mode="if"; S.ifName="Vlan"+n;
+  if(n!==CONFIG.mgmtVlan){
+    print("Note: entering Vlan"+n+". The management network for this site is VLAN "+CONFIG.mgmtVlan+".", 'note');
+  }
+}
+
+/* ----- show ... ----- */
+function showCmd(toks, raw){
+  const rest=toks.slice(1).map(t=>t.toLowerCase());
+  // show lldp neighbors detail
+  if(rest[0]&&isPfx(rest[0],"lldp")){
+    if(rest[1]&&(isPfx(rest[1],"neighbors")||rest[1]==="nei")){
+      lldpDetail(rest.includes("detail")||rest.includes("det"));
+      return;
+    }
+    return incomplete();
+  }
+  if(rest[0]==="ip" && rest[1] && isPfx(rest[1],"interface")){ return showIpIntBrief(); }
+  if(rest[0]&&isPfx(rest[0],"running-config")){ return showRunning(); }
+  if(rest[0]&&isPfx(rest[0],"version")){
+    print("Tidewater Makers Switch OS, Version 4.1.0  |  Uptime: 11 minutes\n"+
+          "System image: mk-sw-os.4.1.0.bin", 'note'); return;
+  }
+  return invalid(raw, (toks[0].length+1));
+}
+
+function lldpDetail(detail){
+  const n=CONFIG.neighbor;
+  if(!detail){
+    print(
+"Capability codes: (R) Router, (B) Bridge, (W) WLAN AP\n\n"+
+"Device ID        Local Intf   Hold   Capability   Port ID\n"+
+n.name+"      "+n.localIntf+"        120    R            "+n.remotePort+"\n\n"+
+"Total entries displayed: 1");
+    print("(Tip: add 'detail' to read the management address.)", 'note');
+    return;
+  }
+  print(
+"------------------------------------------------\n"+
+"Local Intf: "+n.localIntf+"\n"+
+"Chassis id: "+n.chassis+"\n"+
+"Port id: "+n.remotePort+"\n"+
+"Port Description: Uplink to Loft access switch\n"+
+"System Name: "+n.name+"\n\n"+
+"System Description:\n  "+n.desc+"\n\n"+
+"Time remaining: 109 seconds\n"+
+"System Capabilities: B,R\n"+
+"Enabled Capabilities: R\n"+
+"Management Addresses:\n  IP: "+n.mgmt+"\n"+
+"Auto Negotiation - supported, enabled\n"+
+"Physical media capabilities:\n  1000baseT(FD)\n"+
+"Media Attachment Unit type: 30\n"+
+"------------------------------------------------\n"+
+"Total entries displayed: 1");
+  S.lldpViewed=true;
+}
+
+function showIpIntBrief(){
+  const ip=S.svi.ip||"unassigned";
+  const status=S.svi.ip?(S.svi.up?"up":"administratively down"):"administratively down";
+  const proto=(S.svi.ip&&S.svi.up)?"up":"down";
+  print(
+"Interface              IP-Address      OK?  Method  Status                  Protocol\n"+
+"Vlan"+CONFIG.mgmtVlan+"                 "+pad(ip,15)+" YES  manual  "+pad(status,22)+" "+proto+"\n"+
+"GigabitEthernet0/1     unassigned      YES  unset   up                      up\n"+
+"GigabitEthernet0/2     unassigned      YES  unset   up                      up");
+}
+
+function showRunning(){
+  let out="Building configuration...\n\n";
+  out+="hostname "+CONFIG.hostname+"\n!\n";
+  out+="interface Vlan"+CONFIG.mgmtVlan+"\n";
+  if(S.svi.ip) out+=" ip address "+S.svi.ip+" "+S.svi.mask+"\n";
+  out+=(S.svi.up?"":" shutdown\n");
+  out+="!\n";
+  if(S.gateway) out+="ip default-gateway "+S.gateway+"\n";
+  out+="!\nend";
+  print(out);
+}
+
+/* ----- copy running-config startup-config / write ----- */
+function copyCmd(toks){
+  const a=(toks[1]||"").toLowerCase(), b=(toks[2]||"").toLowerCase();
+  const isRun = a&&("running-config".indexOf(a)===0||a==="run");
+  const isStart = b&&("startup-config".indexOf(b)===0||b==="start"||b==="startup");
+  if(isRun&&isStart){ return writeMem(); }
+  if(!toks[1]||!toks[2]) return incomplete();
+  print("% Unsupported copy source/destination in this lab. Try: copy running-config startup-config", 'err');
+}
+function writeMem(){
+  S.saved=true;
+  // startup matches only if the running config is the intended config
+  S.startupOK = (S.svi.ip===CONFIG.sviIp && S.svi.mask===CONFIG.sviMask &&
+                 S.svi.up===true && S.gateway===CONFIG.gateway);
+  print("Building configuration...\n[OK]\nRunning configuration saved to startup-config.", 'note');
+  if(!S.startupOK){
+    print("(Saved as-is. Heads up: the management IP, gateway, or interface state isn't fully configured yet.)", 'note');
+  }
+}
+
+function pad(s,n){ s=String(s); return s.length>=n?s:s+" ".repeat(n-s.length); }
+
+/* ----- help ----- */
+function help(){
+  const m={
+    user:["enable            Enter privileged EXEC mode","?                 Show this list"],
+    priv:["configure terminal  Enter global configuration","show lldp neighbors detail  Discover directly-connected devices",
+          "show ip interface brief     Interface IP summary","show running-config         Current configuration",
+          "copy running-config startup-config  Save config","write memory        Save config","disable / exit      Leave privileged mode"],
+    config:["interface vlan <n>  Configure a switched virtual interface","ip default-gateway <ip>  Set the default gateway",
+            "hostname <name>     Rename the device","exit / end          Leave configuration"],
+    if:["ip address <ip> <mask>  Assign an address to the SVI","no shutdown          Bring the interface up",
+        "shutdown             Administratively disable","exit / end           Leave interface config"]
+  };
+  print("Available commands ("+S.mode+" mode):\n  "+m[S.mode].join("\n  "), 'note');
+}
+
+/* ----------------------------- UI: tasks/questions ----------------------- */
+const tlist=document.getElementById('tasklist');
+TASKS.forEach(t=>{
+  const li=document.createElement('li'); li.id="task-"+t.id;
+  li.innerHTML='<span class="chk" id="chk-'+t.id+'"></span>'+
+    '<span class="t-txt">'+t.label+(t.sub?'<small>'+t.sub+'</small>':'')+'</span>';
+  tlist.appendChild(li);
+});
+
+const qwrap=document.getElementById('questions');
+QUESTIONS.forEach(q=>{
+  const d=document.createElement('div'); d.className="q"; d.id="q-"+q.id;
+  let inner='<p>'+q.prompt+'</p>';
+  if(q.type==="text"){
+    inner+='<input type="text" id="in-'+q.id+'" aria-label="Answer" placeholder="e.g. 10.0.0.1" autocomplete="off" />';
+  } else {
+    q.options.forEach(o=>{
+      inner+='<label><input type="radio" name="'+q.id+'" value="'+o.k+'"> <span>'+o.t+'</span></label>';
+    });
+  }
+  inner+='<div class="verdict" id="v-'+q.id+'"></div>';
+  d.innerHTML=inner; qwrap.appendChild(d);
+});
+
+/* ----------------------------- grading ----------------------------------- */
+function taskState(){ return TASKS.map(t=>({id:t.id, passed:!!t.test(S)})); }
+function questionState(){
+  return QUESTIONS.map(q=>{
+    let ans="", correct=false;
+    if(q.type==="text"){ ans=(document.getElementById('in-'+q.id).value||"").trim(); correct=q.check(ans); }
+    else{ const sel=document.querySelector('input[name="'+q.id+'"]:checked'); ans=sel?sel.value:""; correct=ans===q.answer; }
+    return {id:q.id, prompt:q.prompt, answer:ans, correct};
+  });
+}
+function render(){
+  // lights
+  set('led-lldp', S.lldpViewed, true);
+  set('led-svi',  S.svi.ip===CONFIG.sviIp && S.svi.mask===CONFIG.sviMask && S.svi.up);
+  set('led-gw',   S.gateway===CONFIG.gateway);
+  set('led-save', S.saved && S.startupOK);
+  // tasks
+  const ts=taskState();
+  ts.forEach(t=>{ const c=document.getElementById('chk-'+t.id);
+    c.classList.toggle('done',t.passed); c.textContent=t.passed?'✓':''; });
+  // questions verdict (only after an answer exists)
+  const qs=questionState();
+  qs.forEach(q=>{
+    const v=document.getElementById('v-'+q.id);
+    const answered = (q.answer!=="");
+    v.textContent = !answered?"" : (q.correct?"✓ correct":"✗ not yet");
+    v.className="verdict "+(!answered?"":(q.correct?"ok":"no"));
+  });
+  // score
+  const earned = ts.filter(t=>t.passed).length + qs.filter(q=>q.correct).length;
+  const total = TASKS.length + QUESTIONS.length;
+  document.getElementById('scoreReadout').innerHTML="Score <b>"+earned+"</b> / "+total;
+  const handleOk=(document.getElementById('handle').value||"").trim().length>0;
+  document.getElementById('submitBtn').disabled = !(earned===total && handleOk);
+  return {earned,total,ts,qs};
+}
+function set(id,on,amber){ const el=document.getElementById(id);
+  el.classList.toggle('on',!!on); if(amber) el.classList.add('amber'); }
+
+/* ----------------------------- events ------------------------------------ */
+elCmd.addEventListener('keydown', e=>{
+  if(e.key==="Enter"){ const v=elCmd.value; elCmd.value=""; run(v); refreshPrompt(); render(); }
+});
+qwrap.addEventListener('input', render);
+qwrap.addEventListener('change', render);
+document.getElementById('handle').addEventListener('input', render);
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  S=init(); elScreen.innerHTML=""; CONFIG.hostname="MK-SW-LOFT";
+  refreshPrompt(); banner();
+  document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+  QUESTIONS.forEach(q=>{ if(q.type==="text"){const i=document.getElementById('in-'+q.id); if(i)i.value="";}});
+  setStatus("", ""); render(); elCmd.focus();
+});
+
+/* ----------------------------- submission -------------------------------- */
+function setStatus(msg, kind){ const s=document.getElementById('status');
+  s.className="status "+(kind||""); s.innerHTML=msg; }
+
+document.getElementById('submitBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('submitBtn');
+  const g=render();
+  if(g.earned!==g.total){ setStatus("Finish every task and question first.", "no"); return; }
+  const handle=(document.getElementById('handle').value||"").trim().slice(0,40);
+  if(!handle){ setStatus("Enter a callsign first (no real names).", "no"); return; }
+
+  btn.disabled=true; setStatus("Capturing and submitting…", "");
+
+  const summary={ assignmentId:CONFIG.assignmentId, lines:
+    g.ts.map(t=>({text:"task "+t.id+": "+(t.passed?"pass":"fail"), ok:t.passed}))
+     .concat(g.qs.map(q=>({text:"question "+q.id+": "+(q.correct?"correct":"incorrect"), ok:q.correct})))
+     .concat([{text:"score: "+g.earned+"/"+g.total, ok:g.earned===g.total}]) };
+
+  let screenshot="";
+  try{ screenshot = await window.LabCapture(document.getElementById('labroot'), summary); }
+  catch(_){ screenshot=""; }
+
+  const payload={
+    assignmentId: CONFIG.assignmentId,
+    handle: handle,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: g.ts.map((t,i)=>({id:t.id, label:TASKS[i].label.replace(/<[^>]+>/g,''), passed:t.passed})),
+    questions: g.qs.map(q=>({id:q.id, prompt:q.prompt, answer:q.answer, correct:q.correct})),
+    score: { earned:g.earned, total:g.total },
+    screenshot: screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+    setStatus("No submission URL configured. Ask your instructor to set APPS_SCRIPT_URL.", "no");
+    btn.disabled=false; return;
+  }
+
+  try{
+    // SIMPLE request: no custom headers, text/plain body — avoids CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body:JSON.stringify(payload) });
+    const out=await res.json();
+    if(out && out.success){
+      setStatus('Submitted ✓  Your record: <a href="'+out.docUrl+'" target="_blank" rel="noopener">open document</a>', "ok");
+    } else {
+      setStatus("Server rejected the submission: "+((out&&out.error)||"unknown error")+". Tell your instructor.", "no");
+      btn.disabled=false;
+    }
+  } catch(err){
+    // Fallback: fire-and-forget (can't read docUrl in locked-down contexts).
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      setStatus("Submitted (offline mode — confirm receipt with your instructor).", "ok");
+    } catch(e2){
+      setStatus("Couldn't reach the server. Check your connection and try again.", "no");
+      btn.disabled=false;
+    }
+  }
+});
+
+/* ----------------------------- boot -------------------------------------- */
+function banner(){
+  print(
+"Tidewater Makers Switch OS — MK-SW-LOFT\n"+
+"No management IP configured. This switch is not reachable over the network.\n"+
+"Press Enter or type '?' for help. Begin with 'enable'.\n");
+}
+refreshPrompt(); banner(); render();
+elCmd.focus();
+
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-lacp-etherchannel.html",title:"Bonding the Backbone \u2014 LACP Link Aggregation Lab"}, NEXT={href:"index_netplus-link-aggregation.html",title:"Lab \u2014 Bundle the Studio Uplink (Link Aggregation / LACP)"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

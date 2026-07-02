@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex">
+<title>Lab — Tiered Syslog on a Distribution Switch</title>
+<!--
+  =====================================================================
+  Tiered Syslog Severity on a Distribution Switch
+  Clean-room simulation lab for CompTIA Network+ and AP Networking.
+
+  Objective coverage:
+    Network+ (N10-007, verified against the objectives PDF in-project):
+      3.3 — common scanning/monitoring processes: log reviewing,
+            event management. (Auditing & logging also touches 4.2.)
+      NOTE: The build brief targets N10-009; the equivalent N10-009
+      sub-objective lives in the Network Operations domain (network
+      monitoring / logging). Confirm the exact N10-009 code against the
+      official N10-009 objectives and update the manifest tag — this is
+      a one-line data edit, no rebuild needed.
+    AP Networking (pilot Framework V.1, Unit 4 "Managing Our Global
+    Connections", Topic 4.5):
+      4.5.B — security controls incl. enabling network monitoring/alerting
+      4.5.C — reviewing logs for indicators of threats / network issues
+
+  © 2026  <AUTHOR / ORG — fill in your name here>.
+  Licensed under the MIT License. Original expression; not derived from
+  any third-party courseware (TestOut, Cisco NetAcad, or otherwise).
+  =====================================================================
+-->
+<style>
+  :root{
+    /* Palette — "Greenhouse Annex at night": botanical ink + living green */
+    --ink:        #0c1a17;
+    --ink-2:      #102521;
+    --ink-3:      #0a1512;
+    --panel:      #122a25;
+    --bone:       #e9efe6;
+    --bone-dim:   #aebcae;
+    --slate:      #5d7a72;
+    --line:       rgba(233,239,230,0.10);
+    --line-soft:  rgba(233,239,230,0.06);
+    --moss:       #7fb069;   /* pass / living */
+    --moss-deep:  #4f8a4a;
+    --amber:      #e6a23c;   /* warning */
+    --rust:       #d1654a;   /* error / critical */
+    --focus:      #9fe0a0;
+
+    /* Severity scale 0(worst)→7(noisiest) */
+    --sev0:#d1654a; --sev1:#dd7a48; --sev2:#e08c43; --sev3:#e6a23c;
+    --sev4:#cdb14a; --sev5:#9bbb5c; --sev6:#7fb069; --sev7:#5d7a72;
+
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --r: 10px;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(127,176,105,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(60,110,95,.12), transparent 55%),
+      var(--ink);
+    color:var(--bone);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:clamp(14px,3vw,34px);
+  }
+  a{ color:var(--moss); }
+
+  .wrap{ max-width:1120px; margin:0 auto; }
+
+  /* ---------- Header ---------- */
+  header.lab-head{ margin-bottom:20px; }
+  .eyebrow{
+    font:600 11px/1 var(--sans);
+    letter-spacing:.22em; text-transform:uppercase;
+    color:var(--moss); margin:0 0 10px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{
+    content:""; width:26px; height:1px; background:var(--moss); display:inline-block;
+  }
+  h1{
+    font:600 clamp(22px,3.6vw,34px)/1.08 var(--sans);
+    letter-spacing:-0.02em; margin:0 0 12px;
+  }
+  .tags{ display:flex; flex-wrap:wrap; gap:7px; margin:0 0 14px; }
+  .tag{
+    font:600 11px/1 var(--mono); letter-spacing:.03em;
+    color:var(--bone-dim);
+    border:1px solid var(--line); border-radius:999px;
+    padding:6px 11px; background:var(--ink-2);
+  }
+  .brief{
+    background:var(--ink-2); border:1px solid var(--line);
+    border-radius:var(--r); padding:16px 18px; max-width:760px;
+  }
+  .brief p{ margin:0 0 8px; color:var(--bone-dim); font-size:14.5px; }
+  .brief p:last-child{ margin-bottom:0; }
+  .brief strong{ color:var(--bone); font-weight:600; }
+  code.inl{ font-family:var(--mono); color:var(--moss); font-size:.92em; }
+
+  /* ---------- Layout ---------- */
+  .grid{
+    display:grid; grid-template-columns: 1.35fr 1fr; gap:18px; margin-top:20px;
+    align-items:start;
+  }
+  @media (max-width:880px){ .grid{ grid-template-columns:1fr; } }
+
+  .card{
+    background:var(--ink-2); border:1px solid var(--line);
+    border-radius:var(--r); overflow:hidden;
+  }
+  .card-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:11px 14px; border-bottom:1px solid var(--line-soft);
+  }
+  .card-title{
+    font:600 11px/1 var(--sans); letter-spacing:.14em; text-transform:uppercase;
+    color:var(--bone-dim);
+  }
+
+  /* ---------- Terminal ---------- */
+  .term-dots{ display:flex; gap:6px; }
+  .term-dots i{ width:9px; height:9px; border-radius:50%; background:var(--line); display:inline-block; }
+  .term-dots i:nth-child(1){ background:#3a4d47; }
+  .term-dots i:nth-child(2){ background:#3a4d47; }
+  .term-dots i:nth-child(3){ background:#3a4d47; }
+
+  #term{
+    background:var(--ink-3); color:var(--bone);
+    font-family:var(--mono); font-size:13px; line-height:1.45;
+    padding:14px 14px 4px; height:380px; overflow-y:auto;
+    scroll-behavior:smooth;
+  }
+  #term .line{ white-space:pre-wrap; word-break:break-word; }
+  #term .sys{ color:var(--bone-dim); }
+  #term .ok{ color:var(--moss); }
+  #term .warn{ color:var(--amber); }
+  #term .err{ color:var(--rust); }
+  #term .echo{ color:var(--bone); }
+  #term .caret-line{ color:var(--rust); }
+
+  .prompt-row{
+    display:flex; align-items:center; gap:0;
+    background:var(--ink-3); border-top:1px solid var(--line-soft);
+    padding:8px 14px 12px;
+  }
+  #promptLabel{ font-family:var(--mono); font-size:13px; color:var(--moss); white-space:pre; }
+  #cmd{
+    flex:1; background:transparent; border:0; outline:none;
+    color:var(--bone); font-family:var(--mono); font-size:13px; padding:2px 4px;
+    caret-color:var(--moss);
+  }
+  #cmd::placeholder{ color:#3f554e; }
+
+  .term-actions{ display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--line-soft); }
+
+  /* ---------- Buttons ---------- */
+  button{
+    font:600 13px/1 var(--sans); letter-spacing:.01em;
+    border-radius:8px; padding:9px 14px; cursor:pointer;
+    border:1px solid var(--line); background:var(--panel); color:var(--bone);
+    transition:background .15s ease, border-color .15s ease, transform .05s ease;
+  }
+  button:hover{ background:#16352e; border-color:var(--moss-deep); }
+  button:active{ transform:translateY(1px); }
+  button.ghost{ background:transparent; }
+  button.primary{
+    background:linear-gradient(180deg,#3f7a44,#2f5e36);
+    border-color:#3f7a44; color:#f3fbef;
+  }
+  button.primary:hover{ background:linear-gradient(180deg,#469049,#356a3c); }
+  button:disabled{ opacity:.45; cursor:not-allowed; }
+
+  /* Visible keyboard focus everywhere */
+  :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; border-radius:6px; }
+
+  /* ---------- Severity ladder (signature) ---------- */
+  .ladder{ padding:14px; }
+  .ladder-note{ font-size:12px; color:var(--bone-dim); margin:0 0 12px; }
+  .ladder-grid{ display:flex; flex-direction:column; gap:4px; }
+  .sevrow{
+    display:grid; grid-template-columns: 22px 1fr auto; align-items:center; gap:10px;
+    padding:5px 8px; border-radius:7px; background:var(--ink-3);
+    border:1px solid var(--line-soft);
+  }
+  .sevnum{
+    font:700 12px/1 var(--mono); text-align:center;
+    width:22px; height:22px; display:grid; place-items:center; border-radius:5px;
+    color:#0c1a17;
+  }
+  .sevname{ font-size:12.5px; color:var(--bone); }
+  .sevname small{ color:var(--slate); font-weight:400; }
+  .dests{ display:flex; gap:4px; }
+  .pip{
+    font:700 9px/1 var(--mono); letter-spacing:.04em;
+    padding:3px 5px; border-radius:4px; border:1px solid var(--line);
+    color:var(--slate); background:transparent; min-width:20px; text-align:center;
+  }
+  .pip.on{ color:#0c1a17; border-color:transparent; }
+  .pip.buf.on{ background:var(--moss); }
+  .pip.con.on{ background:var(--amber); }
+  .pip.rem.on{ background:#7fb6c9; }
+  .legend{ display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; font-size:11px; color:var(--bone-dim); }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .legend i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+
+  /* ---------- Checklist ---------- */
+  .checks{ padding:8px 14px 14px; }
+  .check{
+    display:flex; gap:11px; align-items:flex-start;
+    padding:9px 4px; border-bottom:1px solid var(--line-soft);
+  }
+  .check:last-child{ border-bottom:0; }
+  .box{
+    flex:0 0 auto; width:20px; height:20px; border-radius:6px;
+    border:1.5px solid var(--slate); display:grid; place-items:center;
+    margin-top:1px; transition:.15s ease;
+  }
+  .check[data-done="true"] .box{ background:var(--moss); border-color:var(--moss); }
+  .box svg{ width:12px; height:12px; opacity:0; transition:opacity .15s; }
+  .check[data-done="true"] .box svg{ opacity:1; }
+  .check-text{ font-size:13.5px; color:var(--bone-dim); }
+  .check[data-done="true"] .check-text{ color:var(--bone); }
+  .check-text b{ color:var(--bone); font-weight:600; }
+
+  /* ---------- Questions ---------- */
+  .ques{ padding:6px 14px 14px; }
+  .q{ padding:12px 0; border-bottom:1px solid var(--line-soft); }
+  .q:last-child{ border-bottom:0; }
+  .q-prompt{ font-size:13.5px; color:var(--bone); margin:0 0 9px; font-weight:600; }
+  .opts{ display:flex; flex-direction:column; gap:6px; }
+  .opt{
+    display:flex; gap:9px; align-items:flex-start; cursor:pointer;
+    padding:7px 9px; border-radius:7px; border:1px solid var(--line-soft);
+    font-size:13px; color:var(--bone-dim); background:var(--ink-3);
+  }
+  .opt:hover{ border-color:var(--line); }
+  .opt input{ margin-top:2px; accent-color:var(--moss); }
+  .q[data-state="correct"] .q-prompt::after{ content:" ✓"; color:var(--moss); }
+  .q[data-state="wrong"] .q-prompt::after{ content:" ✕"; color:var(--rust); }
+
+  /* ---------- Submission bar ---------- */
+  .submit-bar{
+    margin-top:18px; background:var(--ink-2); border:1px solid var(--line);
+    border-radius:var(--r); padding:16px 18px;
+    display:grid; grid-template-columns: 1fr auto; gap:16px; align-items:end;
+  }
+  @media (max-width:620px){ .submit-bar{ grid-template-columns:1fr; } }
+  .field label{ display:block; font:600 11px/1 var(--sans); letter-spacing:.12em; text-transform:uppercase; color:var(--bone-dim); margin-bottom:7px; }
+  .field input{
+    width:100%; background:var(--ink-3); border:1px solid var(--line);
+    border-radius:8px; padding:11px 12px; color:var(--bone);
+    font-family:var(--mono); font-size:14px;
+  }
+  .field .hint{ font-size:11.5px; color:var(--slate); margin-top:6px; }
+  .submit-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+  .score-chip{
+    font:700 12px/1 var(--mono); color:var(--bone);
+    border:1px solid var(--line); border-radius:999px; padding:7px 12px; background:var(--ink-3);
+  }
+  .score-chip.pass{ color:#0c1a17; background:var(--moss); border-color:var(--moss); }
+
+  #status{
+    margin-top:14px; font-size:13.5px; min-height:20px; color:var(--bone-dim);
+  }
+  #status.ok{ color:var(--moss); }
+  #status.bad{ color:var(--rust); }
+  #status.work{ color:var(--amber); }
+  #status a{ color:var(--moss); font-weight:600; }
+
+  footer.lic{ margin-top:22px; font-size:11.5px; color:var(--slate); }
+
+  .visually-hidden{
+    position:absolute!important; width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none!important; transition:none!important; scroll-behavior:auto!important; }
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-switch-syslog", "title": "Lab — Tiered Syslog on a Distribution Switch", "version": "1.0.0", "objectives": ["N10-009:3.2", "APNET:4.5"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap" id="lab-capture">
+
+  <header class="lab-head">
+    <p class="eyebrow">Network Operations · Lab</p>
+    <h1>Tiered Syslog on a Distribution Switch</h1>
+    <div class="tags" aria-label="Objective coverage">
+      <span class="tag">N10-007 · 3.3</span>
+      <span class="tag">APNET · 4.5.B</span>
+      <span class="tag">APNET · 4.5.C</span>
+      <span class="tag">assignmentId: netplus-switch-syslog</span>
+    </div>
+    <div class="brief">
+      <p><strong>You're Mara Okonkwo, network operations lead at Tidewater Botanical Gardens.</strong>
+      The distribution switch in the Greenhouse Annex IDF — <code class="inl">tbg-dist-sw01</code> — has been
+      running with logging untuned, so the local console drowns in routine chatter while the central
+      collector misses real warnings.</p>
+      <p>Tune logging by <strong>severity</strong>. On the standard scale, <code class="inl">0</code> is the
+      most urgent (emergencies) and <code class="inl">7</code> is the noisiest (debugging). Each destination
+      keeps everything <em>at or above</em> the level you set — a lower number means a stricter, quieter filter.</p>
+      <p>Work in the console at right. Type <code class="inl">?</code> at any prompt for help. The checklist and
+      severity ladder update as you go.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ===== Console ===== -->
+    <section class="card" aria-label="Switch console">
+      <div class="card-head">
+        <span class="card-title">tbg-dist-sw01 — console</span>
+        <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+      <div id="term" role="log" aria-live="off" aria-label="Console output"></div>
+      <div class="prompt-row">
+        <span id="promptLabel" aria-hidden="true">tbg-dist-sw01&gt; </span>
+        <label for="cmd" class="visually-hidden">Command input</label>
+        <input id="cmd" type="text" autocomplete="off" autocapitalize="off"
+               autocorrect="off" spellcheck="false" placeholder="type a command, then Enter" />
+      </div>
+      <div class="term-actions">
+        <button class="ghost" id="resetBtn" type="button">Reset switch</button>
+        <button class="ghost" id="hintBtn" type="button">Show command map</button>
+      </div>
+    </section>
+
+    <!-- ===== Right column ===== -->
+    <div>
+      <!-- Severity ladder -->
+      <section class="card" style="margin-bottom:18px;" aria-label="Severity ladder">
+        <div class="card-head"><span class="card-title">Severity ladder</span></div>
+        <div class="ladder">
+          <p class="ladder-note">Pips show which destination currently captures each level.</p>
+          <div class="ladder-grid" id="ladder"></div>
+          <div class="legend">
+            <span><i style="background:var(--moss)"></i> BUF · RAM buffer</span>
+            <span><i style="background:var(--amber)"></i> CON · console</span>
+            <span><i style="background:#7fb6c9"></i> REM · remote host</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Checklist -->
+      <section class="card" style="margin-bottom:18px;" aria-label="Task checklist">
+        <div class="card-head"><span class="card-title">Tasks</span></div>
+        <div class="checks" id="checks"></div>
+      </section>
+
+      <!-- Questions -->
+      <section class="card" aria-label="Knowledge check">
+        <div class="card-head"><span class="card-title">Knowledge check</span></div>
+        <div class="ques" id="ques"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== Submission ===== -->
+  <div class="submit-bar">
+    <div class="field">
+      <label for="handle">Callsign</label>
+      <input id="handle" type="text" maxlength="32" autocomplete="off"
+             placeholder="e.g. fern-router-09" />
+      <p class="hint">A pseudonym only — no real names, emails, or IDs. Your instructor maps callsigns to roster separately.</p>
+    </div>
+    <div class="submit-actions">
+      <span class="score-chip" id="scoreChip">0 / 9</span>
+      <button class="primary" id="submitBtn" type="button">Submit completed lab</button>
+    </div>
+  </div>
+  <p id="status" role="status" aria-live="polite"></p>
+
+  <footer class="lic">
+    © 2026 &lt;AUTHOR / ORG&gt; — original clean-room lab, MIT License. Built from public N10-007/N10-009
+    objectives and the AP Networking pilot framework. Not derived from any third-party courseware.
+  </footer>
+</div>
+
+<!-- =====================================================================
+     SCRIPT BLOCK 1 — html2canvas (OPTIONAL, MIT).
+     This lab ships dependency-free and captures via the built-in renderer
+     in block 2. For pixel-faithful DOM capture, paste the official minified
+     html2canvas v1.4.1 source between the markers below; it is auto-detected
+     and used when present. Do NOT load it from a CDN (keeps the file offline).
+
+     ── PASTE html2canvas MINIFIED SOURCE BELOW ──
+
+     ── PASTE html2canvas MINIFIED SOURCE ABOVE ──
+     ===================================================================== -->
+
+<!-- =====================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, answer key, sim, capture, POST
+     ===================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- CONFIG (per-lab edits live here) ---------------- */
+  var CONFIG = {
+    assignmentId: "netplus-switch-syslog",
+    objectives: ["N10-009:3.2", "APNET:4.5"],
+    // Deploy your Apps Script web app and paste its /exec URL here.
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    // Per-cohort secret; must match the Script Property on the server.
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    hostname: "tbg-dist-sw01",
+    targets: {            // ANSWER KEY — the required end state
+      loggingOn: true,
+      buffered: 6,        // informational
+      console: 2,         // critical
+      host: "10.42.7.50",
+      trap: 4             // warnings
+    }
+  };
+
+  var SEV = [
+    {n:0, name:"Emergency",     tag:"emerg"},
+    {n:1, name:"Alert",         tag:"alert"},
+    {n:2, name:"Critical",      tag:"crit"},
+    {n:3, name:"Error",         tag:"err"},
+    {n:4, name:"Warning",       tag:"warn"},
+    {n:5, name:"Notification",  tag:"notif"},
+    {n:6, name:"Informational", tag:"info"},
+    {n:7, name:"Debugging",     tag:"debug"}
+  ];
+  // Keyword aliases Cisco IOS accepts for severity arguments.
+  var SEV_WORDS = {
+    "emergencies":0,"emergency":0,"alerts":1,"alert":1,"critical":2,
+    "errors":3,"error":3,"warnings":4,"warning":4,
+    "notifications":5,"notification":5,"informational":6,"info":6,
+    "debugging":7,"debug":7
+  };
+
+  /* ---------------- Device state (in-memory only) ---------------- */
+  var state, savedSnap;
+  function freshState(){
+    return { mode:"user", loggingOn:false, timestamps:false,
+             buffered:null, console:null, host:null, trap:null };
+  }
+  function reset(){
+    state = freshState();
+    savedSnap = null;
+    term.innerHTML = "";
+    println("tbg-dist-sw01 line con 0 — synchronous console session", "sys");
+    println("IOS-style training simulator · type ? for help", "sys");
+    println("", "sys");
+    setPrompt();
+    render();
+    cmd.focus();
+  }
+
+  /* ---------------- Terminal helpers ---------------- */
+  var term = document.getElementById("term");
+  var cmd = document.getElementById("cmd");
+  var promptLabel = document.getElementById("promptLabel");
+
+  function println(text, cls){
+    var d = document.createElement("div");
+    d.className = "line" + (cls ? " " + cls : "");
+    d.textContent = text;
+    term.appendChild(d);
+    term.scrollTop = term.scrollHeight;
+  }
+  function promptStr(){
+    if(state.mode === "user")   return CONFIG.hostname + "> ";
+    if(state.mode === "priv")   return CONFIG.hostname + "# ";
+    return CONFIG.hostname + "(config)# ";
+  }
+  function setPrompt(){ promptLabel.textContent = promptStr(); }
+
+  function invalid(raw, badToken){
+    // Echo a caret under the offending token, IOS-style.
+    var idx = badToken ? raw.indexOf(badToken) : 0;
+    if(idx < 0) idx = 0;
+    println(" ".repeat(idx) + "^", "caret-line");
+    println("% Invalid input detected at '^' marker.", "err");
+  }
+
+  /* ---------------- Command parser ---------------- */
+  function sevFromArg(arg){
+    if(arg == null) return null;
+    var a = String(arg).toLowerCase();
+    if(/^[0-7]$/.test(a)) return parseInt(a,10);
+    if(SEV_WORDS.hasOwnProperty(a)) return SEV_WORDS[a];
+    return undefined; // signals invalid
+  }
+  function isIPv4(s){
+    var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s||"");
+    if(!m) return false;
+    for(var i=1;i<=4;i++){ if(parseInt(m[i],10)>255) return false; }
+    return true;
+  }
+
+  function run(raw){
+    var line = raw.trim();
+    println(promptStr() + raw, "echo");
+    if(line === "") { return; }
+
+    var t = line.split(/\s+/);
+    var head = t[0].toLowerCase();
+
+    // Universal help
+    if(line === "?"){ helpFor(); return; }
+
+    // ----- USER EXEC -----
+    if(state.mode === "user"){
+      if("enable".indexOf(head)===0 && head.length>=2){ state.mode="priv"; setPrompt(); return; }
+      if(head==="exit"){ println("Connection closed.", "sys"); return; }
+      return invalid(raw, t[0]);
+    }
+
+    // ----- PRIV EXEC -----
+    if(state.mode === "priv"){
+      if(head==="disable"){ state.mode="user"; setPrompt(); return; }
+      if(head==="exit" || head==="end"){ state.mode="user"; setPrompt(); return; }
+
+      // configure terminal / conf t / configure
+      if("configure".indexOf(head)===0){
+        var sub = (t[1]||"").toLowerCase();
+        if(t.length===1 || "terminal".indexOf(sub)===0){
+          state.mode="config"; setPrompt();
+          println("Enter configuration commands, one per line.  End with end/CTRL-Z.", "sys");
+          return;
+        }
+        return invalid(raw, t[1]);
+      }
+
+      // copy running-config startup-config  (and short forms / write memory)
+      if(head==="copy"){
+        var src=(t[1]||"").toLowerCase(), dst=(t[2]||"").toLowerCase();
+        var srcOk = "running-config".indexOf(src)===0 || src==="run";
+        var dstOk = "startup-config".indexOf(dst)===0 || dst==="start";
+        if(srcOk && dstOk){ return saveConfig(); }
+        if(!src){ println("% Incomplete command.", "err"); return; }
+        return invalid(raw, t[1]);
+      }
+      if(head==="write" || head==="wr"){
+        var w=(t[1]||"").toLowerCase();
+        if(t.length===1 || w==="memory" || "memory".indexOf(w)===0){ return saveConfig(); }
+        return invalid(raw, t[1]);
+      }
+
+      // show logging / show running-config
+      if("show".indexOf(head)===0 && head.length>=2){
+        var what=(t[1]||"").toLowerCase();
+        if("logging".indexOf(what)===0 && what){ return showLogging(); }
+        if("running-config".indexOf(what)===0 && what){ return showRunning(); }
+        if(!what){ println("% Incomplete command.", "err"); return; }
+        return invalid(raw, t[1]);
+      }
+
+      return invalid(raw, t[0]);
+    }
+
+    // ----- GLOBAL CONFIG -----
+    if(state.mode === "config"){
+      if(head==="exit"){ state.mode="priv"; setPrompt(); return; }
+      if(head==="end"){ state.mode="priv"; setPrompt(); return; }
+
+      // service timestamps log datetime  (bonus realism)
+      if(head==="service"){
+        var s = t.slice(1).join(" ").toLowerCase();
+        if(s==="timestamps log datetime" || s==="timestamps log datetime msec"){
+          state.timestamps=true; render(); return;
+        }
+        return invalid(raw, t[1]||"");
+      }
+
+      // no logging ...
+      var noPrefix = false, body = t;
+      if(head==="no"){ noPrefix=true; body=t.slice(1); }
+      var h2 = (body[0]||"").toLowerCase();
+
+      if("logging".indexOf(h2)===0 && h2){
+        var key=(body[1]||"").toLowerCase(), arg=body[2];
+
+        if(key==="on"){ state.loggingOn = !noPrefix; render(); return; }
+
+        if(key==="buffered"){
+          if(noPrefix){ state.buffered=null; render(); return; }
+          if(arg==null){ println("% Incomplete command.", "err"); return; }
+          var b=sevFromArg(arg); if(b===undefined) return invalid(raw, String(arg));
+          state.buffered=b; render(); return;
+        }
+        if(key==="console"){
+          if(noPrefix){ state.console=null; render(); return; }
+          if(arg==null){ println("% Incomplete command.", "err"); return; }
+          var c=sevFromArg(arg); if(c===undefined) return invalid(raw, String(arg));
+          state.console=c; render(); return;
+        }
+        if(key==="trap"){
+          if(noPrefix){ state.trap=null; render(); return; }
+          if(arg==null){ println("% Incomplete command.", "err"); return; }
+          var tr=sevFromArg(arg); if(tr===undefined) return invalid(raw, String(arg));
+          state.trap=tr; render(); return;
+        }
+        if(key==="host"){
+          if(arg==null){ println("% Incomplete command.", "err"); return; }
+          if(noPrefix){ if(state.host===arg) state.host=null; render(); return; }
+          if(!isIPv4(arg)) return invalid(raw, String(arg));
+          state.host=arg; render();
+          println("Logging to host "+arg+" started.", "sys");
+          return;
+        }
+        // bare "logging"
+        if(!key){ println("% Incomplete command.", "err"); return; }
+        return invalid(raw, body[1]||"");
+      }
+
+      return invalid(raw, t[0]);
+    }
+  }
+
+  function saveConfig(){
+    println("Destination filename [startup-config]?", "sys");
+    println("Building configuration...", "sys");
+    savedSnap = JSON.stringify(snapshot());
+    println("[OK]", "ok");
+    render();
+  }
+  function snapshot(){
+    return { loggingOn:state.loggingOn, timestamps:state.timestamps,
+             buffered:state.buffered, console:state.console,
+             host:state.host, trap:state.trap };
+  }
+  function lvlName(n){ return n==null ? "—" : (SEV[n].name.toLowerCase()+" ("+n+")"); }
+
+  function showLogging(){
+    println("Syslog logging: " + (state.loggingOn ? "enabled" : "disabled"), state.loggingOn?"ok":"warn");
+    println("    Timestamps  : " + (state.timestamps ? "datetime" : "uptime (default)"), "sys");
+    println("    Console logging : " + (state.console==null ? "disabled" : "level "+lvlName(state.console)), "sys");
+    println("    Buffer logging  : " + (state.buffered==null ? "disabled" : "level "+lvlName(state.buffered)), "sys");
+    println("    Trap logging    : " + (state.trap==null ? "disabled" : "level "+lvlName(state.trap)), "sys");
+    println("    Logging host    : " + (state.host==null ? "none" : state.host), "sys");
+    var dirty = JSON.stringify(snapshot()) !== savedSnap;
+    println("    Config state    : " + (savedSnap && !dirty ? "saved to startup" : "UNSAVED — in running-config only"),
+            savedSnap && !dirty ? "ok" : "warn");
+  }
+  function showRunning(){
+    println("! running-config (excerpt)", "sys");
+    if(state.timestamps) println("service timestamps log datetime", "sys");
+    println("hostname "+CONFIG.hostname, "sys");
+    if(state.loggingOn) println("logging on", "sys");
+    if(state.buffered!=null) println("logging buffered "+state.buffered, "sys");
+    if(state.console!=null) println("logging console "+state.console, "sys");
+    if(state.trap!=null) println("logging trap "+state.trap, "sys");
+    if(state.host) println("logging host "+state.host, "sys");
+    println("end", "sys");
+  }
+
+  function helpFor(){
+    if(state.mode==="user"){
+      println("  enable            Enter privileged EXEC mode", "sys");
+      println("  exit              Close the session", "sys");
+    } else if(state.mode==="priv"){
+      println("  configure terminal             Enter global config", "sys");
+      println("  show logging                   View logging status", "sys");
+      println("  show running-config            View active config", "sys");
+      println("  copy running-config startup-config   Persist config", "sys");
+      println("  disable / exit                 Step back / leave", "sys");
+    } else {
+      println("  logging on                     Enable system logging", "sys");
+      println("  logging buffered <0-7|word>    RAM buffer minimum level", "sys");
+      println("  logging console  <0-7|word>    Console minimum level", "sys");
+      println("  logging host <A.B.C.D>         Add a remote syslog host", "sys");
+      println("  logging trap <0-7|word>        Remote (host) minimum level", "sys");
+      println("  service timestamps log datetime   Timestamp log entries", "sys");
+      println("  no logging ...                 Undo a setting", "sys");
+      println("  end / exit                     Leave config mode", "sys");
+      println("  levels: 0 emergency .. 4 warning .. 6 informational .. 7 debugging", "sys");
+    }
+  }
+
+  /* ---------------- Tasks & questions model ---------------- */
+  var TASKS = [
+    { id:"on",     label:'Enable system logging (<b>logging on</b>).',
+      test:function(){ return state.loggingOn === CONFIG.targets.loggingOn; } },
+    { id:"buf",    label:'Capture the <b>RAM buffer</b> down to the <b>informational</b> level.',
+      test:function(){ return state.buffered === CONFIG.targets.buffered; } },
+    { id:"con",    label:'Quiet the <b>console</b> to <b>critical</b> and above.',
+      test:function(){ return state.console === CONFIG.targets.console; } },
+    { id:"host",   label:'Add the remote syslog host <b>10.42.7.50</b>.',
+      test:function(){ return state.host === CONFIG.targets.host; } },
+    { id:"trap",   label:'Set the remote (trap) level to <b>warnings</b>.',
+      test:function(){ return state.trap === CONFIG.targets.trap; } },
+    { id:"save",   label:'Persist <b>running-config → startup-config</b>.',
+      test:function(){ return savedSnap && JSON.stringify(snapshot()) === savedSnap; } }
+  ];
+
+  var QUESTIONS = [
+    { id:"q1", prompt:"On the standard syslog scale, which numeric level marks the most urgent condition?",
+      opts:["0","1","7","8"], answer:"0" },
+    { id:"q2", prompt:"With the RAM buffer set to capture down to informational, are debugging messages stored in the buffer?",
+      opts:["Yes — every level is captured","No — debugging sits below the informational threshold"],
+      answer:"No — debugging sits below the informational threshold" },
+    { id:"q3", prompt:"Why must running-config be copied to startup-config before you leave?",
+      opts:[
+        "Running-config is in NVRAM and is copied to RAM for speed",
+        "Both live in flash; copying just makes a backup on the syslog host",
+        "Running-config is in RAM and is lost on reload; startup-config in NVRAM survives a reboot",
+        "Startup-config runs the device; running-config is only a backup"
+      ],
+      answer:"Running-config is in RAM and is lost on reload; startup-config in NVRAM survives a reboot" }
+  ];
+  var answers = {}; // qid -> chosen string
+
+  /* ---------------- Rendering ---------------- */
+  var checksEl = document.getElementById("checks");
+  var quesEl   = document.getElementById("ques");
+  var ladderEl = document.getElementById("ladder");
+  var scoreChip= document.getElementById("scoreChip");
+
+  function buildChecks(){
+    checksEl.innerHTML = "";
+    TASKS.forEach(function(tk){
+      var row = document.createElement("div");
+      row.className = "check"; row.setAttribute("role","listitem");
+      row.dataset.id = tk.id;
+      row.innerHTML =
+        '<span class="box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#0c1a17" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>'+
+        '<span class="check-text">'+tk.label+'</span>';
+      checksEl.appendChild(row);
+    });
+  }
+  function buildQuestions(){
+    quesEl.innerHTML = "";
+    QUESTIONS.forEach(function(q){
+      var wrap = document.createElement("div");
+      wrap.className="q"; wrap.dataset.id=q.id;
+      var p = document.createElement("p"); p.className="q-prompt"; p.textContent=q.prompt;
+      wrap.appendChild(p);
+      var opts=document.createElement("div"); opts.className="opts";
+      q.opts.forEach(function(o,i){
+        var id=q.id+"_"+i;
+        var lab=document.createElement("label"); lab.className="opt"; lab.setAttribute("for",id);
+        var inp=document.createElement("input");
+        inp.type="radio"; inp.name=q.id; inp.id=id; inp.value=o;
+        inp.addEventListener("change",function(){ answers[q.id]=o; render(); });
+        var span=document.createElement("span"); span.textContent=o;
+        lab.appendChild(inp); lab.appendChild(span); opts.appendChild(lab);
+      });
+      wrap.appendChild(opts); quesEl.appendChild(wrap);
+    });
+  }
+  function buildLadder(){
+    ladderEl.innerHTML="";
+    SEV.forEach(function(s){
+      var row=document.createElement("div"); row.className="sevrow"; row.dataset.n=s.n;
+      row.innerHTML =
+        '<span class="sevnum" style="background:var(--sev'+s.n+')">'+s.n+'</span>'+
+        '<span class="sevname">'+s.name+(s.n===0?' <small>most urgent</small>':(s.n===7?' <small>noisiest</small>':''))+'</span>'+
+        '<span class="dests">'+
+          '<span class="pip buf" data-d="buf">BUF</span>'+
+          '<span class="pip con" data-d="con">CON</span>'+
+          '<span class="pip rem" data-d="rem">REM</span>'+
+        '</span>';
+      ladderEl.appendChild(row);
+    });
+  }
+
+  function captures(level, dest){
+    // A destination captures a severity level if it's set AND level<=threshold.
+    if(dest==="buf") return state.buffered!=null && level<=state.buffered;
+    if(dest==="con") return state.console!=null && level<=state.console;
+    if(dest==="rem") return state.host!=null && state.trap!=null && level<=state.trap;
+    return false;
+  }
+
+  function render(){
+    // checklist
+    var tasksPassed=0;
+    TASKS.forEach(function(tk){
+      var done = !!tk.test();
+      if(done) tasksPassed++;
+      var row = checksEl.querySelector('[data-id="'+tk.id+'"]');
+      if(row) row.dataset.done = done ? "true":"false";
+    });
+    // questions
+    var qCorrect=0;
+    QUESTIONS.forEach(function(q){
+      var chosen=answers[q.id];
+      var w=quesEl.querySelector('[data-id="'+q.id+'"]');
+      if(!chosen){ if(w) w.dataset.state=""; return; }
+      var ok = chosen===q.answer;
+      if(ok) qCorrect++;
+      if(w) w.dataset.state = ok ? "correct":"wrong";
+    });
+    // ladder pips
+    SEV.forEach(function(s){
+      var row=ladderEl.querySelector('[data-n="'+s.n+'"]');
+      if(!row) return;
+      ["buf","con","rem"].forEach(function(d){
+        var pip=row.querySelector('[data-d="'+d+'"]');
+        if(pip) pip.classList.toggle("on", captures(s.n,d));
+      });
+    });
+    // score
+    var earned=tasksPassed+qCorrect, total=TASKS.length+QUESTIONS.length;
+    var pass = earned===total;
+    scoreChip.textContent = earned+" / "+total;
+    scoreChip.classList.toggle("pass", pass);
+    return {earned:earned, total:total, tasksPassed:tasksPassed, qCorrect:qCorrect, pass:pass};
+  }
+
+  /* ---------------- Screenshot capture ---------------- */
+  function bgColor(){ return getComputedStyle(document.body).backgroundColor || "#0c1a17"; }
+
+  async function captureLab(){
+    var node=document.getElementById("lab-capture");
+    if(typeof window.html2canvas === "function"){
+      try{
+        var canvas=await window.html2canvas(node,{backgroundColor:bgColor(), scale:1, useCORS:true});
+        return canvas.toDataURL("image/png");
+      }catch(e){ /* fall through to built-in renderer */ }
+    }
+    return renderFallbackPng();
+  }
+
+  // Dependency-free renderer: draws a faithful text snapshot of lab state.
+  function renderFallbackPng(){
+    var W=760, pad=24, y=pad, lh=18;
+    var c=document.createElement("canvas");
+    var dpr=Math.min(window.devicePixelRatio||1, 2);
+    // height computed after we know line count; pre-measure
+    var lines=[];
+    function L(txt,color,size,weight){ lines.push({t:txt,c:color||"#e9efe6",s:size||13,w:weight||"normal"}); }
+
+    L("Tiered Syslog on a Distribution Switch","#7fb069",18,"600");
+    L("assignmentId: "+CONFIG.assignmentId+"   ·   "+CONFIG.objectives.join("  "),"#aebcae",12);
+    L("callsign: "+(document.getElementById("handle").value||"(none)"),"#e9efe6",13,"600");
+    L("","#000",6);
+    L("CONSOLE TRANSCRIPT (tail)","#5d7a72",11,"700");
+    var termLines=Array.prototype.slice.call(term.querySelectorAll(".line")).slice(-16);
+    if(!termLines.length) L("  (no commands yet)","#5d7a72",12);
+    termLines.forEach(function(ln){
+      var col="#cdd6cc";
+      if(ln.classList.contains("ok")) col="#7fb069";
+      else if(ln.classList.contains("warn")) col="#e6a23c";
+      else if(ln.classList.contains("err")||ln.classList.contains("caret-line")) col="#d1654a";
+      else if(ln.classList.contains("sys")) col="#9fb0a4";
+      var t=ln.textContent; if(t.length>92) t=t.slice(0,91)+"…";
+      L("  "+t, col, 12);
+    });
+    L("","#000",6);
+    L("TASKS","#5d7a72",11,"700");
+    TASKS.forEach(function(tk){
+      var done=!!tk.test();
+      var label=tk.label.replace(/<[^>]+>/g,"");
+      L((done?"  [x] ":"  [ ] ")+label, done?"#7fb069":"#aebcae",12);
+    });
+    L("","#000",6);
+    L("KNOWLEDGE CHECK","#5d7a72",11,"700");
+    QUESTIONS.forEach(function(q){
+      var chosen=answers[q.id];
+      var mark = !chosen ? "[ ]" : (chosen===q.answer?"[x]":"[!]");
+      var col  = !chosen ? "#aebcae" : (chosen===q.answer?"#7fb069":"#d1654a");
+      L("  "+mark+" "+q.prompt, col, 12);
+    });
+    var sc=render();
+    L("","#000",8);
+    L("SCORE  "+sc.earned+" / "+sc.total+(sc.pass?"   ✓ threshold met":""), sc.pass?"#7fb069":"#e6a23c",14,"700");
+    L("captured "+new Date().toISOString(),"#5d7a72",11);
+
+    var H = pad*2 + lines.reduce(function(a,l){ return a + (l.s>13? l.s+6 : lh); },0);
+    c.width=W*dpr; c.height=H*dpr;
+    c.style.width=W+"px"; c.style.height=H+"px";
+    var ctx=c.getContext("2d"); ctx.scale(dpr,dpr);
+    ctx.fillStyle="#0c1a17"; ctx.fillRect(0,0,W,H);
+    ctx.textBaseline="top";
+    lines.forEach(function(l){
+      var step = l.s>13 ? l.s+6 : lh;
+      ctx.font = l.w+" "+l.s+'px ui-monospace, Menlo, Consolas, monospace';
+      ctx.fillStyle=l.c;
+      ctx.fillText(l.t, pad, y);
+      y+=step;
+    });
+    return c.toDataURL("image/png");
+  }
+
+  /* ---------------- Submission ---------------- */
+  var statusEl=document.getElementById("status");
+  var submitBtn=document.getElementById("submitBtn");
+
+  function setStatus(msg, kind){
+    statusEl.className = kind||"";
+    statusEl.innerHTML = msg;
+  }
+
+  async function submit(){
+    var handle=(document.getElementById("handle").value||"").trim();
+    if(!handle){ setStatus("Enter a callsign first — a pseudonym, no real name.", "bad"); return; }
+    if(handle.length>32) handle=handle.slice(0,32);
+
+    if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      setStatus("This lab isn't wired to a submission endpoint yet. Ask your instructor to set <code class='inl'>APPS_SCRIPT_URL</code>.", "bad");
+      return;
+    }
+
+    submitBtn.disabled=true;
+    setStatus("Capturing the lab and submitting…", "work");
+
+    var sc=render();
+    var shot;
+    try{ shot=await captureLab(); }
+    catch(e){ shot=""; }
+
+    var payload={
+      assignmentId: CONFIG.assignmentId,
+      handle: handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(function(tk){
+        return { id:tk.id, label:tk.label.replace(/<[^>]+>/g,""), passed:!!tk.test() };
+      }),
+      questions: QUESTIONS.map(function(q){
+        var chosen=answers[q.id]||null;
+        return { id:q.id, prompt:q.prompt, answer:chosen, correct: chosen===q.answer };
+      }),
+      score: { earned:sc.earned, total:sc.total },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    // Simple request: no custom headers, text/plain body → no CORS preflight.
+    try{
+      var res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+      var out=await res.json();
+      if(out && out.success){
+        var link = out.docUrl ? ' — <a href="'+out.docUrl+'" target="_blank" rel="noopener">open your submission doc</a>' : "";
+        setStatus("Submitted as <b>"+handle+"</b> · score "+sc.earned+"/"+sc.total+link+".", "ok");
+      } else {
+        setStatus("The server rejected the submission"+(out&&out.error?(": "+out.error):"")+". Check with your instructor.", "bad");
+        submitBtn.disabled=false;
+      }
+    }catch(err){
+      // Locked-down contexts: fire-and-forget, can't read docUrl.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+        setStatus("Submission sent in compatibility mode (no receipt link). Confirm with your instructor that it arrived.", "work");
+      }catch(e2){
+        setStatus("Couldn't reach the submission endpoint. Check your connection and try again.", "bad");
+        submitBtn.disabled=false;
+      }
+    }
+  }
+
+  /* ---------------- Wiring ---------------- */
+  cmd.addEventListener("keydown", function(e){
+    if(e.key==="Enter"){ var v=cmd.value; cmd.value=""; run(v); }
+  });
+  document.getElementById("resetBtn").addEventListener("click", reset);
+  document.getElementById("hintBtn").addEventListener("click", function(){
+    println(promptStr()+"?", "echo"); helpFor(); cmd.focus();
+  });
+  submitBtn.addEventListener("click", submit);
+
+  // init
+  buildChecks(); buildQuestions(); buildLadder();
+  reset();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-syslog-forwarding.html",title:"Centralize the Logs \u2014 Brightwater Outfitters Network Lab"}, NEXT={href:"index_netplus-journald-logs.html",title:"NOC Lab \u2014 Reading the Journal"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.5";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

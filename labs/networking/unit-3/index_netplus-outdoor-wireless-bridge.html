@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Cedar Hollow Wireless Site Planner — Outdoor Point-to-Point Bridge Lab
+  assignmentId: netplus-outdoor-wireless-bridge
+  Blueprint tags:
+     CompTIA Network+ N10-009: 2.4 (install/configure wireless standards &
+        technologies — antenna types, frequencies, site surveys)
+        [maps to  in older objectives]
+     AP Networking (pilot V.1): 3.1.B (determine connections required) and
+        3.3.D (configure a wireless access point)
+
+  Original clean-room work. Scenario, sites, SSIDs, addressing, antenna
+  selections, task ordering, and question wording are this author's own
+  expression, built from the public objectives — not derived from any
+  vendor lab.
+
+  Copyright (c) 2026 <AUTHOR / ORG NAME>. All rights reserved.
+  Licensed for use within the Network+ / AP Networking Lab Library.
+  Replace <AUTHOR / ORG NAME> with your name before distribution.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Cedar Hollow Wireless Site Planner — Outdoor Bridge Lab</title>
+<style>
+  :root{
+    --bg:#0f1a17; --bg2:#0b1411; --panel:#16241f; --panel2:#1c2e27;
+    --ink:#e8efe9; --muted:#9fb3a9; --line:rgba(255,255,255,.09);
+    --signal:#8be36b; --beam:#ffc24b; --danger:#ff6b6b; --info:#6bc6ff;
+    --good:#8be36b; --bad:#ff6b6b;
+    --focus:#ffe08a;
+    --radius:14px;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 78% -10%, rgba(139,227,107,.07), transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 18px 90px}
+
+  /* ---- header ---- */
+  header.hd{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;
+    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+  .eyebrow{font:600 11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--signal)}
+  h1{margin:.32em 0 .1em;font-size:clamp(20px,3.4vw,30px);font-weight:800;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:13px;max-width:60ch}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .tag{font:600 11px/1 var(--mono);letter-spacing:.04em;color:var(--ink);
+    background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 10px}
+
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:1.35fr .9fr;gap:18px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .card h2{margin:0 0 4px;font-size:14px;letter-spacing:.02em}
+  .card .hint{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+
+  /* ---- site map (signature) ---- */
+  .mapwrap{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--bg2)}
+  svg.site{display:block;width:100%;height:auto}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;color:var(--muted);font-size:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  /* ---- node config ---- */
+  .nodes{display:grid;grid-template-columns:1fr;gap:12px}
+  .node{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel2)}
+  .node h3{margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:8px}
+  .node h3 .pin{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .field{display:flex;flex-direction:column;gap:4px;min-width:140px;flex:1}
+  label{font:600 11px/1.3 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  select,input[type=text]{
+    background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:9px;
+    padding:9px 10px;font:14px/1.2 var(--sans);width:100%
+  }
+  .chk{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;
+    border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:var(--bg2);user-select:none}
+  .chk input{accent-color:var(--signal);width:16px;height:16px}
+
+  /* ---- controller ---- */
+  .ctl .row{margin-bottom:10px}
+
+  /* ---- tasks & questions ---- */
+  ol.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  ol.tasks li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;
+    border:1px solid var(--line);border-radius:10px;padding:10px 11px;background:var(--panel2)}
+  .badge{flex:0 0 auto;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;
+    font:700 12px/1 var(--mono);background:var(--bg2);border:1px solid var(--line);color:var(--muted)}
+  li.pass .badge{background:rgba(139,227,107,.16);border-color:var(--good);color:var(--good)}
+  li.pass{border-color:rgba(139,227,107,.35)}
+  .qblock{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--panel2)}
+  .qblock .q{font-size:13.5px;font-weight:600;margin-bottom:8px}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink);
+    padding:8px 10px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:var(--bg2)}
+  .opt input{accent-color:var(--signal);margin-top:2px}
+  .opt.correct{border-color:var(--good);background:rgba(139,227,107,.10)}
+  .opt.wrong{border-color:var(--bad);background:rgba(255,107,107,.08)}
+
+  /* ---- submit bar ---- */
+  .subbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(11,20,17,.94);
+    backdrop-filter:blur(6px);border-top:1px solid var(--line)}
+  .subbar .inner{max-width:1080px;margin:0 auto;padding:11px 18px;display:flex;flex-wrap:wrap;
+    gap:12px;align-items:center}
+  .subbar .field{min-width:180px;flex:0 1 240px}
+  .scorepill{font:700 12px/1 var(--mono);letter-spacing:.04em;color:var(--ink);
+    background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:9px 12px}
+  .btn{font:700 13px/1 var(--sans);letter-spacing:.01em;border:1px solid transparent;border-radius:10px;
+    padding:12px 16px;cursor:pointer;color:#08130f;background:var(--signal)}
+  .btn:hover{filter:brightness(1.06)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  .status{font-size:12.5px;color:var(--muted);flex:1 1 100%;min-height:1.2em}
+  .status a{color:var(--signal)}
+  .status.err{color:var(--danger)}
+  .status.ok{color:var(--good)}
+
+  /* ---- a11y ---- */
+  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,.opt:focus-within,.chk:focus-within{
+    outline:3px solid var(--focus);outline-offset:2px}
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .beamline{transition:opacity .35s ease,stroke .35s ease}
+  .heat{transition:opacity .4s ease}
+  footer.ft{margin-top:22px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--line);padding-top:12px}
+  code{font-family:var(--mono);background:var(--bg2);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-outdoor-wireless-bridge", "title": "Cedar Hollow Wireless Site Planner \u2014 Outdoor Bridge Lab", "version": "1.0.0", "objectives": ["N10-009:2.4", "APNET:3.1", "APNET:3.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap">
+
+  <header class="hd">
+    <div>
+      <div class="eyebrow">Cedar Hollow Parks &amp; Rec · Field Networking</div>
+      <h1>Outdoor Wireless Site Planner</h1>
+      <p class="sub">Link the Nature Center and the Maintenance Barn across the meadow with a
+        point-to-point bridge, and fix the dead zone on the amphitheater deck — using the right
+        antenna for each job.</p>
+      <div class="tags" aria-label="Blueprint coverage">
+        <span class="tag">N10-009 · 2.4</span>
+        <span class="tag">AP NET · 3.1.B</span>
+        <span class="tag">AP NET · 3.3.D</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT: simulation -->
+    <section class="card" aria-labelledby="simh" id="labArea">
+      <h2 id="simh">Site map &amp; survey</h2>
+      <p class="hint">Robin Vega is standing in for the parks IT contractor. The two roofs have clear
+        line of sight ~0.6&nbsp;km apart. Aim each link end at the <em>other building only</em> —
+        a neighboring office park sits just off to the south.</p>
+
+      <div class="mapwrap">
+        <svg class="site" viewBox="0 0 640 360" role="img"
+             aria-label="Site map: Nature Center on the left, Maintenance Barn on the right, amphitheater deck below the Nature Center, and a neighboring office park to the south.">
+          <!-- ground -->
+          <rect x="0" y="0" width="640" height="360" fill="#0b1411"/>
+          <path d="M0,250 C160,235 300,260 640,238 L640,360 L0,360 Z" fill="#10211a"/>
+          <!-- meadow grid -->
+          <g stroke="rgba(255,255,255,.04)">
+            <line x1="0" y1="290" x2="640" y2="278"/><line x1="0" y1="320" x2="640" y2="312"/>
+          </g>
+
+          <!-- neighboring office park (south, must avoid) -->
+          <g opacity=".85">
+            <rect x="250" y="318" width="140" height="34" rx="3" fill="#172a22" stroke="rgba(255,255,255,.08)"/>
+            <text x="320" y="339" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#7f968b">NEIGHBOR OFFICE PARK — keep signal off</text>
+          </g>
+
+          <!-- Nature Center -->
+          <g>
+            <rect x="70" y="150" width="110" height="78" rx="4" fill="#1c2e27" stroke="rgba(255,255,255,.12)"/>
+            <rect x="70" y="138" width="110" height="16" rx="3" fill="#24382f"/>
+            <circle id="ncWap" cx="125" cy="140" r="6" fill="#3a4f45" stroke="rgba(255,255,255,.2)"/>
+            <text x="125" y="200" text-anchor="middle" font-size="11" fill="#cfe0d6" font-family="system-ui">Nature Center</text>
+            <text x="125" y="214" text-anchor="middle" font-size="9" fill="#7f968b" font-family="ui-monospace,monospace">NC-ROOF</text>
+          </g>
+
+          <!-- Maintenance Barn -->
+          <g>
+            <rect x="470" y="158" width="104" height="72" rx="4" fill="#1c2e27" stroke="rgba(255,255,255,.12)"/>
+            <path d="M470,158 L522,134 L574,158 Z" fill="#24382f"/>
+            <circle id="mbWap" cx="522" cy="138" r="6" fill="#3a4f45" stroke="rgba(255,255,255,.2)"/>
+            <text x="522" y="206" text-anchor="middle" font-size="11" fill="#cfe0d6" font-family="system-ui">Maintenance Barn</text>
+            <text x="522" y="220" text-anchor="middle" font-size="9" fill="#7f968b" font-family="ui-monospace,monospace">MB-ROOF</text>
+          </g>
+
+          <!-- backhaul beam -->
+          <line id="beam" class="beamline" x1="125" y1="140" x2="522" y2="138"
+                stroke="var(--beam)" stroke-width="3" stroke-dasharray="2 7"
+                stroke-linecap="round" opacity="0"/>
+
+          <!-- amphitheater deck + survey heatmap -->
+          <g>
+            <rect x="60" y="252" width="130" height="40" rx="6" fill="#142019" stroke="rgba(255,255,255,.08)"/>
+            <text x="125" y="276" text-anchor="middle" font-size="10" fill="#9fb3a9" font-family="ui-monospace,monospace">AMPHITHEATER DECK</text>
+            <!-- heat blob: red weak by default -->
+            <ellipse id="heat" class="heat" cx="125" cy="272" rx="74" ry="26"
+                     fill="var(--danger)" opacity=".30"/>
+            <!-- deck antenna marker -->
+            <circle id="deckWap" cx="70" cy="248" r="5" fill="#3a4f45" stroke="rgba(255,255,255,.2)"/>
+          </g>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--beam)"></i> Aimed backhaul link</span>
+        <span><i class="dot" style="background:var(--danger)"></i> Weak survey signal (&lt; −75&nbsp;dBm)</span>
+        <span><i class="dot" style="background:var(--signal)"></i> Adequate coverage</span>
+      </div>
+
+      <!-- node config -->
+      <div class="nodes" style="margin-top:14px">
+
+        <div class="node">
+          <h3><span class="pin"></span> Nature Center roof — bridge end A</h3>
+          <div class="row">
+            <div class="field">
+              <label for="ncAnt">Antenna</label>
+              <select id="ncAnt" data-k="ncAnt">
+                <option value=>— choose —</option>
+                <option value="omni">Omnidirectional (360°)</option>
+                <option value="panel">Panel / sector (directional, wide)</option>
+                <option value="yagi">Yagi (directional, medium gain)</option>
+                <option value="parabolic">Parabolic grid (high gain, narrow beam)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ncAim">Aim at</label>
+              <select id="ncAim" data-k="ncAim">
+                <option value=>— none —</option>
+                <option value="mb">Maintenance Barn</option>
+                <option value="south">Open field (south)</option>
+              </select>
+            </div>
+            <label class="chk"><input type="checkbox" id="ncMount" data-k="ncMount"> Mount WAP</label>
+          </div>
+        </div>
+
+        <div class="node">
+          <h3><span class="pin"></span> Maintenance Barn roof — bridge end B</h3>
+          <div class="row">
+            <div class="field">
+              <label for="mbAnt">Antenna</label>
+              <select id="mbAnt" data-k="mbAnt">
+                <option value=>— choose —</option>
+                <option value="omni">Omnidirectional (360°)</option>
+                <option value="panel">Panel / sector (directional, wide)</option>
+                <option value="yagi">Yagi (directional, medium gain)</option>
+                <option value="parabolic">Parabolic grid (high gain, narrow beam)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="mbAim">Aim at</label>
+              <select id="mbAim" data-k="mbAim">
+                <option value=>— none —</option>
+                <option value="nc">Nature Center</option>
+                <option value="south">Open field (south)</option>
+              </select>
+            </div>
+            <label class="chk"><input type="checkbox" id="mbMount" data-k="mbMount"> Mount WAP</label>
+          </div>
+        </div>
+
+        <div class="node">
+          <h3><span class="pin"></span> Amphitheater deck edge — coverage fix</h3>
+          <div class="row">
+            <div class="field">
+              <label for="dkAnt">Antenna</label>
+              <select id="dkAnt" data-k="dkAnt">
+                <option value=>— choose —</option>
+                <option value="omni">Omnidirectional (360°)</option>
+                <option value="panel">Panel / sector (directional, wide)</option>
+                <option value="parabolic">Parabolic grid (high gain, narrow beam)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="dkAim">Aim at</label>
+              <select id="dkAim" data-k="dkAim">
+                <option value=>— none —</option>
+                <option value="deck">Amphitheater deck</option>
+                <option value="indoor">Indoors</option>
+              </select>
+            </div>
+            <label class="chk"><input type="checkbox" id="dkMount" data-k="dkMount"> Mount WAP</label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- controller -->
+      <div class="node ctl" style="margin-top:12px">
+        <h3><span class="pin"></span> Wireless controller</h3>
+        <div class="row">
+          <div class="field">
+            <label for="band">Backhaul band</label>
+            <select id="band" data-k="band">
+              <option value=>— choose —</option>
+              <option value="2.4">2.4 GHz</option>
+              <option value="5">5 GHz</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="bcast">Backhaul SSID (CHPR-Backhaul)</label>
+            <select id="bcast" data-k="bcast">
+              <option value=>— choose —</option>
+              <option value="on">Broadcast SSID</option>
+              <option value="off">Hidden SSID</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="staffSec">Staff SSID security (CedarHollow-Staff)</label>
+            <select id="staffSec" data-k="staffSec">
+              <option value=>— choose —</option>
+              <option value="open">Open</option>
+              <option value="wpa2">WPA2-Personal</option>
+              <option value="wpa3">WPA3-Personal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="guest">Guest network (CedarHollow-Visitor)</label>
+            <select id="guest" data-k="guest">
+              <option value=>— choose —</option>
+              <option value="off">Not configured</option>
+              <option value="on">On, isolated from staff LAN</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:10px">
+        <button class="btn ghost" type="button" id="resetBtn">Reset lab</button>
+      </div>
+    </section>
+
+    <!-- RIGHT: tasks + questions -->
+    <aside>
+      <section class="card" aria-labelledby="taskh" style="margin-bottom:16px">
+        <h2 id="taskh">Tasks</h2>
+        <p class="hint">These check themselves as you configure the site.</p>
+        <ol class="tasks" id="taskList"></ol>
+      </section>
+
+      <section class="card" aria-labelledby="qh">
+        <h2 id="qh">Knowledge check</h2>
+        <p class="hint">Answer all five. Selections are checked on submit.</p>
+        <div id="qList"></div>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="ft">
+    Cedar Hollow Wireless Site Planner · assignmentId <code>netplus-outdoor-wireless-bridge</code> ·
+    © 2026 &lt;AUTHOR / ORG NAME&gt;. Original clean-room lab content.
+    No real names are collected — use a callsign only.
+  </footer>
+</div>
+
+<!-- SUBMISSION BAR -->
+<div class="subbar" role="region" aria-label="Submit lab">
+  <div class="inner">
+    <div class="field">
+      <label for="handle">Callsign (no real name)</label>
+      <input type="text" id="handle" autocomplete="off" spellcheck="false"
+             maxlength="40" placeholder="e.g. river-fox-22">
+    </div>
+    <span class="scorepill" id="scorePill" aria-live="polite">Tasks 0/5 · Quiz 0/5</span>
+    <button class="btn" type="button" id="submitBtn">Submit completed lab</button>
+    <p class="status" id="status">Configure the site, answer the quiz, enter a callsign, then submit.</p>
+  </div>
+</div>
+
+<!--
+  ============================================================================
+  SCRIPT BLOCK 1 — inlined html2canvas
+  ----------------------------------------------------------------------------
+  Per the library spec, paste the FULL minified html2canvas source between the
+  two markers below so the file stays dependency-free (no CDN). When present,
+  the submit flow captures a pixel-accurate PNG of the lab DOM.
+
+  If left empty, the lab still works: it falls back to a self-rendered PNG
+  "report card" drawn on an offscreen canvas (see makeFallbackShot()), so a
+  real screenshot data URL is always sent. No network is used either way.
+  ============================================================================
+-->
+<script>/* >>> PASTE_HTML2CANVAS_MINIFIED_SOURCE_HERE <<< */</script>
+
+<!-- SCRIPT BLOCK 2 — engine + CONFIG + ANSWER KEY -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------------- LAB CONFIG ----------------------- */
+  var CONFIG = {
+    assignmentId: "netplus-outdoor-wireless-bridge",
+    objectives: ["N10-009:2.4","APNET:3.1","APNET:3.3"],
+    // Deployment values — set these per cohort before handing out:
+    APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+  };
+
+  /* ----------------------- ANSWER KEY ----------------------- *
+   * Note: client keys are inspectable in dev tools. For trustworthy
+   * scoring, re-validate questions server-side (see apps-script.gs). */
+  var QUESTIONS = [
+    { id:"q1",
+      prompt:"For a 0.6 km point-to-point link aimed at one building while keeping signal off the neighboring office park, which antenna fits best?",
+      options:[
+        ["a","Omnidirectional — radiates 360° for broad reach"],
+        ["b","Parabolic grid — high gain, very narrow beamwidth"],
+        ["c","Panel / sector — directional but wide coverage"],
+        ["d","Whip — short-range indoor antenna"]
+      ], answer:"b" },
+    { id:"q2",
+      prompt:"To cover only the amphitheater deck from a building edge — not radiate in every direction — which antenna is most appropriate?",
+      options:[
+        ["a","Omnidirectional, mounted centrally"],
+        ["b","Parabolic grid aimed at the deck"],
+        ["c","Directional panel / sector aimed at the deck"],
+        ["d","No antenna — increase transmit power instead"]
+      ], answer:"c" },
+    { id:"q3",
+      prompt:"Which band is generally preferred for the outdoor backhaul, to get cleaner channels and less congestion?",
+      options:[
+        ["a","2.4 GHz"],
+        ["b","5 GHz"],
+        ["c","900 MHz cellular"],
+        ["d","Bluetooth"]
+      ], answer:"b" },
+    { id:"q4",
+      prompt:"Why choose a directional antenna over an omnidirectional one for the bridge link?",
+      options:[
+        ["a","It focuses RF energy toward the target, adding range and reducing off-axis spill/interference"],
+        ["b","It is always cheaper than an omni"],
+        ["c","It removes the need for line of sight"],
+        ["d","It broadcasts to more clients at once"]
+      ], answer:"a" },
+    { id:"q5",
+      prompt:"Which exhibit told you where the deck signal was weak?",
+      options:[
+        ["a","The DHCP lease table"],
+        ["b","The wireless site survey heatmap (RSSI readings)"],
+        ["c","The switch MAC address table"],
+        ["d","The router boot log"]
+      ], answer:"b" }
+  ];
+
+  var TASKS = [
+    { id:"t_ptp_ant", label:"Fit both bridge ends with a high-gain parabolic grid antenna",
+      pass:function(s){ return s.ncAnt==="parabolic" && s.mbAnt==="parabolic"; } },
+    { id:"t_ptp_link", label:"Mount a WAP on each roof and aim each end at the other building",
+      pass:function(s){ return s.ncMount && s.mbMount && s.ncAim==="mb" && s.mbAim==="nc"; } },
+    { id:"t_backhaul", label:"Run the backhaul on 5 GHz with a hidden SSID",
+      pass:function(s){ return s.band==="5" && s.bcast==="off"; } },
+    { id:"t_deck", label:"Cover the deck dead zone with a directional panel antenna aimed at the deck",
+      pass:function(s){ return s.dkAnt==="panel" && s.dkMount && s.dkAim==="deck"; } },
+    { id:"t_ssid", label:"Secure the staff SSID with WPA3 and stand up an isolated guest network",
+      pass:function(s){ return s.staffSec==="wpa3" && s.guest==="on"; } }
+  ];
+
+  /* ----------------------- STATE ----------------------- */
+  var state = {
+    ncAnt:ncAim:ncMount:false,
+    mbAnt:mbAim:mbMount:false,
+    dkAnt:dkAim:dkMount:false,
+    band:bcast:staffSec:guest:};
+  var answers = {}; // qid -> choice
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ----------------------- BIND CONTROLS ----------------------- */
+  Array.prototype.forEach.call(document.querySelectorAll("[data-k]"), function(el){
+    var k = el.getAttribute("data-k");
+    var ev = (el.type === "checkbox") ? "change" : "change";
+    el.addEventListener(ev, function(){
+      state[k] = (el.type === "checkbox") ? el.checked : el.value;
+      render();
+    });
+  });
+
+  $("resetBtn").addEventListener("click", function(){
+    for (var k in state){ if(typeof state[k]==="boolean") state[k]=false; else state[k]=; }
+    answers = {};
+    Array.prototype.forEach.call(document.querySelectorAll("[data-k]"), function(el){
+      if(el.type==="checkbox") el.checked=false; else el.value=;
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("input[name^='q_']"), function(r){ r.checked=false; });
+    clearQReveal();
+    setStatus("Lab reset. Configure the site again when ready.",);
+    render();
+  });
+
+  /* ----------------------- RENDER ----------------------- */
+  function taskResults(){ return TASKS.map(function(t){ return { id:t.id, label:t.label, passed:!!t.pass(state) }; }); }
+  function tasksPassed(){ return taskResults().filter(function(t){return t.passed;}).length; }
+  function quizCorrect(){
+    return QUESTIONS.filter(function(q){ return answers[q.id] === q.answer; }).length;
+  }
+
+  function renderTasks(){
+    var tr = taskResults(), ol = $("taskList"); ol.innerHTML=;
+    tr.forEach(function(t){
+      var li=document.createElement("li");
+      li.className = t.passed ? "pass" : ;
+      li.innerHTML = '<span class="badge" aria-hidden="true">'+(t.passed?"✓":"•")+'</span>'+
+                     '<span>'+t.label+'<span class="sr">'+(t.passed?" — complete":" — not yet")+'</span></span>';
+      ol.appendChild(li);
+    });
+  }
+
+  function renderQuestions(){
+    var box=$("qList");
+    if(box.dataset.built) return;
+    QUESTIONS.forEach(function(q){
+      var d=document.createElement("div"); d.className="qblock"; d.id="qb_"+q.id;
+      var html='<div class="q">'+q.prompt+'</div><div class="opts" role="radiogroup" aria-label="'+q.id+'">';
+      q.options.forEach(function(o){
+        var inputId="q_"+q.id+"_"+o[0];
+        html+='<label class="opt" for="'+inputId+'" data-opt="'+o[0]+'">'+
+              '<input type="radio" id="'+inputId+'" name="q_'+q.id+'" value="'+o[0]+'"> '+
+              '<span>'+o[1]+'</span></label>';
+      });
+      html+='</div>';
+      d.innerHTML=html; box.appendChild(d);
+    });
+    box.dataset.built="1";
+    box.addEventListener("change", function(e){
+      if(e.target && e.target.name && e.target.name.indexOf("q_")===0){
+        var qid=e.target.name.slice(2);
+        answers[qid]=e.target.value;
+        clearQReveal();
+        renderScore();
+      }
+    });
+  }
+
+  function clearQReveal(){
+    Array.prototype.forEach.call(document.querySelectorAll(".opt"), function(o){
+      o.classList.remove("correct","wrong");
+    });
+  }
+  function revealQuiz(){
+    QUESTIONS.forEach(function(q){
+      var chosen=answers[q.id];
+      var qb=$("qb_"+q.id);
+      Array.prototype.forEach.call(qb.querySelectorAll(".opt"), function(o){
+        var v=o.getAttribute("data-opt");
+        if(v===q.answer) o.classList.add("correct");
+        else if(v===chosen) o.classList.add("wrong");
+      });
+    });
+  }
+
+  function renderMap(){
+    var beam=$("beam"), heat=$("heat");
+    var linkUp = state.ncMount && state.mbMount && state.ncAim==="mb" && state.mbAim==="nc"
+                 && state.ncAnt==="parabolic" && state.mbAnt==="parabolic";
+    beam.style.opacity = linkUp ? "1" : "0";
+    // misaim warning colour
+    var misaim = (state.ncAim==="south" || state.mbAim==="south");
+    beam.setAttribute("stroke", misaim ? "var(--danger)" : "var(--beam)");
+    if(misaim){ beam.style.opacity="1"; beam.setAttribute("x2","300"); beam.setAttribute("y2","330"); }
+    else { beam.setAttribute("x2","522"); beam.setAttribute("y2","138"); }
+    // deck heat: green + adequate when panel mounted & aimed
+    var deckFixed = state.dkAnt==="panel" && state.dkMount && state.dkAim==="deck";
+    var deckBroad = state.dkAnt==="omni" && state.dkMount; // wasteful but technically some coverage
+    if(deckFixed){ heat.setAttribute("fill","var(--signal)"); heat.style.opacity=".32"; heat.setAttribute("rx","74"); }
+    else if(deckBroad){ heat.setAttribute("fill","var(--info)"); heat.style.opacity=".22"; heat.setAttribute("rx","58"); }
+    else { heat.setAttribute("fill","var(--danger)"); heat.style.opacity=".30"; heat.setAttribute("rx","74"); }
+    $("ncWap").setAttribute("fill", state.ncMount?"var(--signal)":"#3a4f45");
+    $("mbWap").setAttribute("fill", state.mbMount?"var(--signal)":"#3a4f45");
+    $("deckWap").setAttribute("fill", state.dkMount?"var(--signal)":"#3a4f45");
+  }
+
+  function renderScore(){
+    var tp=tasksPassed(), qc=quizCorrect();
+    $("scorePill").textContent = "Tasks "+tp+"/"+TASKS.length+" · Quiz "+qc+"/"+QUESTIONS.length;
+  }
+
+  function render(){ renderTasks(); renderMap(); renderScore(); }
+
+  /* ----------------------- SCREENSHOT ----------------------- */
+  function makeFallbackShot(){
+    // Dependency-free PNG "report card" of current lab state. No network.
+    var W=900, H=620, c=document.createElement("canvas");
+    c.width=W; c.height=H; var x=c.getContext("2d");
+    x.fillStyle="#0f1a17"; x.fillRect(0,0,W,H);
+    x.fillStyle="#8be36b"; x.font="bold 26px system-ui,sans-serif";
+    x.fillText("Cedar Hollow — Outdoor Wireless Bridge Lab", 36, 56);
+    x.fillStyle="#9fb3a9"; x.font="13px ui-monospace,monospace";
+    x.fillText("assignmentId: "+CONFIG.assignmentId, 36, 82);
+    x.fillText("callsign: "+($("handle").value||"(none)"), 36, 102);
+    x.fillText("captured: "+new Date().toISOString(), 36, 122);
+    var y=164;
+    x.fillStyle="#e8efe9"; x.font="bold 16px system-ui,sans-serif"; x.fillText("Tasks", 36, y); y+=10;
+    taskResults().forEach(function(t){
+      y+=28; x.fillStyle=t.passed?"#8be36b":"#ff6b6b";
+      x.font="18px system-ui,sans-serif"; x.fillText(t.passed?"✓":"✗", 36, y);
+      x.fillStyle="#cfe0d6"; x.font="14px system-ui,sans-serif";
+      x.fillText(t.label.slice(0,86), 60, y);
+    });
+    y+=46; x.fillStyle="#e8efe9"; x.font="bold 16px system-ui,sans-serif"; x.fillText("Knowledge check", 36, y);
+    QUESTIONS.forEach(function(q,i){
+      y+=26; var ok=answers[q.id]===q.answer;
+      x.fillStyle=ok?"#8be36b":"#ff6b6b"; x.font="16px system-ui,sans-serif";
+      x.fillText(ok?"✓":"✗", 36, y);
+      x.fillStyle="#cfe0d6"; x.font="13px system-ui,sans-serif";
+      x.fillText("Q"+(i+1)+": chose "+(answers[q.id]||"—").toUpperCase()+
+                 "  (key "+q.answer.toUpperCase()+")", 60, y);
+    });
+    var tp=tasksPassed(), qc=quizCorrect();
+    x.fillStyle="#16241f"; x.fillRect(36, H-70, W-72, 44);
+    x.strokeStyle="rgba(255,255,255,.12)"; x.strokeRect(36, H-70, W-72, 44);
+    x.fillStyle="#8be36b"; x.font="bold 18px system-ui,sans-serif";
+    x.fillText("Score  Tasks "+tp+"/"+TASKS.length+"   Quiz "+qc+"/"+QUESTIONS.length, 52, H-42);
+    return c.toDataURL("image/png");
+  }
+
+  function captureShot(){
+    return new Promise(function(resolve){
+      if(typeof window.html2canvas === "function"){
+        try{
+          window.html2canvas(document.getElementById("labArea"),
+            {backgroundColor:"#0f1a17", scale:1, logging:false})
+            .then(function(cv){ resolve(cv.toDataURL("image/png")); })
+            .catch(function(){ resolve(makeFallbackShot()); });
+          return;
+        }catch(e){ /* fall through */ }
+      }
+      resolve(makeFallbackShot());
+    });
+  }
+
+  /* ----------------------- SUBMIT ----------------------- */
+  function setStatus(msg, kind){
+    var s=$("status"); s.textContent=msg; s.className="status"+(kind?(" "+kind):);
+  }
+
+  function buildPayload(shot){
+    var tr=taskResults();
+    var qs=QUESTIONS.map(function(q){
+      return { id:q.id, prompt:q.prompt, answer:answers[q.id]||null, correct:answers[q.id]===q.answer };
+    });
+    return {
+      assignmentId: CONFIG.assignmentId,
+      handle: $("handle").value.trim(),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives.slice(),
+      tasks: tr.map(function(t){ return {id:t.id,label:t.label,passed:t.passed}; }),
+      questions: qs,
+      score: { earned: tasksPassed()+quizCorrect(), total: TASKS.length+QUESTIONS.length },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  $("submitBtn").addEventListener("click", function(){
+    var handle=$("handle").value.trim();
+    revealQuiz();
+    if(handle.length < 2){ setStatus("Enter a callsign first (no real name).","err"); $("handle").focus(); return; }
+    var tp=tasksPassed(), qc=quizCorrect();
+    if(tp<TASKS.length || qc<QUESTIONS.length){
+      setStatus("Not all complete yet — Tasks "+tp+"/"+TASKS.length+", Quiz "+qc+"/"+QUESTIONS.length+
+                ". You can still submit, but check the highlighted items.","err");
+    }
+    var btn=$("submitBtn"); btn.disabled=true;
+    setStatus("Capturing lab and submitting…",);
+    captureShot().then(function(shot){
+      var payload=buildPayload(shot);
+      if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+        btn.disabled=false;
+        setStatus("Demo mode: no submission URL set. Score Tasks "+tp+"/"+TASKS.length+
+                  ", Quiz "+qc+"/"+QUESTIONS.length+". (Instructor: set APPS_SCRIPT_URL.)","err");
+        return;
+      }
+      // Simple request: NO custom headers, text/plain body -> no CORS preflight.
+      fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) })
+        .then(function(res){ return res.json(); })
+        .then(function(out){
+          btn.disabled=false;
+          if(out && out.success){
+            var link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your lab report</a>' : ;
+            $("status").innerHTML = "Submitted. Server recorded your work."+link;
+            $("status").className="status ok";
+          } else {
+            setStatus("Submitted, but the server reported a problem"+(out&&out.error?(": "+out.error):)+". Tell your instructor.","err");
+          }
+        })
+        .catch(function(){
+          // Locked-down fallback: fire-and-forget, can't read response.
+          fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) })
+            .then(function(){
+              btn.disabled=false;
+              setStatus("Sent (could not read confirmation). Ask your instructor to confirm it arrived.","ok");
+            })
+            .catch(function(){
+              btn.disabled=false;
+              setStatus("Could not reach the submission server. Check your connection and try again.","err");
+            });
+        });
+    });
+  });
+
+  /* ----------------------- INIT ----------------------- */
+  renderQuestions();
+  render();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-nic-teaming-ha.html",title:"Team the Server NICs (Survive a Link Failure)"}, NEXT={href:"index_netplus-switch-firmware.html",title:"Lab: Update Switch Firmware \u2014 Northbridge NOS Device Manager"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.1";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

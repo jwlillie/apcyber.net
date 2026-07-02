@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Edge Console — Screened-Subnet Firewall Rules Lab</title>
+<!--
+  ============================================================================
+  LAB: Open the Edge — Firewall Rules for a Screened Subnet
+  assignmentId: netplus-screened-subnet-firewall
+  Blueprint tags: N10-009:4.3  |  APNET:3.5  |  APNET:3.5
+  ----------------------------------------------------------------------------
+  CLEAN-ROOM ORIGINAL. Scenario, persona, hostnames, IP plan, descriptions,
+  task and question wording, and all UI are original to this library and were
+  built from the PUBLIC N10-009 objectives and the PUBLIC AP Networking
+  framework plus documented pfSense behavior. Not derived from any vendor lab.
+
+  © 2026 [AUTHOR / ORG — replace this line]. All rights reserved.
+  Licensed under the terms of the [Your Library] license — replace as needed.
+  ============================================================================
+-->
+<style id="lab-styles">
+  /* ---- Design tokens : "Edge Console" identity ---------------------------- */
+  :root{
+    --bg:#0e1b24;          /* deep operations slate */
+    --panel:#13242f;
+    --panel-2:#0f1f29;
+    --line:#23404f;        /* hairline */
+    --line-soft:#1a3340;
+    --ink:#d8e6ee;
+    --muted:#8aa3b0;
+    --cyan:#37c2c2;        /* signal accent (used with restraint) */
+    --pass:#4fb084;
+    --block:#e0655f;
+    --pending:#d8a23a;
+    --focus:#7fe3e3;
+    --radius:10px;
+    --mono:ui-monospace,"SFMono-Regular","SF Mono","Cascadia Code",Consolas,"Liberation Mono",monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #15303d 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:22px 18px 60px}
+  a{color:var(--cyan)}
+
+  /* ---- Masthead ----------------------------------------------------------- */
+  .masthead{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);
+    padding-bottom:14px;margin-bottom:18px;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .glyph{
+    width:38px;height:38px;border-radius:9px;flex:0 0 auto;
+    background:linear-gradient(150deg,#1c3a48,#0c1a22);
+    border:1px solid var(--line);display:grid;place-items:center;
+  }
+  .brand .glyph svg{width:22px;height:22px}
+  .brand h1{font-size:1.05rem;margin:0;letter-spacing:.2px}
+  .brand .sub{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.16em}
+  .tagchips{display:flex;gap:6px;flex-wrap:wrap}
+  .tagchip{
+    font:600 .68rem/1 var(--mono);letter-spacing:.04em;color:var(--cyan);
+    border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:var(--panel-2);
+  }
+
+  /* ---- Layout ------------------------------------------------------------- */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .card > header{
+    padding:11px 14px;border-bottom:1px solid var(--line-soft);
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(180deg,#142836,#10212c);
+  }
+  .eyebrow{font:700 .68rem/1 var(--sans);text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
+  .card .body{padding:14px}
+
+  /* ---- Scenario ----------------------------------------------------------- */
+  .scenario .body p{margin:.2rem 0 .7rem}
+  .netfacts{
+    display:grid;grid-template-columns:auto 1fr;gap:4px 14px;
+    font:.82rem/1.5 var(--mono);color:var(--ink);
+    border:1px dashed var(--line);border-radius:8px;padding:10px 12px;margin-top:4px;background:var(--panel-2)
+  }
+  .netfacts b{color:var(--cyan);font-weight:600}
+
+  /* ---- Login -------------------------------------------------------------- */
+  .login{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font:600 .72rem/1 var(--sans);letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+  input,select,textarea,button{font-family:inherit;font-size:.92rem;color:var(--ink)}
+  input,select,textarea{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-width:0;
+  }
+  input::placeholder,textarea::placeholder{color:#5e7682}
+  textarea{resize:vertical;min-height:42px;width:100%}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  .btn{
+    border:1px solid var(--line);background:#173140;color:var(--ink);border-radius:8px;
+    padding:9px 14px;cursor:pointer;font-weight:600;letter-spacing:.01em;transition:background .15s,border-color .15s;
+  }
+  .btn:hover{background:#1d4153;border-color:#2c5468}
+  .btn.primary{background:linear-gradient(180deg,#2aa3a3,#1f8a8a);border-color:#34b3b3;color:#04181a}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .btn.small{padding:6px 10px;font-size:.82rem}
+
+  /* ---- Firewall console --------------------------------------------------- */
+  .gated{position:relative}
+  .gated[aria-disabled="true"] .console-inner{filter:grayscale(.7) brightness(.7);pointer-events:none;user-select:none}
+  .lock-note{
+    display:none;position:absolute;inset:0;place-items:center;text-align:center;
+    background:rgba(8,18,24,.72);border-radius:8px;z-index:3;padding:18px;
+  }
+  .gated[aria-disabled="true"] .lock-note{display:grid}
+  .lock-note span{font:600 .9rem var(--sans);color:var(--ink);max-width:280px}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-soft);padding:0 6px;background:var(--panel-2)}
+  .tab{
+    appearance:none;border:none;background:transparent;color:var(--muted);
+    padding:11px 14px;cursor:pointer;font:700 .82rem var(--sans);letter-spacing:.03em;
+    border-bottom:2px solid transparent;
+  }
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--cyan)}
+  .tab .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle;background:#3a5663}
+  .tab[data-iface="WAN"] .dot{background:#c98b3a}
+  .tab[data-iface="LAN"] .dot{background:#4fb084}
+  .tab[data-iface="DMZ"] .dot{background:#7e6fd6}
+
+  .apply-banner{
+    display:none;align-items:center;justify-content:space-between;gap:10px;
+    background:rgba(216,162,58,.14);border:1px solid rgba(216,162,58,.5);color:#f1d49a;
+    padding:9px 12px;border-radius:8px;margin:12px 14px 0;font-size:.85rem;
+  }
+  .apply-banner.show{display:flex}
+
+  .rules-region{padding:12px 14px}
+  .iface-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .iface-head h3{margin:0;font-size:.95rem}
+  .iface-head .hint{font-size:.78rem;color:var(--muted)}
+
+  table.rules{width:100%;border-collapse:collapse;font:.8rem/1.4 var(--mono)}
+  table.rules th{
+    text-align:left;font:700 .66rem/1 var(--sans);text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)
+  }
+  table.rules td{padding:8px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  table.rules tr:last-child td{border-bottom:none}
+  .ord{display:inline-grid;place-items:center;width:24px;height:20px;border:1px solid var(--line);border-radius:5px;color:var(--cyan);font-size:.7rem}
+  .pill{display:inline-block;padding:2px 7px;border-radius:999px;font:700 .66rem/1.4 var(--sans);letter-spacing:.03em}
+  .pill.pass{background:rgba(79,176,132,.16);color:#8fe0bb;border:1px solid rgba(79,176,132,.45)}
+  .pill.block{background:rgba(224,101,95,.16);color:#f3a59f;border:1px solid rgba(224,101,95,.45)}
+  .rm-btn{background:none;border:none;color:#7b94a1;cursor:pointer;font-size:.95rem;padding:2px 6px;border-radius:6px}
+  .rm-btn:hover{color:var(--block);background:rgba(224,101,95,.12)}
+  .empty{color:var(--muted);font-style:italic;padding:10px 8px;font-family:var(--sans)}
+
+  /* add-rule form */
+  .add-rule{margin-top:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
+  .add-rule summary{
+    cursor:pointer;list-style:none;padding:10px 12px;font:700 .82rem var(--sans);color:var(--ink);
+    display:flex;align-items:center;gap:8px
+  }
+  .add-rule summary::-webkit-details-marker{display:none}
+  .add-rule summary .plus{color:var(--cyan);font-size:1.1rem;line-height:0}
+  .add-grid{padding:0 12px 12px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media (max-width:560px){ .add-grid{grid-template-columns:1fr} }
+  .add-grid .full{grid-column:1/-1}
+  .add-grid .field label{margin-bottom:1px}
+  .form-error{
+    grid-column:1/-1;display:none;color:#f3a59f;background:rgba(224,101,95,.1);
+    border:1px solid rgba(224,101,95,.4);border-radius:7px;padding:8px 10px;font-size:.82rem
+  }
+  .form-error.show{display:block}
+  .form-actions{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end}
+
+  /* packet tester (signature element) */
+  .tester{margin:14px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);padding:12px}
+  .tester h4{margin:0 0 4px;font-size:.85rem}
+  .tester p.lead{margin:0 0 9px;font-size:.78rem;color:var(--muted)}
+  .tester .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .verdict{margin-top:10px;font:.82rem/1.5 var(--mono);border-left:3px solid var(--line);padding:6px 10px;color:var(--muted)}
+  .verdict.allow{border-color:var(--pass);color:#9fe6c4}
+  .verdict.deny{border-color:var(--block);color:#f3a59f}
+
+  /* ---- Task & question panel --------------------------------------------- */
+  .tasklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .tasklist li{
+    display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line-soft);
+    border-radius:8px;background:var(--panel-2);font-size:.86rem
+  }
+  .check{
+    flex:0 0 auto;width:20px;height:20px;border-radius:6px;border:1px solid var(--line);
+    display:grid;place-items:center;font-size:.8rem;color:var(--muted);margin-top:1px
+  }
+  .tasklist li.done{border-color:rgba(79,176,132,.5)}
+  .tasklist li.done .check{background:rgba(79,176,132,.18);border-color:rgba(79,176,132,.6);color:#8fe0bb}
+  .tasklist li .t-label b{color:var(--ink)}
+  .tasklist li .t-sub{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+
+  .quiz{display:flex;flex-direction:column;gap:14px;margin-top:4px}
+  .q{border:1px solid var(--line-soft);border-radius:8px;padding:11px 12px;background:var(--panel-2)}
+  .q .prompt{font-size:.86rem;margin-bottom:8px}
+  .q .opts{display:flex;flex-direction:column;gap:6px}
+  .q .opts label{display:flex;gap:8px;align-items:flex-start;font-size:.84rem;color:var(--ink);cursor:pointer;padding:2px}
+  .q .opts input{margin-top:3px}
+  .q .qstate{font:700 .72rem var(--sans);margin-top:7px;display:none}
+  .q.correct{border-color:rgba(79,176,132,.5)}
+  .q.correct .qstate.ok{display:block;color:#8fe0bb}
+  .q.wrong{border-color:rgba(224,101,95,.5)}
+  .q.wrong .qstate.no{display:block;color:#f3a59f}
+
+  /* ---- Submission bar ----------------------------------------------------- */
+  .submitbar{
+    margin-top:18px;border:1px solid var(--line);border-radius:var(--radius);
+    background:linear-gradient(180deg,#142a37,#0f2029);padding:14px
+  }
+  .submitbar .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .submitbar .grow{flex:1 1 220px}
+  .privacy{font-size:.74rem;color:var(--muted);margin:8px 2px 0}
+  .scorebox{font:700 .9rem var(--mono);color:var(--cyan)}
+  .status{margin-top:10px;font-size:.85rem;min-height:1.2em}
+  .status.ok{color:#8fe0bb}
+  .status.err{color:#f3a59f}
+  .status a{color:var(--focus);font-weight:600}
+
+  .footer{margin-top:26px;border-top:1px solid var(--line);padding-top:12px;color:#6f8794;font-size:.74rem}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important}
+  }
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-screened-subnet-firewall", "title": "Edge Console \u2014 Screened-Subnet Firewall Rules Lab", "version": "1.0.0", "objectives": ["N10-009:4.3", "APNET:3.5"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap" id="lab-capture">
+
+  <div class="masthead">
+    <div class="brand">
+      <div class="glyph" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#37c2c2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7l8-3 8 3v5c0 4.5-3.4 7.3-8 8.6C7.4 19.3 4 16.5 4 12V7z"/>
+          <path d="M9 12h6M12 9v6"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Edge Console &middot; Larkfield Outfitters</h1>
+        <div class="sub">Perimeter appliance — firewall rules</div>
+      </div>
+    </div>
+    <div class="tagchips" aria-label="Blueprint objectives">
+      <span class="tagchip">N10-009 · 4.3</span>
+      <span class="tagchip">AP NET · 3.5.C</span>
+      <span class="tagchip">AP NET · 3.5.B</span>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: scenario + simulated console -->
+    <div>
+      <section class="card scenario" aria-labelledby="sc-h">
+        <header><span class="eyebrow" id="sc-h">Brief</span></header>
+        <div class="body">
+          <p>You're the new network tech at <b>Larkfield Outfitters</b>, a small outdoor-gear shop.
+          The team just moved the public reservations site, <b>res-web01</b>, into a
+          <b>screened subnet</b> (a DMZ) so customers on the internet can reach it without touching
+          the staff network. The edge appliance already has the inbound address mapping in place —
+          your job is the <b>firewall pass rules</b> that actually permit the traffic.</p>
+          <p style="margin-bottom:.3rem">Make the edge do three things:</p>
+          <ol style="margin:.1rem 0 .6rem 1.1rem;padding:0;font-size:.9rem">
+            <li>Let the internet reach <b>res-web01</b> on <b>HTTP</b>.</li>
+            <li>Let the internet reach <b>res-web01</b> on <b>HTTPS</b>.</li>
+            <li>Let the <b>staff LAN</b> reach the whole <b>screened subnet</b>.</li>
+          </ol>
+          <div class="netfacts" role="group" aria-label="Network reference">
+            <span>WAN (internet)</span><span><b>untrusted</b> — outside zone</span>
+            <span>Staff LAN net</span><span><b>10.20.10.0/24</b></span>
+            <span>Screened subnet (DMZ) net</span><span><b>10.20.40.0/27</b></span>
+            <span>res-web01 host</span><span><b>10.20.40.10</b></span>
+            <span>Services to open</span><span><b>HTTP 80</b>, <b>HTTPS 443</b></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Login gate -->
+      <section class="card" style="margin-top:16px" aria-labelledby="lg-h" id="loginCard">
+        <header><span class="eyebrow" id="lg-h">Step 1 — Sign in to the appliance</span></header>
+        <div class="body">
+          <form class="login" id="loginForm" autocomplete="off">
+            <div class="field">
+              <label for="u">Operator</label>
+              <input id="u" name="u" placeholder="operator name" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="p">Passphrase</label>
+              <input id="p" name="p" type="password" placeholder="passphrase" autocomplete="off" />
+            </div>
+            <button class="btn primary" type="submit">Sign in</button>
+            <p id="loginMsg" class="status" aria-live="polite" style="flex-basis:100%;margin-top:4px"></p>
+          </form>
+          <p class="privacy">Lab credentials are printed on your worksheet:
+            <code>labadmin</code> / <code>Cr0ss-Zone!</code> — this is a simulator; no real device is contacted.</p>
+        </div>
+      </section>
+
+      <!-- Firewall console -->
+      <section class="card gated" style="margin-top:16px" id="console" aria-disabled="true" aria-labelledby="fw-h">
+        <header><span class="eyebrow" id="fw-h">Firewall &middot; Rules</span>
+          <button class="btn ghost small" id="resetBtn" type="button">Reset lab</button>
+        </header>
+        <div class="lock-note" aria-hidden="true"><span>Sign in to the appliance to manage firewall rules.</span></div>
+
+        <div class="console-inner">
+          <div class="tabs" role="tablist" aria-label="Firewall interfaces">
+            <button class="tab" role="tab" data-iface="WAN" aria-selected="true"><span class="dot"></span>WAN</button>
+            <button class="tab" role="tab" data-iface="LAN" aria-selected="false"><span class="dot"></span>LAN</button>
+            <button class="tab" role="tab" data-iface="DMZ" aria-selected="false"><span class="dot"></span>DMZ</button>
+          </div>
+
+          <div class="apply-banner" id="applyBanner" role="status">
+            <span>You have unsaved firewall changes. They take effect after you apply them.</span>
+            <button class="btn small primary" id="applyBtn" type="button">Apply changes</button>
+          </div>
+
+          <div class="rules-region">
+            <div class="iface-head">
+              <h3 id="ifaceTitle">WAN rules</h3>
+              <span class="hint" id="ifaceHint">Rules are read top-to-bottom; the first match wins.</span>
+            </div>
+
+            <table class="rules" aria-describedby="ifaceHint">
+              <thead>
+                <tr><th style="width:34px">#</th><th>Action</th><th>Proto</th><th>Source</th><th>Destination</th><th>Port</th><th>Description</th><th aria-label="remove"></th></tr>
+              </thead>
+              <tbody id="rulesBody"><!-- rows injected --></tbody>
+            </table>
+
+            <details class="add-rule" id="addRule">
+              <summary><span class="plus">＋</span> Add a rule on <span id="addIface">WAN</span></summary>
+              <div class="add-grid">
+                <div class="field">
+                  <label for="f-action">Action</label>
+                  <select id="f-action"><option value="pass">Pass</option><option value="block">Block</option></select>
+                </div>
+                <div class="field">
+                  <label for="f-proto">Protocol</label>
+                  <select id="f-proto">
+                    <option value="Any">Any</option>
+                    <option value="TCP">TCP</option>
+                    <option value="UDP">UDP</option>
+                    <option value="TCP/UDP">TCP/UDP</option>
+                    <option value="ICMP">ICMP</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="f-src">Source</label>
+                  <select id="f-src">
+                    <option value="any">any</option>
+                    <option value="WAN net">WAN net</option>
+                    <option value="LAN net">LAN net</option>
+                    <option value="DMZ net">DMZ net (screened subnet)</option>
+                    <option value="host">Single host…</option>
+                  </select>
+                </div>
+                <div class="field" id="srcHostWrap" hidden>
+                  <label for="f-srchost">Source host (IPv4)</label>
+                  <input id="f-srchost" placeholder="e.g. 198.51.100.20" />
+                </div>
+                <div class="field">
+                  <label for="f-dst">Destination</label>
+                  <select id="f-dst">
+                    <option value="any">any</option>
+                    <option value="WAN net">WAN net</option>
+                    <option value="LAN net">LAN net</option>
+                    <option value="DMZ net">DMZ net (screened subnet)</option>
+                    <option value="host">Single host…</option>
+                  </select>
+                </div>
+                <div class="field" id="dstHostWrap" hidden>
+                  <label for="f-dsthost">Destination host (IPv4)</label>
+                  <input id="f-dsthost" placeholder="e.g. 10.20.40.10" />
+                </div>
+                <div class="field">
+                  <label for="f-port">Destination port / service</label>
+                  <select id="f-port">
+                    <option value="any">any</option>
+                    <option value="80">HTTP (80)</option>
+                    <option value="443">HTTPS (443)</option>
+                    <option value="22">SSH (22)</option>
+                    <option value="53">DNS (53)</option>
+                    <option value="custom">Custom…</option>
+                  </select>
+                </div>
+                <div class="field" id="portCustomWrap" hidden>
+                  <label for="f-portc">Custom port</label>
+                  <input id="f-portc" placeholder="e.g. 8443" inputmode="numeric" />
+                </div>
+                <div class="field full">
+                  <label for="f-desc">Description</label>
+                  <input id="f-desc" placeholder="What this rule is for" maxlength="80" />
+                </div>
+                <p class="form-error" id="formError" role="alert"></p>
+                <div class="form-actions">
+                  <button class="btn ghost small" type="button" id="cancelRule">Cancel</button>
+                  <button class="btn primary small" type="button" id="saveRule">Save rule</button>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <!-- Signature: packet path tester -->
+          <div class="tester" aria-labelledby="tst-h">
+            <h4 id="tst-h">Trace a packet</h4>
+            <p class="lead">Pick a sample packet. The console walks the matching interface's rules top-to-bottom and reports the first rule that decides its fate — the way a real firewall does.</p>
+            <div class="row">
+              <select id="testPacket" aria-label="Sample packet">
+                <option value="wan-http">Internet → res-web01  TCP/80 (HTTP)</option>
+                <option value="wan-https">Internet → res-web01  TCP/443 (HTTPS)</option>
+                <option value="wan-ssh">Internet → res-web01  TCP/22 (SSH)</option>
+                <option value="lan-dmz">Staff LAN → screened subnet  any</option>
+              </select>
+              <button class="btn small" type="button" id="traceBtn">Trace</button>
+            </div>
+            <div class="verdict" id="verdict" role="status">No trace run yet.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: tasks + questions -->
+    <div>
+      <section class="card" aria-labelledby="tk-h">
+        <header><span class="eyebrow" id="tk-h">Tasks</span><span class="scorebox" id="taskCount">0 / 5</span></header>
+        <div class="body">
+          <ul class="tasklist" id="tasks">
+            <li data-task="login"><span class="check">○</span><span class="t-label"><b>Sign in</b> to the edge appliance.</span></li>
+            <li data-task="http"><span class="check">○</span><span class="t-label"><b>WAN → res-web01, HTTP.</b><span class="t-sub">Pass · TCP · source WAN net · dest host 10.20.40.10 · port 80 · with a description.</span></span></li>
+            <li data-task="https"><span class="check">○</span><span class="t-label"><b>WAN → res-web01, HTTPS.</b><span class="t-sub">Same target, port 443.</span></span></li>
+            <li data-task="lan2dmz"><span class="check">○</span><span class="t-label"><b>LAN → screened subnet, all traffic.</b><span class="t-sub">On the LAN tab: Pass · source LAN net · dest DMZ net · port any · with a description.</span></span></li>
+            <li data-task="apply"><span class="check">○</span><span class="t-label"><b>Apply</b> your changes.</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:16px" aria-labelledby="qz-h">
+        <header><span class="eyebrow" id="qz-h">Check your understanding</span><span class="scorebox" id="quizCount">0 / 5</span></header>
+        <div class="body">
+          <div class="quiz" id="quiz"><!-- questions injected --></div>
+        </div>
+      </section>
+
+      <div class="submitbar">
+        <div class="row">
+          <div class="field grow">
+            <label for="handle">Callsign (no real names)</label>
+            <input id="handle" maxlength="40" placeholder="e.g. blue-heron-7" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label class="visually-hidden" for="submitBtn">Submit lab</label>
+            <button class="btn primary" id="submitBtn" type="button" disabled>Submit completed lab</button>
+          </div>
+        </div>
+        <div class="scorebox" id="overall" style="margin-top:10px">Progress: tasks 0/5 · questions 0/5</div>
+        <p class="privacy">Use a made-up callsign — never your real name, student ID, or email.
+          Your instructor keeps the callsign-to-name list separately. Submitting captures an image of this lab area as evidence.</p>
+        <p class="status" id="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Edge Console simulator · clean-room original content built from public N10-009 &amp; AP Networking objectives.
+    © 2026 [AUTHOR / ORG — replace]. Replace with your library's license line.
+  </div>
+</div>
+
+<!--
+  ===========================================================================
+  SCRIPT BLOCK 1 — html2canvas (optional, for pixel-perfect DOM capture)
+  ---------------------------------------------------------------------------
+  Paste your library's inlined, minified html2canvas source between the
+  markers below (the same blob used in the Security+ labs). When present, it
+  is used automatically. When absent, the engine falls back to a built-in,
+  dependency-free DOM→PNG capture, so the file still works standalone.
+  ===========================================================================
+-->
+<script>/* >>> PASTE MINIFIED html2canvas HERE (defines window.html2canvas) <<< */</script>
+
+<!--
+  ===========================================================================
+  SCRIPT BLOCK 2 — engine, config, answer key, capture, submission
+  ===========================================================================
+-->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- PER-LAB CONFIG (edit these three for deployment) ------- */
+  const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE";   // shared across the library
+  const SUBMISSION_TOKEN = "PASTE_PER_COHORT_TOKEN_HERE";// rotate per cohort
+  const ASSIGNMENT_ID    = "netplus-screened-subnet-firewall";
+  const OBJECTIVES       = ["N10-009:4.3","APNET:3.5","APNET:3.5"];
+
+  /* ---------------- ANSWER KEY (inspectable — formative use) --------------- */
+  const CREDS = { user:"labadmin", pass:"Cr0ss-Zone!" };
+  const WEB_IP = "10.20.40.10";
+
+  const QUESTIONS = [
+    { id:"q1", prompt:"Which appliance interface should carry the inbound rules that let the internet reach res-web01?",
+      options:["The LAN interface","The WAN interface","The DMZ interface","The loopback interface"], correct:1,
+      why:"Traffic arriving from the internet enters on WAN, so the pass rules belong on the WAN interface." },
+    { id:"q2", prompt:"To allow only plain and secure web traffic to res-web01, which destination ports do you permit?",
+      options:["20 and 21","22 and 23","80 and 443","25 and 110"], correct:2,
+      why:"HTTP is TCP/80 and HTTPS is TCP/443." },
+    { id:"q3", prompt:"A screened subnet that hosts public-facing servers is also commonly called a…",
+      options:["VLAN trunk","DMZ (demilitarized zone)","Broadcast domain","Default gateway"], correct:1,
+      why:"Screened subnet and DMZ are the same idea: a buffer zone between untrusted and trusted networks." },
+    { id:"q4", prompt:"How does a firewall evaluate a list of rules (an ACL) against a packet?",
+      options:["Bottom-to-top, last match wins","Top-to-bottom, first match wins","In random order","Only the most specific rule, ignoring order"], correct:1,
+      why:"Rules are read top-to-bottom and the first one that matches decides the packet — which is why order matters." },
+    { id:"q5", prompt:"Why place res-web01 in the screened subnet instead of on the staff LAN?",
+      options:["It makes the website load faster","So the public can reach the service while the internal LAN stays isolated",
+               "Because DMZ hosts don't need IP addresses","To avoid having to write any firewall rules"], correct:1,
+      why:"The DMZ exposes the public service while keeping internet traffic away from internal systems, limiting lateral movement." }
+  ];
+
+  /* Predicates that auto-pass each task by inspecting sim state. */
+  function ruleMatch(r, pred){ return pred(r); }
+  function hasRule(pred){ return state.rules.some(r=>ruleMatch(r,pred)); }
+
+  const TASKS = [
+    { id:"login",  label:"Sign in to the edge appliance",
+      pass:()=> state.loggedIn },
+    { id:"http",   label:"WAN → res-web01 HTTP (80) pass rule",
+      pass:()=> hasRule(r=> r.action==="pass" && r.iface==="WAN" && (r.proto==="TCP"||r.proto==="TCP/UDP")
+              && r.src==="WAN net" && r.dst==="host" && r.dstHost===WEB_IP && r.port==="80" && r.desc.trim().length>0) },
+    { id:"https",  label:"WAN → res-web01 HTTPS (443) pass rule",
+      pass:()=> hasRule(r=> r.action==="pass" && r.iface==="WAN" && (r.proto==="TCP"||r.proto==="TCP/UDP")
+              && r.src==="WAN net" && r.dst==="host" && r.dstHost===WEB_IP && r.port==="443" && r.desc.trim().length>0) },
+    { id:"lan2dmz",label:"LAN → screened subnet (all traffic) pass rule",
+      pass:()=> hasRule(r=> r.action==="pass" && r.iface==="LAN" && r.proto==="Any"
+              && r.src==="LAN net" && r.dst==="DMZ net" && r.port==="any" && r.desc.trim().length>0) },
+    { id:"apply",  label:"Apply changes",
+      pass:()=> state.applied && state.rules.length>0 }
+  ];
+
+  /* ---------------- STATE --------------------------------------------------- */
+  const state = {
+    loggedIn:false,
+    activeIface:"WAN",
+    rules:[],            // {id,action,iface,proto,src,srcHost,dst,dstHost,port,desc}
+    applied:false,
+    answers:{},          // qid -> chosen index
+    handle:};
+  let ruleSeq = 1;
+
+  /* ---------------- DOM refs ----------------------------------------------- */
+  const $ = sel => document.querySelector(sel);
+  const els = {
+    loginForm:$("#loginForm"), u:$("#u"), p:$("#p"), loginMsg:$("#loginMsg"),
+    console:$("#console"), reset:$("#resetBtn"),
+    tabs:[...document.querySelectorAll(".tab")],
+    ifaceTitle:$("#ifaceTitle"), addIface:$("#addIface"),
+    rulesBody:$("#rulesBody"),
+    addRule:$("#addRule"),
+    fAction:$("#f-action"), fProto:$("#f-proto"),
+    fSrc:$("#f-src"), srcHostWrap:$("#srcHostWrap"), fSrcHost:$("#f-srchost"),
+    fDst:$("#f-dst"), dstHostWrap:$("#dstHostWrap"), fDstHost:$("#f-dsthost"),
+    fPort:$("#f-port"), portCustomWrap:$("#portCustomWrap"), fPortC:$("#f-portc"),
+    fDesc:$("#f-desc"), formError:$("#formError"),
+    saveRule:$("#saveRule"), cancelRule:$("#cancelRule"),
+    applyBanner:$("#applyBanner"), applyBtn:$("#applyBtn"),
+    testPacket:$("#testPacket"), traceBtn:$("#traceBtn"), verdict:$("#verdict"),
+    tasks:$("#tasks"), taskCount:$("#taskCount"),
+    quiz:$("#quiz"), quizCount:$("#quizCount"),
+    handle:$("#handle"), submitBtn:$("#submitBtn"),
+    overall:$("#overall"), status:$("#status"), capture:$("#lab-capture")
+  };
+
+  /* ---------------- LOGIN --------------------------------------------------- */
+  els.loginForm.addEventListener("submit", e=>{
+    e.preventDefault();
+    const u = els.u.value.trim(), p = els.p.value;
+    if(!u || !p){ setLoginMsg("Enter both the operator name and passphrase.", false); return; }
+    if(u===CREDS.user && p===CREDS.pass){
+      state.loggedIn = true;
+      els.console.setAttribute("aria-disabled","false");
+      setLoginMsg("Signed in. Firewall rules are now editable.", true);
+      els.u.disabled = els.p.disabled = true;
+      refresh();
+    } else {
+      setLoginMsg("Authentication failed — check the operator name and passphrase on your worksheet (case-sensitive).", false);
+    }
+  });
+  function setLoginMsg(t, ok){ els.loginMsg.textContent=t; els.loginMsg.className="status "+(ok?"ok":"err"); }
+
+  /* ---------------- TABS ---------------------------------------------------- */
+  els.tabs.forEach(tab=>{
+    tab.addEventListener("click", ()=>{
+      els.tabs.forEach(t=>t.setAttribute("aria-selected", t===tab ? "true":"false"));
+      state.activeIface = tab.dataset.iface;
+      els.ifaceTitle.textContent = state.activeIface + " rules";
+      els.addIface.textContent = state.activeIface;
+      renderRules();
+    });
+    tab.addEventListener("keydown", e=>{
+      const i = els.tabs.indexOf(tab);
+      if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
+        e.preventDefault();
+        const n = e.key==="ArrowRight" ? (i+1)%els.tabs.length : (i-1+els.tabs.length)%els.tabs.length;
+        els.tabs[n].focus(); els.tabs[n].click();
+      }
+    });
+  });
+
+  /* ---------------- ADD RULE FORM ------------------------------------------ */
+  els.fSrc.addEventListener("change", ()=> els.srcHostWrap.hidden = els.fSrc.value!=="host");
+  els.fDst.addEventListener("change", ()=> els.dstHostWrap.hidden = els.fDst.value!=="host");
+  els.fPort.addEventListener("change", ()=> els.portCustomWrap.hidden = els.fPort.value!=="custom");
+  els.cancelRule.addEventListener("click", ()=>{ els.addRule.open=false; clearForm(); });
+
+  function isIPv4(s){
+    if(!/^(\d{1,3})(\.\d{1,3}){3}$/.test(s)) return false;
+    return s.split(".").every(o=>{ const n=+o; return n>=0 && n<=255; });
+  }
+  function showFormError(t){ els.formError.textContent=t; els.formError.classList.add("show"); }
+  function clearFormError(){ els.formError.classList.remove("show"); els.formError.textContent=; }
+
+  els.saveRule.addEventListener("click", ()=>{
+    clearFormError();
+    const r = {
+      id: ruleSeq++,
+      action: els.fAction.value,
+      iface: state.activeIface,
+      proto: els.fProto.value,
+      src: els.fSrc.value,
+      srcHost: els.fSrc.value==="host" ? els.fSrcHost.value.trim() : dst: els.fDst.value,
+      dstHost: els.fDst.value==="host" ? els.fDstHost.value.trim() : port: els.fPort.value==="custom" ? els.fPortC.value.trim() : els.fPort.value,
+      desc: els.fDesc.value.trim()
+    };
+    // realistic validation / teaching errors
+    if(r.src==="host" && !isIPv4(r.srcHost)){
+      showFormError("Source is set to “Single host,” so enter a valid IPv4 address (e.g. 198.51.100.20)."); return; }
+    if(r.dst==="host" && !isIPv4(r.dstHost)){
+      showFormError("Destination is set to “Single host,” so enter a valid IPv4 address (e.g. "+WEB_IP+")."); return; }
+    if(els.fPort.value==="custom" && !/^\d{1,5}$/.test(r.port)){
+      showFormError("Enter a numeric custom port between 1 and 65535, or pick a named service."); return; }
+    if(r.port!=="any" && (r.proto==="Any"||r.proto==="ICMP")){
+      showFormError("A specific destination port needs a port-based protocol — choose TCP, UDP, or TCP/UDP (ICMP and “Any” have no ports)."); return; }
+    if(!r.desc){
+      showFormError("Add a short description. On a real appliance this is how the next admin knows why the rule exists."); return; }
+
+    state.rules.push(r);
+    state.applied = false;          // new change is pending until applied
+    els.addRule.open=false; clearForm();
+    refresh();
+  });
+
+  function clearForm(){
+    els.fAction.value="pass"; els.fProto.value="Any";
+    els.fSrc.value="any"; els.srcHostWrap.hidden=true; els.fSrcHost.value=;
+    els.fDst.value="any"; els.dstHostWrap.hidden=true; els.fDstHost.value=;
+    els.fPort.value="any"; els.portCustomWrap.hidden=true; els.fPortC.value=;
+    els.fDesc.value=; clearFormError();
+  }
+
+  /* ---------------- RENDER RULES ------------------------------------------- */
+  function srcLabel(r){ return r.src==="host" ? r.srcHost : r.src; }
+  function dstLabel(r){ return r.dst==="host" ? r.dstHost : r.dst; }
+  function portLabel(r){
+    const names={ "80":"80 (HTTP)","443":"443 (HTTPS)","22":"22 (SSH)","53":"53 (DNS)","any":"any" };
+    return names[r.port] || r.port;
+  }
+  function renderRules(){
+    const list = state.rules.filter(r=>r.iface===state.activeIface);
+    if(!list.length){
+      els.rulesBody.innerHTML = '<tr><td colspan="8" class="empty">No rules on '+state.activeIface+
+        ' yet. Inbound traffic here is denied by default until you pass it.</td></tr>';
+      return;
+    }
+    els.rulesBody.innerHTML = list.map((r,i)=>(
+      '<tr>'+
+        '<td><span class="ord">'+String(i+1).padStart(2,"0")+'</span></td>'+
+        '<td><span class="pill '+(r.action==="pass"?"pass":"block")+'">'+r.action.toUpperCase()+'</span></td>'+
+        '<td>'+r.proto+'</td>'+
+        '<td>'+esc(srcLabel(r))+'</td>'+
+        '<td>'+esc(dstLabel(r))+'</td>'+
+        '<td>'+esc(portLabel(r))+'</td>'+
+        '<td>'+esc(r.desc)+'</td>'+
+        '<td><button class="rm-btn" type="button" title="Remove rule" data-rm="'+r.id+'" aria-label="Remove rule '+(i+1)+'">✕</button></td>'+
+      '</tr>'
+    )).join();
+    els.rulesBody.querySelectorAll("[data-rm]").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        state.rules = state.rules.filter(x=>x.id !== +b.dataset.rm);
+        state.applied = false; refresh();
+      });
+    });
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\:"&quot;"}[c])); }
+
+  /* ---------------- APPLY --------------------------------------------------- */
+  els.applyBtn.addEventListener("click", ()=>{
+    if(!state.rules.length){ return; }
+    state.applied = true;
+    refresh();
+    flash("Changes applied. The ruleset is now live.", true);
+  });
+
+  /* ---------------- PACKET TRACER (signature) ------------------------------ */
+  const PACKETS = {
+    "wan-http":  { iface:"WAN", proto:"TCP", dstHost:WEB_IP, port:"80",  label:"Internet → res-web01 TCP/80" },
+    "wan-https": { iface:"WAN", proto:"TCP", dstHost:WEB_IP, port:"443", label:"Internet → res-web01 TCP/443" },
+    "wan-ssh":   { iface:"WAN", proto:"TCP", dstHost:WEB_IP, port:"22",  label:"Internet → res-web01 TCP/22" },
+    "lan-dmz":   { iface:"LAN", proto:"Any", dstNet:"DMZ net", port:"any", label:"Staff LAN → screened subnet" }
+  };
+  function packetMatchesRule(pkt, r){
+    if(r.iface!==pkt.iface) return false;
+    // protocol
+    if(r.proto!=="Any"){
+      if(pkt.proto==="Any"){ /* broad packet matches any specific proto rule */ }
+      else if(r.proto==="TCP/UDP"){ if(pkt.proto!=="TCP"&&pkt.proto!=="UDP") return false; }
+      else if(r.proto!==pkt.proto) return false;
+    }
+    // destination
+    if(pkt.dstHost){
+      if(r.dst==="host" && r.dstHost!==pkt.dstHost) return false;
+      if(r.dst==="LAN net"||r.dst==="WAN net") return false; // wrong net for a DMZ host
+      // r.dst === "any" or "DMZ net" both can cover a DMZ host
+    }
+    if(pkt.dstNet){
+      if(r.dst!=="any" && r.dst!==pkt.dstNet) return false;
+    }
+    // port
+    if(r.port!=="any" && r.port!==pkt.port && !(pkt.port==="any")) return false;
+    return true;
+  }
+  els.traceBtn.addEventListener("click", ()=>{
+    if(!state.applied){
+      els.verdict.className="verdict deny";
+      els.verdict.textContent="Apply your changes first — un-applied rules aren't evaluated yet.";
+      return;
+    }
+    const pkt = PACKETS[els.testPacket.value];
+    const ordered = state.rules.filter(r=>r.iface===pkt.iface);
+    let hitIdx=-1, hit=null;
+    for(let i=0;i<ordered.length;i++){ if(packetMatchesRule(pkt, ordered[i])){ hit=ordered[i]; hitIdx=i; break; } }
+    if(hit && hit.action==="pass"){
+      els.verdict.className="verdict allow";
+      els.verdict.textContent="ALLOW · "+pkt.label+" — first matched rule #"+String(hitIdx+1).padStart(2,"0")+" ("+hit.desc+").";
+    } else if(hit && hit.action==="block"){
+      els.verdict.className="verdict deny";
+      els.verdict.textContent="DENY · "+pkt.label+" — first matched rule #"+String(hitIdx+1).padStart(2,"0")+" is a BLOCK ("+hit.desc+").";
+    } else {
+      els.verdict.className="verdict deny";
+      els.verdict.textContent="DENY · "+pkt.label+" — no rule matched, so the implicit default-deny on "+pkt.iface+" drops it.";
+    }
+  });
+
+  /* ---------------- QUESTIONS ---------------------------------------------- */
+  function renderQuiz(){
+    els.quiz.innerHTML = QUESTIONS.map(q=>(
+      '<div class="q" data-q="'+q.id+'">'+
+        '<div class="prompt">'+esc(q.prompt)+'</div>'+
+        '<div class="opts" role="radiogroup" aria-label="'+esc(q.prompt)+'">'+
+          q.options.map((o,i)=>(
+            '<label><input type="radio" name="'+q.id+'" value="'+i+'"> <span>'+esc(o)+'</span></label>'
+          )).join()+
+        '</div>'+
+        '<div class="qstate ok">Correct.</div>'+
+        '<div class="qstate no">Not quite — '+esc(q.why)+'</div>'+
+      '</div>'
+    )).join();
+    els.quiz.querySelectorAll("input[type=radio]").forEach(inp=>{
+      inp.addEventListener("change", ()=>{ state.answers[inp.name]=+inp.value; refresh(); });
+    });
+  }
+  function quizResults(){
+    return QUESTIONS.map(q=>{
+      const chosen = state.answers[q.id];
+      const answered = chosen!==undefined;
+      const correct = answered && chosen===q.correct;
+      return { id:q.id, prompt:q.prompt, answer: answered ? q.options[chosen] : correct };
+    });
+  }
+
+  /* ---------------- REFRESH / SCORING -------------------------------------- */
+  function refresh(){
+    renderRules();
+    els.applyBanner.classList.toggle("show", state.loggedIn && state.rules.length>0 && !state.applied);
+
+    // tasks
+    let tdone=0;
+    TASKS.forEach(t=>{
+      const li = els.tasks.querySelector('[data-task="'+t.id+'"]');
+      const ok = t.pass();
+      li.classList.toggle("done", ok);
+      li.querySelector(".check").textContent = ok ? "✓" : "○";
+      if(ok) tdone++;
+    });
+    els.taskCount.textContent = tdone+" / "+TASKS.length;
+
+    // questions
+    const qr = quizResults();
+    let qdone=0;
+    qr.forEach(r=>{
+      const card = els.quiz.querySelector('[data-q="'+r.id+'"]');
+      const answered = state.answers[r.id]!==undefined;
+      card.classList.toggle("correct", r.correct);
+      card.classList.toggle("wrong", answered && !r.correct);
+      if(r.correct) qdone++;
+    });
+    els.quizCount.textContent = qdone+" / "+QUESTIONS.length;
+
+    els.overall.textContent = "Progress: tasks "+tdone+"/"+TASKS.length+" · questions "+qdone+"/"+QUESTIONS.length;
+
+    state.handle = els.handle.value.trim();
+    els.submitBtn.disabled = state.handle.length===0;
+  }
+  els.handle.addEventListener("input", refresh);
+
+  /* ---------------- RESET --------------------------------------------------- */
+  els.reset.addEventListener("click", ()=>{
+    state.rules=[]; state.applied=false; state.activeIface="WAN";
+    els.tabs.forEach(t=>t.setAttribute("aria-selected", t.dataset.iface==="WAN"?"true":"false"));
+    els.ifaceTitle.textContent="WAN rules"; els.addIface.textContent="WAN";
+    els.verdict.className="verdict"; els.verdict.textContent="No trace run yet.";
+    clearForm();
+    refresh();
+    flash("Lab reset. Rules cleared.", true);
+  });
+
+  /* ---------------- SCREENSHOT CAPTURE ------------------------------------- */
+  function loadImg(src){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; }); }
+
+  async function domCapturePNG(node){
+    const css = (document.getElementById("lab-styles")||{}).textContent || ;
+    const rect = node.getBoundingClientRect();
+    const w = Math.max(1, Math.ceil(rect.width));
+    const h = Math.max(1, Math.ceil(rect.height));
+    const cloneStr = new XMLSerializer().serializeToString(node);
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+        '<foreignObject x="0" y="0" width="'+w+'" height="'+h+'">'+
+          '<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px;background:#0e1b24">'+
+            '<style>'+css+'</style>'+ cloneStr +
+          '</div>'+
+        '</foreignObject>'+
+      '</svg>';
+    const url = URL.createObjectURL(new Blob([svg],{type:"image/svg+xml;charset=utf-8"}));
+    try{
+      const img = await loadImg(url);
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      const ctx=c.getContext("2d"); ctx.fillStyle="#0e1b24"; ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img,0,0);
+      return c.toDataURL("image/png");
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  function evidenceCardPNG(){
+    const c=document.createElement("canvas"); c.width=960; c.height=620;
+    const x=c.getContext("2d");
+    x.fillStyle="#0e1b24"; x.fillRect(0,0,960,620);
+    x.fillStyle="#37c2c2"; x.font="700 22px sans-serif";
+    x.fillText("Edge Console — Firewall Rules Lab", 36, 50);
+    x.fillStyle="#8aa3b0"; x.font="13px monospace";
+    x.fillText(ASSIGNMENT_ID+"  ·  "+OBJECTIVES.join("  "), 36, 74);
+    x.fillStyle="#d8e6ee"; x.font="15px sans-serif";
+    x.fillText("Callsign: "+(state.handle||"—"), 36, 110);
+    let y=146;
+    x.font="700 14px sans-serif"; x.fillStyle="#d8e6ee"; x.fillText("Tasks", 36, y); y+=22;
+    x.font="13px sans-serif";
+    TASKS.forEach(t=>{ const ok=t.pass(); x.fillStyle=ok?"#8fe0bb":"#8aa3b0";
+      x.fillText((ok?"[x] ":"[ ] ")+t.label, 48, y); y+=20; });
+    y+=10; x.font="700 14px sans-serif"; x.fillStyle="#d8e6ee"; x.fillText("Questions", 36, y); y+=22;
+    x.font="13px sans-serif";
+    quizResults().forEach((r,i)=>{ x.fillStyle=r.correct?"#8fe0bb":"#f3a59f";
+      x.fillText((r.correct?"[x] ":"[ ] ")+"Q"+(i+1), 48, y); y+=20; });
+    x.fillStyle="#6f8794"; x.font="11px monospace";
+    x.fillText("captured "+new Date().toISOString(), 36, 600);
+    return c.toDataURL("image/png");
+  }
+
+  async function captureScreenshot(node){
+    if(window.html2canvas){
+      try{ const cv = await window.html2canvas(node,{backgroundColor:"#0e1b24",scale:1,logging:false}); return cv.toDataURL("image/png"); }
+      catch(e){ /* fall through */ }
+    }
+    try{ return await domCapturePNG(node); }catch(e){ /* fall through */ }
+    return evidenceCardPNG();
+  }
+
+  /* ---------------- SUBMIT -------------------------------------------------- */
+  els.submitBtn.addEventListener("click", submit);
+
+  async function submit(){
+    state.handle = els.handle.value.trim().slice(0,40);
+    if(!state.handle){ setStatus("Enter a callsign first.", "err"); return; }
+
+    els.submitBtn.disabled = true;
+    setStatus("Capturing lab and submitting…", );
+
+    const tasksOut = TASKS.map(t=>({ id:t.id, label:t.label, passed: !!t.pass() }));
+    const qOut = quizResults();
+    const earned = qOut.filter(q=>q.correct).length;
+
+    let shot;
+    try{ shot = await captureScreenshot(els.capture); }
+    catch(e){ shot = evidenceCardPNG(); }
+
+    const payload = {
+      assignmentId: ASSIGNMENT_ID,
+      handle: state.handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: OBJECTIVES,
+      tasks: tasksOut,
+      questions: qOut,
+      score: { earned: earned, total: QUESTIONS.length },
+      screenshot: shot,
+      submissionToken: SUBMISSION_TOKEN
+    };
+
+    if(APPS_SCRIPT_URL.indexOf("PASTE_") === 0){
+      console.log("[edge-lab] APPS_SCRIPT_URL not set — dry run. Payload:", payload);
+      setStatus("Demo mode: no submission URL configured yet. Payload logged to the console for the instructor.", "err");
+      els.submitBtn.disabled=false;
+      return;
+    }
+
+    try{
+      const res = await fetch(APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) }); // simple request: no preflight
+      const out = await res.json();
+      if(out && out.success){
+        const link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission</a>.' : ;
+        setStatus("Submitted. Tasks "+tasksOut.filter(t=>t.passed).length+"/"+tasksOut.length+
+                  ", questions "+earned+"/"+QUESTIONS.length+"."+link, "ok", true);
+      } else {
+        setStatus("The server rejected the submission"+(out&&out.error?(": "+out.error):)+". Tell your instructor.", "err");
+        els.submitBtn.disabled=false;
+      }
+    } catch(e){
+      // Fallback: fire-and-forget (can't read docUrl) for locked-down contexts.
+      try{
+        await fetch(APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        setStatus("Submission sent, but the confirmation couldn't be read in this browser. Confirm with your instructor that it arrived.", "ok", true);
+      } catch(e2){
+        setStatus("Couldn't reach the submission server. Check your connection and try again, or tell your instructor.", "err");
+        els.submitBtn.disabled=false;
+      }
+    }
+  }
+
+  function setStatus(t, cls, keepDisabled){
+    els.status.innerHTML=t; els.status.className="status "+(cls||);
+    if(!keepDisabled && cls!==) { /* leave as-is */ }
+  }
+  function flash(t, ok){ setStatus(t, ok?"ok":"err"); setTimeout(()=>{ if(els.status.textContent===t) setStatus(); }, 2600); }
+
+  /* ---------------- INIT ---------------------------------------------------- */
+  renderQuiz();
+  refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-mac-acl-bench.html",title:"Block Unmanaged Devices with a MAC ACL (CLI)"}, NEXT={href:"index_netplus-std-acl-deny-hosts.html",title:"Standard ACL Deny Specific Sources, Permit the Rest"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.5";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

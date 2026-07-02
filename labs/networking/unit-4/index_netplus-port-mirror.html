@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex">
+<title>Mirror Path — Port Mirroring / SPAN Lab</title>
+
+<!--
+  ============================================================================
+  Mirror Path — Configure Port Mirroring (SPAN) on a managed switch
+  CompTIA Network+ (N10-009) + AP Networking pilot  ·  simulation lab
+  ----------------------------------------------------------------------------
+  Clean-room original work. Scenario, persona, hostnames, IP plan, VLAN IDs,
+  port labels, credentials, task wording, and question wording are all original.
+  The CLI command syntax taught here is factual, documented vendor behavior.
+  No third-party lab content (TestOut, Cisco NetAcad/Packet Tracer, or other)
+  is reproduced.
+
+  © 2026 [AUTHOR / LIBRARY NAME]. All rights reserved.
+  Licensed for use within the AP Networking / Network+ Lab Library.
+  Replace the bracketed author/license line with your own notice.
+  ============================================================================
+-->
+
+<style>
+  :root{
+    --bg:#0c1118; --panel:#131a24; --panel-2:#0f151d; --line:#233044;
+    --text:#c7d2e0; --muted:#6b7c93; --dim:#46566b;
+    --accent:#f2a541;            /* monitoring / mirror amber */
+    --accent-soft:#3a2c12;
+    --ok:#5dd39e; --bad:#f2667a; --cli:#8fe28f; --link:#7fb2ff;
+    --focus:#9fd0ff;
+    --radius:10px;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 85% -10%, #16202e 0%, transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased; padding:18px;
+  }
+  a{color:var(--link)}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* Header */
+  header.lab{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .glyph{
+    width:38px;height:38px;border:1px solid var(--accent);border-radius:9px;
+    display:grid;place-items:center;color:var(--accent);background:var(--accent-soft);
+  }
+  .glyph svg{width:22px;height:22px}
+  h1{font-size:18px;margin:0;letter-spacing:.2px;font-weight:650}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .tag{
+    font-family:var(--mono);font-size:11px;color:var(--accent);
+    border:1px solid var(--line);background:var(--panel-2);
+    padding:3px 8px;border-radius:999px;white-space:nowrap;
+  }
+  .tag.prov{color:var(--muted)}
+
+  /* Layout */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .card > .head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel-2);
+  }
+  .head .ttl{font-size:12.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);font-weight:600}
+  .head .meta{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+
+  /* Console */
+  .console{display:flex;flex-direction:column;min-height:430px}
+  .term{
+    flex:1;font-family:var(--mono);font-size:13px;line-height:1.5;
+    padding:12px 14px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+    background:var(--panel-2);color:var(--text);max-height:430px;
+  }
+  .term .echo{color:var(--cli)}
+  .term .err{color:var(--bad)}
+  .term .sys{color:var(--muted)}
+  .term .ok{color:var(--ok)}
+  .prompt-row{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);
+    padding:8px 12px;background:var(--panel)}
+  .prompt-lbl{font-family:var(--mono);font-size:13px;color:var(--accent);white-space:nowrap}
+  #cmd{
+    flex:1;background:transparent;border:none;outline:none;color:var(--text);
+    font-family:var(--mono);font-size:13px;padding:6px 2px;
+  }
+  #cmd::placeholder{color:var(--dim)}
+
+  /* Mirror-path signature panel */
+  .mirror{padding:14px}
+  .mirror svg{width:100%;height:120px;display:block}
+  .node text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+  .wire{stroke:var(--line);stroke-width:2;fill:none}
+  .wire.active{stroke:var(--accent)}
+  .pkt{fill:var(--accent);opacity:0}
+  .mirror.live .pkt{opacity:1;animation:flow 1.6s linear infinite}
+  .pkt.p2{animation-delay:.53s}
+  .pkt.p3{animation-delay:1.06s}
+  @keyframes flow{
+    0%{transform:translateX(0)} 100%{transform:translateX(var(--span,300px))}
+  }
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;
+    color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px;
+  }
+  .badge.on{color:var(--accent);border-color:var(--accent)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+  .badge.on .dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+  /* Tasks + questions */
+  .panel-body{padding:14px}
+  .lead{color:var(--muted);font-size:13px;margin:0 0 12px}
+  ul.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  ul.tasks li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px}
+  .chk{
+    flex:none;width:20px;height:20px;border:1px solid var(--line);border-radius:6px;
+    display:grid;place-items:center;color:var(--dim);font-family:var(--mono);font-size:12px;margin-top:1px;
+  }
+  li.done .chk{border-color:var(--ok);color:var(--ok)}
+  li.done .t-main{color:var(--text)}
+  .t-main{color:var(--text)}
+  .t-hint{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+
+  .q{border-top:1px solid var(--line);padding:13px 0}
+  .q:first-of-type{border-top:none;padding-top:4px}
+  .q .ask{font-size:13.5px;margin:0 0 9px}
+  .q .ask b{color:var(--accent);font-family:var(--mono);font-weight:600;margin-right:6px}
+  .opts{display:flex;flex-direction:column;gap:7px}
+  .opt{display:flex;gap:9px;align-items:center;font-size:13px;color:var(--text);cursor:pointer}
+  .opt input{accent-color:var(--accent);width:16px;height:16px}
+  .q input[type=text]{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 10px;
+  }
+  .verdict{font-family:var(--mono);font-size:11.5px;margin-top:7px;min-height:14px}
+  .verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
+
+  /* Submission bar */
+  .submit{margin-top:16px}
+  .submit .panel-body{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end}
+  @media (max-width:640px){.submit .panel-body{grid-template-columns:1fr}}
+  label.f{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.3px}
+  #handle{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--text);font-family:var(--mono);font-size:14px;padding:10px 12px;
+  }
+  .score{
+    font-family:var(--mono);font-size:13px;color:var(--muted);
+    border:1px solid var(--line);border-radius:8px;padding:10px 14px;white-space:nowrap;text-align:center;
+  }
+  .score b{color:var(--accent)}
+  button{
+    font-family:var(--sans);font-weight:600;font-size:13.5px;cursor:pointer;
+    border-radius:8px;border:1px solid var(--line);padding:11px 16px;
+    background:var(--panel-2);color:var(--text);transition:border-color .15s,background .15s;
+  }
+  button:hover{border-color:var(--dim)}
+  button.primary{background:var(--accent);color:#1a1206;border-color:var(--accent)}
+  button.primary:hover{filter:brightness(1.05)}
+  button.ghost{background:transparent}
+  .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .status{font-family:var(--mono);font-size:12.5px;margin-top:12px;min-height:18px}
+  .status.ok{color:var(--ok)} .status.bad{color:var(--bad)} .status.work{color:var(--accent)}
+
+  /* Focus visibility */
+  a:focus-visible,button:focus-visible,input:focus-visible,.opt:focus-within,
+  #cmd:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+
+  footer.note{color:var(--dim);font-size:11.5px;margin-top:18px;border-top:1px solid var(--line);padding-top:12px;line-height:1.6}
+  footer.note code{font-family:var(--mono);color:var(--muted)}
+
+  @media (prefers-reduced-motion:reduce){
+    .mirror.live .pkt{animation:none;opacity:1}
+    *{transition:none!important}
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-port-mirror", "title": "Mirror Path — Port Mirroring / SPAN Lab", "version": "1.0.0", "objectives": ["N10-009:3.2", "APNET:4.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap" id="labArea">
+
+  <header class="lab">
+    <div class="brand">
+      <div class="glyph" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="6" rx="1.5"/><rect x="2" y="14" width="20" height="6" rx="1.5"/>
+          <path d="M7 7h.01M11 7h.01M15 7h.01"/><path d="M7 17h.01M11 17h.01M15 17h.01"/>
+          <path d="M18 10v4"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Mirror Path — Configure Port Mirroring (SPAN)</h1>
+        <div class="sub">Brightwater Transit Authority · core distribution switch <code>BWT-DSW-01</code></div>
+      </div>
+    </div>
+    <div class="tags" aria-label="Objective coverage">
+      <span class="tag">N10-009 · 2.3</span>
+      <span class="tag prov">APNET · U2 (provisional)</span>
+    </div>
+  </header>
+
+  <p class="lead" style="margin-bottom:18px">
+    The security team just racked a new <b>IDS sensor</b> in the Brightwater Transit data center.
+    Its capture interface is patched into the core switch <code>BWT-DSW-01</code>, but it can only
+    inspect traffic if you <b>mirror</b> the WAN uplink to it. Your shift task: stage the analyzer
+    port, build a monitor session that copies received traffic from the uplink to the sensor, and
+    save the configuration so it survives a reboot.
+  </p>
+
+  <div class="grid">
+
+    <!-- LEFT: console + mirror path -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card console">
+        <div class="head">
+          <span class="ttl">Switch Console — BWT-DSW-01</span>
+          <span class="meta" id="connMeta">10.20.4.9 · SSH</span>
+        </div>
+        <div class="term" id="term" role="log" aria-live="polite" aria-label="Switch console output"></div>
+        <div class="prompt-row">
+          <span class="prompt-lbl" id="ps1">Username:</span>
+          <input id="cmd" type="text" autocomplete="off" autocapitalize="off"
+                 autocorrect="off" spellcheck="false"
+                 aria-label="Console command line" placeholder="type a command and press Enter" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head">
+          <span class="ttl">Mirror Path</span>
+          <span class="badge" id="mirrorBadge"><span class="dot"></span> no active session</span>
+        </div>
+        <div class="mirror" id="mirror">
+          <svg viewBox="0 0 460 120" aria-label="Diagram of the monitor session traffic path">
+            <!-- source -->
+            <g class="node"><rect x="6" y="40" width="92" height="40" rx="7" fill="var(--panel-2)" stroke="var(--line)"/>
+              <text x="52" y="58" text-anchor="middle">Gi1/0/4</text>
+              <text x="52" y="72" text-anchor="middle">WAN uplink</text></g>
+            <!-- switch -->
+            <g class="node"><rect x="184" y="34" width="92" height="52" rx="7" fill="var(--panel-2)" stroke="var(--line)"/>
+              <text x="230" y="54" text-anchor="middle">BWT-DSW-01</text>
+              <text x="230" y="68" text-anchor="middle">session 1</text></g>
+            <!-- dest -->
+            <g class="node"><rect x="362" y="40" width="92" height="40" rx="7" fill="var(--panel-2)" stroke="var(--line)"/>
+              <text x="408" y="58" text-anchor="middle">Gi1/0/20</text>
+              <text x="408" y="72" text-anchor="middle">IDS sensor</text></g>
+            <!-- wires -->
+            <path id="wireL" class="wire" d="M98 60 H184"/>
+            <path id="wireR" class="wire" d="M276 60 H362"/>
+            <!-- packets (animate left->switch->dest) -->
+            <g id="pkts" aria-hidden="true">
+              <rect class="pkt"    x="100" y="56" width="9" height="9" rx="2" style="--span:264px"/>
+              <rect class="pkt p2" x="100" y="56" width="9" height="9" rx="2" style="--span:264px"/>
+              <rect class="pkt p3" x="100" y="56" width="9" height="9" rx="2" style="--span:264px"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: tasks + questions -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="head"><span class="ttl">Lab tasks</span><span class="meta" id="taskCount">0 / 4</span></div>
+        <div class="panel-body">
+          <ul class="tasks" id="tasks">
+            <li data-t="auth"><span class="chk">✓</span><span>
+              <span class="t-main">Authenticate to the switch and enter privileged EXEC.</span>
+              <span class="t-hint">Log in with the shift credentials, then <code>enable</code>.</span></span></li>
+            <li data-t="vlan"><span class="chk">✓</span><span>
+              <span class="t-main">Place the analyzer port <code>Gi1/0/20</code> into access VLAN 90 (IDS-CAPTURE).</span>
+              <span class="t-hint">Configure the interface as an access port on VLAN 90.</span></span></li>
+            <li data-t="mirror"><span class="chk">✓</span><span>
+              <span class="t-main">Build monitor session 1: source <code>Gi1/0/4</code> (received), destination <code>Gi1/0/20</code>.</span>
+              <span class="t-hint">Mirror traffic <em>entering</em> the uplink to the sensor port.</span></span></li>
+            <li data-t="save"><span class="chk">✓</span><span>
+              <span class="t-main">Save the running configuration to startup.</span>
+              <span class="t-hint">Persist the change so it survives a reload.</span></span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head"><span class="ttl">Knowledge check</span><span class="meta" id="qCount">0 / 3</span></div>
+        <div class="panel-body" id="questions">
+          <div class="q" data-q="q1">
+            <p class="ask"><b>Q1</b>What is the generic industry term for copying frames from a monitored port to a separate analysis port?</p>
+            <input type="text" data-answer aria-label="Answer for question 1" placeholder="one or two words" />
+            <div class="verdict" aria-live="polite"></div>
+          </div>
+          <div class="q" data-q="q2">
+            <p class="ask"><b>Q2</b>Which direction keyword captures only traffic <em>entering</em> the source port?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q2" value="rx"> rx (received)</label>
+              <label class="opt"><input type="radio" name="q2" value="tx"> tx (transmitted)</label>
+              <label class="opt"><input type="radio" name="q2" value="both"> both</label>
+            </div>
+            <div class="verdict" aria-live="polite"></div>
+          </div>
+          <div class="q" data-q="q3">
+            <p class="ask"><b>Q3</b>To see the mirrored copy, the IDS sensor must be cabled to which port?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q3" value="source"> the source / monitored port</label>
+              <label class="opt"><input type="radio" name="q3" value="dest"> the destination / monitor port</label>
+              <label class="opt"><input type="radio" name="q3" value="mgmt"> the management port</label>
+            </div>
+            <div class="verdict" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBMISSION -->
+  <div class="card submit">
+    <div class="head"><span class="ttl">Submit completed lab</span><span class="meta">pseudonymous · no real names</span></div>
+    <div class="panel-body">
+      <div>
+        <label class="f" for="handle">Callsign (your handle — not your real name)</label>
+        <input id="handle" type="text" maxlength="40" autocomplete="off" spellcheck="false"
+               placeholder="e.g., tideline-fox" />
+      </div>
+      <div class="score" id="scoreBox">Score <b id="scoreNum">0 / 7</b></div>
+      <button class="primary" id="submitBtn" type="button">Submit completed lab</button>
+    </div>
+    <div class="panel-body" style="padding-top:0">
+      <div class="actions">
+        <button class="ghost" id="resetBtn" type="button">Reset lab</button>
+        <button class="ghost" id="hintBtn" type="button">Show command hints</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <footer class="note">
+    Simulation for formative practice. Answer keys are client-side and self-reported; the screenshot
+    and the server timestamp are supporting evidence, not proof. No personal data is collected — use a
+    callsign only. © 2026 [AUTHOR / LIBRARY NAME]. Network+ is a trademark of CompTIA; AP is a trademark
+    of the College Board. This lab is independent and not endorsed by either.
+  </footer>
+</div>
+
+<!-- ===========================================================================
+     SCRIPT BLOCK 1 — INLINED html2canvas
+     ---------------------------------------------------------------------------
+     Per the library spec, paste the FULL minified html2canvas source between the
+     markers below (reuse the exact blob proven in the Security+ library — it is
+     MIT-licensed, so reuse is fine). Until you paste it, the lab still runs and
+     submits; it simply sends an empty screenshot field and warns the learner.
+     ===========================================================================
+-->
+<script>/* >>> PASTE MINIFIED html2canvas HERE <<< */</script>
+
+<!-- ===========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, answer key, CLI logic, submission
+     =========================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------------- LAB CONFIG (per-lab edits) ----------------------- */
+  const CONFIG = {
+    assignmentId: "netplus-port-mirror",
+    title: "Mirror Path — Configure Port Mirroring (SPAN)",
+    // Both blueprints. N10-009 2.3 = Ethernet switching features (port mirroring).
+    // APNET unit is PROVISIONAL pending the official AP Networking framework PDF.
+    objectives: ["N10-009:3.2", "APNET:4.3"],
+
+    // The single shared web-app endpoint for the whole library:
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN",
+
+    // Sim facts (all original):
+    host: "BWT-DSW-01",
+    mgmtIp: "10.20.4.9",
+    login: { user: "netop", pass: "Tr@ckside-2027" },
+    sourcePort: "Gi1/0/4",       // WAN uplink (monitored)
+    destPort:   "Gi1/0/20",      // IDS sensor (analyzer)
+    monitorVlan: 90,
+    monitorVlanName: "IDS-CAPTURE",
+    captureDir: "rx",            // mirror traffic ENTERING the source
+    sessionId: 1,
+    portCount: 24
+  };
+
+  /* answer key (client-side; re-validate server-side if a grade must be trusted) */
+  const QKEY = {
+    q1: function(v){ v=(v||"").toLowerCase().replace(/[^a-z ]/g,"").trim();
+                     return ["port mirroring","mirroring","port mirror","span","port span"].includes(v); },
+    q2: "rx",
+    q3: "dest"
+  };
+
+  /* ------------------------------ sim state -------------------------------- */
+  const state = freshState();
+  function freshState(){
+    return {
+      mode: "login-user",         // login-user | login-pass | user | priv | config | config-if | config-vlan
+      enableReached: false,
+      currentIf: null,
+      ports: {},                  // canon -> {mode, accessVlan}
+      vlans: { 1:{name:"default"} },
+      session: { sources: [], destination: null }, // sources: [{intf,dir}]
+      startupSaved: false
+    };
+  }
+  function portState(canon){ return state.ports[canon] || (state.ports[canon] = {mode:null, accessVlan:null}); }
+
+  /* ------------------------------- DOM refs -------------------------------- */
+  const term   = document.getElementById("term");
+  const cmd     = document.getElementById("cmd");
+  const ps1     = document.getElementById("ps1");
+  const mirror  = document.getElementById("mirror");
+  const mBadge  = document.getElementById("mirrorBadge");
+  const statusEl= document.getElementById("status");
+
+  /* ------------------------------ console I/O ------------------------------ */
+  function out(text, cls){
+    const span = document.createElement("span");
+    if(cls) span.className = cls;
+    span.textContent = text + "\n";
+    term.appendChild(span);
+    term.scrollTop = term.scrollHeight;
+  }
+  function banner(){
+    out("Brightwater Transit Authority — Authorized access only.", "sys");
+    out("Connecting to "+CONFIG.mgmtIp+" ...", "sys");
+    out(CONFIG.host+" line vty 0 ready.\n", "sys");
+  }
+
+  function setPrompt(){
+    const m = state.mode, h = CONFIG.host;
+    let p = "Username:";
+    if(m==="login-pass") p = "Password:";
+    else if(m==="user")  p = h+">";
+    else if(m==="priv")  p = h+"#";
+    else if(m==="config")p = h+"(config)#";
+    else if(m==="config-if") p = h+"(config-if)#";
+    else if(m==="config-vlan") p = h+"(config-vlan)#";
+    ps1.textContent = p;
+    cmd.type = (m==="login-pass") ? "password" : "text";
+  }
+
+  /* --------------------------- interface parsing --------------------------- */
+  // accepts gi/gig/gigabitethernet + N/N/N, with or without a space
+  function canonIf(token){
+    if(!token) return null;
+    const m = token.toLowerCase().replace(/\s+/g,"").match(/^(?:g|gi|gig|gigabitethernet)(\d+\/\d+\/\d+)$/);
+    if(!m) return null;
+    const tail = m[1];
+    const last = parseInt(tail.split("/").pop(),10);
+    if(last < 1 || last > CONFIG.portCount) return {error:"range"};
+    return "Gi"+tail;
+  }
+
+  function invalid(){ out("% Invalid input detected at '^' marker.", "err"); }
+  function incomplete(){ out("% Incomplete command.", "err"); }
+
+  /* --------------------------------- parser -------------------------------- */
+  function handle(raw){
+    const line = raw.trim();
+    const m = state.mode;
+
+    // login flow
+    if(m==="login-user"){
+      out("Username: "+line, "echo");
+      state._user = line;
+      state.mode = "login-pass"; setPrompt(); return;
+    }
+    if(m==="login-pass"){
+      out("Password: ", "echo"); // never echo the secret
+      if(state._user===CONFIG.login.user && line===CONFIG.login.pass){
+        state.mode="user"; out("\nLogin successful.\n","ok");
+      } else {
+        state._user=null; state.mode="login-user";
+        out("% Authentication failed.\n","err");
+      }
+      setPrompt(); return;
+    }
+
+    if(line==="") return;
+    out(ps1.textContent+" "+line, "echo");
+    const t = line.toLowerCase().split(/\s+/);
+
+    // universal navigation
+    if(pre(t[0],"exit") && t.length===1){ navExit(); return refresh(); }
+    if(t[0]==="end" && (m==="config"||m==="config-if"||m==="config-vlan")){ state.mode="priv"; state.currentIf=null; return refresh(); }
+    if(pre(t[0],"logout") || (t[0]==="disable")){ if(t[0]==="disable" && m==="priv"){state.mode="user"; return refresh();} }
+    if(t[0]==="?"){ helpFor(m); return; }
+
+    // USER EXEC
+    if(m==="user"){
+      if(pre(t[0],"enable")){ state.mode="priv"; state.enableReached=true; return refresh(); }
+      if(t[0]==="show"){ return showCmd(t); }
+      return invalid();
+    }
+
+    // PRIV EXEC
+    if(m==="priv"){
+      if(pre(t[0],"configure") && t[1] && pre(t[1],"terminal")){ state.mode="config";
+        out("Enter configuration commands, one per line. End with CNTL/Z.","sys"); return refresh(); }
+      if(pre(t[0],"configure") && !t[1]) return incomplete();
+      if(t[0]==="show"){ return showCmd(t); }
+      if(saveCmd(t)) return refresh();
+      if(t[0]==="monitor"){ return monitorCmd(t); }   // lenient: allow from priv too
+      return invalid();
+    }
+
+    // GLOBAL CONFIG
+    if(m==="config"){
+      if(pre(t[0],"interface")){
+        if(!t[1]) return incomplete();
+        const c = canonIf(t.slice(1).join(""));
+        if(c && c.error) { out("% Interface out of range (this switch has "+CONFIG.portCount+" ports).","err"); return; }
+        if(!c) return invalid();
+        state.currentIf=c; portState(c); state.mode="config-if"; return refresh();
+      }
+      if(t[0]==="vlan"){
+        const id=parseInt(t[1],10);
+        if(!t[1]) return incomplete();
+        if(isNaN(id)||id<1||id>4094) return invalid();
+        state.vlans[id]=state.vlans[id]||{name:"VLAN"+String(id).padStart(4,"0")};
+        state.mode="config-vlan"; state._vlanCtx=id; return refresh();
+      }
+      if(t[0]==="monitor"){ return monitorCmd(t); }
+      if(t[0]==="hostname" || t[0]==="no"){ return refresh(); } // tolerated no-ops
+      return invalid();
+    }
+
+    // INTERFACE CONFIG
+    if(m==="config-if"){
+      const ps = portState(state.currentIf);
+      if(t[0]==="switchport" && pre(t[1]||"","mode") && t[2] && pre(t[2],"access")){ ps.mode="access"; return refresh(); }
+      if(t[0]==="switchport" && pre(t[1]||"","access") && pre(t[2]||"","vlan")){
+        const id=parseInt(t[3],10);
+        if(!t[3]) return incomplete();
+        if(isNaN(id)||id<1||id>4094) return invalid();
+        if(ps.mode==null) ps.mode="access";
+        ps.accessVlan=id; state.vlans[id]=state.vlans[id]||{name:"VLAN"+String(id).padStart(4,"0")};
+        return refresh();
+      }
+      if(t[0]==="description" || t[0]==="no" || t[0]==="shutdown"){ return refresh(); } // tolerated
+      return invalid();
+    }
+
+    // VLAN CONFIG
+    if(m==="config-vlan"){
+      if(t[0]==="name"){ if(!t[1]) return incomplete(); state.vlans[state._vlanCtx].name = line.split(/\s+/).slice(1).join(" "); return refresh(); }
+      if(t[0]==="no"){ return refresh(); }
+      return invalid();
+    }
+
+    invalid();
+  }
+
+  function pre(tok,word){ return tok && word.startsWith(tok) && tok.length>=1; }
+
+  function navExit(){
+    const m=state.mode;
+    if(m==="config-if"){ state.mode="config"; state.currentIf=null; }
+    else if(m==="config-vlan"){ state.mode="config"; state._vlanCtx=null; }
+    else if(m==="config"){ state.mode="priv"; }
+    else if(m==="priv"){ state.mode="user"; }
+    else if(m==="user"){ out("Connection to "+CONFIG.host+" closed.","sys"); }
+  }
+
+  function saveCmd(t){
+    const j=t.join(" ");
+    if(j==="copy running-config startup-config" || j==="copy run start" ||
+       j==="write memory" || j==="write" || t[0]==="wr"){
+      out("Building configuration...","sys");
+      out("[OK]","ok");
+      state.startupSaved=true;
+      return true;
+    }
+    return false;
+  }
+
+  function monitorCmd(t){
+    // monitor session <id> source interface <if> [rx|tx|both]
+    // monitor session <id> destination interface <if>
+    if(!(pre(t[1]||"","session"))) return invalid();
+    const id=parseInt(t[2],10);
+    if(isNaN(id)) return incomplete();
+    if(id!==CONFIG.sessionId){ out("% Session "+id+" is not in use by this lab (use session "+CONFIG.sessionId+").","err"); return; }
+    const kind=t[3];
+    if(!kind) return incomplete();
+
+    if(pre(kind,"source")){
+      if(!(pre(t[4]||"","interface"))) return invalid();
+      const c=canonIf((t[5]||""));
+      if(c && c.error){ out("% Interface out of range.","err"); return; }
+      if(!c) return invalid();
+      let dir = t[6] ? t[6] : "both";
+      if(!["rx","tx","both"].includes(dir)) return invalid();
+      // replace any existing source for this lab
+      state.session.sources = [{intf:c, dir:dir}];
+      out("Monitor session "+id+" source set: "+c+" ("+dir+")","sys");
+      return refresh();
+    }
+    if(pre(kind,"destination")){
+      if(!(pre(t[4]||"","interface"))) return invalid();
+      const c=canonIf((t[5]||""));
+      if(c && c.error){ out("% Interface out of range.","err"); return; }
+      if(!c) return invalid();
+      state.session.destination=c;
+      out("Monitor session "+id+" destination set: "+c,"sys");
+      return refresh();
+    }
+    invalid();
+  }
+
+  function showCmd(t){
+    const j=t.join(" ");
+    if(j.startsWith("show monitor")){
+      const s=state.session;
+      if(!s.sources.length && !s.destination){ out("\n  No SPAN configured.\n","sys"); return; }
+      out("\n  Session "+CONFIG.sessionId,"sys");
+      out("  ---------","sys");
+      out("  Source Ports        : "+(s.sources.map(x=>x.intf+" ("+x.dir+")").join(", ")||"None"),"sys");
+      out("  Destination Ports   : "+(s.destination||"None")+"\n","sys");
+      return;
+    }
+    if(j.startsWith("show vlan")){
+      out("\n  VLAN Name             Ports","sys");
+      Object.keys(state.vlans).sort((a,b)=>a-b).forEach(id=>{
+        const ports=Object.keys(state.ports).filter(p=>state.ports[p].accessVlan==id);
+        out("  "+String(id).padEnd(5)+state.vlans[id].name.padEnd(16)+" "+(ports.join(", ")||"-"),"sys");
+      });
+      out("","sys"); return;
+    }
+    if(j.startsWith("show running") || j.startsWith("show run")){
+      out("\n  monitor session "+CONFIG.sessionId+" ...","sys");
+      out("  startup saved: "+(state.startupSaved?"yes":"no")+"\n","sys"); return;
+    }
+    out("% Try: show monitor | show vlan brief | show running-config","err");
+  }
+
+  function helpFor(m){
+    const help = {
+      "user":["enable","show ...","exit"],
+      "priv":["configure terminal","monitor session 1 ...","copy running-config startup-config","show monitor","exit"],
+      "config":["interface Gi1/0/X","vlan <id>","monitor session 1 source interface Gi1/0/X rx","monitor session 1 destination interface Gi1/0/X","exit"],
+      "config-if":["switchport mode access","switchport access vlan <id>","exit"],
+      "config-vlan":["name <text>","exit"]
+    };
+    out("  Available: "+(help[m]||["exit"]).join("  |  "),"sys");
+  }
+
+  /* --------------------------- task / score logic -------------------------- */
+  function tasksState(){
+    const s=state, ps=s.ports[CONFIG.destPort];
+    const t_auth = s.enableReached;
+    const t_vlan = !!ps && ps.accessVlan===CONFIG.monitorVlan;
+    const srcOk = s.session.sources.some(x=>x.intf===CONFIG.sourcePort && x.dir===CONFIG.captureDir);
+    const dstOk = s.session.destination===CONFIG.destPort;
+    const t_mirror = srcOk && dstOk;
+    const t_save = s.startupSaved && t_vlan && t_mirror;
+    return {auth:t_auth, vlan:t_vlan, mirror:t_mirror, save:t_save};
+  }
+  const TASK_LABELS={
+    auth:"Authenticate and reach privileged EXEC",
+    vlan:"Analyzer port Gi1/0/20 in access VLAN 90 (IDS-CAPTURE)",
+    mirror:"Monitor session 1: source Gi1/0/4 (rx) → destination Gi1/0/20",
+    save:"Running configuration saved to startup"
+  };
+
+  function questionsState(){
+    const q1 = document.querySelector('[data-q="q1"] [data-answer]').value;
+    const q2 = (document.querySelector('input[name="q2"]:checked')||{}).value || "";
+    const q3 = (document.querySelector('input[name="q3"]:checked')||{}).value || "";
+    return {
+      q1:{val:q1, correct:QKEY.q1(q1)},
+      q2:{val:q2, correct:q2===QKEY.q2},
+      q3:{val:q3, correct:q3===QKEY.q3}
+    };
+  }
+  const QPROMPTS={
+    q1:"Generic term for copying frames from a monitored port to an analysis port",
+    q2:"Direction keyword that captures inbound traffic on the source port",
+    q3:"Port the IDS sensor must connect to in order to receive the mirrored copy"
+  };
+
+  /* ------------------------------- rendering ------------------------------- */
+  function refresh(){
+    setPrompt();
+    const tk=tasksState();
+    let tdone=0;
+    document.querySelectorAll("#tasks li").forEach(li=>{
+      const ok=tk[li.dataset.t]; li.classList.toggle("done",!!ok); if(ok)tdone++;
+    });
+    document.getElementById("taskCount").textContent = tdone+" / 4";
+
+    const qs=questionsState(); let qdone=0;
+    document.querySelectorAll("#questions .q").forEach(q=>{
+      const id=q.dataset.q, v=q.querySelector(".verdict"), st=qs[id];
+      const touched = (id==="q1") ? q.querySelector("[data-answer]").value.trim()!=="" :
+                      !!document.querySelector('input[name="'+id+'"]:checked');
+      if(!touched){ v.textContent=""; v.className="verdict"; }
+      else if(st.correct){ v.textContent="✓ correct"; v.className="verdict ok"; qdone++; }
+      else { v.textContent="✗ not quite — review the task above"; v.className="verdict bad"; }
+    });
+    document.getElementById("qCount").textContent = qdone+" / 3";
+
+    const earned = tdone+qdone, total = 7;
+    document.getElementById("scoreNum").textContent = earned+" / "+total;
+
+    // mirror path animation when session is correct
+    const live = tk.mirror;
+    mirror.classList.toggle("live",live);
+    document.getElementById("wireL").classList.toggle("active",live);
+    document.getElementById("wireR").classList.toggle("active",live);
+    mBadge.className = "badge"+(live?" on":"");
+    mBadge.innerHTML = '<span class="dot"></span> '+(live? "MIRRORING · session 1 (rx)" : "no active session");
+
+    return {tasks:tk, questions:qs, earned, total};
+  }
+
+  /* ------------------------------ submission ------------------------------- */
+  async function submit(){
+    const handle=(document.getElementById("handle").value||"").trim();
+    if(!handle){ setStatus("Enter a callsign first (a handle, not your real name).","bad"); return; }
+    if(handle.length>40){ setStatus("Callsign is too long (40 characters max).","bad"); return; }
+
+    const r=refresh();
+    const tasksArr=Object.keys(TASK_LABELS).map(k=>({id:k,label:TASK_LABELS[k],passed:!!r.tasks[k]}));
+    const qArr=Object.keys(QPROMPTS).map(k=>({id:k,prompt:QPROMPTS[k],answer:r.questions[k].val,correct:!!r.questions[k].correct}));
+
+    setStatus("Capturing lab screenshot…","work");
+    let shot="";
+    try{
+      if(typeof html2canvas==="function"){
+        const canvas=await html2canvas(document.getElementById("labArea"),{backgroundColor:"#0c1118",scale:1});
+        shot=canvas.toDataURL("image/png");
+      } else {
+        setStatus("Note: html2canvas not inlined — submitting without a screenshot.","work");
+      }
+    }catch(e){ /* continue without screenshot */ }
+
+    const payload={
+      assignmentId:CONFIG.assignmentId,
+      handle:handle,
+      clientTimestamp:new Date().toISOString(),
+      objectives:CONFIG.objectives,
+      tasks:tasksArr,
+      questions:qArr,
+      score:{earned:r.earned,total:r.total},
+      screenshot:shot,
+      submissionToken:CONFIG.submissionToken
+    };
+
+    if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      setStatus("This lab isn't wired to a server yet. Instructor: set APPS_SCRIPT_URL in the CONFIG block. (Your work scored "+r.earned+"/"+r.total+".)","bad");
+      return;
+    }
+
+    setStatus("Submitting…","work");
+    try{
+      // Simple request: no custom headers, text/plain body → no CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+      const data=await res.json();
+      if(data && data.success){
+        setStatus("Submitted ✓  Score "+r.earned+"/"+r.total+"."+(data.docUrl?" ":""),"ok");
+        if(data.docUrl){
+          const a=document.createElement("a"); a.href=data.docUrl; a.target="_blank";
+          a.rel="noopener"; a.textContent="Open your submission record";
+          statusEl.appendChild(document.createTextNode("  ")); statusEl.appendChild(a);
+        }
+      } else {
+        setStatus("Server rejected the submission: "+((data&&data.error)||"unknown error")+". Check with your instructor.","bad");
+      }
+    }catch(err){
+      // Fallback: fire-and-forget (can't read docUrl). Confirm with instructor.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+        setStatus("Submission sent, but the confirmation couldn't be read. Ask your instructor to confirm it arrived. (Scored "+r.earned+"/"+r.total+".)","work");
+      }catch(e2){
+        setStatus("Couldn't reach the submission server. Check your connection and try again.","bad");
+      }
+    }
+  }
+  function setStatus(msg,cls){ statusEl.textContent=msg; statusEl.className="status "+(cls||""); }
+
+  /* --------------------------------- reset --------------------------------- */
+  function reset(){
+    Object.assign(state, freshState());
+    term.textContent=""; banner();
+    document.getElementById("handle").value="";
+    document.querySelectorAll('input[type="radio"]').forEach(r=>r.checked=false);
+    document.querySelector('[data-q="q1"] [data-answer]').value="";
+    setStatus("","");
+    refresh(); cmd.focus();
+  }
+
+  /* ------------------------------- wire up --------------------------------- */
+  cmd.addEventListener("keydown",function(e){
+    if(e.key==="Enter"){ const v=cmd.value; cmd.value=""; handle(v); }
+  });
+  document.querySelectorAll('input[name="q2"],input[name="q3"]').forEach(el=>el.addEventListener("change",refresh));
+  document.querySelector('[data-q="q1"] [data-answer]').addEventListener("input",refresh);
+  document.getElementById("submitBtn").addEventListener("click",submit);
+  document.getElementById("resetBtn").addEventListener("click",reset);
+  document.getElementById("hintBtn").addEventListener("click",function(){
+    out("\n  Suggested flow:","sys");
+    out("    "+CONFIG.login.user+" / "+CONFIG.login.pass,"sys");
+    out("    enable","sys");
+    out("    configure terminal","sys");
+    out("    interface "+CONFIG.destPort+"  →  switchport mode access  →  switchport access vlan "+CONFIG.monitorVlan,"sys");
+    out("    exit","sys");
+    out("    monitor session "+CONFIG.sessionId+" source interface "+CONFIG.sourcePort+" "+CONFIG.captureDir,"sys");
+    out("    monitor session "+CONFIG.sessionId+" destination interface "+CONFIG.destPort,"sys");
+    out("    end  →  copy running-config startup-config\n","sys");
+  });
+
+  /* --------------------------------- boot ---------------------------------- */
+  banner(); setPrompt(); refresh(); cmd.focus();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-network-discovery.html",title:"Authorized Network Discovery \u2014 Larkfield Community Library"}, NEXT={href:"index_netplus-nslookup-mail-routing.html",title:"DNS Detective \u2014 Verifying Mail Routing with nslookup"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>DNS Detective — Verifying Mail Routing with nslookup</title>
+<!--
+  ============================================================================
+  Lab: DNS Detective — Verifying Mail Routing with nslookup
+  assignmentId: netplus-nslookup-mail-routing
+  Objectives:  N10-007:1.8 (DNS service / record types) , N10-007:5.2 (use the
+               appropriate tool: nslookup)
+               AP Networking 4.2.A (purpose of common network protocols / DNS),
+               AP Networking 4.3.A (apply appropriate CLI commands)
+  Likely N10-009 re-map (confirm against the N10-009 objectives file): 1.6, 5.5
+
+  This is an ORIGINAL, clean-room build from the public exam objectives and the
+  public AP Networking framework. All scenario text, company/domain names,
+  hostnames, IP plan, task wording, and question phrasing are original to this
+  library. No third-party lab content was copied.
+
+  © 2026 [AUTHOR NAME]. [LICENSE — e.g. All rights reserved / CC BY-NC 4.0].
+  Replace the bracketed notice above with the library author's own copyright
+  and license line before distribution.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c2330; --edge:#2b3340;
+    --ink:#e6edf3; --muted:#9aa7b4; --accent:#39d3c4; --accent-2:#7aa2ff;
+    --ok:#3fb950; --bad:#f0556a; --warn:#d2a24c;
+    --term-bg:#06090f; --term-ink:#d8e6e2; --term-prompt:#39d3c4;
+    --radius:10px; --mono:"SFMono-Regular",ui-monospace,"Cascadia Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+  a{color:var(--accent-2)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px clamp(12px,3vw,28px) 96px}
+  header.app{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;
+    border-bottom:1px solid var(--edge);padding-bottom:14px;margin-bottom:18px}
+  header.app h1{font-size:clamp(1.05rem,2.4vw,1.5rem);margin:0;letter-spacing:.2px}
+  header.app .tagline{color:var(--muted);font-size:.9rem}
+  .badges{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+  .badge{font:600 .72rem/1 var(--mono);color:var(--accent);
+    background:rgba(57,211,196,.1);border:1px solid rgba(57,211,196,.35);
+    padding:5px 8px;border-radius:999px;white-space:nowrap}
+  .badge.ap{color:var(--accent-2);background:rgba(122,162,255,.1);border-color:rgba(122,162,255,.35)}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);overflow:hidden}
+  .card h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
+    margin:0;padding:11px 14px;border-bottom:1px solid var(--edge);background:var(--panel-2)}
+  .card .body{padding:14px}
+
+  /* terminal */
+  .term-shell{background:var(--term-bg);border:1px solid var(--edge);border-radius:var(--radius);
+    display:flex;flex-direction:column;min-height:430px}
+  .term-bar{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid #11161f}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+  .term-bar .title{margin-left:8px;color:var(--muted);font:600 .78rem var(--mono)}
+  .term-out{flex:1;overflow:auto;padding:12px 14px;font:.86rem/1.5 var(--mono);
+    color:var(--term-ink);white-space:pre-wrap;word-break:break-word}
+  .term-out .prompt{color:var(--term-prompt)}
+  .term-out .cmd{color:#fff}
+  .term-out .err{color:var(--bad)}
+  .term-out .dim{color:#73828c}
+  .term-in{display:flex;align-items:center;gap:8px;border-top:1px solid #11161f;padding:9px 12px}
+  .term-in .ps{color:var(--term-prompt);font:600 .9rem var(--mono);white-space:nowrap}
+  .term-in input{flex:1;background:transparent;border:none;outline:none;color:var(--term-ink);
+    font:.9rem var(--mono);caret-color:var(--accent)}
+  .term-in input:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+  .hint{margin-top:10px;font-size:.82rem;color:var(--muted)}
+  .hint code{background:var(--panel-2);border:1px solid var(--edge);border-radius:5px;
+    padding:1px 6px;font:.8rem var(--mono);color:var(--ink)}
+
+  /* tasks + questions */
+  ol.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  ol.tasks li{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--edge);
+    border-radius:8px;background:var(--panel-2)}
+  .tick{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--muted);
+    display:grid;place-items:center;font-size:.7rem;color:transparent;margin-top:1px}
+  li.done .tick{border-color:var(--ok);background:var(--ok);color:#06210f}
+  li.done .t-text{color:var(--ink)}
+  .t-text{font-size:.9rem;color:var(--muted)}
+  .t-text b{color:var(--ink)}
+
+  .q{padding:11px 0;border-top:1px dashed var(--edge)}
+  .q:first-child{border-top:none;padding-top:0}
+  .q label{display:block;font-size:.9rem;margin-bottom:7px}
+  .q .qnum{color:var(--accent);font:700 .8rem var(--mono);margin-right:6px}
+  .q input[type=text]{width:100%;background:var(--term-bg);border:1px solid var(--edge);
+    color:var(--ink);border-radius:7px;padding:8px 10px;font:.88rem var(--mono)}
+  .q input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .q .verdict{font-size:.8rem;margin-top:5px;min-height:1em}
+  .verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
+
+  .btn{appearance:none;border:1px solid var(--edge);background:var(--panel-2);color:var(--ink);
+    font:600 .85rem var(--sans);padding:9px 14px;border-radius:8px;cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn.primary{background:var(--accent);color:#04201d;border-color:var(--accent)}
+  .btn.ghost{background:transparent}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  /* submission bar */
+  .subbar{position:fixed;left:0;right:0;bottom:0;background:rgba(13,17,23,.96);
+    border-top:1px solid var(--edge);backdrop-filter:blur(6px);z-index:20}
+  .subbar .inner{max-width:1180px;margin:0 auto;padding:11px clamp(12px,3vw,28px);
+    display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .subbar label{font-size:.82rem;color:var(--muted)}
+  .subbar input#handle{background:var(--term-bg);border:1px solid var(--edge);color:var(--ink);
+    border-radius:8px;padding:9px 11px;font:.9rem var(--mono);min-width:170px}
+  .subbar input#handle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .scorepill{font:700 .82rem var(--mono);color:var(--ink);background:var(--panel-2);
+    border:1px solid var(--edge);border-radius:999px;padding:7px 12px}
+  #status{font-size:.84rem;min-width:160px}
+  #status.ok{color:var(--ok)} #status.bad{color:var(--bad)} #status.work{color:var(--warn)}
+  .grow{flex:1 1 auto}
+
+  .legal{margin-top:22px;color:#5d6b76;font-size:.72rem;line-height:1.5}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+  .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;border:0}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-nslookup-mail-routing", "title": "DNS Detective — Verifying Mail Routing with nslookup", "version": "1.0.0", "objectives": ["N10-009:3.4", "N10-009:5.5", "APNET:4.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="app">
+    <div>
+      <h1>DNS Detective — Verifying Mail Routing with <code style="font-family:var(--mono)">nslookup</code></h1>
+      <div class="tagline">Aldermere Outfitters · pre-migration mail-routing check</div>
+    </div>
+    <div class="badges" aria-label="Aligned objectives">
+      <span class="badge">N10-007 · 1.8</span>
+      <span class="badge">N10-007 · 5.2</span>
+      <span class="badge ap">AP NET · 4.2.A</span>
+      <span class="badge ap">AP NET · 4.3.A</span>
+    </div>
+  </header>
+
+  <!-- region captured in the screenshot -->
+  <div id="lab-capture">
+  <div class="grid">
+
+    <!-- LEFT: simulated terminal -->
+    <section class="card" aria-label="Simulated DNS lookup terminal">
+      <h2>analyst-ws ~ secure shell</h2>
+      <div class="body">
+        <div class="term-shell">
+          <div class="term-bar">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <span class="title">resolver: <span id="srv-name">resolver.aldermere.net</span></span>
+          </div>
+          <div id="termOut" class="term-out" role="log" aria-live="polite" aria-label="Terminal output" tabindex="0"></div>
+          <div class="term-in">
+            <span class="ps" id="ps1" aria-hidden="true">analyst@ws:~$</span>
+            <label class="visually-hidden" for="termIn">Terminal command input</label>
+            <input id="termIn" type="text" autocomplete="off" autocapitalize="off"
+                   spellcheck="false" enterkeyhint="send"
+                   aria-describedby="termHint" placeholder="type a command, e.g. nslookup aldermere.net">
+          </div>
+        </div>
+        <p class="hint" id="termHint">
+          Try <code>nslookup aldermere.net</code>, set a record type with
+          <code>nslookup -type=mx aldermere.net</code>, point a query at a specific
+          server with <code>nslookup -type=mx aldermere.net ns-edge.brackenhost.net</code>,
+          or enter interactive mode by typing <code>nslookup</code> alone
+          (then <code>set type=mx</code>, <code>server &lt;name&gt;</code>, a hostname, or <code>exit</code>).
+          Type <code>help</code> for the command list.
+        </p>
+        <div class="row" style="margin-top:12px">
+          <button class="btn ghost" id="btnReset" type="button">Reset lab</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: brief, tasks, questions -->
+    <div style="display:flex;flex-direction:column;gap:18px">
+
+      <section class="card">
+        <h2>Your assignment</h2>
+        <div class="body" style="font-size:.9rem;line-height:1.55;color:var(--muted)">
+          You're a junior network analyst at <b style="color:var(--ink)">Aldermere Outfitters</b>,
+          an outdoor-gear retailer about to move its email to a new provider. Before the
+          cutover, the lead engineer asks you to confirm how internet mail is currently
+          routed to the company mail server for <b style="color:var(--ink)">aldermere.net</b>,
+          and to verify that the records the company's own resolver returns match what the
+          domain's <b style="color:var(--ink)">external authoritative</b> name server reports.
+          Work entirely from the terminal.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Tasks — auto-checked</h2>
+        <div class="body">
+          <ol class="tasks" id="taskList" aria-live="polite">
+            <li data-task="a" id="task-a">
+              <span class="tick" aria-hidden="true">✓</span>
+              <span class="t-text"><b>Find the primary IP.</b> Ask the default resolver for the
+              A record of <code style="font-family:var(--mono)">aldermere.net</code>.</span>
+            </li>
+            <li data-task="mx" id="task-mx">
+              <span class="tick" aria-hidden="true">✓</span>
+              <span class="t-text"><b>Find the mail exchanger.</b> Query the
+              <code style="font-family:var(--mono)">MX</code> record for the domain.</span>
+            </li>
+            <li data-task="mailip" id="task-mailip">
+              <span class="tick" aria-hidden="true">✓</span>
+              <span class="t-text"><b>Resolve the mail host.</b> Look up the A record of the
+              mail exchanger you found.</span>
+            </li>
+            <li data-task="ext" id="task-ext">
+              <span class="tick" aria-hidden="true">✓</span>
+              <span class="t-text"><b>Confirm externally.</b> Repeat a query against
+              <code style="font-family:var(--mono)">ns-edge.brackenhost.net</code> and check it agrees.</span>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Report your findings</h2>
+        <div class="body" id="questions">
+          <div class="q" data-q="q1">
+            <label for="q1"><span class="qnum">Q1</span>Primary (A record) IP address of aldermere.net?</label>
+            <input id="q1" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 203.0.113.7">
+            <div class="verdict" id="v-q1" aria-live="polite"></div>
+          </div>
+          <div class="q" data-q="q2">
+            <label for="q2"><span class="qnum">Q2</span>Fully-qualified hostname of the mail exchanger?</label>
+            <input id="q2" type="text" autocomplete="off" placeholder="e.g. mail.example.net">
+            <div class="verdict" id="v-q2" aria-live="polite"></div>
+          </div>
+          <div class="q" data-q="q3">
+            <label for="q3"><span class="qnum">Q3</span>IP address of that mail server?</label>
+            <input id="q3" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 203.0.113.9">
+            <div class="verdict" id="v-q3" aria-live="polite"></div>
+          </div>
+          <div class="q" data-q="q4">
+            <label for="q4"><span class="qnum">Q4</span>MX preference (priority) value on that record?</label>
+            <input id="q4" type="text" inputmode="numeric" autocomplete="off" placeholder="a number">
+            <div class="verdict" id="v-q4" aria-live="polite"></div>
+          </div>
+          <div class="q" data-q="q5">
+            <label for="q5"><span class="qnum">Q5</span>Does ns-edge.brackenhost.net report the same mail exchanger? (yes / no)</label>
+            <input id="q5" type="text" autocomplete="off" placeholder="yes or no">
+            <div class="verdict" id="v-q5" aria-live="polite"></div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <button class="btn" id="btnCheck" type="button">Check answers</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+  </div><!-- /lab-capture -->
+
+  <p class="legal">
+    Simulated environment for instruction only. Addresses use the documentation
+    ranges reserved by RFC&nbsp;5737 (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
+    “Aldermere Outfitters,” aldermere.net, and brackenhost.net are fictional.
+    © 2026 [AUTHOR NAME]. [LICENSE]. Original clean-room content — not derived from any vendor lab.
+  </p>
+</div>
+
+<!-- submission bar -->
+<div class="subbar">
+  <div class="inner">
+    <label for="handle">Callsign</label>
+    <input id="handle" type="text" maxlength="32" autocomplete="off" spellcheck="false"
+           placeholder="pick a handle (no real names)" aria-describedby="status">
+    <span class="scorepill" id="scorePill">Score 0 / 9</span>
+    <span class="grow"></span>
+    <span id="status" role="status" aria-live="polite">Not submitted</span>
+    <button class="btn primary" id="btnSubmit" type="button">Submit completed lab</button>
+  </div>
+</div>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 1 — screenshot capture.
+     The library spec calls for an INLINED copy of html2canvas here so the file
+     is fully dependency-free. A 150KB+ minified library is not reproduced in
+     this template; instead a small built-in renderer (captureLab) draws the
+     simulated terminal + status to a PNG natively, which is sufficient because
+     the lab area is plain DOM (monospace text on a dark panel). If you prefer
+     pixel-perfect capture of the whole UI, paste the minified html2canvas source
+     between the markers below; captureLab() will automatically use it if present.
+     ========================================================================= -->
+<script>/* <<< PASTE minified html2canvas here to enable window.html2canvas (optional) >>> */</script>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, answer key, sim, scoring, submission.
+     ========================================================================= -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- CONFIG / ANSWER KEY (per-lab edits live here) ---------- */
+  const CONFIG = {
+    assignmentId: "netplus-nslookup-mail-routing",
+    objectives: ["N10-009:3.4", "N10-009:5.5", "APNET:4.3"],
+    // Deployed Apps Script Web App /exec URL — same across the whole library:
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    maxScreenshotBytes: 1500000
+  };
+
+  const DEFAULT_SERVER = { name:"resolver.aldermere.net", ip:"192.0.2.53", authoritative:false };
+  const EXT_SERVER     = { name:"ns-edge.brackenhost.net", ip:"203.0.113.9", authoritative:true  };
+
+  // Authoritative zone data the simulator answers from (original values).
+  const ZONE = {
+    "aldermere.net":         { A:"198.51.100.20", MX:[{pref:10, host:"mail.aldermere.net"}] },
+    "mail.aldermere.net":    { A:"198.51.100.25" },
+    "www.aldermere.net":     { A:"198.51.100.21" },
+    "resolver.aldermere.net":{ A:"192.0.2.53" },
+    "ns-edge.brackenhost.net":{ A:"203.0.113.9" }
+  };
+
+  // Servers the simulator can reach, addressable by name or IP.
+  const SERVERS = {
+    "resolver.aldermere.net": DEFAULT_SERVER, "192.0.2.53": DEFAULT_SERVER,
+    "ns-edge.brackenhost.net": EXT_SERVER,    "203.0.113.9": EXT_SERVER
+  };
+
+  const ANSWER_KEY = {
+    q1: { type:"ip",   accept:["198.51.100.20"] },
+    q2: { type:"host", accept:["mail.aldermere.net"] },
+    q3: { type:"ip",   accept:["198.51.100.25"] },
+    q4: { type:"num",  accept:["10"] },
+    q5: { type:"bool", accept:["yes","y"] }
+  };
+  const QUESTION_IDS = ["q1","q2","q3","q4","q5"];
+  const TASK_DEFS = [
+    { id:"a",      label:"Find the A record of aldermere.net via the default resolver" },
+    { id:"mx",     label:"Query the MX record for aldermere.net" },
+    { id:"mailip", label:"Resolve the A record of the mail exchanger" },
+    { id:"ext",    label:"Confirm a record against the external authoritative server" }
+  ];
+
+  /* ---------------- engine state ----------------------------------------- */
+  const state = {
+    mode: "shell",                 // "shell" | "interactive"
+    server: DEFAULT_SERVER,        // current default server for queries
+    qtype: "A",                    // current interactive query type
+    tasks: { a:false, mx:false, mailip:false, ext:false },
+    questions: {}                  // id -> {answer, correct}
+  };
+
+  const $ = function(s){ return document.querySelector(s); };
+  const out = $("#termOut"), input = $("#termIn"), ps = $("#ps1"), srvName = $("#srv-name");
+
+  function write(text, cls){
+    const span = document.createElement("span");
+    if(cls) span.className = cls;
+    span.textContent = text + "\n";
+    out.appendChild(span);
+    out.scrollTop = out.scrollHeight;
+  }
+  function echoCmd(raw){
+    const line = document.createElement("div");
+    const p = document.createElement("span"); p.className = "prompt"; p.textContent = ps.textContent + " ";
+    const c = document.createElement("span"); c.className = "cmd"; c.textContent = raw;
+    line.appendChild(p); line.appendChild(c); out.appendChild(line);
+  }
+
+  function banner(){
+    write("Aldermere Outfitters — analyst workstation", "dim");
+    write("Resolver tools ready. Type 'help' for available commands.", "dim");
+    write("");
+  }
+
+  /* ---------------- DNS resolution sim ----------------------------------- */
+  function normName(n){ return (n||"").trim().replace(/\.$/,"").toLowerCase(); }
+
+  function header(server){
+    write("Server:\t\t" + server.name);
+    write("Address:\t" + server.ip + "#53");
+    write("");
+  }
+
+  // returns true on a clean answer, false on error
+  function doQuery(name, type, server){
+    const zname = normName(name);
+    if(!SERVERS[server.name] && !SERVERS[server.ip]){
+      write(";; connection timed out; no servers could be reached", "err");
+      return false;
+    }
+    const rec = ZONE[zname];
+    header(server);
+    if(!rec){
+      write("** server can't find " + zname + ": NXDOMAIN", "err");
+      return false;
+    }
+    const authoritative = server.authoritative;
+    if(type === "MX"){
+      if(!rec.MX){ write(zname + "\thas no MX record", "dim"); return false; }
+      if(!authoritative) write("Non-authoritative answer:", "dim");
+      rec.MX.forEach(function(m){
+        write(zname + "\tmail exchanger = " + m.pref + " " + m.host + ".");
+      });
+      write("");
+      markMxFlags(zname, server);
+      return true;
+    }
+    // default / A
+    if(!rec.A){ write(zname + "\thas no A record", "dim"); return false; }
+    if(!authoritative) write("Non-authoritative answer:", "dim");
+    write("Name:\t" + zname);
+    write("Address: " + rec.A);
+    write("");
+    markAFlags(zname, server);
+    return true;
+  }
+
+  function markAFlags(zname, server){
+    if(zname === "aldermere.net" && server.name === DEFAULT_SERVER.name) completeTask("a");
+    if(zname === "mail.aldermere.net") completeTask("mailip");
+    if(server.name === EXT_SERVER.name && (zname === "aldermere.net" || zname === "mail.aldermere.net"))
+      completeTask("ext");
+  }
+  function markMxFlags(zname, server){
+    if(zname === "aldermere.net") completeTask("mx");
+    if(server.name === EXT_SERVER.name && zname === "aldermere.net") completeTask("ext");
+  }
+
+  /* ---------------- command parsing -------------------------------------- */
+  function parseType(token){
+    const m = /^-(?:type|querytype|q)=(.+)$/i.exec(token);
+    return m ? m[1].toUpperCase() : null;
+  }
+
+  function runShellNslookup(args){
+    // forms: nslookup <name> | nslookup -type=x <name> | nslookup <name> <server>
+    //        nslookup -type=x <name> <server> | nslookup (no args -> interactive)
+    if(args.length === 0){ enterInteractive(); return; }
+    let type = "A", name = null, serverTok = null;
+    args.forEach(function(a){
+      const t = parseType(a);
+      if(t){ type = t; }
+      else if(name === null){ name = a; }
+      else if(serverTok === null){ serverTok = a; }
+    });
+    if(name === null){ write("nslookup: missing host to look up", "err"); return; }
+    let server = state.server;
+    if(serverTok){
+      const s = SERVERS[normName(serverTok)] || SERVERS[serverTok];
+      if(!s){ write(";; Can't find server " + serverTok + ": NXDOMAIN", "err"); return; }
+      server = s;
+    }
+    doQuery(name, type, server);
+  }
+
+  function enterInteractive(){
+    state.mode = "interactive";
+    state.qtype = "A";
+    ps.textContent = ">";
+    write("Default server:  " + state.server.name);
+    write("Address:  " + state.server.ip + "#53");
+    write("> (interactive mode — try 'set type=mx', 'server <name>', a hostname, or 'exit')", "dim");
+  }
+  function leaveInteractive(){
+    state.mode = "shell"; ps.textContent = "analyst@ws:~$";
+  }
+
+  function runInteractive(raw){
+    const line = raw.trim();
+    if(line === "") return;
+    if(/^exit$|^quit$/i.test(line)){ leaveInteractive(); return; }
+    let m;
+    if((m = /^set\s+(?:type|q|querytype)\s*=\s*(\S+)$/i.exec(line))){
+      state.qtype = m[1].toUpperCase();
+      write("query type set to " + state.qtype, "dim"); return;
+    }
+    if((m = /^server\s+(\S+)$/i.exec(line))){
+      const s = SERVERS[normName(m[1])] || SERVERS[m[1]];
+      if(!s){ write("** can't find server " + m[1] + ": NXDOMAIN", "err"); return; }
+      state.server = s; srvName.textContent = s.name;
+      write("Default server:  " + s.name);
+      write("Address:  " + s.ip + "#53"); return;
+    }
+    if(/\s/.test(line)){ write("syntax error: unexpected token in interactive query", "err"); return; }
+    doQuery(line, state.qtype, state.server);
+  }
+
+  function runCommand(raw){
+    const trimmed = raw.trim();
+    echoCmd(raw);
+    if(state.mode === "interactive"){ runInteractive(trimmed); return; }
+    if(trimmed === ""){ return; }
+    const parts = trimmed.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+    switch(cmd){
+      case "help":
+        write("Commands:");
+        write("  nslookup <host>                      default (A) lookup via current resolver");
+        write("  nslookup -type=mx <host>             query a record type (a, mx, ...)");
+        write("  nslookup <host> <server>             send the query to a specific server");
+        write("  nslookup                             enter interactive mode");
+        write("    set type=<a|mx>   server <name>    <host>   exit");
+        write("  clear        help        reset");
+        write("");
+        break;
+      case "clear": out.innerHTML = ""; break;
+      case "reset": resetLab(); break;
+      case "nslookup": runShellNslookup(args); break;
+      default:
+        write(cmd + ": command not found (this lab uses 'nslookup'; type 'help')", "err");
+    }
+  }
+
+  /* ---------------- tasks / scoring -------------------------------------- */
+  function completeTask(id){
+    if(state.tasks[id]) return;
+    state.tasks[id] = true;
+    const li = document.getElementById("task-" + id);
+    if(li) li.classList.add("done");
+    refreshScore();
+  }
+
+  function checkQuestions(){
+    QUESTION_IDS.forEach(function(id){
+      const el = document.getElementById(id);
+      const v = document.getElementById("v-" + id);
+      const raw = (el.value || "").trim();
+      if(raw === ""){ v.textContent = ""; v.className = "verdict"; delete state.questions[id]; return; }
+      const key = ANSWER_KEY[id];
+      let val = raw.toLowerCase();
+      if(key.type === "host") val = val.replace(/\.$/,"");
+      if(key.type === "ip" || key.type === "num") val = val.replace(/\s+/g,"");
+      const correct = key.accept.indexOf(val) !== -1;
+      state.questions[id] = { answer: raw, correct: correct };
+      v.textContent = correct ? "✓ matches your lookup" : "✗ check your terminal output and re-enter";
+      v.className = "verdict " + (correct ? "ok" : "bad");
+    });
+    refreshScore();
+  }
+
+  function tasksPassed(){ return TASK_DEFS.filter(function(t){return state.tasks[t.id];}).length; }
+  function questionsPassed(){ return QUESTION_IDS.filter(function(id){return state.questions[id] && state.questions[id].correct;}).length; }
+  function totalPoints(){ return TASK_DEFS.length + QUESTION_IDS.length; }
+  function earnedPoints(){ return tasksPassed() + questionsPassed(); }
+
+  function refreshScore(){
+    $("#scorePill").textContent = "Score " + earnedPoints() + " / " + totalPoints();
+  }
+
+  /* ---------------- screenshot (native; html2canvas if present) ---------- */
+  function captureLab(){
+    if(window.html2canvas){
+      return window.html2canvas(document.getElementById("lab-capture"), {backgroundColor:"#0d1117", scale:1})
+        .then(function(c){ return c.toDataURL("image/png"); });
+    }
+    return Promise.resolve(nativeCapture());
+  }
+  function nativeCapture(){
+    const lines = [];
+    out.querySelectorAll(":scope > *").forEach(function(n){
+      (n.textContent || "").split("\n").forEach(function(t){ lines.push(t); });
+    });
+    const W = 920, pad = 18, lh = 18, headerH = 92, footH = 132;
+    const bodyH = Math.max(lines.length, 6) * lh;
+    const H = headerH + bodyH + footH + pad*2;
+    const cv = document.createElement("canvas");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = W*dpr; cv.height = H*dpr;
+    const x = cv.getContext("2d"); x.scale(dpr,dpr);
+    x.fillStyle = "#06090f"; x.fillRect(0,0,W,H);
+    x.fillStyle = "#39d3c4"; x.font = "600 16px monospace";
+    x.fillText("DNS Detective — nslookup lab   ·   "+CONFIG.assignmentId, pad, 26);
+    x.fillStyle = "#9aa7b4"; x.font = "12px monospace";
+    x.fillText("resolver: "+state.server.name+"   mode: "+state.mode, pad, 46);
+    x.fillText("captured: "+new Date().toISOString(), pad, 64);
+    x.strokeStyle = "#222b36"; x.beginPath(); x.moveTo(pad,78); x.lineTo(W-pad,78); x.stroke();
+    x.font = "13px monospace";
+    let y = headerH + 8;
+    lines.forEach(function(t){
+      x.fillStyle = /can't find|NXDOMAIN|command not found|timed out|error/i.test(t) ? "#f0556a" : "#d8e6e2";
+      x.fillText(t.slice(0,150), pad, y); y += lh;
+    });
+    let fy = headerH + bodyH + 22;
+    x.strokeStyle = "#222b36"; x.beginPath(); x.moveTo(pad,fy-14); x.lineTo(W-pad,fy-14); x.stroke();
+    x.fillStyle = "#e6edf3"; x.font = "600 13px monospace";
+    x.fillText("Callsign: " + (($("#handle").value||"—")) +
+               "      Score: " + earnedPoints() + " / " + totalPoints(), pad, fy);
+    fy += 20; x.font = "12px monospace";
+    TASK_DEFS.forEach(function(t){
+      x.fillStyle = state.tasks[t.id] ? "#3fb950" : "#9aa7b4";
+      x.fillText((state.tasks[t.id]?"[x] ":"[ ] ") + t.label, pad, fy); fy += 16;
+    });
+    return cv.toDataURL("image/png");
+  }
+
+  /* ---------------- submission ------------------------------------------- */
+  function setStatus(msg, kind){ const s = $("#status"); s.textContent = msg; s.className = kind || ""; }
+
+  function buildPayload(screenshot){
+    return {
+      assignmentId: CONFIG.assignmentId,
+      handle: ($("#handle").value || "").trim().slice(0,32),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASK_DEFS.map(function(t){ return { id:t.id, label:t.label, passed: !!state.tasks[t.id] }; }),
+      questions: QUESTION_IDS.map(function(id){
+        const q = state.questions[id] || { answer:"", correct:false };
+        return { id:id, prompt: document.querySelector('label[for="'+id+'"]').textContent.trim(),
+                 answer:q.answer, correct:!!q.correct };
+      }),
+      score: { earned: earnedPoints(), total: totalPoints() },
+      screenshot: screenshot,
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  async function submit(){
+    const handle = ($("#handle").value || "").trim();
+    if(handle.length < 2){ setStatus("Enter a callsign first (no real names).", "bad"); $("#handle").focus(); return; }
+    checkQuestions();
+    setStatus("Capturing & submitting…", "work");
+    $("#btnSubmit").disabled = true;
+    let shot = "";
+    try { shot = await captureLab(); } catch(e){ shot = ""; }
+    if(shot.length > CONFIG.maxScreenshotBytes) shot = shot.slice(0, CONFIG.maxScreenshotBytes);
+    const payload = buildPayload(shot);
+
+    if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0){
+      setStatus("No Apps Script URL set — see lab CONFIG.", "bad");
+      $("#btnSubmit").disabled = false; return;
+    }
+    try{
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const outp = await res.json();
+      if(outp && outp.success){
+        setStatus("Submitted ✓", "ok");
+        if(outp.docUrl){
+          const a = document.createElement("a");
+          a.href = outp.docUrl; a.target = "_blank"; a.rel = "noopener";
+          a.textContent = " open your submission";
+          $("#status").appendChild(a);
+        }
+      } else {
+        setStatus("Server rejected: " + ((outp && outp.error) || "unknown"), "bad");
+      }
+    } catch(err){
+      // locked-down fallback: fire-and-forget; can't read the Doc link
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        setStatus("Sent (couldn't read confirmation). Verify with your instructor.", "work");
+      }catch(e2){
+        setStatus("Submission failed — check your connection and try again.", "bad");
+      }
+    } finally {
+      $("#btnSubmit").disabled = false;
+    }
+  }
+
+  /* ---------------- reset / wiring --------------------------------------- */
+  function resetLab(){
+    state.mode = "shell"; state.server = DEFAULT_SERVER; state.qtype = "A";
+    state.tasks = { a:false, mx:false, mailip:false, ext:false }; state.questions = {};
+    ps.textContent = "analyst@ws:~$"; srvName.textContent = DEFAULT_SERVER.name;
+    out.innerHTML = "";
+    TASK_DEFS.forEach(function(t){ const li=document.getElementById("task-"+t.id); if(li) li.classList.remove("done"); });
+    QUESTION_IDS.forEach(function(id){ document.getElementById(id).value=""; const v=document.getElementById("v-"+id); v.textContent=""; v.className="verdict"; });
+    refreshScore(); setStatus("Lab reset.", "");
+    banner();
+  }
+
+  input.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ const v = input.value; input.value = ""; runCommand(v); }
+  });
+  $("#btnReset").addEventListener("click", resetLab);
+  $("#btnCheck").addEventListener("click", checkQuestions);
+  $("#btnSubmit").addEventListener("click", submit);
+  $("#termOut").addEventListener("click", function(){ input.focus(); });
+
+  banner();
+  refreshScore();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-port-mirror.html",title:"Mirror Path \u2014 Port Mirroring / SPAN Lab"}, NEXT={href:"index_netplus-powershell-remoting.html",title:"Hands Off the Keyboard \u2014 Manage a Server with PowerShell Remoting"}, CRUMB="All Labs \u203a Unit 4 \u2014 Managing Our Global Connections \u203a Topic 4.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

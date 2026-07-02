@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Lab — NAT Port Forwarding to a Screened Subnet (Aegis NX)</title>
+
+<!--
+  =====================================================================
+  AP Networking / CompTIA Network+ Lab Library
+  Lab: NAT Port Forwarding to a Screened Subnet
+  assignmentId: netplus-nat-portforward
+
+  © 2026 <AUTHOR NAME / ORG>. All rights reserved.
+  Licensed for use within the <LIBRARY NAME> Network+ / AP Networking
+  lab library. Replace this notice with your own copyright/license line.
+
+  CLEAN-ROOM NOTICE: This lab was authored from the public CompTIA
+  Network+ objectives and the public College Board AP Networking
+  framework, plus the documented behavior of NAT port-forwarding on a
+  generic firewall appliance. The scenario, persona, appliance name,
+  hostnames, IP plan, port values, rule descriptions, and all question
+  wording are original. No third-party lab content was copied.
+  =====================================================================
+-->
+
+<style>
+  :root{
+    --bg:#0f1419;            /* ink */
+    --panel:#161d26;         /* raised surface */
+    --panel-2:#1c2530;       /* nested surface */
+    --line:#27323f;          /* hairline */
+    --line-strong:#34414f;
+    --text:#e6edf3;
+    --muted:#8b9bb0;
+    --faint:#5d6b7d;
+    --accent:#f5a623;        /* signal amber — primary action / active */
+    --accent-ink:#1a1206;
+    --pass:#2dd4bf;          /* teal — completed */
+    --fail:#f87171;          /* coral — error / not yet */
+    --link:#7cc4ff;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    --radius:10px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #16202b 0%, transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:24px 18px 80px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---- header ---- */
+  header.lab{
+    display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 20px;
+    border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px;
+  }
+  .brandmark{
+    display:flex;align-items:center;gap:11px;
+  }
+  .chip{
+    width:34px;height:34px;border-radius:8px;flex:0 0 auto;
+    background:linear-gradient(150deg,var(--accent),#c97e0e);
+    display:grid;place-items:center;color:var(--accent-ink);
+    font-family:var(--mono);font-weight:800;font-size:15px;
+    box-shadow:0 2px 0 #00000040, inset 0 0 0 1px #ffffff22;
+  }
+  .brandtext b{font-family:var(--mono);letter-spacing:.04em;font-size:14px;color:var(--text)}
+  .brandtext span{display:block;font-size:11px;color:var(--faint);letter-spacing:.12em;text-transform:uppercase}
+  .lab h1{
+    font-size:19px;margin:0;font-weight:650;letter-spacing:-.01em;
+  }
+  .obj-tags{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .tag{
+    font-family:var(--mono);font-size:11px;color:var(--muted);
+    border:1px solid var(--line-strong);border-radius:999px;
+    padding:3px 9px;background:var(--panel);
+  }
+  .tag.prov{border-style:dashed;color:var(--faint)}
+
+  /* ---- scenario ---- */
+  .scenario{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:22px;font-size:14px;color:#d4dde7;
+  }
+  .scenario strong{color:var(--accent)}
+  .scenario .meta{
+    margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;
+    font-family:var(--mono);font-size:12px;color:var(--muted);
+  }
+  .scenario .meta code{color:var(--text)}
+
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .panel > .ph{
+    display:flex;align-items:center;gap:8px;
+    padding:11px 15px;border-bottom:1px solid var(--line);
+    background:linear-gradient(var(--panel-2),var(--panel));
+  }
+  .ph h2{font-size:13px;margin:0;font-weight:650;letter-spacing:.02em}
+  .ph .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .ph .right{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+  /* ---- console / rule builder ---- */
+  .console-body{padding:15px}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:520px){.field-row{grid-template-columns:1fr}}
+  .field{margin-bottom:12px}
+  .field label{
+    display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:5px;font-weight:600;
+  }
+  .field input, .field select{
+    width:100%;background:var(--bg);color:var(--text);
+    border:1px solid var(--line-strong);border-radius:7px;
+    padding:9px 10px;font-family:var(--mono);font-size:13px;
+  }
+  .field input:focus, .field select:focus, button:focus-visible, input:focus-visible{
+    outline:2px solid var(--accent);outline-offset:1px;
+  }
+  .field .ro{opacity:.7;cursor:not-allowed}
+  .field .help{font-size:11px;color:var(--faint);margin-top:4px;font-family:var(--mono)}
+
+  .btn{
+    font-family:var(--sans);font-weight:650;font-size:13px;cursor:pointer;
+    border-radius:8px;border:1px solid transparent;padding:9px 15px;
+    transition:transform .04s ease, background .15s ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);border-color:#d8920f}
+  .btn-primary:hover{background:#ffb733}
+  .btn-ghost{background:transparent;color:var(--muted);border-color:var(--line-strong)}
+  .btn-ghost:hover{color:var(--text);border-color:var(--faint)}
+  .btn-danger{background:transparent;color:var(--fail);border:1px solid #4a2a2a;padding:4px 9px;font-size:12px}
+  .btn-danger:hover{background:#2a1717}
+
+  .builder-actions{display:flex;gap:10px;margin-top:4px}
+
+  .form-error{
+    display:none;margin-top:12px;padding:9px 12px;border-radius:7px;
+    background:#2a1414;border:1px solid #5a2626;color:#fca5a5;
+    font-family:var(--mono);font-size:12px;
+  }
+  .form-error.show{display:block}
+
+  /* ---- rules table ---- */
+  .rules-wrap{border-top:1px solid var(--line);margin-top:4px}
+  table.rules{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
+  table.rules th{
+    text-align:left;color:var(--faint);font-weight:600;font-size:10.5px;
+    letter-spacing:.06em;text-transform:uppercase;padding:9px 12px;
+    border-bottom:1px solid var(--line);
+  }
+  table.rules td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  table.rules tr:last-child td{border-bottom:none}
+  .arrow{color:var(--accent)}
+  .empty-rules{padding:20px 12px;color:var(--faint);font-family:var(--mono);font-size:12px;text-align:center}
+  .badge-proto{color:var(--link)}
+
+  /* ---- checklist ---- */
+  .checklist{padding:6px 0}
+  .check{
+    display:flex;gap:11px;padding:11px 15px;border-bottom:1px solid var(--line);
+    align-items:flex-start;
+  }
+  .check:last-child{border-bottom:none}
+  .check .box{
+    flex:0 0 auto;width:20px;height:20px;border-radius:6px;margin-top:1px;
+    border:1.5px solid var(--line-strong);display:grid;place-items:center;
+    font-size:12px;color:var(--bg);font-weight:800;transition:all .2s ease;
+  }
+  .check.done .box{background:var(--pass);border-color:var(--pass)}
+  .check .ctext{font-size:13px}
+  .check .ctext .lbl{color:var(--text)}
+  .check.done .ctext .lbl{color:var(--pass)}
+  .check .ctext .sub{display:block;color:var(--faint);font-family:var(--mono);font-size:11px;margin-top:2px}
+
+  /* ---- questions ---- */
+  .q{padding:13px 15px;border-bottom:1px solid var(--line)}
+  .q:last-child{border-bottom:none}
+  .q .prompt{font-size:13px;margin-bottom:8px;color:#d4dde7}
+  .q .prompt b{color:var(--accent);font-family:var(--mono)}
+  .q input{
+    width:100%;background:var(--bg);color:var(--text);
+    border:1px solid var(--line-strong);border-radius:7px;
+    padding:8px 10px;font-family:var(--mono);font-size:13px;
+  }
+  .q .verdict{font-size:11.5px;margin-top:6px;font-family:var(--mono);min-height:14px}
+  .q.correct input{border-color:var(--pass)}
+  .q.correct .verdict{color:var(--pass)}
+  .q.wrong input{border-color:var(--fail)}
+  .q.wrong .verdict{color:var(--fail)}
+
+  /* ---- submit bar ---- */
+  .submitbar{
+    margin-top:22px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px 18px;
+    display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end;
+  }
+  @media (max-width:620px){.submitbar{grid-template-columns:1fr}}
+  .submitbar .field{margin:0}
+  .scoreline{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px}
+  .scoreline b{color:var(--text)}
+  .status{
+    margin-top:14px;font-size:13px;font-family:var(--mono);min-height:18px;
+    padding-left:2px;
+  }
+  .status.ok{color:var(--pass)}
+  .status.err{color:var(--fail)}
+  .status.work{color:var(--accent)}
+  .status a{color:var(--link)}
+
+  footer.lic{
+    margin:30px auto 0;max-width:1080px;color:var(--faint);font-size:11px;
+    font-family:var(--mono);border-top:1px solid var(--line);padding-top:14px;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important}
+  }
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-nat-portforward", "title": "Lab — NAT Port Forwarding to a Screened Subnet (Aegis NX)", "version": "1.0.0", "objectives": ["N10-009:2.1", "APNET:3.5"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab">
+    <div class="brandmark">
+      <div class="chip" aria-hidden="true">NX</div>
+      <div class="brandtext">
+        <b>AEGIS&nbsp;NX-220</b>
+        <span>Firewall · NAT / Port Forward</span>
+      </div>
+    </div>
+    <h1>NAT Port Forwarding to a Screened Subnet</h1>
+    <div class="obj-tags" aria-label="Objective tags">
+      <span class="tag">N10-007 · 1.3</span>
+      <span class="tag prov" title="Provisional — add the N10-009 objectives PDF to confirm">N10-009 · TBD</span>
+      <span class="tag">APNET · 4.4.A</span>
+    </div>
+  </header>
+
+  <!-- ORIGINAL SCENARIO -->
+  <section class="scenario">
+    You're <strong>Devin Osei-Mensah</strong>, the junior network technician at
+    <strong>Lakebend Outfitters</strong>, a regional retailer. Three servers sit in a
+    <strong>screened subnet</strong> (10.30.12.0/24) and must be managed from the
+    corporate LAN, but the firewall currently blocks all inbound sessions to that
+    segment. Your job: add NAT <em>port-forwarding</em> rules on the
+    <strong>Aegis NX-220</strong> so the right management protocols reach the right
+    hosts — and document each rule as you go.
+    <div class="meta">
+      <span>LAN source net: <code>10.30.0.0/16</code></span>
+      <span>Screened subnet: <code>10.30.12.0/24</code></span>
+      <span>Firewall inside IP: <code>10.30.12.1</code></span>
+    </div>
+  </section>
+
+  <div class="grid">
+
+    <!-- LEFT: the simulated appliance -->
+    <main>
+      <div class="panel" id="captureArea">
+        <div class="ph">
+          <span class="dot" aria-hidden="true"></span>
+          <h2>NAT → Port Forward Rules</h2>
+          <span class="right">Aegis NX-220 · fw-edge-01</span>
+        </div>
+
+        <div class="console-body">
+          <div class="field-row">
+            <div class="field">
+              <label for="f-proto">Protocol</label>
+              <select id="f-proto">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+                <option value="tcp/udp">TCP/UDP</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="f-source">Source (incoming interface)</label>
+              <input id="f-source" class="ro" value="LAN  ·  10.30.0.0/16" readonly aria-readonly="true">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="f-dport">Destination port (external)</label>
+              <input id="f-dport" inputmode="numeric" placeholder="e.g. 22" autocomplete="off">
+              <span class="help">Port the LAN client connects to on the firewall.</span>
+            </div>
+            <div class="field">
+              <label for="f-target">Redirect target IP</label>
+              <input id="f-target" placeholder="e.g. 10.30.12.41" autocomplete="off">
+              <span class="help">Host in the screened subnet.</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="f-rport">Redirect target port</label>
+              <input id="f-rport" inputmode="numeric" placeholder="e.g. 22" autocomplete="off">
+              <span class="help">Port on the target host. May differ from the external port.</span>
+            </div>
+            <div class="field">
+              <label for="f-desc">Description</label>
+              <input id="f-desc" placeholder="What does this rule do?" autocomplete="off" maxlength="80">
+              <span class="help">Required — document every rule.</span>
+            </div>
+          </div>
+
+          <div class="builder-actions">
+            <button class="btn btn-primary" id="addRule" type="button">Add rule</button>
+            <button class="btn btn-ghost" id="resetLab" type="button">Reset lab</button>
+          </div>
+
+          <div class="form-error" id="formError" role="alert" aria-live="assertive"></div>
+        </div>
+
+        <div class="rules-wrap" aria-live="polite">
+          <table class="rules">
+            <caption class="sr-only">Active NAT port-forward rules</caption>
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Proto</th>
+                <th scope="col">Ext&nbsp;port</th>
+                <th scope="col">Target</th>
+                <th scope="col">Description</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="rulesBody">
+              <tr><td colspan="6" class="empty-rules">No rules yet. Add a port-forward rule above.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT: tasks + questions -->
+    <aside>
+      <div class="panel" style="margin-bottom:22px">
+        <div class="ph">
+          <span class="dot" aria-hidden="true"></span>
+          <h2>Lab tasks</h2>
+          <span class="right" id="taskCount">0 / 3</span>
+        </div>
+        <div class="checklist" id="checklist"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">
+          <span class="dot" aria-hidden="true"></span>
+          <h2>Knowledge checks</h2>
+          <span class="right" id="qCount">0 / 3</span>
+        </div>
+        <div id="questions"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- SUBMISSION BAR -->
+  <div class="submitbar">
+    <div>
+      <div class="field">
+        <label for="handle">Callsign / handle (no real names)</label>
+        <input id="handle" placeholder="e.g. packet-otter" autocomplete="off" maxlength="40">
+      </div>
+      <div class="scoreline">Score: <b id="scoreNow">0</b> / 6 &nbsp;·&nbsp; tasks <span id="tScore">0/3</span>, checks <span id="qScore">0/3</span></div>
+    </div>
+    <button class="btn btn-primary" id="submitBtn" type="button" style="height:fit-content">Submit completed lab</button>
+  </div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+
+</div>
+
+<footer class="lic">
+  © 2026 &lt;AUTHOR NAME / ORG&gt; · Network+ / AP Networking Lab Library ·
+  assignmentId <b>netplus-nat-portforward</b> · clean-room original.
+</footer>
+
+<!-- ===================================================================
+     SCRIPT BLOCK 1 — INLINED html2canvas
+     -------------------------------------------------------------------
+     Paste the FULL minified html2canvas source between the markers below
+     (one line, no CDN). The capture code in block 2 degrades gracefully
+     if this is left empty — submission still works, screenshot is just
+     skipped and the learner is told.  Library: html2canvas (MIT).
+     =================================================================== -->
+<script id="html2canvas-inline">
+/* >>> PASTE MINIFIED html2canvas HERE <<< */
+</script>
+
+<!-- ===================================================================
+     SCRIPT BLOCK 2 — ENGINE, CONFIG, ANSWER KEY, CHECKING, SUBMIT
+     =================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- CONFIG (per-lab edits live here) ---------- */
+  const CONFIG = {
+    assignmentId: "netplus-nat-portforward",
+    title: "NAT Port Forwarding to a Screened Subnet",
+    // Both blueprints. N10-009 code is provisional until the N10-009
+    // objectives PDF is added to the project — this is a one-line edit.
+    objectives: ["N10-009:2.1", "APNET:3.5"],
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "REPLACE_WITH_PER_COHORT_TOKEN"
+  };
+
+  /* ---------- ANSWER KEY: required port-forward rules ---------- */
+  const REQUIRED = [
+    { id:"ssh",   label:"Forward SSH to INV-DB-07",
+      proto:"tcp", dport:22,    target:"10.30.12.41", rport:22,
+      sub:"TCP 22 → 10.30.12.41:22   ·   suggested desc: \u201cSSH from LAN to INV-DB-07\u201d" },
+    { id:"https", label:"Forward HTTPS to POS-WEB-12",
+      proto:"tcp", dport:443,   target:"10.30.12.58", rport:443,
+      sub:"TCP 443 → 10.30.12.58:443   ·   suggested desc: \u201cHTTPS from LAN to POS-WEB-12\u201d" },
+    { id:"rdp",   label:"Custom-port RDP to KIOSK-MGT-03",
+      proto:"tcp", dport:47620, target:"10.30.12.66", rport:3389,
+      sub:"TCP 47620 → 10.30.12.66:3389   ·   external port differs from target port" }
+  ];
+
+  /* ---------- ANSWER KEY: knowledge checks ---------- */
+  const QUESTIONS = [
+    { id:"q1",
+      prompt:"Two screened-subnet hosts must each be reachable from the LAN over SSH using only the firewall's single inside address. Which translation technique keeps their sessions separate by Layer&nbsp;4 port number?",
+      accept:["pat","port address translation","nat overload","overload"] },
+    { id:"q2",
+      prompt:"A rule accepts external <b>TCP&nbsp;47620</b> but delivers the traffic to the host on <b>TCP&nbsp;3389</b>. Rewriting the Layer&nbsp;4 destination port like this is an example of ____ NAT.",
+      accept:["destination","destination nat","dnat","d-nat"] },
+    { id:"q3",
+      prompt:"The three servers sit in an isolated segment reachable from outside for specific services while the internal LAN stays shielded. What is the common name for this segment?",
+      accept:["screened subnet","dmz","demilitarized zone","perimeter network"] }
+  ];
+
+  const PASS_TOTAL = REQUIRED.length + QUESTIONS.length; // 6
+
+  /* ---------- state ---------- */
+  let rules = [];          // user-created port-forward rules
+  let qCorrect = {};       // id -> bool
+
+  /* ---------- helpers ---------- */
+  const $ = (s, r) => (r||document).querySelector(s);
+  const norm = s => (s||"").trim().toLowerCase().replace(/\s+/g," ");
+  const isPort = v => /^\d+$/.test(v) && +v>=1 && +v<=65535;
+  const isIPv4 = v => {
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec((v||"").trim());
+    return !!m && m.slice(1).every(o => +o>=0 && +o<=255);
+  };
+  function showFormError(msg){
+    const el=$("#formError"); el.textContent=msg; el.classList.add("show");
+  }
+  function clearFormError(){ const el=$("#formError"); el.classList.remove("show"); el.textContent=""; }
+
+  /* ---------- rule builder ---------- */
+  function addRule(){
+    clearFormError();
+    const proto  = $("#f-proto").value;
+    const dport  = $("#f-dport").value.trim();
+    const target = $("#f-target").value.trim();
+    const rport  = $("#f-rport").value.trim();
+    const desc   = $("#f-desc").value.trim();
+
+    // realistic, specific validation — the errors ARE the teaching
+    if(!isPort(dport)) return showFormError("Destination port must be a number 1\u201365535 (you entered \""+dport+"\").");
+    if(!isIPv4(target)) return showFormError("Redirect target must be a valid IPv4 address, e.g. 10.30.12.41.");
+    if(!target.startsWith("10.30.12.")) return showFormError("Target "+target+" is not in the screened subnet 10.30.12.0/24 — the host won't be reachable from this rule.");
+    if(!isPort(rport)) return showFormError("Redirect target port must be a number 1\u201365535 (you entered \""+rport+"\").");
+    if(!desc) return showFormError("Add a description — every rule must be documented before it's saved.");
+
+    if(rules.some(r => r.proto===proto && r.dport===+dport)){
+      return showFormError("A "+proto.toUpperCase()+" rule already forwards external port "+dport+". Edit or remove it first.");
+    }
+
+    rules.push({ proto, dport:+dport, target, rport:+rport, desc });
+    $("#f-dport").value=""; $("#f-target").value=""; $("#f-rport").value=""; $("#f-desc").value="";
+    $("#f-dport").focus();
+    renderRules(); evaluate();
+  }
+
+  function removeRule(i){ rules.splice(i,1); renderRules(); evaluate(); }
+
+  function renderRules(){
+    const body = $("#rulesBody");
+    if(!rules.length){
+      body.innerHTML = '<tr><td colspan="6" class="empty-rules">No rules yet. Add a port-forward rule above.</td></tr>';
+      return;
+    }
+    body.innerHTML = rules.map((r,i)=>(
+      '<tr>'+
+        '<td>'+(i+1)+'</td>'+
+        '<td class="badge-proto">'+r.proto.toUpperCase()+'</td>'+
+        '<td>'+r.dport+'</td>'+
+        '<td>'+r.target+'<span class="arrow"> : </span>'+r.rport+'</td>'+
+        '<td>'+escapeHtml(r.desc)+'</td>'+
+        '<td><button class="btn btn-danger" type="button" data-i="'+i+'" aria-label="Remove rule '+(i+1)+'">Remove</button></td>'+
+      '</tr>'
+    )).join("");
+    body.querySelectorAll("button[data-i]").forEach(b=>{
+      b.addEventListener("click",()=>removeRule(+b.dataset.i));
+    });
+  }
+  function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+  /* ---------- task checking ---------- */
+  function ruleSatisfies(req){
+    return rules.some(r =>
+      r.proto.indexOf("tcp")!==-1 &&            // TCP (or TCP/UDP) accepted
+      r.dport===req.dport &&
+      r.target===req.target &&
+      r.rport===req.rport &&
+      (r.desc||"").trim().length>0
+    );
+  }
+  function renderChecklist(){
+    $("#checklist").innerHTML = REQUIRED.map(req=>{
+      const done = ruleSatisfies(req);
+      return '<div class="check'+(done?' done':'')+'">'+
+        '<div class="box" aria-hidden="true">'+(done?'\u2713':'')+'</div>'+
+        '<div class="ctext"><span class="lbl">'+req.label+'</span>'+
+        '<span class="sub">'+req.sub+'</span></div></div>';
+    }).join("");
+  }
+
+  /* ---------- questions ---------- */
+  function renderQuestions(){
+    $("#questions").innerHTML = QUESTIONS.map(q=>(
+      '<div class="q" id="qrow-'+q.id+'">'+
+        '<div class="prompt">'+q.prompt+'</div>'+
+        '<input id="qin-'+q.id+'" autocomplete="off" placeholder="Your answer\u2026" aria-label="Answer">'+
+        '<div class="verdict" id="qv-'+q.id+'"></div>'+
+      '</div>'
+    )).join("");
+    QUESTIONS.forEach(q=>{
+      $("#qin-"+q.id).addEventListener("input",()=>checkQuestion(q));
+    });
+  }
+  function checkQuestion(q){
+    const val = norm($("#qin-"+q.id).value);
+    if(!val){ qCorrect[q.id]=false; setQ(q.id,"",""); evaluate(); return; }
+    const ok = q.accept.some(a=>norm(a)===val) || q.accept.some(a=>val.indexOf(norm(a))!==-1 && norm(a).length>2);
+    qCorrect[q.id]=ok;
+    setQ(q.id, ok?"correct":"wrong", ok?"\u2713 correct":"not quite \u2014 try again");
+    evaluate();
+  }
+  function setQ(id,cls,txt){
+    const row=$("#qrow-"+id); row.classList.remove("correct","wrong");
+    if(cls) row.classList.add(cls);
+    $("#qv-"+id).textContent=txt;
+  }
+
+  /* ---------- scoring ---------- */
+  function tasksPassed(){ return REQUIRED.filter(ruleSatisfies).length; }
+  function questionsPassed(){ return QUESTIONS.filter(q=>qCorrect[q.id]).length; }
+  function evaluate(){
+    renderChecklist();
+    const t=tasksPassed(), qc=questionsPassed();
+    $("#taskCount").textContent=t+" / "+REQUIRED.length;
+    $("#qCount").textContent=qc+" / "+QUESTIONS.length;
+    $("#tScore").textContent=t+"/"+REQUIRED.length;
+    $("#qScore").textContent=qc+"/"+QUESTIONS.length;
+    $("#scoreNow").textContent=(t+qc);
+  }
+
+  /* ---------- screenshot (degrades gracefully) ---------- */
+  async function capture(){
+    if(typeof window.html2canvas!=="function") return null;
+    try{
+      const canvas=await window.html2canvas($("#captureArea"),{backgroundColor:"#161d26",scale:1});
+      return canvas.toDataURL("image/png");
+    }catch(e){ return null; }
+  }
+
+  /* ---------- submit ---------- */
+  async function submit(){
+    const status=$("#status");
+    const handle=$("#handle").value.trim();
+    if(!handle){ status.className="status err"; status.textContent="Enter a callsign before submitting (no real names)."; $("#handle").focus(); return; }
+
+    status.className="status work"; status.textContent="Capturing lab and submitting\u2026";
+
+    const taskRows = REQUIRED.map(req=>({ id:req.id, label:req.label, passed:ruleSatisfies(req) }));
+    const qRows = QUESTIONS.map(q=>({ id:q.id, prompt:stripTags(q.prompt), answer:($("#qin-"+q.id).value||"").trim(), correct:!!qCorrect[q.id] }));
+    const earned = tasksPassed()+questionsPassed();
+
+    const shot = await capture();
+
+    const payload = {
+      assignmentId: CONFIG.assignmentId,
+      handle: handle.slice(0,40),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: taskRows,
+      questions: qRows,
+      score: { earned: earned, total: PASS_TOTAL },
+      screenshot: shot || "",
+      submissionToken: CONFIG.submissionToken
+    };
+
+    try{
+      // Simple request: NO custom headers, default text/plain body → no CORS preflight.
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const out = await res.json();
+      if(out && out.success){
+        status.className="status ok";
+        status.innerHTML = "Submitted \u2014 score "+earned+"/"+PASS_TOTAL+". "+
+          (out.docUrl ? '<a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your lab record</a>.' : "Recorded.")+
+          (shot?"":" (Screenshot was skipped \u2014 html2canvas not inlined.)");
+      } else {
+        status.className="status err";
+        status.textContent="Submission rejected: "+((out&&out.error)||"unknown error")+". Check with your instructor.";
+      }
+    } catch(err){
+      // Fallback: fire-and-forget, can't read docUrl.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        status.className="status ok";
+        status.textContent="Submitted (offline mode \u2014 confirm receipt with your instructor). Score "+earned+"/"+PASS_TOTAL+".";
+      } catch(e2){
+        status.className="status err";
+        status.textContent="Could not reach the submission server. Check your connection and try again.";
+      }
+    }
+  }
+  function stripTags(s){ const d=document.createElement("div"); d.innerHTML=s; return d.textContent||""; }
+
+  /* ---------- reset ---------- */
+  function resetLab(){
+    rules=[]; qCorrect={};
+    ["f-dport","f-target","f-rport","f-desc","handle"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+    $("#f-proto").value="tcp";
+    QUESTIONS.forEach(q=>{ const i=$("#qin-"+q.id); if(i)i.value=""; setQ(q.id,"",""); });
+    clearFormError();
+    $("#status").className="status"; $("#status").textContent="";
+    renderRules(); renderQuestions(); evaluate();
+  }
+
+  /* ---------- init ---------- */
+  function init(){
+    renderRules(); renderChecklist(); renderQuestions(); evaluate();
+    $("#addRule").addEventListener("click",addRule);
+    $("#resetLab").addEventListener("click",resetLab);
+    $("#submitBtn").addEventListener("click",submit);
+    // Enter in the builder adds the rule
+    ["f-dport","f-target","f-rport","f-desc"].forEach(id=>{
+      $("#"+id).addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();addRule();} });
+    });
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init);
+  else init();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-switch-hardening.html",title:"Harden the Maker-Annex Switch"}, NEXT={href:"index_netplus-ips-sensor-deploy.html",title:"Arm the Edge \u2014 IPS Sensor Deployment Lab"}, CRUMB="All Labs \u203a Unit 3 \u2014 Managing Many Connections \u203a Topic 3.5";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>
