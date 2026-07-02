@@ -219,6 +219,13 @@ nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-fil
 .mobile-nav-links a.nav-cta:hover{opacity:.9}
 .mobile-nav-section-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem .9rem .3rem;opacity:.7}
 .mobile-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:.4rem .5rem}
+
+/* --- simulations dropdown --- */
+.nav-drop{position:relative}
+.nav-drop>a::after{content:" \25BE";font-size:.7em}
+.nav-drop-menu{position:absolute;top:100%;left:0;min-width:190px;background:var(--navy-mid,#132040);border:1px solid rgba(0,212,200,.15);border-radius:10px;padding:.4rem;display:none;flex-direction:column;gap:.15rem;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:600}
+.nav-drop:hover .nav-drop-menu,.nav-drop:focus-within .nav-drop-menu{display:flex}
+.nav-drop-menu a{display:block;padding:.45rem .7rem!important;border-radius:7px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -229,7 +236,12 @@ nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-fil
     <li><a href="index.html">Home</a></li>
     <li><a href="socratic-anchors.html">Socratic Guides</a></li>
     <li><a href="tools.html" class="active">Student Tools</a></li>
-    <li><a href="labs/index.html">Labs</a></li>
+    <li class="nav-drop"><a href="labs/index.html">Simulations</a>
+      <div class="nav-drop-menu">
+        <a href="labs/cyber/index.html">AP Cyber</a>
+        <a href="labs/networking/index.html">AP Networking</a>
+      </div>
+    </li>
     <li><a href="legal.html">Legal</a></li>
     <li><a href="edtech-tool.html">EdTech Privacy</a></li>
     <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
@@ -248,7 +260,8 @@ nav{position:sticky;top:0;z-index:200;background:rgba(11,22,40,.95);backdrop-fil
     <a href="index.html" onclick="closeMobileNav()">Home</a>
     <a href="socratic-anchors.html" onclick="closeMobileNav()">Socratic Guides</a>
     <a href="tools.html" class="active" onclick="closeMobileNav()">Student Tools</a>
-    <a href="labs/index.html" onclick="closeMobileNav()">Labs</a>
+    <a href="labs/cyber/index.html" onclick="closeMobileNav()">Simulations: AP Cyber</a>
+    <a href="labs/networking/index.html" onclick="closeMobileNav()">Simulations: AP Networking</a>
     <a href="edtech-tool.html" onclick="closeMobileNav()">EdTech Privacy</a>
     <a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta" onclick="closeMobileNav()">AP Central &#x2197;</a>
   </div>
