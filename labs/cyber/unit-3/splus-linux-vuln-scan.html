@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<!--
+  ===========================================================================
+  ScanForge Lab — "Scanning a Linux Network for Vulnerabilities"
+  CompTIA Security+ (SY0-701) objective 4.3 (also touches 4.4, 4.9)
+
+  Single-file browser simulation lab. Opens directly in any browser.
+  No build step, no server runtime, no external dependencies.
+
+  Copyright (c) 2026 [INSTRUCTOR / AUTHOR NAME].
+  Licensed for use within the author's Security+ lab library.
+  All scenario text, host ranges, credentials, advisory IDs, persona, and
+  the simulated ScanForge UI are original works authored for this library.
+  This lab is NOT derived from, and does not reproduce, any third-party
+  vendor's lab wording, screenshots, file names, values, or question text.
+  It is built clean-room from the public SY0-701 exam objective.
+  ===========================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ScanForge Lab — Scan a Linux Network for Vulnerabilities</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-linux-vuln-scan",
+  "title": "ScanForge Lab — Scan a Linux Network for Vulnerabilities",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.1 Network Vulnerabilities and Attacks"
+    ],
+    "skills": [
+      "1.B"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.3"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<style id="labstyle">
+  :root{
+    --bg:#0e1116; --panel:#161b24; --panel-2:#1d2430; --line:#2b3543;
+    --ink:#e8edf4; --ink-dim:#9aa7b8; --ink-faint:#697686;
+    --accent:#3ea6ff; --accent-ink:#06243d;
+    --ok:#43d17a; --ok-bg:#10301f;
+    --warn:#ffcf5c; --warn-bg:#332a0c;
+    --crit:#ff5d6c; --crit-bg:#3a121a;
+    --high:#ff894d; --med:#ffcf5c; --low:#7fb2ff; --info:#9aa7b8;
+    --radius:10px; --shadow:0 10px 30px rgba(0,0,0,.35);
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--sans); background:var(--bg); color:var(--ink);
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+  .lab-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .lab-head h1{font-size:1.18rem;margin:0;font-weight:650;letter-spacing:.2px}
+  .lab-head .obj{font-size:.78rem;color:var(--ink-dim);font-family:var(--mono)}
+  .badge{display:inline-block;font-size:.7rem;font-family:var(--mono);
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink-dim);
+    padding:2px 8px;border-radius:999px}
+
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+
+  /* ---- simulated app shell ---- */
+  .app{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:var(--shadow)}
+  .app-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;
+    background:linear-gradient(180deg,#1b2230,#141a23);border-bottom:1px solid var(--line)}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.3px}
+  .logo .mark{width:22px;height:22px}
+  .app-bar .url{flex:1;font-family:var(--mono);font-size:.78rem;color:var(--ink-dim);
+    background:#0c1118;border:1px solid var(--line);border-radius:7px;padding:5px 10px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .app-bar .who{font-size:.78rem;color:var(--ink-dim)}
+  .tabs{display:flex;gap:2px;padding:0 10px;background:#10151d;border-bottom:1px solid var(--line);overflow-x:auto}
+  .tab{appearance:none;border:0;background:transparent;color:var(--ink-faint);
+    font:inherit;font-size:.85rem;padding:11px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+  .tab[disabled]{opacity:.4;cursor:not-allowed}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-3px;border-radius:5px}
+  .view{padding:18px;min-height:360px}
+  .view[hidden]{display:none}
+
+  h2.section{font-size:1rem;margin:.2rem 0 .8rem;font-weight:650}
+  p.lead{color:var(--ink-dim);margin:.2rem 0 1rem;font-size:.92rem;max-width:62ch}
+
+  label.field{display:block;margin:0 0 12px;max-width:420px}
+  label.field span{display:block;font-size:.8rem;color:var(--ink-dim);margin-bottom:5px}
+  input[type=text],input[type=password],select{
+    width:100%;background:#0c1118;border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font:inherit;font-size:.92rem;padding:9px 11px}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  .hint{font-size:.75rem;color:var(--ink-faint);font-family:var(--mono);margin-top:4px}
+
+  .btn{appearance:none;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
+    font:inherit;font-weight:600;font-size:.88rem;padding:9px 16px;border-radius:8px;cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn[disabled]{opacity:.45;cursor:not-allowed;border-color:var(--line)}
+  .btn.small{padding:6px 12px;font-size:.8rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
+
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:14px;margin:10px 0}
+  .card h3{margin:0 0 8px;font-size:.92rem}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.86rem}
+  .kv dt{color:var(--ink-faint)}
+  .kv dd{margin:0;font-family:var(--mono)}
+
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--ink-dim);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+  tbody tr:hover{background:#10151d}
+  .sev{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;font-family:var(--mono)}
+  .sev.crit{background:var(--crit-bg);color:var(--crit)}
+  .sev.high{background:#3a210c;color:var(--high)}
+  .sev.med{background:var(--warn-bg);color:var(--med)}
+  .sev.low{background:#0f2238;color:var(--low)}
+
+  .empty{color:var(--ink-faint);font-style:italic;padding:24px 4px}
+  .progress{height:10px;background:#0c1118;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:14px 0}
+  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#7fd1ff);transition:width .25s}
+  .scan-status{font-family:var(--mono);font-size:.82rem;color:var(--ink-dim);min-height:1.2em}
+
+  .donut-row{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  .stat{background:#0c1118;border:1px solid var(--line);border-radius:9px;padding:10px 14px;min-width:96px}
+  .stat b{display:block;font-size:1.3rem;font-family:var(--mono)}
+  .stat span{font-size:.72rem;color:var(--ink-faint)}
+
+  /* ---- side panel ---- */
+  .side{display:flex;flex-direction:column;gap:14px;position:sticky;top:14px}
+  .side .box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+  .side h2{font-size:.92rem;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between}
+  .checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .checklist li{display:flex;gap:9px;align-items:flex-start;font-size:.85rem;color:var(--ink-dim)}
+  .checklist li .mark{flex:0 0 18px;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);
+    display:grid;place-items:center;font-size:.7rem;margin-top:1px}
+  .checklist li.done{color:var(--ink)}
+  .checklist li.done .mark{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+
+  .q{border-top:1px solid var(--line);padding-top:11px;margin-top:11px}
+  .q:first-of-type{border-top:0;padding-top:0;margin-top:0}
+  .q .prompt{font-size:.85rem;margin:0 0 7px}
+  .q .opts{display:flex;flex-direction:column;gap:5px}
+  .q .opts label{display:flex;gap:7px;align-items:flex-start;font-size:.83rem;color:var(--ink-dim);cursor:pointer}
+  .q small.fb{display:block;margin-top:5px;font-size:.76rem}
+  .q small.fb.good{color:var(--ok)}
+  .q small.fb.bad{color:var(--crit)}
+
+  .submit-bar{display:flex;flex-direction:column;gap:10px}
+  .submit-bar .status{font-size:.8rem;min-height:1.1em}
+  .submit-bar .status.good{color:var(--ok)}
+  .submit-bar .status.bad{color:var(--crit)}
+  .submit-bar a.doc{color:var(--accent);font-size:.82rem;word-break:break-all}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    padding:10px 16px;border-radius:9px;box-shadow:var(--shadow);font-size:.85rem;
+    opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.bad{border-color:var(--crit)}
+
+  footer.copyright{margin-top:22px;font-size:.72rem;color:var(--ink-faint);text-align:center}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important}
+  }
+  .visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <div class="lab-head">
+    <div>
+      <h1>Scanning a Linux Network for Vulnerabilities</h1>
+      <div class="obj">SY0-701 objective 4.3 · supports 4.4, 4.9 · lab id: splus-linux-vuln-scan</div>
+    </div>
+    <span class="badge">ScanForge™ Console — simulation</span>
+  </div>
+
+  <div class="grid">
+
+    <!-- ================= SIMULATED APP ================= -->
+    <main class="app" id="capture-root" aria-label="ScanForge vulnerability scanner console">
+      <div class="app-bar">
+        <span class="logo">
+          <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2 3 6v6c0 5 3.8 8.3 9 10 5.2-1.7 9-5 9-10V6l-9-4z" fill="none" stroke="#3ea6ff" stroke-width="1.6"/>
+            <path d="M8.4 12.2l2.4 2.4 4.8-5" fill="none" stroke="#3ea6ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          ScanForge
+        </span>
+        <span class="url" id="addrbar">https://scan.northwind.lan:9443/console</span>
+        <span class="who" id="whoami">not signed in</span>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Console sections">
+        <button class="tab" role="tab" id="tab-login"   aria-selected="true"  aria-controls="view-login">Sign in</button>
+        <button class="tab" role="tab" id="tab-targets" aria-selected="false" aria-controls="view-targets" disabled>Targets</button>
+        <button class="tab" role="tab" id="tab-tasks"   aria-selected="false" aria-controls="view-tasks" disabled>Scan Tasks</button>
+        <button class="tab" role="tab" id="tab-report"  aria-selected="false" aria-controls="view-report" disabled>Report</button>
+      </div>
+
+      <!-- LOGIN -->
+      <section class="view" id="view-login" role="tabpanel" aria-labelledby="tab-login">
+        <h2 class="section">Sign in to the ScanForge console</h2>
+        <p class="lead">Northwind Freight Co. runs its vulnerability scanner as an internal web
+          appliance. Use your analyst credentials to reach the console.</p>
+        <label class="field"><span>Username</span>
+          <input type="text" id="in-user" autocomplete="off" spellcheck="false" placeholder="username">
+          <span class="hint">try: j.harper</span>
+        </label>
+        <label class="field"><span>Password</span>
+          <input type="password" id="in-pass" autocomplete="off" placeholder="password">
+          <span class="hint">try: Vault!ng-2026</span>
+        </label>
+        <div class="row">
+          <button class="btn primary" id="btn-login">Sign in</button>
+          <span id="login-msg" style="font-size:.82rem;color:var(--crit)"></span>
+        </div>
+      </section>
+
+      <!-- TARGETS -->
+      <section class="view" id="view-targets" role="tabpanel" aria-labelledby="tab-targets" hidden>
+        <h2 class="section">Scan targets</h2>
+        <p class="lead">A <b>target</b> defines <em>what</em> the scanner will look at — a host, a
+          range, or a subnet. The infrastructure team brought up a block of Linux application
+          servers. Define a target that covers the full block so nothing is missed.</p>
+
+        <div class="card">
+          <h3>New target</h3>
+          <label class="field"><span>Target name</span>
+            <input type="text" id="t-name" placeholder="e.g., Linux app servers" autocomplete="off">
+          </label>
+          <div class="row" style="align-items:flex-start">
+            <label class="field" style="margin:0;max-width:200px"><span>Start IP</span>
+              <input type="text" id="t-start" placeholder="10.42.7.20" autocomplete="off" spellcheck="false">
+            </label>
+            <label class="field" style="margin:0;max-width:200px"><span>End IP</span>
+              <input type="text" id="t-end" placeholder="10.42.7.29" autocomplete="off" spellcheck="false">
+            </label>
+          </div>
+          <div class="row">
+            <button class="btn primary" id="btn-add-target">Create target</button>
+            <span id="target-msg" style="font-size:.82rem;color:var(--crit)"></span>
+          </div>
+          <div class="hint" style="margin-top:8px">Linux block assigned by the infra team: 10.42.7.20 – 10.42.7.29</div>
+        </div>
+
+        <table aria-label="Defined targets">
+          <thead><tr><th>Name</th><th>Range</th><th>Hosts</th></tr></thead>
+          <tbody id="target-rows">
+            <tr class="empty-row"><td colspan="3" class="empty">No targets defined yet.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- TASKS -->
+      <section class="view" id="view-tasks" role="tabpanel" aria-labelledby="tab-tasks" hidden>
+        <h2 class="section">Scan tasks</h2>
+        <p class="lead">A <b>task</b> pairs a target with a scan policy and lets you run it. Create a
+          task for your Linux target, then launch the scan.</p>
+
+        <div class="card">
+          <h3>New scan task</h3>
+          <label class="field"><span>Task name</span>
+            <input type="text" id="k-name" placeholder="e.g., Linux servers — full audit" autocomplete="off">
+          </label>
+          <label class="field"><span>Target</span>
+            <select id="k-target"><option value="">— choose a target —</option></select>
+          </label>
+          <label class="field"><span>Scan policy</span>
+            <select id="k-policy">
+              <option value="full">Full and fast (recommended)</option>
+              <option value="discovery">Host discovery only</option>
+            </select>
+          </label>
+          <div class="row">
+            <button class="btn primary" id="btn-add-task">Create task</button>
+            <span id="task-msg" style="font-size:.82rem;color:var(--crit)"></span>
+          </div>
+        </div>
+
+        <table aria-label="Scan tasks">
+          <thead><tr><th>Task</th><th>Target</th><th>Status</th><th></th></tr></thead>
+          <tbody id="task-rows">
+            <tr class="empty-row"><td colspan="4" class="empty">No tasks created yet.</td></tr>
+          </tbody>
+        </table>
+
+        <div id="scan-area" hidden>
+          <div class="progress" aria-hidden="true"><i id="scan-bar"></i></div>
+          <div class="scan-status" id="scan-status" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- REPORT -->
+      <section class="view" id="view-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+        <h2 class="section">Scan report — Linux app servers</h2>
+        <div id="report-empty" class="empty">No completed scan yet. Run a scan task to generate a report.</div>
+
+        <div id="report-body" hidden>
+          <div class="donut-row">
+            <div class="stat"><b id="r-hosts">0</b><span>live hosts</span></div>
+            <div class="stat"><b id="r-findings">0</b><span>findings</span></div>
+            <div class="stat"><b style="color:var(--crit)" id="r-crit">0</b><span>critical</span></div>
+            <div class="stat"><b style="color:var(--high)" id="r-high">0</b><span>high</span></div>
+          </div>
+          <p class="lead">Findings are sorted by severity. ScanForge assigns each a CVSS base score
+            and an internal advisory ID; map the advisory to its CVE when you triage. The top row is
+            the most serious issue on this network.</p>
+          <table aria-label="Vulnerability findings">
+            <thead><tr><th>Severity</th><th>CVSS</th><th>Host</th><th>Port</th><th>Finding</th><th>Advisory</th></tr></thead>
+            <tbody id="finding-rows"></tbody>
+          </table>
+
+          <div class="card" id="detail-card">
+            <h3 id="d-title">Most serious finding</h3>
+            <dl class="kv" id="d-kv"></dl>
+            <p id="d-remed" style="font-size:.85rem;color:var(--ink-dim);margin:10px 0 0"></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ================= SIDE PANEL ================= -->
+    <aside class="side" aria-label="Lab progress and submission">
+      <div class="box">
+        <h2>Task checklist <span class="badge" id="task-count">0/5</span></h2>
+        <ul class="checklist" id="checklist">
+          <li data-task="signin"><span class="mark"></span> Sign in to the ScanForge console</li>
+          <li data-task="target"><span class="mark"></span> Create a target covering the Linux host range</li>
+          <li data-task="task"><span class="mark"></span> Create a scan task that uses the target</li>
+          <li data-task="scan"><span class="mark"></span> Run the scan to completion</li>
+          <li data-task="report"><span class="mark"></span> Open the scan report</li>
+        </ul>
+      </div>
+
+      <div class="box">
+        <h2>Questions <span class="badge" id="q-count">0/4</span></h2>
+        <div id="questions"></div>
+      </div>
+
+      <div class="box submit-bar">
+        <h2>Submit completed lab</h2>
+        <label class="field" style="margin:0">
+          <span>Hacker name (pseudonym — no real name)</span>
+          <input type="text" id="hacker" placeholder="e.g., null_byte_kestrel" autocomplete="off" spellcheck="false" maxlength="40">
+        </label>
+        <div class="row">
+          <button class="btn primary" id="btn-submit">Submit completed lab</button>
+          <button class="btn small" id="btn-reset" type="button">Reset lab</button>
+        </div>
+        <div class="status" id="submit-status" role="status" aria-live="polite"></div>
+        <a class="doc" id="doc-link" href="#" target="_blank" rel="noopener" hidden>Open your submission document</a>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="copyright">
+    © 2026 [Author/Instructor]. Original clean-room lab built from SY0-701 obj. 4.3.
+    ScanForge, Northwind Freight Co., all hosts, advisories, and credentials are fictional.
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ===================================================================
+     SCRIPT BLOCK 1 — dependency-free screenshot capture
+     (SVG <foreignObject> rasterizer; substitutes for html2canvas because
+      this lab ships with zero external/CDN dependencies. To use real
+      html2canvas instead, paste its minified source here and replace the
+      body of captureScreenshot() with: return html2canvas(node).then(c=>c.toDataURL('image/png'));)
+     =================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  // Serialize a live DOM node + the page CSS into a PNG data URL.
+  function captureViaForeignObject(node){
+    return new Promise(function(resolve, reject){
+      try{
+        // mirror current form values into attributes so they render in the clone
+        var clone = node.cloneNode(true);
+        var liveInputs = node.querySelectorAll('input, select, textarea');
+        var cloneInputs = clone.querySelectorAll('input, select, textarea');
+        liveInputs.forEach(function(el, i){
+          var c = cloneInputs[i];
+          if(!c) return;
+          if(el.tagName === 'SELECT'){
+            Array.prototype.forEach.call(c.options, function(o, idx){
+              if(idx === el.selectedIndex) o.setAttribute('selected','selected');
+              else o.removeAttribute('selected');
+            });
+          } else if(el.type === 'password'){
+            c.setAttribute('value', el.value ? '••••••••' : '');
+          } else {
+            c.setAttribute('value', el.value || '');
+          }
+        });
+
+        var rect = node.getBoundingClientRect();
+        var w = Math.ceil(rect.width), h = Math.ceil(rect.height);
+        var css = (document.getElementById('labstyle') || {}).textContent || '';
+        var bg = getComputedStyle(document.body).backgroundColor || '#0e1116';
+
+        var xml = new XMLSerializer().serializeToString(clone);
+        var svg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+            '<foreignObject x="0" y="0" width="100%" height="100%">'+
+              '<div xmlns="http://www.w3.org/1999/xhtml" '+
+                   'style="width:'+w+'px;height:'+h+'px;background:'+bg+';font-family:'+
+                   'system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">'+
+                '<style>'+css+'</style>'+ xml +
+              '</div>'+
+            '</foreignObject>'+
+          '</svg>';
+
+        var url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        var img = new Image();
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        img.onload = function(){
+          try{
+            var canvas = document.createElement('canvas');
+            canvas.width = w * dpr; canvas.height = h * dpr;
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.scale(dpr, dpr);
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+          }catch(e){ reject(e); }
+        };
+        img.onerror = function(){ reject(new Error('foreignObject image load failed')); };
+        img.src = url;
+      }catch(e){ reject(e); }
+    });
+  }
+
+  // Guaranteed fallback: draw a plain summary card so a PNG always exists.
+  function captureFallback(summary){
+    var w = 760, h = 380;
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0e1116'; ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = '#3ea6ff';
+    ctx.font = '700 22px system-ui, sans-serif';
+    ctx.fillText('ScanForge — lab completion', 28, 46);
+    ctx.fillStyle = '#9aa7b8'; ctx.font = '13px ui-monospace, monospace';
+    ctx.fillText('Linux network vulnerability scan · SY0-701 4.3', 28, 70);
+    ctx.strokeStyle = '#2b3543'; ctx.beginPath(); ctx.moveTo(28,86); ctx.lineTo(w-28,86); ctx.stroke();
+    var lines = summary.split('\n'); var y = 118;
+    ctx.font = '15px system-ui, sans-serif';
+    lines.forEach(function(ln){
+      ctx.fillStyle = ln.indexOf('✓') === 0 ? '#43d17a' : '#e8edf4';
+      ctx.fillText(ln, 28, y); y += 26;
+    });
+    return Promise.resolve(canvas.toDataURL('image/png'));
+  }
+
+  // Public API used by the engine.
+  window.captureScreenshot = function(node, fallbackSummary){
+    return captureViaForeignObject(node).catch(function(){
+      return captureFallback(fallbackSummary || 'Screenshot fallback');
+    });
+  };
+})();
+</script>
+
+<!-- ===================================================================
+     SCRIPT BLOCK 2 — engine + CONFIG + ANSWER KEY + submission
+     =================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------------- LAB CONFIG ----------------------- */
+  const CONFIG = {
+    assignmentId: "splus-linux-vuln-scan",
+    title: "Scanning a Linux Network for Vulnerabilities",
+    objectives: ["4.3", "4.4", "4.9"],
+    version: "1.0.0",
+
+    // sim credentials / network (all original, fictional)
+    creds:   { user: "j.harper", pass: "Vault!ng-2026" },
+    console: "https://scan.northwind.lan:9443/console",
+    linuxRange: { start: "10.42.7.20", end: "10.42.7.29" },
+
+    // INSTRUCTOR fills these in once for the whole library:
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "PER_COHORT_SECRET_HERE"
+  };
+
+  // Findings the scan "discovers" (deterministic, original advisory IDs).
+  var FINDINGS = [
+    { sev:"crit", sevLabel:"Critical", cvss:9.6, host:"10.42.7.23", port:445,
+      name:"Outdated Samba service permits unauthenticated remote code execution",
+      adv:"SF-2026-0912",
+      remed:"Apply the vendor security update and upgrade the affected package, then rescan to confirm. Block port 445 at the perimeter until patched." },
+    { sev:"high", sevLabel:"High", cvss:7.4, host:"10.42.7.28", port:3306,
+      name:"Database service reachable without transport encryption",
+      adv:"SF-2026-0744",
+      remed:"Require TLS on the database listener and restrict access to application hosts only." },
+    { sev:"med", sevLabel:"Medium", cvss:5.3, host:"10.42.7.21", port:22,
+      name:"SSH server still offers deprecated CBC ciphers",
+      adv:"SF-2026-0510",
+      remed:"Disable CBC ciphers and weak MACs in the SSH daemon configuration." },
+    { sev:"low", sevLabel:"Low", cvss:3.1, host:"10.42.7.26", port:80,
+      name:"Web server discloses its software version in HTTP banners",
+      adv:"SF-2026-0233",
+      remed:"Suppress the server version banner in the web server configuration." }
+  ];
+  var LIVE_HOSTS = ["10.42.7.21","10.42.7.23","10.42.7.26","10.42.7.28"]; // 4 alive
+
+  // ANSWER KEY (client-side / self-reported — see integrity note in build doc).
+  var QUESTIONS = [
+    { id:"q1", type:"num", prompt:"After the scan finishes, how many live hosts did ScanForge discover inside the target range?",
+      answer:"4", normalize:function(v){return v.trim();} },
+    { id:"q2", type:"choice", prompt:"What severity does ScanForge assign to the single most serious finding?",
+      options:["Low","Medium","High","Critical"], answer:"Critical" },
+    { id:"q3", type:"num", prompt:"On which TCP port was that most serious finding detected?",
+      answer:"445", normalize:function(v){return v.trim();} },
+    { id:"q4", type:"choice", prompt:"Per the report, what is the recommended first remediation step for the Critical finding?",
+      options:[
+        "Accept the risk and document an exception",
+        "Apply the vendor security update / patch the affected package",
+        "Rescan the host without making changes",
+        "Increase the scan frequency"
+      ], answer:"Apply the vendor security update / patch the affected package" }
+  ];
+  /* --------------------- END LAB CONFIG --------------------- */
+
+
+  /* ----------------------- STATE ----------------------- */
+  var state = {
+    signedIn:false, targets:[], tasks:[], scanDone:false, reportViewed:false,
+    answers:{}, submitting:false
+  };
+
+  var $  = function(s,r){ return (r||document).querySelector(s); };
+  var $$ = function(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+  function ipToInt(ip){
+    var p = String(ip).trim().split('.');
+    if(p.length!==4) return null;
+    var n=0;
+    for(var i=0;i<4;i++){ var o=Number(p[i]); if(!(o>=0&&o<=255)||p[i]==='') return null; n=n*256+o; }
+    return n;
+  }
+  function rangeSize(a,b){ var x=ipToInt(a),y=ipToInt(b); return (x===null||y===null||y<x)?null:(y-x+1); }
+
+  /* ----------------------- TABS ----------------------- */
+  function selectTab(id){
+    $$('.tab').forEach(function(t){
+      var on = t.id === 'tab-'+id;
+      t.setAttribute('aria-selected', on?'true':'false');
+    });
+    ['login','targets','tasks','report'].forEach(function(v){
+      $('#view-'+v).hidden = (v !== id);
+    });
+  }
+  $$('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      if(t.disabled) return;
+      selectTab(t.id.replace('tab-',''));
+    });
+  });
+  function unlock(tabId){ $('#tab-'+tabId).disabled = false; }
+
+  /* ----------------------- LOGIN ----------------------- */
+  $('#btn-login').addEventListener('click', function(){
+    var u = $('#in-user').value.trim(), p = $('#in-pass').value;
+    var msg = $('#login-msg');
+    if(u === CONFIG.creds.user && p === CONFIG.creds.pass){
+      state.signedIn = true;
+      msg.textContent = '';
+      $('#whoami').textContent = 'signed in as ' + u;
+      unlock('targets'); unlock('tasks'); unlock('report');
+      mark('signin', true);
+      toast('Signed in to ScanForge.');
+      selectTab('targets');
+    } else {
+      msg.textContent = u||p ? 'Invalid credentials. Check the username and password and try again.'
+                             : 'Enter a username and password.';
+    }
+    refresh();
+  });
+
+  /* ----------------------- TARGETS ----------------------- */
+  $('#btn-add-target').addEventListener('click', function(){
+    var name = $('#t-name').value.trim();
+    var s = $('#t-start').value.trim(), e = $('#t-end').value.trim();
+    var msg = $('#target-msg'); msg.textContent='';
+    if(!name){ msg.textContent='Give the target a name.'; return; }
+    var size = rangeSize(s,e);
+    if(size===null){ msg.textContent='Enter a valid start and end IP, with the end not lower than the start.'; return; }
+    state.targets.push({ id:'tg'+(state.targets.length+1), name:name, start:s, end:e, size:size });
+    $('#t-name').value=''; $('#t-start').value=''; $('#t-end').value='';
+    renderTargets(); renderTaskTargetOptions();
+    evalTargetTask();
+    toast('Target created.');
+    refresh();
+  });
+
+  function renderTargets(){
+    var tb = $('#target-rows');
+    if(!state.targets.length){ tb.innerHTML='<tr class="empty-row"><td colspan="3" class="empty">No targets defined yet.</td></tr>'; return; }
+    tb.innerHTML = state.targets.map(function(t){
+      return '<tr><td>'+esc(t.name)+'</td><td>'+esc(t.start)+' – '+esc(t.end)+'</td><td>'+t.size+'</td></tr>';
+    }).join('');
+  }
+
+  // task "target" passes when a defined target fully covers the Linux block
+  function evalTargetTask(){
+    var lo = ipToInt(CONFIG.linuxRange.start), hi = ipToInt(CONFIG.linuxRange.end);
+    var ok = state.targets.some(function(t){
+      var s = ipToInt(t.start), e = ipToInt(t.end);
+      return s!==null && e!==null && s<=lo && e>=hi;
+    });
+    mark('target', ok);
+  }
+
+  /* ----------------------- TASKS ----------------------- */
+  function renderTaskTargetOptions(){
+    var sel = $('#k-target');
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">— choose a target —</option>' +
+      state.targets.map(function(t){ return '<option value="'+t.id+'">'+esc(t.name)+'</option>'; }).join('');
+    sel.value = cur;
+  }
+
+  $('#btn-add-task').addEventListener('click', function(){
+    var name = $('#k-name').value.trim();
+    var tgId = $('#k-target').value;
+    var policy = $('#k-policy').value;
+    var msg = $('#task-msg'); msg.textContent='';
+    if(!name){ msg.textContent='Give the task a name.'; return; }
+    if(!tgId){ msg.textContent='Choose a target for this task.'; return; }
+    var tg = state.targets.filter(function(t){return t.id===tgId;})[0];
+    state.tasks.push({ id:'tk'+(state.tasks.length+1), name:name, target:tg, policy:policy, status:'New' });
+    $('#k-name').value='';
+    renderTasks();
+    mark('task', true);
+    toast('Scan task created.');
+    refresh();
+  });
+
+  function renderTasks(){
+    var tb = $('#task-rows');
+    if(!state.tasks.length){ tb.innerHTML='<tr class="empty-row"><td colspan="4" class="empty">No tasks created yet.</td></tr>'; return; }
+    tb.innerHTML = state.tasks.map(function(k){
+      var canRun = k.status==='New';
+      var btn = k.status==='Done'
+        ? '<button class="btn small" data-view="'+k.id+'">View report</button>'
+        : '<button class="btn small primary" data-run="'+k.id+'"'+(state.scanning?' disabled':'')+'>'+(canRun?'Run scan':k.status)+'</button>';
+      return '<tr><td>'+esc(k.name)+'</td><td>'+esc(k.target.name)+'</td><td>'+esc(k.status)+'</td><td>'+btn+'</td></tr>';
+    }).join('');
+    $$('#task-rows [data-run]').forEach(function(b){
+      b.addEventListener('click', function(){ runScan(b.getAttribute('data-run')); });
+    });
+    $$('#task-rows [data-view]').forEach(function(b){
+      b.addEventListener('click', function(){ openReport(); });
+    });
+  }
+
+  function runScan(taskId){
+    if(state.scanning) return;
+    var k = state.tasks.filter(function(t){return t.id===taskId;})[0];
+    if(!k) return;
+    state.scanning = true; k.status = 'Running';
+    renderTasks();
+    var area = $('#scan-area'); area.hidden = false;
+    var bar = $('#scan-bar'), st = $('#scan-status');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var steps = [
+      [12,'Resolving target hosts in '+k.target.start+' – '+k.target.end+' …'],
+      [34,'Host discovery: '+LIVE_HOSTS.length+' live hosts responding …'],
+      [58,'Port and service detection …'],
+      [80,'Matching services against vulnerability feed …'],
+      [100,'Scan complete. '+FINDINGS.length+' findings.']
+    ];
+    var i = 0;
+    function step(){
+      if(i>=steps.length){
+        state.scanning=false; k.status='Done'; state.scanDone=true;
+        renderTasks(); buildReport(); mark('scan', true);
+        unlock('report'); toast('Scan finished — report ready.'); refresh(); return;
+      }
+      bar.style.width = steps[i][0] + '%';
+      st.textContent = steps[i][1];
+      i++;
+      setTimeout(step, reduce ? 120 : 850);
+    }
+    step();
+  }
+
+  /* ----------------------- REPORT ----------------------- */
+  function buildReport(){
+    var crit = FINDINGS.filter(function(f){return f.sev==='crit';}).length;
+    var high = FINDINGS.filter(function(f){return f.sev==='high';}).length;
+    $('#r-hosts').textContent = LIVE_HOSTS.length;
+    $('#r-findings').textContent = FINDINGS.length;
+    $('#r-crit').textContent = crit;
+    $('#r-high').textContent = high;
+
+    $('#finding-rows').innerHTML = FINDINGS.map(function(f){
+      return '<tr>'+
+        '<td><span class="sev '+f.sev+'">'+f.sevLabel+'</span></td>'+
+        '<td>'+f.cvss.toFixed(1)+'</td>'+
+        '<td>'+esc(f.host)+'</td>'+
+        '<td>'+f.port+'</td>'+
+        '<td>'+esc(f.name)+'</td>'+
+        '<td>'+esc(f.adv)+'</td></tr>';
+    }).join('');
+
+    var top = FINDINGS[0];
+    $('#d-title').textContent = 'Most serious finding — ' + top.sevLabel + ' (' + top.adv + ')';
+    $('#d-kv').innerHTML =
+      kv('Host', top.host) + kv('TCP port', String(top.port)) +
+      kv('CVSS base', top.cvss.toFixed(1)) + kv('Severity', top.sevLabel) +
+      kv('Class', 'Unauthenticated remote code execution');
+    $('#d-remed').textContent = 'Recommended remediation: ' + top.remed;
+
+    $('#report-empty').hidden = true;
+    $('#report-body').hidden = false;
+  }
+
+  function openReport(){
+    selectTab('report');
+    if(state.scanDone){ state.reportViewed = true; mark('report', true); refresh(); }
+  }
+  $('#tab-report').addEventListener('click', function(){
+    if(!this.disabled && state.scanDone){ state.reportViewed=true; mark('report',true); refresh(); }
+  });
+
+  /* ----------------------- CHECKLIST ----------------------- */
+  function mark(taskKey, done){
+    var li = $('.checklist li[data-task="'+taskKey+'"]');
+    if(!li) return;
+    li.classList.toggle('done', !!done);
+    li.querySelector('.mark').textContent = done ? '✓' : '';
+  }
+  function tasksPassed(){
+    return $$('.checklist li').map(function(li){
+      return { id:li.getAttribute('data-task'), label:li.textContent.trim(), passed:li.classList.contains('done') };
+    });
+  }
+
+  /* ----------------------- QUESTIONS ----------------------- */
+  function renderQuestions(){
+    var box = $('#questions');
+    box.innerHTML = QUESTIONS.map(function(q){
+      var inner;
+      if(q.type==='choice'){
+        inner = '<div class="opts" role="radiogroup" aria-label="'+esc(q.prompt)+'">' +
+          q.options.map(function(opt,idx){
+            var id = q.id+'_'+idx;
+            return '<label><input type="radio" name="'+q.id+'" id="'+id+'" value="'+esc(opt)+'"> <span>'+esc(opt)+'</span></label>';
+          }).join('') + '</div>';
+      } else {
+        inner = '<input type="text" id="in_'+q.id+'" inputmode="numeric" autocomplete="off" placeholder="your answer" style="max-width:160px">';
+      }
+      return '<div class="q" data-q="'+q.id+'">'+
+        '<p class="prompt"><b>'+q.id.toUpperCase()+'.</b> '+esc(q.prompt)+'</p>'+
+        inner +
+        '<small class="fb" id="fb_'+q.id+'"></small>'+
+      '</div>';
+    }).join('');
+
+    QUESTIONS.forEach(function(q){
+      if(q.type==='choice'){
+        $$('input[name="'+q.id+'"]').forEach(function(r){
+          r.addEventListener('change', function(){ state.answers[q.id]=r.value; checkQuestion(q); refresh(); });
+        });
+      } else {
+        var el = $('#in_'+q.id);
+        el.addEventListener('input', function(){ state.answers[q.id]=el.value; });
+        el.addEventListener('blur',  function(){ if(el.value!==''){ checkQuestion(q); refresh(); } });
+      }
+    });
+  }
+
+  function isCorrect(q){
+    var v = state.answers[q.id];
+    if(v==null || v==='') return false;
+    if(q.type==='num') return q.normalize(String(v)) === q.answer;
+    return v === q.answer;
+  }
+  function checkQuestion(q){
+    var fb = $('#fb_'+q.id);
+    if(state.answers[q.id]==null || state.answers[q.id]===''){ fb.textContent=''; fb.className='fb'; return; }
+    if(isCorrect(q)){ fb.textContent='✓ Correct'; fb.className='fb good'; }
+    else { fb.textContent='Not quite — review the report and try again.'; fb.className='fb bad'; }
+  }
+  function questionsResult(){
+    return QUESTIONS.map(function(q){
+      return { id:q.id, prompt:q.prompt, answer:String(state.answers[q.id]==null?'':state.answers[q.id]), correct:isCorrect(q) };
+    });
+  }
+
+  /* ----------------------- PROGRESS / SCORE ----------------------- */
+  function refresh(){
+    var tp = tasksPassed();
+    var tDone = tp.filter(function(t){return t.passed;}).length;
+    $('#task-count').textContent = tDone + '/' + tp.length;
+
+    var qDone = QUESTIONS.filter(isCorrect).length;
+    $('#q-count').textContent = qDone + '/' + QUESTIONS.length;
+
+    var allTasks = tDone === tp.length;
+    var allQs = qDone === QUESTIONS.length;
+    $('#btn-submit').disabled = !(allTasks && allQs) || state.submitting;
+  }
+
+  function score(){
+    var tp = tasksPassed();
+    var earned = tp.filter(function(t){return t.passed;}).length + QUESTIONS.filter(isCorrect).length;
+    var total = tp.length + QUESTIONS.length;
+    return { earned:earned, total:total };
+  }
+
+  /* ----------------------- SUBMIT ----------------------- */
+  $('#btn-submit').addEventListener('click', function(){ submit(); });
+
+  function summaryText(){
+    var tp = tasksPassed();
+    var lines = tp.map(function(t){ return (t.passed?'✓ ':'· ')+t.label; });
+    var s = score();
+    lines.push(''); lines.push('Score: '+s.earned+'/'+s.total);
+    lines.push('Hacker: '+($('#hacker').value.trim()||'(unnamed)'));
+    return lines.join('\n');
+  }
+
+  function submit(){
+    if(state.submitting) return;
+    var hacker = $('#hacker').value.trim();
+    var st = $('#submit-status'); var link = $('#doc-link');
+    link.hidden = true; st.className='status';
+    if(!hacker){ st.className='status bad'; st.textContent='Enter a hacker name before submitting.'; return; }
+
+    state.submitting = true; $('#btn-submit').disabled = true;
+    st.textContent = 'Capturing screenshot…';
+
+    window.captureScreenshot($('#capture-root'), summaryText()).then(function(png){
+      st.textContent = 'Submitting to instructor…';
+      var s = score();
+      var payload = {
+        assignmentId: CONFIG.assignmentId,
+        hackerName: hacker.slice(0,40),
+        clientTimestamp: new Date().toISOString(),
+        objectives: CONFIG.objectives,
+        tasks: tasksPassed(),
+        questions: questionsResult(),
+        score: { earned:s.earned, total:s.total },
+        screenshot: png,
+        submissionToken: CONFIG.submissionToken,
+        labVersion: CONFIG.version
+      };
+      return sendToAppsScript(payload);
+    }).then(function(out){
+      state.submitting = false;
+      if(out && out.success){
+        st.className='status good';
+        st.textContent = 'Submitted. Your work was recorded with the instructor.';
+        if(out.docUrl){ link.href = out.docUrl; link.hidden = false; }
+      } else if(out && out.fireAndForget){
+        st.className='status good';
+        st.textContent = 'Submission sent. The response could not be read in this browser — confirm receipt with your instructor.';
+      } else {
+        st.className='status bad';
+        st.textContent = 'Submission rejected: ' + ((out && out.error) || 'unknown error') + '.';
+        $('#btn-submit').disabled = false;
+      }
+    }).catch(function(err){
+      state.submitting = false; $('#btn-submit').disabled = false;
+      st.className='status bad';
+      st.textContent = 'Could not submit: ' + (err && err.message ? err.message : 'network error') +
+                       '. Check the APPS_SCRIPT_URL and your connection.';
+    });
+  }
+
+  // Simple request (no custom headers / text body) to avoid a CORS preflight.
+  function sendToAppsScript(payload){
+    var url = CONFIG.APPS_SCRIPT_URL;
+    if(!url || url.indexOf('PASTE_') === 0){
+      return Promise.reject(new Error('APPS_SCRIPT_URL is not configured in this lab'));
+    }
+    return fetch(url, { method:'POST', body: JSON.stringify(payload) })
+      .then(function(res){
+        return res.json().catch(function(){
+          // response unreadable (locked-down context) — retry fire-and-forget
+          return null;
+        });
+      })
+      .then(function(json){
+        if(json) return json;
+        // fallback: no-cors fire-and-forget
+        return fetch(url, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) })
+          .then(function(){ return { fireAndForget:true }; });
+      });
+  }
+
+  /* ----------------------- RESET ----------------------- */
+  $('#btn-reset').addEventListener('click', function(){
+    if(!confirm('Reset the entire lab? All progress and answers will be cleared.')) return;
+    state = { signedIn:false, targets:[], tasks:[], scanDone:false, reportViewed:false, answers:{}, submitting:false };
+    $('#in-user').value=''; $('#in-pass').value=''; $('#login-msg').textContent='';
+    $('#whoami').textContent='not signed in';
+    $('#t-name').value=''; $('#t-start').value=''; $('#t-end').value='';
+    $('#k-name').value='';
+    $('#tab-targets').disabled = $('#tab-tasks').disabled = $('#tab-report').disabled = true;
+    $('#scan-area').hidden = true; $('#scan-bar').style.width='0';
+    $('#report-empty').hidden=false; $('#report-body').hidden=true;
+    $('#hacker').value=''; $('#submit-status').textContent=''; $('#submit-status').className='status';
+    $('#doc-link').hidden=true;
+    $$('.checklist li').forEach(function(li){ li.classList.remove('done'); li.querySelector('.mark').textContent=''; });
+    renderTargets(); renderTasks(); renderTaskTargetOptions(); renderQuestions();
+    selectTab('login'); refresh();
+    toast('Lab reset.');
+  });
+
+  /* ----------------------- UTIL ----------------------- */
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function kv(k,v){ return '<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>'; }
+  var toastTimer=null;
+  function toast(msg, bad){
+    var t=$('#toast'); t.textContent=msg; t.className='toast show'+(bad?' bad':'');
+    clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.className='toast'; }, 2600);
+  }
+
+  /* ----------------------- INIT ----------------------- */
+  renderTargets(); renderTasks(); renderTaskTargetOptions(); renderQuestions(); refresh();
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-win-vuln-scan.html",title:"Lab \u2014 Scan and Remediate Windows Host Vulnerabilities (SY0-701 5.2.3)"}, NEXT={href:"splus-dc-vuln-scan.html",title:"SentryScope Lab \u2014 Domain Controller Vulnerability Scan"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.1 Network Vulnerabilities and Attacks";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

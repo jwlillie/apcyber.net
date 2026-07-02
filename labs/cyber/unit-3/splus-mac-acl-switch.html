@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Single-File Lab Simulation
+  Lab: Restrict Devices with a MAC-Based ACL  (assignmentId: splus-mac-acl-switch)
+  Objectives: 4.1 (Hardening targets: switches), 2.5.2.1 (Access control list),
+              3.2.1.8 (Port security / MAC filtering)
+
+  Copyright (c) 2026 [Your Name / Your Org]. All rights reserved.
+  Original clean-room work built from the public CompTIA SY0-701 objective and
+  the documented behavior of managed-switch ACL consoles. Not derived from, and
+  not a reskin of, any third-party courseware lab. Scenario, persona, company,
+  ACL name, MAC values, interface range, mask semantics, and all question
+  wording are original to this file. License: <choose one, e.g. proprietary /
+  CC-BY-NC / MIT> before distribution.
+
+  NOTE ON SCREENSHOT CAPTURE (deviation from build-prompt section 2.3):
+  The build prompt asks for the minified html2canvas source pasted inline.
+  This file instead uses a native SVG <foreignObject> -> <canvas> rasterizer
+  (see SCRIPT BLOCK 1). Reason: the genuine html2canvas bundle is ~150KB of
+  third-party minified JS that cannot be reproduced from memory without risking
+  a corrupted/incorrect copy, and no network fetch is available at build time.
+  The native method is genuinely dependency-free (which is the actual goal of
+  the single-file requirement) and rasterizes the self-drawn lab DOM correctly.
+  If you prefer the real library, paste its source into the marked block and
+  call window.html2canvas(node) instead of captureLabPng(node).
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-mac-acl-switch",
+  "title": "Restrict Devices with a MAC-Based ACL",
+  "version": "1.0.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.2 Protecting Networks: Managerial Controls and Wireless Security"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.5",
+      "3.2",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab: Restrict Devices with a MAC-Based ACL</title>
+<style>
+  /* ---- Theming via CSS variables ---- */
+  :root{
+    --bg:#0e1320;
+    --panel:#161d2e;
+    --panel-2:#1d2740;
+    --edge:#2b3754;
+    --ink:#e7edf6;
+    --ink-dim:#9fb0c9;
+    --accent:#4ea1ff;
+    --accent-2:#7c8cff;
+    --ok:#39d98a;
+    --warn:#ffcc66;
+    --bad:#ff6b7d;
+    --chip:#23304d;
+    --focus:#ffd34d;
+    --radius:12px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.45;font-size:15px;
+  }
+  a{color:var(--accent)}
+  h1,h2,h3{line-height:1.2;margin:0 0 .4em}
+  h1{font-size:1.25rem}
+  h2{font-size:1.05rem}
+  h3{font-size:.95rem}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 120px}
+  .hdr{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+  .hdr .meta{color:var(--ink-dim);font-size:.85rem}
+  .obj{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .obj .tag{background:var(--chip);border:1px solid var(--edge);border-radius:999px;padding:2px 9px;font-size:.75rem;color:var(--ink-dim)}
+
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start}
+  @media (max-width:920px){ .grid{grid-template-columns:1fr} }
+
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);overflow:hidden}
+  .card > .card-h{background:var(--panel-2);padding:10px 14px;border-bottom:1px solid var(--edge);font-weight:600;font-size:.9rem;letter-spacing:.02em}
+  .card .card-b{padding:14px}
+
+  /* ---- Simulated switch console ---- */
+  .console{display:grid;grid-template-columns:190px 1fr;min-height:430px}
+  @media (max-width:560px){ .console{grid-template-columns:1fr} }
+  .conbar{background:#0b1322;border-bottom:1px solid var(--edge);padding:10px 14px;display:flex;gap:10px;align-items:center;grid-column:1 / -1}
+  .conbar .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 7px var(--ok)}
+  .conbar .name{font-family:var(--mono);font-size:.85rem;color:var(--ink-dim)}
+  .nav{background:#0f1626;border-right:1px solid var(--edge);padding:8px}
+  @media (max-width:560px){ .nav{border-right:none;border-bottom:1px solid var(--edge);display:flex;gap:6px;overflow:auto} }
+  .nav button{
+    display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;color:var(--ink-dim);
+    padding:9px 10px;border-radius:8px;font:inherit;cursor:pointer;margin-bottom:4px;white-space:nowrap;
+  }
+  .nav button:hover{background:#15203a;color:var(--ink)}
+  .nav button[aria-current="page"]{background:var(--chip);color:var(--ink);border-color:var(--edge)}
+  .view{padding:16px;min-width:0}
+  .view h2{display:flex;align-items:center;gap:8px}
+  .hint{color:var(--ink-dim);font-size:.85rem;margin:.2em 0 1em}
+
+  label{display:block;font-size:.82rem;color:var(--ink-dim);margin:0 0 4px}
+  input[type=text],select{
+    width:100%;background:#0c1322;border:1px solid var(--edge);color:var(--ink);
+    border-radius:8px;padding:9px 10px;font:inherit;font-family:var(--mono);
+  }
+  select{font-family:var(--sans)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row > .col{flex:1 1 130px;min-width:0}
+  .field{margin-bottom:12px}
+  .btn{
+    background:var(--accent);color:#04122a;border:none;border-radius:8px;padding:9px 14px;
+    font:inherit;font-weight:600;cursor:pointer;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn.secondary{background:var(--chip);color:var(--ink);border:1px solid var(--edge)}
+  .btn.ghost{background:transparent;color:var(--ink-dim);border:1px solid var(--edge)}
+  .btn.tiny{padding:5px 9px;font-size:.8rem}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--edge);vertical-align:top}
+  th{color:var(--ink-dim);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+  td.mono,th.mono{font-family:var(--mono)}
+  .empty{color:var(--ink-dim);font-style:italic;padding:10px 2px}
+  .pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:.74rem;border:1px solid var(--edge)}
+  .pill.deny{background:rgba(255,107,125,.14);color:#ffb3bd;border-color:#5a2730}
+  .pill.bound{background:rgba(57,217,138,.14);color:#9cf0c4;border-color:#235c41}
+  .pill.none{background:transparent;color:var(--ink-dim)}
+
+  .checkscroll{max-height:230px;overflow:auto;border:1px solid var(--edge);border-radius:8px;padding:8px;background:#0c1322}
+  .if-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:6px}
+  .if-list label{display:flex;align-items:center;gap:6px;font-family:var(--mono);color:var(--ink);background:#11192b;border:1px solid var(--edge);border-radius:6px;padding:6px 8px;cursor:pointer;margin:0}
+  .if-list input{width:auto}
+
+  .notice{border-radius:8px;padding:9px 11px;font-size:.85rem;margin-top:10px;border:1px solid var(--edge)}
+  .notice.ok{background:rgba(57,217,138,.1);border-color:#235c41;color:#bff3d6}
+  .notice.bad{background:rgba(255,107,125,.1);border-color:#5a2730;color:#ffc6cd}
+  .notice.warn{background:rgba(255,204,102,.1);border-color:#5c4a20;color:#ffe2a6}
+
+  /* ---- Task / question panel ---- */
+  .tasks li{list-style:none;display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--edge)}
+  .tasks{margin:0;padding:0}
+  .tasks li:last-child{border-bottom:none}
+  .mark{flex:0 0 20px;width:20px;height:20px;border-radius:50%;border:2px solid var(--edge);margin-top:1px;display:grid;place-items:center;font-size:.8rem;color:transparent}
+  .tasks li.done .mark{background:var(--ok);border-color:var(--ok);color:#04210f}
+  .tasks li .t-label{font-size:.9rem}
+  .tasks li.done .t-label{color:var(--ink)}
+  .tasks li .t-label small{display:block;color:var(--ink-dim);font-size:.78rem;margin-top:2px}
+
+  .q{border:1px solid var(--edge);border-radius:8px;padding:11px;margin-bottom:10px;background:#0c1322}
+  .q .qp{font-size:.9rem;margin-bottom:8px}
+  .q .opt{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:.86rem;color:var(--ink-dim);cursor:pointer}
+  .q .opt input{margin-top:3px}
+  .q.correct{border-color:#235c41}
+  .q.incorrect{border-color:#5a2730}
+  .q .verdict{font-size:.8rem;margin-top:6px}
+  .q.correct .verdict{color:#9cf0c4}
+  .q.incorrect .verdict{color:#ffb3bd}
+
+  .scorebox{display:flex;gap:14px;align-items:baseline;margin-top:6px}
+  .scorebox .big{font-size:1.6rem;font-weight:700}
+
+  /* ---- Submission bar ---- */
+  .subbar{
+    position:fixed;left:0;right:0;bottom:0;background:rgba(13,18,30,.96);
+    border-top:1px solid var(--edge);backdrop-filter:blur(6px);z-index:20;
+  }
+  .subbar .inner{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .subbar label{margin:0}
+  .subbar .grow{flex:1 1 240px;min-width:160px}
+  .subbar .status{flex:1 1 100%;font-size:.85rem;color:var(--ink-dim)}
+  .subbar .status[data-kind="ok"]{color:#bff3d6}
+  .subbar .status[data-kind="bad"]{color:#ffc6cd}
+  .subbar .status[data-kind="busy"]{color:var(--warn)}
+
+  /* focus + reduced motion (quality floor) */
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important}
+  }
+  .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  footer.lic{color:var(--ink-dim);font-size:.74rem;margin-top:18px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <div class="hdr">
+    <div>
+      <h1>Lab — Restrict Devices with a MAC-Based ACL</h1>
+      <div class="meta">Branch IDF switch hardening · pseudonymous submission</div>
+    </div>
+    <div class="obj" aria-label="SY0-701 objectives">
+      <span class="tag">SY0-701 4.1</span>
+      <span class="tag">2.5.2.1</span>
+      <span class="tag">3.2.1.8</span>
+    </div>
+  </div>
+
+  <!-- Scenario -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-h">Scenario</div>
+    <div class="card-b">
+      <p style="margin:0 0 8px">You are the on-call network technician for <strong>Larkmere Outfitters</strong>,
+      a regional retailer. Customers and staff keep plugging personal streaming sticks and casting dongles
+      into the open Ethernet jacks of the back-office IDF, where the access switch <code>sw-idf-b2</code> lives.
+      Management wants those device families kept off that switch at layer 2.</p>
+      <p style="margin:0">Your task is to build a MAC-based ACL on <code>sw-idf-b2</code> that <em>denies</em> the
+      known hardware-address ranges of those devices, bind it to every access port, and persist the change so it
+      survives a reboot.</p>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- ============ SIMULATED SWITCH CONSOLE ============ -->
+    <div class="card" id="labArea">
+      <div class="card-h">Switch Web Console — <span class="mono" style="font-family:var(--mono)">sw-idf-b2</span></div>
+      <div class="console">
+        <div class="conbar">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">admin@sw-idf-b2 · 24-port Gigabit managed</span>
+        </div>
+        <nav class="nav" aria-label="Switch sections">
+          <button type="button" data-view="acl" aria-current="page">MAC ACL</button>
+          <button type="button" data-view="bind">ACL Binding</button>
+          <button type="button" data-view="save">Maintenance</button>
+        </nav>
+        <div class="view">
+
+          <!-- View: MAC ACL -->
+          <section id="view-acl">
+            <h2>MAC-Based Access Control Lists</h2>
+            <p class="hint">Create a named ACL, then add deny entries. In this console a mask byte of
+              <code>FF</code> means <em>ignore that byte (match any value)</em>; a mask byte of
+              <code>00</code> means <em>match that byte exactly</em>.</p>
+
+            <div class="field" style="max-width:420px">
+              <label for="aclName">New ACL name</label>
+              <div class="row">
+                <div class="col"><input type="text" id="aclName" placeholder="e.g. RestrictMedia" autocomplete="off"></div>
+                <div><button class="btn" id="createAcl" type="button">Create ACL</button></div>
+              </div>
+            </div>
+
+            <div class="field" style="max-width:300px">
+              <label for="aclSelect">Editing ACL</label>
+              <select id="aclSelect" aria-label="Select ACL to edit"></select>
+            </div>
+
+            <div id="aceEditor" hidden>
+              <h3>Access Control Entries (ACEs)</h3>
+              <div class="row">
+                <div class="col" style="flex:0 0 92px"><label for="acePriority">Priority</label>
+                  <input type="text" id="acePriority" inputmode="numeric" placeholder="1"></div>
+                <div class="col" style="flex:0 0 120px"><label for="aceAction">Action</label>
+                  <select id="aceAction"><option>Permit</option><option selected>Deny</option></select></div>
+                <div class="col" style="flex:0 0 130px"><label for="aceDest">Destination MAC</label>
+                  <select id="aceDest"><option selected>Any</option><option>Specific</option></select></div>
+              </div>
+              <div class="row" style="margin-top:8px">
+                <div class="col"><label for="aceSrc">Source MAC value (12 hex)</label>
+                  <input type="text" id="aceSrc" placeholder="3C8D20000000" autocomplete="off"></div>
+                <div class="col"><label for="aceMask">Source MAC mask (12 hex)</label>
+                  <input type="text" id="aceMask" placeholder="000000FFFFFF" autocomplete="off"></div>
+                <div style="align-self:flex-end"><button class="btn" id="addAce" type="button">Add ACE</button></div>
+              </div>
+              <div id="aceMsg" aria-live="polite"></div>
+
+              <table style="margin-top:12px" aria-label="ACE table">
+                <thead><tr><th>#</th><th>Action</th><th>Dest</th><th class="mono">Source value</th><th class="mono">Source mask</th><th></th></tr></thead>
+                <tbody id="aceRows"><tr><td colspan="6" class="empty">No entries yet.</td></tr></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- View: Binding -->
+          <section id="view-bind" hidden>
+            <h2>Bind ACL to Interfaces</h2>
+            <p class="hint">Bind an ACL to a single port, or use <strong>Copy Settings</strong> to apply one port's
+              binding to many ports at once.</p>
+
+            <div class="row" style="align-items:flex-end">
+              <div class="col"><label for="bindAcl">ACL</label><select id="bindAcl"></select></div>
+              <div class="col" style="flex:0 0 120px"><label for="bindIf">Interface</label><select id="bindIf"></select></div>
+              <div><button class="btn" id="bindBtn" type="button">Bind</button></div>
+            </div>
+
+            <h3 style="margin-top:16px">Copy Settings</h3>
+            <div class="row" style="align-items:flex-end">
+              <div class="col" style="flex:0 0 200px"><label for="copyFrom">Copy binding from</label><select id="copyFrom"></select></div>
+              <div style="display:flex;gap:8px">
+                <button class="btn secondary tiny" id="selAll" type="button">Select GE1–GE24</button>
+                <button class="btn ghost tiny" id="selNone" type="button">Clear</button>
+              </div>
+            </div>
+            <div class="checkscroll" style="margin-top:8px">
+              <div class="if-list" id="copyTargets"></div>
+            </div>
+            <div style="margin-top:8px"><button class="btn" id="copyApply" type="button">Apply to selected</button></div>
+            <div id="bindMsg" aria-live="polite"></div>
+
+            <table style="margin-top:14px" aria-label="Interface bindings">
+              <thead><tr><th>Interface</th><th>Bound ACL</th></tr></thead>
+              <tbody id="bindRows"></tbody>
+            </table>
+          </section>
+
+          <!-- View: Maintenance -->
+          <section id="view-save" hidden>
+            <h2>Maintenance — Configuration</h2>
+            <p class="hint">Changes you make are in the <em>running</em> configuration. Save them to the
+              <em>startup</em> configuration so they persist across a reboot or power cycle.</p>
+            <p>Running config status: <span id="dirtyState" class="pill none">unchanged</span></p>
+            <button class="btn" id="saveCfg" type="button">Save running config → startup</button>
+            <div id="saveMsg" aria-live="polite"></div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TASK / QUESTION PANEL ============ -->
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-h">Lab Tasks</div>
+        <div class="card-b">
+          <ul class="tasks" id="taskList" aria-live="polite"></ul>
+          <div class="scorebox">
+            <div><div class="big" id="scoreNum">0 / 0</div>
+            <div style="color:var(--ink-dim);font-size:.8rem">tasks + questions</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">Knowledge Check</div>
+        <div class="card-b" id="questionBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="lic">
+    © 2026 [Your Name / Your Org]. Original clean-room lab for CompTIA Security+ SY0-701 exam prep
+    (objectives 4.1, 2.5.2.1, 3.2.1.8). Scenario, values, and wording are original; not derived from any
+    third-party courseware. Set your license before distribution.
+  </footer>
+</div>
+
+<!-- ============ SUBMISSION BAR ============ -->
+<div class="subbar">
+  <div class="inner">
+    <div class="grow">
+      <label for="hackerName" class="vh">Hacker name (pseudonym)</label>
+      <input type="text" id="hackerName" placeholder="Hacker name (pseudonym — no real names)" autocomplete="off" maxlength="40">
+    </div>
+    <button class="btn secondary" id="resetBtn" type="button">Reset lab</button>
+    <button class="btn" id="submitBtn" type="button" disabled>Submit completed lab</button>
+    <div class="status" id="statusLine" role="status" aria-live="polite">Enter a hacker name to enable submission.</div>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- SCRIPT BLOCK 1 — dependency-free screenshot capture                    -->
+<!-- (Substitutes for inlined html2canvas; see file header note.)           -->
+<!-- If you want the real library, paste its minified source here and       -->
+<!-- replace captureLabPng() usage with window.html2canvas(node).           -->
+<!-- ===================================================================== -->
+<script>
+(function(){
+  // Rasterize a DOM node to a PNG data URL using SVG <foreignObject>.
+  // Works on the self-drawn lab DOM (no external/tainting images present).
+  async function captureLabPng(node){
+    const rect = node.getBoundingClientRect();
+    const width = Math.max(1, Math.ceil(rect.width));
+    const height = Math.max(1, Math.ceil(rect.height));
+    const css = Array.from(document.querySelectorAll('style')).map(s => s.textContent).join('\n');
+    const clone = node.cloneNode(true);
+    // Mirror current values of inputs/selects into attributes so they serialize.
+    const liveCtl = node.querySelectorAll('input, select');
+    const cloneCtl = clone.querySelectorAll('input, select');
+    liveCtl.forEach((el, i) => {
+      const c = cloneCtl[i]; if(!c) return;
+      if(el.tagName === 'INPUT'){ c.setAttribute('value', el.value); }
+      if(el.tagName === 'SELECT'){
+        Array.from(c.options).forEach(o => { o.removeAttribute('selected'); });
+        if(c.selectedIndex >= 0 && c.options[el.selectedIndex]) c.options[el.selectedIndex].setAttribute('selected','selected');
+      }
+    });
+    const xhtml = new XMLSerializer().serializeToString(clone);
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+width+'" height="'+height+'">'+
+      '<foreignObject x="0" y="0" width="100%" height="100%">'+
+      '<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+width+'px;background:#0e1320;color:#e7edf6;">'+
+      '<style>'+css+'</style>'+xhtml+
+      '</div></foreignObject></svg>';
+    const url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const scale = Math.min(2, window.devicePixelRatio || 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale; canvas.height = height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#0e1320';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+
+  // Fallback: a tiny placeholder PNG so the submission still carries a screenshot field.
+  function placeholderPng(text){
+    const c = document.createElement('canvas'); c.width = 600; c.height = 120;
+    const x = c.getContext('2d');
+    x.fillStyle = '#0e1320'; x.fillRect(0,0,600,120);
+    x.fillStyle = '#9fb0c9'; x.font = '16px system-ui, sans-serif';
+    x.fillText(text || 'Screenshot unavailable in this browser.', 16, 64);
+    return c.toDataURL('image/png');
+  }
+
+  window.__cap = { captureLabPng, placeholderPng };
+})();
+</script>
+
+<!-- ===================================================================== -->
+<!-- SCRIPT BLOCK 2 — engine, CONFIG + ANSWER KEY, logic, submission        -->
+<!-- ===================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------- LAB CONFIG + ANSWER KEY ----------------- */
+  const CONFIG = {
+    assignmentId: "splus-mac-acl-switch",
+    title: "Restrict Devices with a MAC-Based ACL",
+    objectives: ["2.5", "3.2", "4.1"],
+    // Same /exec URL across the whole library:
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+
+    aclName: "RestrictMedia",         // required ACL name (case-insensitive match)
+    interfaces: Array.from({length:24}, (_,i)=>"GE"+(i+1)),  // GE1..GE24
+    // Required ACEs. mask byte FF = wildcard (any), 00 = exact. OUI-only blocks
+    // a whole device family. Values are original to this lab.
+    requiredAces: [
+      { priority:1, action:"Deny", dest:"Any", src:"3C8D20000000", mask:"000000FFFFFF" },
+      { priority:2, action:"Deny", dest:"Any", src:"A47733000000", mask:"000000FFFFFF" },
+      { priority:3, action:"Deny", dest:"Any", src:"F09FC2000000", mask:"000000FFFFFF" },
+      { priority:4, action:"Deny", dest:"Any", src:"7C6166000000", mask:"000000FFFFFF" },
+      { priority:5, action:"Deny", dest:"Any", src:"18B430000000", mask:"000000FFFFFF" },
+      { priority:6, action:"Deny", dest:"Any", src:"5CCF7F000000", mask:"000000FFFFFF" },
+    ],
+    questions: [
+      { id:"q1",
+        prompt:"In this console, what does a mask byte of FF (all ones) tell the switch to do for that byte of the source MAC address?",
+        options:[
+          "Require an exact match on that byte",
+          "Ignore that byte and match any value",
+          "Drop only broadcast frames",
+          "Reverse the bit order of that byte"
+        ], answerIndex:1 },
+      { id:"q2",
+        prompt:"Each ACE denies traffic by source MAC. What does matching on the source (instead of the destination) accomplish here?",
+        options:[
+          "It blocks frames sent FROM the listed devices, keeping them off the switch",
+          "It blocks frames sent TO the listed devices only",
+          "It encrypts traffic originating from those devices",
+          "It moves those devices to a guest VLAN"
+        ], answerIndex:0 },
+      { id:"q3",
+        prompt:"You finished the ACL and bindings, then saved to the startup configuration. Why is that final save necessary?",
+        options:[
+          "It applies the ACL for the very first time",
+          "Without it, the changes are lost on the next reboot or power cycle",
+          "It encrypts the configuration file at rest",
+          "It is required before an ACL name can be created"
+        ], answerIndex:1 },
+    ],
+  };
+
+  /* ----------------- in-memory state ----------------- */
+  const state = {
+    acls: {},          // name -> { aces: [...] }
+    selectedAcl: null,
+    bindings: {},      // interfaceId -> aclName
+    saved: false,
+    dirty: false,
+    answers: {},       // qid -> chosen index
+  };
+
+  /* ----------------- helpers ----------------- */
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const hex = s => (s||"").replace(/[^0-9a-fA-F]/g,"").toUpperCase();
+  const aclKey = state.acls; // alias
+
+  function findAcl(name){
+    const want = (name||"").toLowerCase();
+    return Object.keys(state.acls).find(n => n.toLowerCase() === want) || null;
+  }
+
+  /* ----------------- view switching ----------------- */
+  $$(".nav button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      $$(".nav button").forEach(x=>x.removeAttribute("aria-current"));
+      b.setAttribute("aria-current","page");
+      ["acl","bind","save"].forEach(v=>{ $("#view-"+v).hidden = (v !== b.dataset.view); });
+    });
+  });
+
+  /* ----------------- ACL creation ----------------- */
+  $("#createAcl").addEventListener("click", ()=>{
+    const name = $("#aclName").value.trim();
+    if(!name){ msg("#aceMsg","bad","Enter a name for the ACL."); return; }
+    if(findAcl(name)){ msg("#aceMsg","warn","An ACL with that name already exists."); selectAcl(findAcl(name)); return; }
+    state.acls[name] = { aces: [] };
+    $("#aclName").value = "";
+    markDirty();
+    refreshAclSelects();
+    selectAcl(name);
+    msg("#aceMsg","ok","Created ACL \""+name+"\".");
+  });
+
+  function selectAcl(name){
+    state.selectedAcl = name;
+    $("#aclSelect").value = name;
+    $("#aceEditor").hidden = !name;
+    renderAces();
+  }
+  $("#aclSelect").addEventListener("change", e=> selectAcl(e.target.value || null));
+
+  /* ----------------- add ACE ----------------- */
+  $("#addAce").addEventListener("click", ()=>{
+    const name = state.selectedAcl;
+    if(!name){ msg("#aceMsg","bad","Select or create an ACL first."); return; }
+    const priority = parseInt($("#acePriority").value, 10);
+    const action = $("#aceAction").value;
+    const dest = $("#aceDest").value;
+    const src = hex($("#aceSrc").value);
+    const mask = hex($("#aceMask").value);
+    if(!Number.isInteger(priority) || priority < 1){ msg("#aceMsg","bad","Priority must be a whole number ≥ 1."); return; }
+    if(src.length !== 12){ msg("#aceMsg","bad","Source MAC value must be 12 hex digits (you entered "+src.length+")."); return; }
+    if(mask.length !== 12){ msg("#aceMsg","bad","Source MAC mask must be 12 hex digits (you entered "+mask.length+")."); return; }
+    if(state.acls[name].aces.some(a=>a.priority===priority)){ msg("#aceMsg","warn","Priority "+priority+" already exists in this ACL."); return; }
+    state.acls[name].aces.push({ priority, action, dest, src, mask });
+    state.acls[name].aces.sort((a,b)=>a.priority-b.priority);
+    $("#acePriority").value = ""; $("#aceSrc").value = ""; $("#aceMask").value = "";
+    markDirty();
+    renderAces();
+    msg("#aceMsg","ok","Added ACE #"+priority+".");
+  });
+
+  function renderAces(){
+    const name = state.selectedAcl;
+    const tb = $("#aceRows");
+    if(!name || !state.acls[name].aces.length){ tb.innerHTML = '<tr><td colspan="6" class="empty">No entries yet.</td></tr>'; updateAll(); return; }
+    tb.innerHTML = state.acls[name].aces.map(a=>(
+      '<tr><td>'+a.priority+'</td>'+
+      '<td><span class="pill '+(a.action==="Deny"?"deny":"")+'">'+a.action+'</span></td>'+
+      '<td>'+a.dest+'</td>'+
+      '<td class="mono">'+fmtMac(a.src)+'</td>'+
+      '<td class="mono">'+fmtMac(a.mask)+'</td>'+
+      '<td><button class="btn ghost tiny" type="button" data-del="'+a.priority+'">remove</button></td></tr>'
+    )).join("");
+    tb.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const p = parseInt(btn.dataset.del,10);
+        state.acls[name].aces = state.acls[name].aces.filter(a=>a.priority!==p);
+        markDirty(); renderAces();
+      });
+    });
+    updateAll();
+  }
+  const fmtMac = s => s.match(/.{1,2}/g).join(":");
+
+  /* ----------------- binding ----------------- */
+  function refreshAclSelects(){
+    const names = Object.keys(state.acls);
+    const opts = names.length ? names.map(n=>'<option value="'+n+'">'+n+'</option>').join("")
+                              : '<option value="">(no ACLs yet)</option>';
+    $("#aclSelect").innerHTML = (names.length?'':'<option value="">(create one above)</option>') + opts;
+    $("#bindAcl").innerHTML = opts;
+    if(state.selectedAcl) $("#aclSelect").value = state.selectedAcl;
+  }
+
+  function buildInterfaceControls(){
+    $("#bindIf").innerHTML = CONFIG.interfaces.map(i=>'<option>'+i+'</option>').join("");
+    $("#copyTargets").innerHTML = CONFIG.interfaces.map(i=>(
+      '<label><input type="checkbox" value="'+i+'"> '+i+'</label>'
+    )).join("");
+    renderBindRows();
+    refreshCopyFrom();
+  }
+
+  function refreshCopyFrom(){
+    const bound = Object.keys(state.bindings);
+    $("#copyFrom").innerHTML = bound.length
+      ? bound.map(i=>'<option value="'+i+'">'+i+' → '+state.bindings[i]+'</option>').join("")
+      : '<option value="">(bind one interface first)</option>';
+  }
+
+  $("#bindBtn").addEventListener("click", ()=>{
+    const acl = $("#bindAcl").value;
+    const iff = $("#bindIf").value;
+    if(!acl){ msg("#bindMsg","bad","Create an ACL before binding."); return; }
+    state.bindings[iff] = acl;
+    markDirty(); renderBindRows(); refreshCopyFrom();
+    msg("#bindMsg","ok","Bound "+acl+" to "+iff+".");
+  });
+
+  $("#selAll").addEventListener("click", ()=> $$("#copyTargets input").forEach(c=>c.checked=true));
+  $("#selNone").addEventListener("click", ()=> $$("#copyTargets input").forEach(c=>c.checked=false));
+
+  $("#copyApply").addEventListener("click", ()=>{
+    const from = $("#copyFrom").value;
+    if(!from || !state.bindings[from]){ msg("#bindMsg","bad","Pick a source interface that already has an ACL bound."); return; }
+    const acl = state.bindings[from];
+    const targets = $$("#copyTargets input:checked").map(c=>c.value);
+    if(!targets.length){ msg("#bindMsg","warn","Select at least one target interface."); return; }
+    targets.forEach(t=> state.bindings[t] = acl);
+    markDirty(); renderBindRows(); refreshCopyFrom();
+    msg("#bindMsg","ok","Copied "+acl+" binding to "+targets.length+" interface(s).");
+  });
+
+  function renderBindRows(){
+    $("#bindRows").innerHTML = CONFIG.interfaces.map(i=>{
+      const b = state.bindings[i];
+      return '<tr><td class="mono">'+i+'</td><td>'+(b
+        ? '<span class="pill bound">'+b+'</span>'
+        : '<span class="pill none">— none —</span>')+'</td></tr>';
+    }).join("");
+    updateAll();
+  }
+
+  /* ----------------- save config ----------------- */
+  $("#saveCfg").addEventListener("click", ()=>{
+    state.saved = true; state.dirty = false;
+    $("#dirtyState").textContent = "saved to startup"; $("#dirtyState").className = "pill bound";
+    msg("#saveMsg","ok","Running configuration saved to startup configuration.");
+    updateAll();
+  });
+  function markDirty(){
+    state.dirty = true; state.saved = false;
+    $("#dirtyState").textContent = "unsaved changes"; $("#dirtyState").className = "pill deny";
+  }
+
+  /* ----------------- task checking ----------------- */
+  function aclCreated(){ return !!findAcl(CONFIG.aclName); }
+  function acesCorrect(){
+    const name = findAcl(CONFIG.aclName); if(!name) return false;
+    const have = state.acls[name].aces;
+    if(have.length !== CONFIG.requiredAces.length) return false;
+    return CONFIG.requiredAces.every(req =>
+      have.some(a => a.priority===req.priority && a.action===req.action &&
+        a.dest===req.dest && a.src===req.src && a.mask===req.mask));
+  }
+  function boundAll(){
+    const name = findAcl(CONFIG.aclName); if(!name) return false;
+    return CONFIG.interfaces.every(i => (state.bindings[i]||"").toLowerCase() === name.toLowerCase());
+  }
+  function savedOk(){ return state.saved === true; }
+
+  function tasks(){
+    return [
+      { id:"acl",  label:'Create a MAC-based ACL named "'+CONFIG.aclName+'"', sub:"On the MAC ACL page.", passed: aclCreated() },
+      { id:"aces", label:"Add the 6 required deny entries", sub:"Priorities 1–6, action Deny, destination Any, mask 000000FFFFFF.", passed: acesCorrect() },
+      { id:"bind", label:"Bind the ACL to GE1–GE24", sub:"Use Copy Settings to apply to all access ports.", passed: boundAll() },
+      { id:"save", label:"Save the running config to startup", sub:"So the change survives a reboot.", passed: savedOk() },
+    ];
+  }
+
+  function renderTasks(){
+    const ts = tasks();
+    $("#taskList").innerHTML = ts.map(t=>(
+      '<li class="'+(t.passed?"done":"")+'"><span class="mark" aria-hidden="true">✓</span>'+
+      '<span class="t-label">'+t.label+'<small>'+t.sub+'</small></span></li>'
+    )).join("");
+    return ts;
+  }
+
+  /* ----------------- questions ----------------- */
+  function renderQuestions(){
+    $("#questionBox").innerHTML = CONFIG.questions.map((q,qi)=>{
+      const chosen = state.answers[q.id];
+      const verdictClass = (chosen===undefined) ? "" : (chosen===q.answerIndex ? "correct" : "incorrect");
+      const opts = q.options.map((o,oi)=>(
+        '<label class="opt"><input type="radio" name="'+q.id+'" value="'+oi+'"'+(chosen===oi?" checked":"")+'> <span>'+o+'</span></label>'
+      )).join("");
+      let verdict = "";
+      if(chosen!==undefined) verdict = '<div class="verdict">'+(chosen===q.answerIndex?"Correct.":"Not quite — review the hint on the MAC ACL page and try again.")+'</div>';
+      return '<div class="q '+verdictClass+'"><div class="qp"><strong>Q'+(qi+1)+'.</strong> '+q.prompt+'</div>'+opts+verdict+'</div>';
+    }).join("");
+    $$("#questionBox input[type=radio]").forEach(r=>{
+      r.addEventListener("change", e=>{
+        const qid = e.target.name;
+        state.answers[qid] = parseInt(e.target.value,10);
+        renderQuestions(); updateAll();
+      });
+    });
+  }
+  function questionsCorrect(){
+    return CONFIG.questions.filter(q => state.answers[q.id] === q.answerIndex).length;
+  }
+
+  /* ----------------- score + readiness ----------------- */
+  function updateAll(){
+    const ts = renderTasks();
+    const tPass = ts.filter(t=>t.passed).length;
+    const qPass = questionsCorrect();
+    const earned = tPass + qPass;
+    const total = ts.length + CONFIG.questions.length;
+    $("#scoreNum").textContent = earned + " / " + total;
+    const ready = $("#hackerName").value.trim().length > 0;
+    $("#submitBtn").disabled = !ready;
+    if(!ready){
+      setStatus("Enter a hacker name to enable submission.","");
+    } else if(earned < total){
+      setStatus("You can submit now ("+earned+"/"+total+"), but the lab isn't fully complete.","");
+    } else {
+      setStatus("All tasks and questions complete — ready to submit.","ok");
+    }
+  }
+
+  /* ----------------- messaging ----------------- */
+  function msg(sel,kind,text){
+    const el = $(sel);
+    el.innerHTML = '<div class="notice '+(kind==="ok"?"ok":kind==="bad"?"bad":"warn")+'">'+text+'</div>';
+  }
+  function setStatus(text,kind){
+    const el = $("#statusLine"); el.textContent = text; el.dataset.kind = kind || "";
+  }
+
+  /* ----------------- submission ----------------- */
+  $("#submitBtn").addEventListener("click", submitLab);
+
+  async function submitLab(){
+    const hackerName = $("#hackerName").value.trim().slice(0,40);
+    if(!hackerName){ setStatus("Enter a hacker name first.","bad"); return; }
+    $("#submitBtn").disabled = true;
+    setStatus("Capturing screenshot…","busy");
+
+    let screenshot;
+    try { screenshot = await window.__cap.captureLabPng($("#labArea")); }
+    catch(e){ screenshot = window.__cap.placeholderPng("Screenshot capture not supported here."); }
+
+    const ts = tasks();
+    const payload = {
+      assignmentId: CONFIG.assignmentId,
+      hackerName,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: ts.map(t=>({ id:t.id, label:t.label, passed:t.passed })),
+      questions: CONFIG.questions.map(q=>({
+        id:q.id, prompt:q.prompt,
+        answer: (state.answers[q.id]!==undefined ? q.options[state.answers[q.id]] : null),
+        correct: state.answers[q.id] === q.answerIndex
+      })),
+      score: {
+        earned: ts.filter(t=>t.passed).length + questionsCorrect(),
+        total: ts.length + CONFIG.questions.length
+      },
+      screenshot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    setStatus("Submitting to instructor…","busy");
+    try {
+      // Simple request: no custom headers, default text/plain body => no CORS preflight.
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const out = await res.json();
+      if(out && out.success){
+        setStatus("Submitted ✓ — instructor doc: "+(out.docUrl || "(created)"),"ok");
+      } else {
+        setStatus("Submission rejected: "+((out && out.error) || "unknown error")+". Check with your instructor.","bad");
+        $("#submitBtn").disabled = false;
+      }
+    } catch(err){
+      // Fallback: fire-and-forget (can't read the response in locked-down contexts).
+      try {
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        setStatus("Submitted (could not read confirmation) — please confirm receipt with your instructor.","warn");
+      } catch(e2){
+        setStatus("Could not reach the submission server. Check your connection and the APPS_SCRIPT_URL.","bad");
+        $("#submitBtn").disabled = false;
+      }
+    }
+  }
+
+  /* ----------------- reset ----------------- */
+  $("#resetBtn").addEventListener("click", ()=>{
+    state.acls = {}; state.selectedAcl = null; state.bindings = {}; state.saved = false; state.dirty = false; state.answers = {};
+    $("#aclName").value=""; $("#aceEditor").hidden = true;
+    $("#dirtyState").textContent="unchanged"; $("#dirtyState").className="pill none";
+    ["#aceMsg","#bindMsg","#saveMsg"].forEach(s=>$(s).innerHTML="");
+    refreshAclSelects(); renderAces(); buildInterfaceControls(); renderQuestions(); updateAll();
+    setStatus("Lab reset.","");
+  });
+
+  $("#hackerName").addEventListener("input", updateAll);
+
+  /* ----------------- init ----------------- */
+  refreshAclSelects();
+  buildInterfaceControls();
+  renderQuestions();
+  updateAll();
+})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-switch-port-hardening.html",title:"Lab: Switch Port Hardening"}, NEXT={href:"splus-router-vty-acl.html",title:"Restrict VTY (Telnet/SSH) Access"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.2 Protecting Networks: Managerial Controls and Wireless Security";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

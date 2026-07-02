@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab: Lock and Unlock Linux User Accounts — Tidewater Marine Analytics</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-linux-account-lockunlock",
+  "title": "Lab: Lock and Unlock Linux User Accounts — Tidewater Marine Analytics",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.5",
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  =====================================================================
+  Security+ (SY0-701) Simulation Lab — single-file, dependency-free.
+  Assignment: splus-linux-account-lockunlock
+  Objectives: 4.6.1 (provisioning/de-provisioning user accounts),
+              2.5 (mitigation techniques: account lockout/disablement)
+
+  Copyright (c) 2026 [AUTHOR NAME / ORG].  All rights reserved.
+  Original clean-room work built from the public CompTIA SY0-701
+  objectives. No third-party lab text, scenario, names, paths, values,
+  ordering, question wording, or screenshots were copied. You may use
+  and modify this file within your own course; do not redistribute as
+  a competing product. Licensed to your cohort under [LICENSE].
+  =====================================================================
+
+  SCREENSHOT NOTE (see INSTRUCTOR_SETUP.md):
+  This file is intentionally zero-dependency. It captures a PNG of the
+  lab's completion state using only built-in browser APIs. If you want a
+  full pixel screenshot of the rendered DOM instead, paste the minified
+  html2canvas source between the marked <script> tags below; the engine
+  auto-detects window.html2canvas and uses it when present.
+-->
+<style>
+  :root{
+    --bg:#0a0e17;
+    --bg-2:#0e1422;
+    --panel:#121a2b;
+    --panel-2:#0c121e;
+    --ink:#e8edf6;
+    --ink-dim:#9aa7bd;
+    --ink-faint:#6b7891;
+    --line:#23304a;
+    --line-soft:#1a2335;
+    --accent:#5ad2a6;     /* mint */
+    --accent-2:#6aa6ff;   /* blue */
+    --warn:#f0b35b;
+    --bad:#f0707f;
+    --good:#5ad2a6;
+    --term-bg:#06090f;
+    --term-ink:#cfe9d8;
+    --radius:12px;
+    --radius-sm:8px;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#10203a 0%,var(--bg) 55%);color:var(--ink);font-family:var(--sans);line-height:1.5}
+  a{color:var(--accent-2)}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 56px}
+  header.lab{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:16px}
+  .titleblock h1{font-size:1.22rem;margin:0 0 4px;letter-spacing:.2px}
+  .titleblock .sub{color:var(--ink-dim);font-size:.86rem}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tag{font:600 .72rem/1 var(--mono);color:var(--accent);background:rgba(90,210,166,.08);border:1px solid rgba(90,210,166,.35);padding:5px 8px;border-radius:999px}
+  .tag.alt{color:var(--accent-2);background:rgba(106,166,255,.08);border-color:rgba(106,166,255,.35)}
+  .brand{font:700 .8rem/1 var(--mono);color:var(--ink-faint);text-align:right}
+  .brand b{color:var(--ink-dim)}
+
+  .scenario{background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin:18px 0}
+  .scenario h2{margin:0 0 6px;font-size:.95rem;color:var(--accent)}
+  .scenario p{margin:6px 0;color:var(--ink-dim);font-size:.92rem}
+  .scenario .policy{margin-top:10px;font-size:.86rem;color:var(--ink);background:rgba(240,179,91,.07);border-left:3px solid var(--warn);padding:8px 12px;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  /* terminal */
+  .term-card{background:var(--term-bg);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 18px 40px -24px #000}
+  .term-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#0a0f18;border-bottom:1px solid var(--line)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .dot.r{background:#f0707f}.dot.y{background:#f0b35b}.dot.g{background:#5ad2a6}
+  .term-title{margin-left:8px;font:600 .76rem/1 var(--mono);color:var(--ink-faint)}
+  .term{padding:12px 13px;min-height:340px;max-height:430px;overflow:auto;font:0.86rem/1.5 var(--mono);color:var(--term-ink);white-space:pre-wrap;word-break:break-word}
+  .term .l{display:block}
+  .term .muted{color:#7f93a8}
+  .term .ok{color:var(--good)}
+  .term .err{color:var(--bad)}
+  .term .accent{color:#8fd0ff}
+  .term .dim{color:#5c6e84}
+  .term .prompt{color:#7fe0b5}
+  .term .you{color:#e8edf6}
+  .term .head{color:#cdd9ea;text-decoration:underline}
+  .inputline{display:flex;align-items:center;gap:8px;padding:9px 13px;border-top:1px solid var(--line);background:#070b12}
+  .inputline .ps1{font:600 .86rem/1 var(--mono);color:#7fe0b5;white-space:nowrap}
+  .inputline input{flex:1;background:transparent;border:0;outline:none;color:var(--term-ink);font:0.86rem/1.5 var(--mono);caret-color:var(--accent)}
+  .inputline input::placeholder{color:#46566b}
+
+  /* side panels */
+  .side{display:flex;flex-direction:column;gap:16px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .panel h3{margin:0;font-size:.82rem;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-dim);padding:12px 14px;border-bottom:1px solid var(--line-soft);background:var(--panel-2)}
+  .panel .body{padding:12px 14px}
+
+  .checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+  .checklist li{display:flex;gap:9px;align-items:flex-start;font-size:.85rem;color:var(--ink-dim)}
+  .checklist .box{flex:none;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);display:grid;place-items:center;font:700 .7rem/1 var(--mono);color:transparent;margin-top:1px}
+  .checklist li.done{color:var(--ink)}
+  .checklist li.done .box{background:rgba(90,210,166,.16);border-color:var(--accent);color:var(--accent)}
+  .checklist code{font-family:var(--mono);color:#8fd0ff;font-size:.82rem}
+
+  table.acct{width:100%;border-collapse:collapse;font-size:.82rem}
+  table.acct th,table.acct td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-soft)}
+  table.acct th{color:var(--ink-faint);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.4px}
+  table.acct td.u{font-family:var(--mono);color:var(--ink)}
+  .pill{display:inline-flex;align-items:center;gap:5px;font:600 .72rem/1 var(--mono);padding:4px 8px;border-radius:999px}
+  .pill.locked{color:var(--bad);background:rgba(240,112,127,.1);border:1px solid rgba(240,112,127,.4)}
+  .pill.open{color:var(--good);background:rgba(90,210,166,.1);border:1px solid rgba(90,210,166,.4)}
+  .acct caption{caption-side:bottom;text-align:left;color:var(--ink-faint);font-size:.72rem;padding-top:8px}
+
+  .quiz{display:flex;flex-direction:column;gap:16px}
+  .q{border:1px solid var(--line-soft);border-radius:var(--radius-sm);padding:11px 12px;background:var(--panel-2)}
+  .q .p{font-size:.86rem;margin:0 0 9px}
+  .q .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{display:flex;gap:9px;align-items:flex-start;font-size:.85rem;color:var(--ink-dim);cursor:pointer;padding:4px 6px;border-radius:6px}
+  .opt:hover{background:rgba(255,255,255,.03)}
+  .opt input{margin-top:3px;accent-color:var(--accent)}
+  .opt code{font-family:var(--mono);color:#8fd0ff}
+  .q .fb{margin-top:8px;font-size:.8rem;min-height:1.1em}
+  .q.correct{border-color:rgba(90,210,166,.45)}
+  .q.correct .fb{color:var(--good)}
+  .q.wrong .fb{color:var(--bad)}
+
+  /* submission */
+  .submit{margin-top:20px;background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .submit .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px}
+  .field label{font-size:.78rem;color:var(--ink-dim)}
+  .field input{background:var(--term-bg);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;color:var(--ink);font:0.9rem var(--mono)}
+  .field .hint{font-size:.72rem;color:var(--ink-faint)}
+  .scorebox{font:700 .9rem/1.2 var(--mono);color:var(--ink);text-align:right;min-width:130px}
+  .scorebox small{display:block;font-weight:500;color:var(--ink-faint);font-size:.72rem;letter-spacing:.3px}
+  .btns{display:flex;gap:10px}
+  button{font:600 .88rem var(--sans);border-radius:var(--radius-sm);padding:11px 16px;border:1px solid transparent;cursor:pointer;transition:transform .06s ease}
+  button:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:#06251a;border-color:var(--accent)}
+  .btn-primary:disabled{opacity:.45;cursor:not-allowed}
+  .btn-ghost{background:transparent;color:var(--ink-dim);border-color:var(--line)}
+  .btn-ghost:hover{color:var(--ink);border-color:var(--ink-faint)}
+  .status{margin-top:12px;font-size:.86rem;min-height:1.2em}
+  .status.ok{color:var(--good)}
+  .status.err{color:var(--bad)}
+  .status.work{color:var(--accent-2)}
+  .status a{font-weight:600}
+
+  .footer{margin-top:26px;color:var(--ink-faint);font-size:.74rem;text-align:center}
+
+  :focus-visible{outline:2px solid var(--accent-2);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.cursor{animation:none!important}}
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="lab">
+    <div class="titleblock">
+      <h1>Lock and Unlock Linux User Accounts</h1>
+      <div class="sub">Hands-on simulation &middot; Linux account de-provisioning &amp; reactivation</div>
+      <div class="tags" aria-label="Mapped exam objectives">
+        <span class="tag">SY0-701 &middot; 4.6.1 De-provisioning</span>
+        <span class="tag alt">SY0-701 &middot; 2.5 Account lockout</span>
+      </div>
+    </div>
+    <div class="brand">
+      <b>TIDEWATER MARINE ANALYTICS</b><br>
+      twma-fileserver01 &middot; ops
+    </div>
+  </header>
+
+  <section class="scenario" aria-label="Scenario">
+    <h2>Scenario</h2>
+    <p>You are the on-call systems operator for <strong>Tidewater Marine Analytics</strong>, which runs long offshore research deployments. When a crew member is on extended rotation away from the network, their shore login is dormant and becomes an attack surface no one is watching.</p>
+    <p>The vessel <em>RV Meridian</em> just rotated. Three analysts have begun a multi-week offshore deployment and their accounts must be taken offline. Three others have just come back ashore and need their accounts reactivated.</p>
+    <div class="policy"><strong>Policy AC-07:</strong> Any interactive account dormant for more than <strong>10 days</strong> must be locked so password login is refused. Accounts are reactivated only on confirmed return to shore.</div>
+  </section>
+
+  <div class="grid">
+    <!-- ===================== TERMINAL ===================== -->
+    <main>
+      <div class="term-card">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="term-title">root@twma-fileserver01: ~</span>
+        </div>
+        <div class="term" id="term" role="log" aria-live="polite" aria-label="Terminal output"></div>
+        <form class="inputline" id="cmdform" autocomplete="off">
+          <span class="ps1" aria-hidden="true">root@twma-fileserver01:~#</span>
+          <label class="sr" for="cmd">Terminal command</label>
+          <input id="cmd" name="cmd" type="text" inputmode="text" spellcheck="false"
+                 placeholder="type a command — try: help" aria-describedby="termhelp">
+        </form>
+      </div>
+      <p id="termhelp" class="footer" style="text-align:left;margin-top:8px">
+        You are logged in as <code style="font-family:var(--mono);color:#8fd0ff">root</code>. Type
+        <code style="font-family:var(--mono);color:#8fd0ff">help</code> for the available commands.
+        Use the up/down arrows to recall previous commands.
+      </p>
+    </main>
+
+    <!-- ===================== SIDE PANELS ===================== -->
+    <aside class="side">
+      <section class="panel" aria-labelledby="tasksh">
+        <h3 id="tasksh">Task checklist</h3>
+        <div class="body">
+          <ul class="checklist" id="checklist"></ul>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="acctsh">
+        <h3 id="acctsh">Live account status</h3>
+        <div class="body">
+          <table class="acct">
+            <thead><tr><th>User</th><th>Person</th><th>State</th></tr></thead>
+            <tbody id="accttbody"></tbody>
+            <caption>Updates as you run commands. System accounts hidden.</caption>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="kch">
+        <h3 id="kch">Knowledge check</h3>
+        <div class="body">
+          <div class="quiz" id="quiz"></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- ===================== SUBMISSION ===================== -->
+  <section class="submit" aria-labelledby="subh">
+    <h3 id="subh" class="sr">Submit your completed lab</h3>
+    <div class="row">
+      <div class="field">
+        <label for="hacker">Hacker name (pseudonym — no real names)</label>
+        <input id="hacker" type="text" maxlength="40" placeholder="e.g. tidereaper" autocomplete="off">
+        <span class="hint">Used to identify your submission to your instructor. Do not enter your real name.</span>
+      </div>
+      <div class="scorebox" id="scorebox" aria-live="polite">
+        0 / 11
+        <small>SCORE</small>
+      </div>
+      <div class="btns">
+        <button class="btn-ghost" id="resetbtn" type="button">Reset lab</button>
+        <button class="btn-primary" id="submitbtn" type="button" disabled>Submit completed lab</button>
+      </div>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <p class="footer">
+    &copy; 2026 [AUTHOR NAME / ORG]. Original clean-room lab for CompTIA Security+ (SY0-701) exam prep.
+    Objectives 4.6.1 &amp; 2.5. Self-reported formative assessment — see your syllabus for grading.
+  </p>
+</div>
+
+<!-- ============================================================
+     OPTIONAL html2canvas INSERTION POINT
+     Paste the full minified html2canvas source between the two
+     <script> tags below to enable a true full-DOM screenshot.
+     If left empty, the lab uses its built-in evidence-card capture.
+     ============================================================ -->
+<script id="html2canvas-slot">/* paste minified html2canvas here (optional) */</script>
+
+<!-- ============================================================
+     ENGINE + CONFIG + ANSWER KEY
+     ============================================================ -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- LAB CONFIG (per §11) ---------------- */
+  const CONFIG = {
+    assignmentId: "splus-linux-account-lockunlock",
+    title: "Lock and Unlock Linux User Accounts",
+    objectives: ["2.5", "4.6"],
+    hostname: "twma-fileserver01",
+    // Same /exec URL across the whole library:
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    // Rotate per cohort; must match the Apps Script "SUBMISSION_TOKEN" property:
+    submissionToken: "REPLACE_WITH_COHORT_TOKEN"
+  };
+
+  /* ---------------- WORLD / ANSWER KEY ----------------
+     Original users, names, and (fake) password hashes.       */
+  var ACCOUNTS = {
+    // target users — three to LOCK (begin unlocked):
+    rmonroe:    { person:"Renata Monroe",    target:true,  action:"lock",   locked:false, hash:"$6$Qr7tLmX2$8fK1pVz9dD4oH" },
+    darmstrong: { person:"Desmond Armstrong", target:true, action:"lock",   locked:false, hash:"$6$ZbN3kPwe$U2sL7yQ0aM6cR" },
+    pchaudhry:  { person:"Priya Chaudhry",   target:true,  action:"lock",   locked:false, hash:"$6$Hm9gTfd1$rJ8xC3nE5kW2t" },
+    // target users — three to UNLOCK (begin locked):
+    kobrien:    { person:"Kelsey O'Brien",   target:true,  action:"unlock", locked:true,  hash:"$6$Lp2vRsa7$qB4mZ9hF1uX6e" },
+    tnakamura:  { person:"Toshiro Nakamura", target:true,  action:"unlock", locked:true,  hash:"$6$Wd5yJce8$nT0kP2sV7gL3a" },
+    ediaz:      { person:"Esteban Diaz",     target:true,  action:"unlock", locked:true,  hash:"$6$Cx1qMbo4$eH7rD6wA9jY5b" },
+    // non-target system / staff accounts shown only in /etc/shadow:
+    root:       { person:"root",     target:false, hidden:true, locked:false, hash:"$6$Aa0bZz9$systemRootHashX" },
+    daemon:     { person:"daemon",   target:false, hidden:true, locked:true,  hash:"*", nopass:true },
+    sshd:       { person:"sshd",     target:false, hidden:true, locked:true,  hash:"*", nopass:true },
+    opsadmin:   { person:"opsadmin", target:false, hidden:true, locked:false, hash:"$6$Ee3dWq2$opsAdminHashQ" }
+  };
+  // Initial snapshot so Reset restores exactly:
+  var INITIAL = JSON.parse(JSON.stringify(ACCOUNTS));
+
+  var SHADOW_ORDER = ["root","daemon","sshd","opsadmin",
+                      "rmonroe","darmstrong","pchaudhry","kobrien","tnakamura","ediaz"];
+
+  var TASKS = [
+    { id:"lock-rmonroe",    label:"Lock account rmonroe (Renata Monroe)",       check:function(){return ACCOUNTS.rmonroe.locked;} },
+    { id:"lock-darmstrong", label:"Lock account darmstrong (Desmond Armstrong)",check:function(){return ACCOUNTS.darmstrong.locked;} },
+    { id:"lock-pchaudhry",  label:"Lock account pchaudhry (Priya Chaudhry)",    check:function(){return ACCOUNTS.pchaudhry.locked;} },
+    { id:"unlock-kobrien",  label:"Unlock account kobrien (Kelsey O'Brien)",    check:function(){return !ACCOUNTS.kobrien.locked;} },
+    { id:"unlock-tnakamura",label:"Unlock account tnakamura (Toshiro Nakamura)",check:function(){return !ACCOUNTS.tnakamura.locked;} },
+    { id:"unlock-ediaz",    label:"Unlock account ediaz (Esteban Diaz)",        check:function(){return !ACCOUNTS.ediaz.locked;} },
+    { id:"view-shadow",     label:"Inspect /etc/shadow to verify the changes",  check:function(){return STATE.shadowViewed;} }
+  ];
+
+  var QUESTIONS = [
+    {
+      id:"q1",
+      prompt:"Which usermod option disables password login by inserting an exclamation mark in front of the stored hash?",
+      options:[ {v:"-L",label:"<code>-L</code>"}, {v:"-d",label:"<code>-d</code>"}, {v:"-e",label:"<code>-e</code>"}, {v:"-G",label:"<code>-G</code>"} ],
+      answer:"-L",
+      explain:"usermod -L locks the account by prefixing the /etc/shadow hash with '!'."
+    },
+    {
+      id:"q2",
+      prompt:"After an account is locked, what single character appears at the very start of its password field in /etc/shadow?",
+      options:[ {v:"*",label:"<code>*</code>"}, {v:"!",label:"<code>!</code> (exclamation mark)"}, {v:"x",label:"<code>x</code>"}, {v:":",label:"<code>:</code>"} ],
+      answer:"!",
+      explain:"A leading '!' makes the stored hash impossible to match, so password authentication fails."
+    },
+    {
+      id:"q3",
+      prompt:"Which passwd flag re-enables an account in the same way as usermod -U?",
+      options:[ {v:"-u",label:"<code>-u</code>"}, {v:"-l",label:"<code>-l</code>"}, {v:"-S",label:"<code>-S</code>"}, {v:"-x",label:"<code>-x</code>"} ],
+      answer:"-u",
+      explain:"passwd -u (unlock) removes the '!' that passwd -l / usermod -L added."
+    },
+    {
+      id:"q4",
+      prompt:"True or false: locking an account this way blocks future password logins but does not, on its own, terminate existing sessions or revoke SSH key access.",
+      options:[ {v:"true",label:"True"}, {v:"false",label:"False"} ],
+      answer:"true",
+      explain:"Correct — locking only invalidates the password hash. Active sessions and key-based auth must be handled separately."
+    }
+  ];
+
+  /* ---------------- RUNTIME STATE ---------------- */
+  var STATE = { shadowViewed:false, history:[], histIdx:-1, answers:{} };
+
+  /* ---------------- DOM refs ---------------- */
+  var term = document.getElementById("term");
+  var form = document.getElementById("cmdform");
+  var input = document.getElementById("cmd");
+  var checklistEl = document.getElementById("checklist");
+  var accttbody = document.getElementById("accttbody");
+  var quizEl = document.getElementById("quiz");
+  var scorebox = document.getElementById("scorebox");
+  var hackerEl = document.getElementById("hacker");
+  var submitBtn = document.getElementById("submitbtn");
+  var resetBtn = document.getElementById("resetbtn");
+  var statusEl = document.getElementById("status");
+
+  /* ---------------- terminal helpers ---------------- */
+  function line(text, cls){
+    var span = document.createElement("span");
+    span.className = "l" + (cls ? " " + cls : "");
+    span.textContent = text;
+    term.appendChild(span);
+    term.scrollTop = term.scrollHeight;
+  }
+  function blank(){ line(""); }
+
+  function banner(){
+    line("Tidewater Marine Analytics — shore file server", "dim");
+    line("twma-fileserver01  (Linux 6.1.0)  ttyS0", "dim");
+    line("Logged in as root. Type 'help' to list commands.", "muted");
+    blank();
+  }
+
+  var HELP = [
+    ["help",                         "Show this command list"],
+    ["whoami",                       "Print the effective user"],
+    ["ls /home",                     "List user home directories"],
+    ["passwd -S <user>",             "Show an account's lock status"],
+    ["usermod -L <user>",            "Lock an account (disable password login)"],
+    ["usermod -U <user>",            "Unlock an account"],
+    ["passwd -l <user>",             "Lock an account (alternative to usermod -L)"],
+    ["passwd -u <user>",             "Unlock an account (alternative to usermod -U)"],
+    ["cat /etc/shadow",              "View the shadow password file"],
+    ["clear",                        "Clear the screen"]
+  ];
+
+  function printHelp(){
+    line("Available commands:", "head");
+    HELP.forEach(function(h){
+      line("  " + pad(h[0], 22) + h[1], "muted");
+    });
+    line("  ('sudo' is accepted but you are already root.)", "dim");
+    blank();
+  }
+  function pad(s,n){ s=String(s); while(s.length<n) s+=" "; return s; }
+
+  function shadowField(a){
+    if(a.nopass) return a.hash;            // '*' for service accounts
+    return (a.locked ? "!" : "") + a.hash;
+  }
+  function printShadow(){
+    line("# cat /etc/shadow", "dim");
+    SHADOW_ORDER.forEach(function(u){
+      var a = ACCOUNTS[u];
+      // user:password:lastchg:min:max:warn:inactive:expire:
+      line(u + ":" + shadowField(a) + ":19876:0:99999:7:::", a.locked && !a.nopass ? "err" : "you");
+    });
+    blank();
+    STATE.shadowViewed = true;
+    refresh();
+  }
+
+  function statusLine(u){
+    var a = ACCOUNTS[u];
+    if(a.locked) line(u + " L 2026-05-14 0 99999 7 -1 (Password locked.)", "muted");
+    else         line(u + " P 2026-05-14 0 99999 7 -1 (Password set, SHA512 crypt.)", "muted");
+  }
+
+  function exists(u){ return Object.prototype.hasOwnProperty.call(ACCOUNTS, u); }
+
+  function setLock(u, locked, viaPasswd){
+    var a = ACCOUNTS[u];
+    a.locked = locked;
+    if(viaPasswd){
+      line("passwd: password expiry information changed.", "muted");
+    } // usermod is silent on success, like the real tool
+    refresh();
+  }
+
+  /* ---------------- command parser ---------------- */
+  function run(raw){
+    var cmd = raw.trim();
+    line("root@" + CONFIG.hostname + ":~# " + cmd, "prompt");
+    if(!cmd){ return; }
+    STATE.history.push(cmd); STATE.histIdx = STATE.history.length;
+
+    // allow a leading sudo
+    var noted = false;
+    cmd = cmd.replace(/^sudo\s+/, function(){ noted = true; return ""; });
+    if(noted) line("(you are already root)", "dim");
+
+    var parts = cmd.split(/\s+/).filter(Boolean);
+    var c = parts[0];
+
+    if(c === "help"){ printHelp(); return; }
+    if(c === "clear"){ term.innerHTML = ""; return; }
+    if(c === "whoami"){ line("root", "you"); blank(); return; }
+
+    if(c === "ls"){
+      if(parts[1] && parts[1] !== "/home" && parts[1] !== "/home/"){ line("ls: cannot access '"+parts[1]+"': listing /home instead","dim"); }
+      var homes = Object.keys(ACCOUNTS).filter(function(u){ return !ACCOUNTS[u].hidden || u==="opsadmin"; });
+      // show real human users only
+      homes = ["rmonroe","darmstrong","pchaudhry","kobrien","tnakamura","ediaz","opsadmin"];
+      line(homes.join("  "), "accent"); blank(); return;
+    }
+
+    if(c === "cat"){
+      if(parts[1] === "/etc/shadow"){ printShadow(); return; }
+      line("cat: " + (parts[1]||"") + ": No such file or directory (this lab only models /etc/shadow)", "err"); blank(); return;
+    }
+
+    if(c === "getent"){
+      if(parts[1] === "shadow" && parts[2]){
+        if(!exists(parts[2])){ line("(no entry)","dim"); blank(); return; }
+        var a=ACCOUNTS[parts[2]]; line(parts[2]+":"+shadowField(a)+":19876:0:99999:7:::", a.locked?"err":"you"); blank(); return;
+      }
+      line("usage: getent shadow <user>","dim"); blank(); return;
+    }
+
+    if(c === "passwd"){
+      var opt = parts[1], user = parts[2];
+      if(opt === "-S" && user){ if(!exists(user)){nouser("passwd",user);return;} statusLine(user); blank(); return; }
+      if(opt === "-l" && user){ if(!exists(user)){nouser("passwd",user);return;} setLock(user,true,true); blank(); return; }
+      if(opt === "-u" && user){ if(!exists(user)){nouser("passwd",user);return;} setLock(user,false,true); blank(); return; }
+      line("usage: passwd [-l | -u | -S] <user>", "dim"); blank(); return;
+    }
+
+    if(c === "usermod"){
+      var o = parts[1], usr = parts[2];
+      // normalize long options
+      if(o === "--lock") o = "-L";
+      if(o === "--unlock") o = "-U";
+      if(o === "-L" && usr){ if(!exists(usr)){nouser("usermod",usr);return;} setLock(usr,true,false); blank(); return; }
+      if(o === "-U" && usr){ if(!exists(usr)){nouser("usermod",usr);return;} setLock(usr,false,false); blank(); return; }
+      line("usermod: invalid usage. Try: usermod -L <user>  /  usermod -U <user>", "err"); blank(); return;
+    }
+
+    line(c + ": command not found. Type 'help' for the list.", "err"); blank();
+  }
+
+  function nouser(tool,u){ line(tool + ": user '" + u + "' does not exist", "err"); blank(); }
+
+  /* ---------------- side panels ---------------- */
+  function buildChecklist(){
+    checklistEl.innerHTML = "";
+    TASKS.forEach(function(t){
+      var li = document.createElement("li");
+      li.id = "task-" + t.id;
+      li.innerHTML = '<span class="box" aria-hidden="true"></span><span>' + escapeHtml(t.label) + '</span>';
+      checklistEl.appendChild(li);
+    });
+  }
+  function buildAccountTable(){
+    accttbody.innerHTML = "";
+    Object.keys(ACCOUNTS).forEach(function(u){
+      var a = ACCOUNTS[u];
+      if(!a.target) return;
+      var tr = document.createElement("tr");
+      tr.innerHTML = '<td class="u">' + u + '</td><td>' + escapeHtml(a.person) +
+        '</td><td id="state-' + u + '"></td>';
+      accttbody.appendChild(tr);
+    });
+  }
+  function buildQuiz(){
+    quizEl.innerHTML = "";
+    QUESTIONS.forEach(function(q){
+      var wrap = document.createElement("div");
+      wrap.className = "q"; wrap.id = "q-" + q.id;
+      var html = '<p class="p" id="qp-'+q.id+'">' + escapeHtml(q.prompt) + '</p><div class="opts" role="radiogroup" aria-labelledby="qp-'+q.id+'">';
+      q.options.forEach(function(o,i){
+        var oid = q.id + "-" + i;
+        html += '<label class="opt" for="'+oid+'"><input type="radio" id="'+oid+'" name="'+q.id+'" value="'+escapeAttr(o.v)+'"><span>'+o.label+'</span></label>';
+      });
+      html += '</div><div class="fb" aria-live="polite"></div>';
+      wrap.innerHTML = html;
+      quizEl.appendChild(wrap);
+    });
+    quizEl.addEventListener("change", function(e){
+      if(e.target && e.target.name){
+        STATE.answers[e.target.name] = e.target.value;
+        gradeQuestion(e.target.name);
+        refresh();
+      }
+    });
+  }
+  function gradeQuestion(qid){
+    var q = QUESTIONS.filter(function(x){return x.id===qid;})[0];
+    if(!q) return;
+    var wrap = document.getElementById("q-"+qid);
+    var fb = wrap.querySelector(".fb");
+    var chosen = STATE.answers[qid];
+    if(chosen == null){ wrap.className="q"; fb.textContent=""; return; }
+    if(chosen === q.answer){ wrap.className="q correct"; fb.textContent = "Correct. " + q.explain; }
+    else { wrap.className="q wrong"; fb.textContent = "Not quite — try again."; }
+  }
+
+  /* ---------------- scoring + refresh ---------------- */
+  function tasksPassed(){ return TASKS.filter(function(t){return t.check();}); }
+  function questionsCorrect(){ return QUESTIONS.filter(function(q){return STATE.answers[q.id]===q.answer;}); }
+
+  function refresh(){
+    // checklist
+    TASKS.forEach(function(t){
+      var li = document.getElementById("task-"+t.id);
+      var done = t.check();
+      li.className = done ? "done" : "";
+      li.querySelector(".box").textContent = done ? "✓" : "";
+    });
+    // account table
+    Object.keys(ACCOUNTS).forEach(function(u){
+      var a = ACCOUNTS[u]; if(!a.target) return;
+      var cell = document.getElementById("state-"+u);
+      if(!cell) return;
+      cell.innerHTML = a.locked
+        ? '<span class="pill locked">● locked</span>'
+        : '<span class="pill open">● active</span>';
+    });
+    // score
+    var earned = tasksPassed().length + questionsCorrect().length;
+    var total = TASKS.length + QUESTIONS.length;
+    scorebox.innerHTML = earned + " / " + total + "<small>SCORE</small>";
+    submitBtn.disabled = hackerEl.value.trim().length === 0;
+  }
+
+  /* ---------------- PNG capture (dependency-free) ----------------
+     Prefers html2canvas if an instructor pasted it; otherwise draws
+     a completion-evidence card with the Canvas 2D API. Always returns
+     a PNG data URL.                                                  */
+  function capturePng(){
+    if(window.html2canvas){
+      return window.html2canvas(document.querySelector(".wrap"), {backgroundColor:"#0a0e17", scale:1})
+        .then(function(c){ return c.toDataURL("image/png"); })
+        .catch(function(){ return evidenceCard(); });
+    }
+    return Promise.resolve(evidenceCard());
+  }
+
+  function evidenceCard(){
+    var W=900, H=620, c=document.createElement("canvas");
+    c.width=W; c.height=H; var x=c.getContext("2d");
+    x.fillStyle="#0a0e17"; x.fillRect(0,0,W,H);
+    x.fillStyle="#0e1422"; x.fillRect(0,0,W,70);
+    x.fillStyle="#5ad2a6"; x.font="bold 22px monospace";
+    x.fillText("Security+ Lab — Completion Evidence", 28, 44);
+    x.fillStyle="#9aa7bd"; x.font="12px monospace";
+    x.fillText(CONFIG.assignmentId + "  |  obj " + CONFIG.objectives.join(", ") + "  |  host " + CONFIG.hostname, 28, 60);
+
+    var y=104;
+    x.fillStyle="#e8edf6"; x.font="14px monospace";
+    x.fillText("Hacker name: " + (hackerEl.value.trim() || "(unset)"), 28, y); y+=22;
+    x.fillText("Client time:  " + new Date().toISOString(), 28, y); y+=30;
+
+    x.fillStyle="#6aa6ff"; x.font="bold 13px monospace";
+    x.fillText("TASKS", 28, y); y+=20;
+    x.font="13px monospace";
+    TASKS.forEach(function(t){
+      var ok=t.check();
+      x.fillStyle= ok ? "#5ad2a6" : "#f0707f";
+      x.fillText((ok?"[x] ":"[ ] ") + t.label, 40, y); y+=19;
+    });
+    y+=12;
+    x.fillStyle="#6aa6ff"; x.font="bold 13px monospace";
+    x.fillText("KNOWLEDGE CHECK", 28, y); y+=20;
+    x.font="13px monospace";
+    QUESTIONS.forEach(function(q){
+      var ok = STATE.answers[q.id]===q.answer;
+      x.fillStyle= ok ? "#5ad2a6" : "#f0707f";
+      var chosen = STATE.answers[q.id]==null ? "—" : STATE.answers[q.id];
+      x.fillText((ok?"[x] ":"[ ] ") + q.id + "  answer: " + chosen, 40, y); y+=19;
+    });
+
+    var earned = tasksPassed().length + questionsCorrect().length;
+    var total = TASKS.length + QUESTIONS.length;
+    y+=18; x.fillStyle="#e8edf6"; x.font="bold 18px monospace";
+    x.fillText("SCORE  " + earned + " / " + total, 28, y);
+
+    x.fillStyle="#6b7891"; x.font="11px monospace";
+    x.fillText("© 2026 [AUTHOR] — original clean-room lab. Self-reported formative evidence.", 28, H-22);
+    return c.toDataURL("image/png");
+  }
+
+  /* ---------------- submission ---------------- */
+  function buildPayload(png){
+    return {
+      assignmentId: CONFIG.assignmentId,
+      hackerName: hackerEl.value.trim().slice(0,40),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(function(t){ return { id:t.id, label:t.label, passed:t.check() }; }),
+      questions: QUESTIONS.map(function(q){
+        var ans = STATE.answers[q.id] != null ? STATE.answers[q.id] : "";
+        return { id:q.id, prompt:q.prompt, answer:ans, correct: ans===q.answer };
+      }),
+      score: { earned: tasksPassed().length + questionsCorrect().length, total: TASKS.length + QUESTIONS.length },
+      screenshot: png,
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  function setStatus(msg, kind){ statusEl.textContent=""; statusEl.className="status "+(kind||""); statusEl.appendChild(document.createTextNode(msg)); }
+  function setStatusLink(msg, url){
+    statusEl.textContent=""; statusEl.className="status ok";
+    statusEl.appendChild(document.createTextNode(msg + " "));
+    var a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener"; a.textContent="Open submission document";
+    statusEl.appendChild(a);
+  }
+
+  async function submit(){
+    if(hackerEl.value.trim().length===0){ setStatus("Enter a hacker name first.","err"); hackerEl.focus(); return; }
+    if(CONFIG.APPS_SCRIPT_URL.indexOf("REPLACE_WITH") !== -1){
+      setStatus("This lab has not been configured yet — the instructor must set APPS_SCRIPT_URL and the cohort token.","err");
+      return;
+    }
+    submitBtn.disabled=true;
+    setStatus("Capturing your work and uploading…","work");
+    try{
+      var png = await capturePng();
+      var payload = buildPayload(png);
+      // Simple request: no custom headers, body is a string -> no CORS preflight.
+      var res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      var out = await res.json();
+      if(out && out.success){
+        if(out.docUrl) setStatusLink("Submitted. Your instructor has received it.", out.docUrl);
+        else setStatus("Submitted. Your instructor has received it.","ok");
+      } else {
+        setStatus("The server rejected the submission: " + ((out&&out.error)||"unknown error") + ". Check with your instructor.","err");
+        submitBtn.disabled=false;
+      }
+    } catch(err){
+      // Fall back to fire-and-forget if the response can't be read in a locked-down context.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(buildPayload(await capturePng())) });
+        setStatus("Submission sent, but this browser blocked the confirmation. Confirm receipt with your instructor.","work");
+      } catch(e2){
+        setStatus("Could not reach the submission server. Check your connection or contact your instructor. ("+(err&&err.message||err)+")","err");
+        submitBtn.disabled=false;
+      }
+    }
+  }
+
+  /* ---------------- reset ---------------- */
+  function resetLab(){
+    ACCOUNTS = JSON.parse(JSON.stringify(INITIAL));
+    STATE = { shadowViewed:false, history:[], histIdx:-1, answers:{} };
+    term.innerHTML=""; banner();
+    QUESTIONS.forEach(function(q){
+      var w=document.getElementById("q-"+q.id); if(w){ w.className="q"; w.querySelector(".fb").textContent=""; }
+    });
+    Array.prototype.forEach.call(quizEl.querySelectorAll("input[type=radio]"), function(r){ r.checked=false; });
+    setStatus("","");
+    refresh();
+    input.focus();
+  }
+
+  /* ---------------- utils ---------------- */
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m];}); }
+  function escapeAttr(s){ return escapeHtml(s).replace(/'/g,"&#39;"); }
+
+  /* ---------------- wire up ---------------- */
+  form.addEventListener("submit", function(e){ e.preventDefault(); var v=input.value; input.value=""; run(v); });
+  input.addEventListener("keydown", function(e){
+    if(e.key==="ArrowUp"){ if(STATE.history.length){ STATE.histIdx=Math.max(0,STATE.histIdx-1); input.value=STATE.history[STATE.histIdx]||""; e.preventDefault(); } }
+    else if(e.key==="ArrowDown"){ if(STATE.history.length){ STATE.histIdx=Math.min(STATE.history.length,STATE.histIdx+1); input.value=STATE.history[STATE.histIdx]||""; e.preventDefault(); } }
+  });
+  hackerEl.addEventListener("input", refresh);
+  submitBtn.addEventListener("click", submit);
+  resetBtn.addEventListener("click", resetLab);
+
+  buildChecklist(); buildAccountTable(); buildQuiz();
+  banner(); refresh();
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-linux-passwd-rotate.html",title:"Lab \u2014 Rotate Your Linux Account Password"}, NEXT={href:"splus-ad-ou-structure.html",title:"Build an Active Directory OU Structure \u2014 Security+ Lab"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

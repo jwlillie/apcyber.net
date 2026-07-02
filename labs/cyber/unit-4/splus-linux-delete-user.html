@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Offboarding: Remove a Departed Linux User — Security+ Lab</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-linux-delete-user",
+  "title": "Offboarding: Remove a Departed Linux User — Security+ Lab",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  =====================================================================
+  Security+ (SY0-701) Single-File Simulation Lab
+  Lab: Offboarding — Remove a Departed Linux User
+  assignmentId: splus-linux-delete-user
+  SY0-701 objective: 4.6 (Implement and maintain IAM —
+                     Provisioning/de-provisioning user accounts)
+
+  © 2026 {{AUTHOR}}. All rights reserved.
+  Built clean-room from the public SY0-701 objective and documented
+  Linux behavior (userdel(8), passwd(5)). Original scenario, persona,
+  usernames, paths, values, and question wording. Not derived from any
+  vendor's lab content, screenshots, or phrasing.
+  Replace {{AUTHOR}} with your name/institution before distribution.
+  =====================================================================
+-->
+<style id="lab-styles">
+  :root{
+    --bg:#e9ebf0; --ink:#1b1f27; --muted:#5b6472; --card:#ffffff;
+    --line:#d3d8e0; --line-strong:#b9c0cb;
+    --term-bg:#14171e; --term-ink:#cfd6e0; --term-dim:#717b88;
+    --amber:#e0a24a; --green:#4fb286; --red:#d96b5b; --focus:#3a6df0;
+    --paper:#f6f3ea; --stamp-open:#c8503f; --stamp-closed:#3f8f6a;
+    --font-ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--font-ui);
+    line-height:1.5; -webkit-font-smoothing:antialiased; padding:24px 16px 120px;
+  }
+  a{color:var(--focus)}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header.masthead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:18px}
+  .masthead .obj{font-family:var(--font-mono);font-size:12px;letter-spacing:.04em;color:#fff;background:#2c3340;
+    padding:3px 9px;border-radius:999px}
+  .masthead h1{font-size:clamp(20px,3.2vw,28px);margin:0;font-weight:680;letter-spacing:-.01em}
+  .masthead .sub{color:var(--muted);font-size:14px;width:100%}
+
+  .lab{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:880px){.lab{grid-template-columns:1fr}}
+
+  /* ---- left rail ---- */
+  .rail{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+
+  /* signature: work order ticket */
+  .ticket{background:var(--paper);border:1px solid #e3dcc8;position:relative;overflow:hidden}
+  .ticket::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:repeating-linear-gradient(
+    45deg,#d8cba6 0 8px,#cdbf95 8px 16px)}
+  .ticket .tk-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-left:8px}
+  .ticket .tk-meta{font-family:var(--font-mono);font-size:11.5px;color:#8a7f5f;letter-spacing:.03em}
+  .ticket h2{font-size:16px;margin:2px 0 8px;padding-left:8px}
+  .ticket p{margin:0 0 10px;padding-left:8px;font-size:14px;color:#3f4233}
+  .stamp{font-family:var(--font-mono);font-weight:700;font-size:13px;letter-spacing:.12em;
+    border:2.5px solid var(--stamp-open);color:var(--stamp-open);border-radius:6px;padding:4px 10px;
+    transform:rotate(-6deg);white-space:nowrap;transition:color .25s,border-color .25s}
+  .stamp[data-state="closed"]{border-color:var(--stamp-closed);color:var(--stamp-closed)}
+
+  h3.sec{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+
+  ul.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  ul.tasks li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+  .chk{flex:0 0 auto;width:20px;height:20px;border-radius:6px;border:2px solid var(--line-strong);
+    display:grid;place-items:center;margin-top:1px;transition:background .2s,border-color .2s}
+  .chk svg{width:12px;height:12px;opacity:0;transition:opacity .2s}
+  li.done .chk{background:var(--green);border-color:var(--green)}
+  li.done .chk svg{opacity:1}
+  li.done .t-label{color:var(--muted)}
+  .t-label code{font-family:var(--font-mono);font-size:12.5px;background:#eef1f5;padding:1px 5px;border-radius:4px}
+
+  .q{padding:12px 0;border-top:1px solid var(--line)}
+  .q:first-of-type{border-top:0;padding-top:0}
+  .q .prompt{font-size:14px;margin-bottom:8px;font-weight:560}
+  .q .prompt .qn{font-family:var(--font-mono);color:var(--muted);margin-right:6px}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opts label{display:flex;gap:8px;align-items:center;font-size:13.5px;padding:6px 8px;border:1px solid var(--line);
+    border-radius:7px;cursor:pointer}
+  .opts label:hover{border-color:var(--line-strong)}
+  .opts input{accent-color:var(--focus)}
+  input.text{font-family:var(--font-mono);font-size:13.5px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:7px;width:100%;background:#fff}
+  .verdict{font-size:12px;margin-top:6px;min-height:15px;font-family:var(--font-mono)}
+  .verdict.ok{color:var(--green)} .verdict.no{color:var(--red)}
+
+  /* ---- terminal ---- */
+  .console{background:var(--term-bg);border-radius:var(--radius);border:1px solid #0c0e13;overflow:hidden;
+    display:flex;flex-direction:column;min-height:520px}
+  .console .bar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#1b1f28;border-bottom:1px solid #0c0e13}
+  .console .dots{display:flex;gap:6px}
+  .console .dots i{width:11px;height:11px;border-radius:50%;display:block}
+  .dots i:nth-child(1){background:#e0655a}.dots i:nth-child(2){background:#e0b24a}.dots i:nth-child(3){background:#4fb286}
+  .console .title{font-family:var(--font-mono);font-size:12px;color:var(--term-dim);margin-left:4px}
+  .screen{flex:1;overflow-y:auto;padding:12px 14px;font-family:var(--font-mono);font-size:13px;
+    color:var(--term-ink);white-space:pre-wrap;word-break:break-word}
+  .screen .line{margin:0}
+  .screen .dim{color:var(--term-dim)}
+  .screen .amber{color:var(--amber)}
+  .screen .green{color:var(--green)}
+  .screen .red{color:var(--red)}
+  .promptline{display:flex;align-items:center;padding:8px 14px;border-top:1px solid #0c0e13;background:#11141a}
+  .promptline .ps1{font-family:var(--font-mono);font-size:13px;color:var(--amber);margin-right:8px;white-space:nowrap}
+  .promptline input{flex:1;background:transparent;border:0;outline:0;color:var(--term-ink);
+    font-family:var(--font-mono);font-size:13px}
+  .console .hint{font-family:var(--font-mono);font-size:11.5px;color:var(--term-dim);padding:6px 14px;border-top:1px solid #0c0e13}
+
+  /* ---- submission bar ---- */
+  .subbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line-strong);
+    box-shadow:0 -4px 18px rgba(20,30,50,.06);z-index:20}
+  .subbar .inner{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 16px}
+  .subbar label{font-size:13px;color:var(--muted)}
+  .subbar input[type=text]{font-family:var(--font-mono);font-size:14px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:7px;min-width:200px}
+  .score{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+  .score b{color:var(--ink)}
+  .btn{font:inherit;font-weight:600;font-size:14px;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}
+  .btn-primary{background:var(--ink);color:#fff}
+  .btn-primary:hover{background:#2c3340}
+  .btn-primary:disabled{background:#aeb6c2;cursor:not-allowed}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .btn-ghost:hover{border-color:var(--line-strong);color:var(--ink)}
+  .status{font-size:13px;flex-basis:100%;font-family:var(--font-mono)}
+  .status.ok{color:var(--stamp-closed)} .status.no{color:var(--red)} .status.busy{color:var(--muted)}
+  .status a{font-weight:600}
+
+  footer.legal{max-width:1180px;margin:20px auto 0;font-size:11.5px;color:var(--muted)}
+
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+  <header class="masthead">
+    <span class="obj">SY0-701 · 4.6</span>
+    <h1>Offboarding: Remove a Departed Linux User</h1>
+    <span class="sub">De-provisioning a user account · file server <code>calderon-fs</code> · you are signed in as <b>acalderon</b> (sudo)</span>
+  </header>
+
+  <div class="lab" id="labArea">
+    <!-- LEFT RAIL -->
+    <div class="rail">
+
+      <!-- signature: offboarding work order -->
+      <section class="card ticket" aria-labelledby="wo-h">
+        <div class="tk-head">
+          <div>
+            <div class="tk-meta">WORK ORDER · OFFB-2026-0488</div>
+            <h2 id="wo-h">Account closure — Yusuf Bello</h2>
+          </div>
+          <div class="stamp" id="stamp" data-state="open" role="status" aria-live="polite">OPEN</div>
+        </div>
+        <p>Yusuf Bello (<code>ybello</code>) has left Calderon Robotics. HR has confirmed his
+        files were already copied off by his team lead. Per the offboarding policy, a departed
+        worker's local account must be removed <b>completely</b>, including the home directory,
+        so nothing is left behind to be misused.</p>
+        <p style="margin-bottom:0"><b>Your job:</b> delete the account and its home directory, then
+        verify the removal in <code>/etc/passwd</code> and <code>/home</code> using the terminal.</p>
+      </section>
+
+      <!-- tasks -->
+      <section class="card" aria-labelledby="tk-h">
+        <h3 class="sec" id="tk-h">Task checklist</h3>
+        <ul class="tasks" id="taskList"></ul>
+      </section>
+
+      <!-- questions -->
+      <section class="card" aria-labelledby="q-h">
+        <h3 class="sec" id="q-h">Knowledge check</h3>
+        <div id="questionList"></div>
+      </section>
+    </div>
+
+    <!-- TERMINAL -->
+    <section class="console" aria-label="Terminal">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span>
+        <span class="title">acalderon@calderon-fs: ~</span></div>
+      <div class="screen" id="screen" role="log" aria-live="polite" tabindex="0"></div>
+      <div class="promptline">
+        <span class="ps1" id="ps1">acalderon@calderon-fs:~$</span>
+        <input id="cmd" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+               aria-label="Terminal command input" placeholder="type a command — try: help">
+      </div>
+      <div class="hint">Tip: <code>help</code> lists commands · <code>↑/↓</code> recalls history</div>
+    </section>
+  </div>
+
+  <footer class="legal">
+    © 2026 {{AUTHOR}} · Original clean-room simulation for CompTIA Security+ (SY0-701) objective 4.6.
+    Procedures are factual; scenario, names, paths, and wording are this author's own work.
+  </footer>
+</div>
+
+<!-- SUBMISSION BAR -->
+<div class="subbar">
+  <div class="inner">
+    <label for="hacker">Hacker name</label>
+    <input id="hacker" type="text" maxlength="40" placeholder="e.g. nullroute" autocomplete="off"
+           aria-label="Hacker name (pseudonym, no real names)">
+    <span class="score" id="scoreBox">Score <b>0</b>/<b id="totBox">0</b></span>
+    <button class="btn btn-primary" id="submitBtn" disabled>Submit completed lab</button>
+    <button class="btn btn-ghost" id="resetBtn" type="button">Reset lab</button>
+    <span class="status busy" id="status">Enter a hacker name to enable submission.</span>
+  </div>
+</div>
+
+<!-- ====================  SCREENSHOT CAPTURE  ====================
+  Dependency-free PNG capture via SVG <foreignObject>. The master build
+  prompt calls for an inlined html2canvas; that minified source could not
+  be fetched in this offline build environment, and this self-contained
+  routine needs no external library, satisfying the zero-dependency rule.
+  To use html2canvas instead, paste its minified source here and point
+  captureScreenshot() at it.
+  ============================================================== -->
+<script>
+async function captureScreenshot(node){
+  // freeze input values into attributes so they serialize
+  node.querySelectorAll('input').forEach(function(i){
+    if(i.type==='text'){ i.setAttribute('value', i.value); }
+    if(i.type==='radio'){ i.checked ? i.setAttribute('checked','') : i.removeAttribute('checked'); }
+  });
+  const rect = node.getBoundingClientRect();
+  const w = Math.ceil(rect.width);
+  const h = Math.ceil(Math.max(rect.height, node.scrollHeight));
+  const css = document.getElementById('lab-styles').textContent;
+  const clone = node.cloneNode(true);
+  const xml = new XMLSerializer().serializeToString(clone);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject x="0" y="0" width="100%" height="100%">'+
+        '<div xmlns="http://www.w3.org/1999/xhtml" style="background:#e9ebf0;padding:8px;width:'+w+'px">'+
+          '<style>'+css+'</style>'+ xml +
+        '</div>'+
+      '</foreignObject>'+
+    '</svg>';
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  try{
+    const img = await new Promise(function(res,rej){
+      const im = new Image(); im.onload=function(){res(im)}; im.onerror=rej; im.src=url;
+    });
+    const scale = Math.min(2, (window.devicePixelRatio||1));
+    const canvas = document.createElement('canvas');
+    canvas.width = w*scale; canvas.height = h*scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale,scale);
+    ctx.fillStyle = '#e9ebf0'; ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img,0,0);
+    return canvas.toDataURL('image/png');
+  } finally { URL.revokeObjectURL(url); }
+}
+</script>
+
+<!-- ====================  ENGINE + CONFIG + ANSWER KEY  ==================== -->
+<script>
+(function(){
+"use strict";
+
+/* ---------- LAB CONFIG ---------- */
+const CONFIG = {
+  assignmentId: "splus-linux-delete-user",
+  title: "Offboarding: Remove a Departed Linux User",
+  objectives: ["4.6"],
+  author: "{{AUTHOR}}",
+  // Same /exec URL across the whole library. Replace before distribution.
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "REPLACE_WITH_COHORT_TOKEN"
+};
+
+/* ---------- simulated system state ---------- */
+const TARGET = { user:"ybello", name:"Yusuf Bello", uid:1001 };
+
+function freshState(){
+  return {
+    passwd:[
+      {u:"root",       uid:0,    gid:0,    info:"root",           home:"/root",       shell:"/bin/bash"},
+      {u:"daemon",     uid:1,    gid:1,    info:"daemon",         home:"/usr/sbin",   shell:"/usr/sbin/nologin"},
+      {u:"sshd",       uid:110,  gid:65534,info:"",               home:"/run/sshd",   shell:"/usr/sbin/nologin"},
+      {u:"acalderon",  uid:1000, gid:1000, info:"Ana Calderon",   home:"/home/acalderon", shell:"/bin/bash"},
+      {u:"ybello",     uid:1001, gid:1001, info:"Yusuf Bello",    home:"/home/ybello",    shell:"/bin/bash"},
+      {u:"pnguyen",    uid:1002, gid:1002, info:"Priya Nguyen",   home:"/home/pnguyen",   shell:"/bin/bash"},
+      {u:"svc-backup", uid:1003, gid:1003, info:"Backup Service", home:"/home/svc-backup",shell:"/usr/sbin/nologin"}
+    ],
+    home:["acalderon","ybello","pnguyen","svc-backup"],
+    accountRemoved:false,
+    homeRemoved:false,
+    seenPasswdClean:false,
+    seenHomeClean:false,
+    history:[]
+  };
+}
+let S = freshState();
+
+/* ---------- tasks ---------- */
+const TASKS = [
+  {id:"remove",        label:"Delete the ybello account and its home directory in one step",
+                       pass:()=> S.accountRemoved && S.homeRemoved},
+  {id:"verify-passwd", label:"View /etc/passwd and confirm ybello is gone",
+                       pass:()=> S.seenPasswdClean},
+  {id:"verify-home",   label:"View /home and confirm /home/ybello no longer exists",
+                       pass:()=> S.seenHomeClean}
+];
+
+/* ---------- questions + ANSWER KEY ---------- */
+const QUESTIONS = [
+  { id:"q1", type:"choice",
+    prompt:"Which option added to userdel deletes the account's home directory (and mail spool) along with the account?",
+    options:["-d","-r","-f","-m"], answer:"-r" },
+  { id:"q2", type:"text",
+    prompt:"Type the full path of the file you read to confirm the local account record was removed.",
+    answer:"/etc/passwd",
+    accept:(v)=> v.trim().replace(/\/+$/,"") === "/etc/passwd" },
+  { id:"q3", type:"choice",
+    prompt:"Closing a departed worker's account promptly is part of de-provisioning. The main security risk it reduces is:",
+    options:[
+      "an orphaned account being used for unauthorized access later",
+      "slower login times for remaining staff",
+      "higher disk usage on the file server",
+      "extra software-license cost"
+    ],
+    answer:"an orphaned account being used for unauthorized access later" }
+];
+
+/* ---------- DOM ---------- */
+const screenEl = document.getElementById("screen");
+const cmdEl    = document.getElementById("cmd");
+const taskList = document.getElementById("taskList");
+const qList    = document.getElementById("questionList");
+const stamp    = document.getElementById("stamp");
+const scoreB   = document.querySelector("#scoreBox b");
+const totBox   = document.getElementById("totBox");
+const hackerEl = document.getElementById("hacker");
+const submitBtn= document.getElementById("submitBtn");
+const resetBtn = document.getElementById("resetBtn");
+const statusEl = document.getElementById("status");
+
+/* ---------- terminal output ---------- */
+function out(text, cls){
+  const p = document.createElement("p");
+  p.className = "line" + (cls ? " "+cls : "");
+  p.textContent = text;
+  screenEl.appendChild(p);
+  screenEl.scrollTop = screenEl.scrollHeight;
+}
+function echoCmd(raw){ out("acalderon@calderon-fs:~$ " + raw, "amber"); }
+
+function banner(){
+  out("Calderon Robotics — file server 'calderon-fs'  (lab sandbox)","dim");
+  out("Signed in as acalderon. sudo is available. Type 'help' to begin.","dim");
+  out("");
+}
+
+/* ---------- command implementations ---------- */
+const HELP = [
+  "Available commands in this sandbox:",
+  "  help                      show this help",
+  "  whoami                    print the current user",
+  "  cat /etc/passwd           show local account records",
+  "  grep <name> /etc/passwd   search the account records",
+  "  ls /home                  list home directories",
+  "  ls -l /home               list home directories (detailed)",
+  "  id <user>                 show a user's ids",
+  "  userdel [options] <user>  delete a user account",
+  "  rm -rf <path>             remove a directory tree",
+  "  clear                     clear the screen"
+];
+
+function renderPasswdLines(filter){
+  let rows = S.passwd;
+  if(filter) rows = rows.filter(r => r.u.indexOf(filter) !== -1 ||
+                                     (r.info && r.info.toLowerCase().indexOf(filter.toLowerCase())!==-1));
+  rows.forEach(r => out(r.u+":x:"+r.uid+":"+r.gid+":"+r.info+":"+r.home+":"+r.shell));
+  return rows.length;
+}
+function userExists(name){ return S.passwd.some(r => r.u === name); }
+function removeUser(name){ S.passwd = S.passwd.filter(r => r.u !== name); }
+
+function cmd_userdel(args){
+  // collect flags + target
+  let flags = "", target = null;
+  args.forEach(a=>{
+    if(a.startsWith("--")){ if(a==="--remove") flags+="r"; if(a==="--force") flags+="f"; }
+    else if(a.startsWith("-")){ flags += a.slice(1); }
+    else { target = a; }
+  });
+  if(!target){ out("userdel: missing operand","red"); out("Try: userdel -r ybello","dim"); return; }
+  if(!userExists(target)){ out("userdel: user '"+target+"' does not exist","red"); return; }
+  if(target !== TARGET.user){
+    out("userdel: refusing in this lab — only the offboarding target ("+TARGET.user+") may be modified.","red");
+    return;
+  }
+  const withR = flags.indexOf("r") !== -1;
+  removeUser(target);
+  S.accountRemoved = true;
+  if(withR){
+    S.home = S.home.filter(h => h !== target);
+    S.homeRemoved = true;
+    out("# account '"+target+"' and /home/"+target+" removed","dim");
+  } else {
+    out("# account '"+target+"' removed, but /home/"+target+" was left in place","dim");
+    out("# policy requires removing the home directory too — rerun with -r, or: rm -rf /home/"+target,"dim");
+  }
+  refresh();
+}
+
+function cmd_rm(args){
+  const hasR = args.some(a => a.startsWith("-") && a.indexOf("r")!==-1);
+  const path = args.find(a => !a.startsWith("-"));
+  if(!path){ out("rm: missing operand","red"); return; }
+  if(path === "/home/"+TARGET.user || path === "/home/"+TARGET.user+"/"){
+    if(!hasR){ out("rm: cannot remove '"+path+"': Is a directory","red"); return; }
+    if(S.home.indexOf(TARGET.user) === -1){
+      out("rm: cannot remove '"+path+"': No such file or directory","red"); return;
+    }
+    S.home = S.home.filter(h => h !== TARGET.user);
+    S.homeRemoved = true;
+    out("# "+path+" removed","dim");
+    refresh(); return;
+  }
+  out("rm: refusing in this lab — that path is out of scope.","red");
+}
+
+function runCommand(raw){
+  const line = raw.trim();
+  echoCmd(raw);
+  if(line === ""){ return; }
+  S.history.push(raw);
+
+  // handle a single pipe to grep:  cat /etc/passwd | grep ybello
+  if(/\|\s*grep\s+/.test(line)){
+    const m = line.match(/\|\s*grep\s+(\S+)/);
+    const term = m ? m[1] : "";
+    if(/(^|\s)(cat|less|more)\s+\/etc\/passwd/.test(line)){
+      const n = renderPasswdLines(term);
+      if(n===0) out("");      // grep prints nothing when no match
+      if(!userExists(TARGET.user) && S.accountRemoved) S.seenPasswdClean = true;
+      refresh(); return;
+    }
+  }
+
+  const parts = line.split(/\s+/);
+  let cmd = parts[0], args = parts.slice(1);
+  if(cmd === "sudo"){ cmd = parts[1]; args = parts.slice(2); }   // accept sudo prefix
+
+  switch(cmd){
+    case "help": HELP.forEach(l=>out(l)); break;
+    case "whoami": out("acalderon"); break;
+    case "clear": screenEl.innerHTML = ""; break;
+    case "cat": case "less": case "more":
+      if(args[0]==="/etc/passwd"){
+        renderPasswdLines(null);
+        if(!userExists(TARGET.user) && S.accountRemoved) S.seenPasswdClean = true;
+        refresh();
+      } else if(args[0]) out(cmd+": "+args[0]+": No such file or directory","red");
+      else out(cmd+": missing file operand","red");
+      break;
+    case "grep":
+      if(args.includes("/etc/passwd")){
+        const term = args.find(a=>a!=="/etc/passwd");
+        const n = renderPasswdLines(term||"");
+        if(n===0) out("");
+        if(!userExists(TARGET.user) && S.accountRemoved) S.seenPasswdClean = true;
+        refresh();
+      } else out("grep: that file is out of scope in this lab","red");
+      break;
+    case "ls":
+      if(args.some(a=>a==="/home" || a==="/home/")){
+        const detailed = args.some(a=>a.startsWith("-") && a.indexOf("l")!==-1);
+        if(detailed){
+          out("total "+S.home.length);
+          S.home.forEach(h=>{
+            const rec = S.passwd.find(r=>r.u===h);
+            out("drwxr-xr-x 3 "+h+" "+h+" 4096 Jun 18 09:14 "+h);
+          });
+        } else {
+          out(S.home.join("  "));
+        }
+        if(S.home.indexOf(TARGET.user)===-1 && S.accountRemoved) S.seenHomeClean = true;
+        refresh();
+      } else if(args.length===0){
+        out("offboarding-notes.txt  policy.pdf");
+      } else out("ls: cannot access '"+args[0]+"': out of scope in this lab","red");
+      break;
+    case "id":
+      if(args[0]){
+        const r = S.passwd.find(x=>x.u===args[0]);
+        if(r) out("uid="+r.uid+"("+r.u+") gid="+r.gid+"("+r.u+") groups="+r.gid+"("+r.u+")");
+        else out("id: '"+args[0]+"': no such user","red");
+      } else out("uid=1000(acalderon) gid=1000(acalderon)");
+      break;
+    case "userdel": cmd_userdel(args); break;
+    case "rm": cmd_rm(args); break;
+    default: out(cmd+": command not found","red");
+  }
+}
+
+/* ---------- scoring / render ---------- */
+function gradeQuestion(q){
+  if(q.type==="choice"){
+    const sel = qList.querySelector('input[name="'+q.id+'"]:checked');
+    return { answer: sel ? sel.value : "", correct: sel ? sel.value===q.answer : false };
+  } else {
+    const inp = qList.querySelector('input[name="'+q.id+'"]');
+    const v = inp ? inp.value : "";
+    return { answer: v, correct: q.accept ? q.accept(v) : v.trim()===q.answer };
+  }
+}
+
+function refresh(){
+  // tasks
+  let tDone = 0;
+  TASKS.forEach(t=>{
+    const li = document.getElementById("task-"+t.id);
+    const ok = t.pass();
+    li.classList.toggle("done", ok);
+    if(ok) tDone++;
+  });
+  // questions
+  let qDone = 0;
+  QUESTIONS.forEach(q=>{
+    const g = gradeQuestion(q);
+    const v = document.getElementById("verdict-"+q.id);
+    if(g.answer===""){ v.textContent=""; v.className="verdict"; }
+    else if(g.correct){ v.textContent="✓ correct"; v.className="verdict ok"; qDone++; }
+    else { v.textContent="✗ not yet"; v.className="verdict no"; }
+  });
+  const earned = tDone + qDone;
+  const total  = TASKS.length + QUESTIONS.length;
+  scoreB.textContent = earned;
+  totBox.textContent = total;
+  const passed = earned === total;
+  stamp.dataset.state = passed ? "closed" : "open";
+  stamp.textContent  = passed ? "CLOSED" : "OPEN";
+  return { earned, total, passed };
+}
+
+/* ---------- build UI ---------- */
+function buildTasks(){
+  taskList.innerHTML = "";
+  TASKS.forEach(t=>{
+    const li = document.createElement("li");
+    li.id = "task-"+t.id;
+    li.innerHTML = '<span class="chk" aria-hidden="true"><svg viewBox="0 0 16 16">'+
+      '<path d="M3 8.5l3 3 7-7" fill="none" stroke="#fff" stroke-width="2.4" '+
+      'stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
+      '<span class="t-label"></span>';
+    li.querySelector(".t-label").textContent = t.label;
+    taskList.appendChild(li);
+  });
+}
+function buildQuestions(){
+  qList.innerHTML = "";
+  QUESTIONS.forEach((q,i)=>{
+    const wrap = document.createElement("div");
+    wrap.className = "q";
+    const p = document.createElement("div");
+    p.className = "prompt";
+    p.innerHTML = '<span class="qn">Q'+(i+1)+'</span>';
+    p.appendChild(document.createTextNode(q.prompt));
+    wrap.appendChild(p);
+    if(q.type==="choice"){
+      const box = document.createElement("div"); box.className="opts";
+      q.options.forEach((opt,j)=>{
+        const id = q.id+"_"+j;
+        const lab = document.createElement("label");
+        lab.setAttribute("for", id);
+        lab.innerHTML = '<input type="radio" id="'+id+'" name="'+q.id+'">';
+        lab.appendChild(document.createTextNode(opt));
+        lab.querySelector("input").value = opt;
+        box.appendChild(lab);
+      });
+      wrap.appendChild(box);
+    } else {
+      const inp = document.createElement("input");
+      inp.type="text"; inp.className="text"; inp.name=q.id;
+      inp.setAttribute("autocomplete","off"); inp.setAttribute("spellcheck","false");
+      inp.placeholder="/path/to/file";
+      wrap.appendChild(inp);
+    }
+    const v = document.createElement("div");
+    v.className="verdict"; v.id="verdict-"+q.id; v.setAttribute("aria-live","polite");
+    wrap.appendChild(v);
+    qList.appendChild(wrap);
+  });
+  qList.addEventListener("input", refresh);
+  qList.addEventListener("change", refresh);
+}
+
+/* ---------- terminal input handling ---------- */
+let histIdx = -1;
+cmdEl.addEventListener("keydown", function(e){
+  if(e.key==="Enter"){
+    const raw = cmdEl.value;
+    runCommand(raw);
+    cmdEl.value=""; histIdx = S.history.length;
+  } else if(e.key==="ArrowUp"){
+    if(S.history.length){ histIdx=Math.max(0,histIdx-1); cmdEl.value=S.history[histIdx]||""; e.preventDefault(); }
+  } else if(e.key==="ArrowDown"){
+    if(S.history.length){ histIdx=Math.min(S.history.length,histIdx+1); cmdEl.value=S.history[histIdx]||""; e.preventDefault(); }
+  }
+});
+
+/* ---------- submission ---------- */
+function setStatus(msg, cls){ statusEl.textContent = msg; statusEl.className = "status " + (cls||"busy"); }
+
+hackerEl.addEventListener("input", function(){
+  const ok = hackerEl.value.trim().length>0;
+  submitBtn.disabled = !ok;
+  if(ok) setStatus("Ready. Complete the tasks, then submit.","busy");
+  else   setStatus("Enter a hacker name to enable submission.","busy");
+});
+
+async function submit(){
+  const hackerName = hackerEl.value.trim().slice(0,40);
+  if(!hackerName){ setStatus("A hacker name is required.","no"); return; }
+  submitBtn.disabled = true;
+  setStatus("Capturing screenshot…","busy");
+
+  let shot = "";
+  try { shot = await captureScreenshot(document.getElementById("labArea")); }
+  catch(err){ shot = ""; }
+
+  const grade = refresh();
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: hackerName,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t=>({ id:t.id, label:t.label, passed:t.pass() })),
+    questions: QUESTIONS.map(q=>{
+      const g = gradeQuestion(q);
+      return { id:q.id, prompt:q.prompt, answer:g.answer, correct:g.correct };
+    }),
+    score: { earned: grade.earned, total: grade.total },
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  setStatus("Submitting to instructor…","busy");
+  try{
+    // Simple request (no custom headers, default text/plain) => no CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission</a>' : "";
+      statusEl.innerHTML = "Submitted ✓ — score "+grade.earned+"/"+grade.total+
+        (grade.passed?" (passed)":" (incomplete)")+"."+link;
+      statusEl.className = "status ok";
+    } else {
+      setStatus("Submission rejected: "+((out&&out.error)||"unknown error")+". Check with your instructor.","no");
+      submitBtn.disabled=false;
+    }
+  } catch(err){
+    // Fallback: fire-and-forget (cannot read the Doc link).
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("Submission sent (could not read confirmation). Please verify with your instructor.","ok");
+    }catch(e2){
+      setStatus("Could not reach the instructor endpoint. Check your connection or the lab URL.","no");
+      submitBtn.disabled=false;
+    }
+  }
+}
+submitBtn.addEventListener("click", submit);
+
+/* ---------- reset ---------- */
+function resetLab(){
+  S = freshState();
+  screenEl.innerHTML = "";
+  qList.querySelectorAll("input").forEach(i=>{ if(i.type==="radio") i.checked=false; else i.value=""; });
+  banner();
+  refresh();
+  setStatus(hackerEl.value.trim()? "Ready. Complete the tasks, then submit." :
+            "Enter a hacker name to enable submission.","busy");
+  cmdEl.focus();
+}
+resetBtn.addEventListener("click", resetLab);
+
+/* ---------- init ---------- */
+buildTasks();
+buildQuestions();
+banner();
+refresh();
+screenEl.addEventListener("click", ()=>cmdEl.focus());
+cmdEl.focus();
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-linux-group-split.html",title:"Lab: Reorganize Linux Groups \u2014 Provisioning & De-provisioning"}, NEXT={href:"splus-linux-user-provisioning.html",title:"Provisioning Desk \u2014 Create a Linux User Account"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

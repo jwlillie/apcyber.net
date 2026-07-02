@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Tuning the Update Cadence on a Workstation</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-update-policy-config",
+  "title": "Lab — Tuning the Update Cadence on a Workstation",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.3 Protecting Devices"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.5",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  CompTIA Security+ (SY0-701) clean-room simulation lab
+  Lab: Tuning the Update Cadence on a Workstation
+  assignmentId: splus-update-policy-config
+  Objectives: SY0-701 2.5 (mitigation techniques / 2.5.5 Patching),
+              4.1 (apply common security techniques to computing resources)
+
+  © 2026 [AUTHOR / ORGANIZATION]. All rights reserved.
+  Original work authored from the public SY0-701 exam objectives and the
+  documented behavior of Windows update settings. This file is NOT derived
+  from, and is not affiliated with, any commercial courseware vendor's lab.
+  Scenario, personas, machine names, values, task wording and question
+  wording are original to this author. Licensed for use within the author's
+  CompTIA Security+ course; redistribution requires the author's permission.
+  ============================================================================
+-->
+<style id="lab-style">
+  :root{
+    --bg:#eef1f5;
+    --surface:#ffffff;
+    --surface-2:#f6f8fb;
+    --ink:#1b1f24;
+    --ink-soft:#5a6470;
+    --line:#d7dde5;
+    --line-strong:#bcc6d2;
+    --accent:#0b6bcb;
+    --accent-ink:#ffffff;
+    --good:#1f8a4c;
+    --good-bg:#e7f6ec;
+    --bad:#b3261e;
+    --bad-bg:#fdeceb;
+    --warn:#8a5a00;
+    --pending:#9aa4b1;
+    --radius:10px;
+    --radius-sm:6px;
+    --shadow:0 1px 2px rgba(16,24,40,.06), 0 6px 18px rgba(16,24,40,.08);
+    --font: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font);
+    font-size:15px;
+    line-height:1.45;
+    padding:20px 16px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+  a{color:var(--accent);}
+
+  /* ---- page header ---- */
+  .lab-head{
+    display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-start;
+    justify-content:space-between;margin-bottom:16px;
+  }
+  .lab-head h1{font-size:20px;margin:0 0 4px;font-weight:650;}
+  .lab-head .obj{
+    display:inline-block;font-size:12px;color:var(--ink-soft);
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:999px;padding:2px 10px;margin-right:6px;
+  }
+  .scenario{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:14px 16px;max-width:620px;
+    box-shadow:var(--shadow);
+  }
+  .scenario p{margin:0 0 8px;}
+  .scenario p:last-child{margin-bottom:0;}
+  .scenario strong{font-weight:650;}
+
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start;}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr;} }
+
+  /* ---- simulated settings window ---- */
+  .winapp{
+    background:var(--surface);border:1px solid var(--line-strong);
+    border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);
+  }
+  .titlebar{
+    display:flex;align-items:center;gap:10px;
+    background:var(--surface-2);border-bottom:1px solid var(--line);
+    padding:9px 14px;font-size:13px;color:var(--ink-soft);
+  }
+  .titlebar .dots{display:flex;gap:6px;}
+  .titlebar .dots i{width:11px;height:11px;border-radius:50%;display:block;background:var(--line-strong);}
+  .winbody{display:grid;grid-template-columns:200px 1fr;min-height:380px;}
+  @media (max-width:560px){ .winbody{grid-template-columns:1fr;} }
+
+  .sidenav{border-right:1px solid var(--line);padding:14px 8px;background:var(--surface-2);}
+  @media (max-width:560px){ .sidenav{border-right:none;border-bottom:1px solid var(--line);} }
+  .sidenav .navitem{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);
+    color:var(--ink-soft);font-size:14px;cursor:default;
+  }
+  .sidenav .navitem.active{background:#e3edfb;color:var(--accent);font-weight:600;}
+  .sidenav .navitem .ic{width:18px;height:18px;flex:0 0 auto;color:currentColor;}
+
+  .pane{padding:20px 22px;min-width:0;}
+  .pane h2{font-size:18px;margin:0 0 2px;font-weight:650;}
+  .pane .crumb{font-size:13px;color:var(--ink-soft);margin:0 0 18px;}
+
+  .row{
+    display:flex;align-items:flex-start;gap:14px;justify-content:space-between;
+    padding:16px 0;border-bottom:1px solid var(--line);
+  }
+  .row:last-of-type{border-bottom:none;}
+  .row .meta{min-width:0;}
+  .row .meta .label{font-weight:600;}
+  .row .meta .help{font-size:13px;color:var(--ink-soft);margin-top:3px;}
+  .row .control{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+
+  /* toggle switch */
+  .switch{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;border:none;background:none;padding:0;font:inherit;}
+  .switch .track{
+    width:42px;height:22px;border-radius:999px;background:var(--line-strong);
+    position:relative;transition:background .18s ease;flex:0 0 auto;
+  }
+  .switch .knob{
+    position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .18s ease;
+  }
+  .switch[aria-checked="true"] .track{background:var(--accent);}
+  .switch[aria-checked="true"] .knob{left:22px;}
+  .switch .state{font-size:13px;color:var(--ink-soft);min-width:24px;text-align:left;}
+
+  /* number stepper */
+  .stepper{display:inline-flex;align-items:stretch;border:1px solid var(--line-strong);border-radius:var(--radius-sm);overflow:hidden;background:#fff;}
+  .stepper button{
+    width:34px;border:none;background:var(--surface-2);font-size:18px;line-height:1;cursor:pointer;color:var(--ink);
+  }
+  .stepper button:hover{background:#e9eef5;}
+  .stepper input{
+    width:64px;text-align:center;border:none;border-left:1px solid var(--line);border-right:1px solid var(--line);
+    font:inherit;font-size:15px;padding:7px 4px;-moz-appearance:textfield;
+  }
+  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .unit{font-size:13px;color:var(--ink-soft);}
+
+  .linkbtn{
+    background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;
+    text-decoration:underline;padding:0;
+  }
+
+  /* device modal */
+  .scrim{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:50;}
+  .scrim.open{display:flex;}
+  .dialog{
+    background:var(--surface);border-radius:var(--radius);max-width:440px;width:100%;
+    box-shadow:0 12px 40px rgba(16,24,40,.35);overflow:hidden;
+  }
+  .dialog h3{margin:0;padding:16px 18px;border-bottom:1px solid var(--line);font-size:16px;}
+  .dialog .dlgbody{padding:16px 18px;}
+  .dialog fieldset{border:none;margin:0;padding:0;}
+  .dialog legend{padding:0;margin:0 0 10px;font-size:14px;color:var(--ink-soft);}
+  .opt{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;}
+  .opt input{margin-top:3px;}
+  .opt .t{font-weight:600;}
+  .opt .d{font-size:13px;color:var(--ink-soft);}
+  .dialog .actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--line);}
+
+  /* ---- buttons ---- */
+  .btn{
+    font:inherit;font-size:14px;font-weight:600;border-radius:var(--radius-sm);
+    padding:9px 16px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);cursor:pointer;
+  }
+  .btn:hover{background:var(--surface-2);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+  .btn.primary:hover{background:#0a5cae;}
+  .btn:disabled{opacity:.55;cursor:not-allowed;}
+
+  /* ---- right column panels ---- */
+  .panel{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px;
+  }
+  .panel > h3{margin:0;padding:13px 16px;border-bottom:1px solid var(--line);font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:var(--ink-soft);}
+  .panel .pbody{padding:6px 16px 14px;}
+
+  .check{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);}
+  .check:last-child{border-bottom:none;}
+  .check .mark{
+    flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--pending);
+    display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;margin-top:1px;
+  }
+  .check.done .mark{background:var(--good);border-color:var(--good);}
+  .check .ctext{font-size:14px;}
+  .check.done .ctext{color:var(--ink);}
+
+  .q{padding:12px 0;border-bottom:1px solid var(--line);}
+  .q:last-child{border-bottom:none;}
+  .q .prompt{font-size:14px;margin-bottom:8px;}
+  .q .qnum{color:var(--accent);font-weight:700;margin-right:4px;}
+  .q label{display:flex;gap:8px;align-items:flex-start;font-size:14px;padding:6px 8px;border-radius:var(--radius-sm);cursor:pointer;}
+  .q label:hover{background:var(--surface-2);}
+  .q label input{margin-top:3px;}
+  .q .verdict{font-size:13px;margin-top:6px;display:none;}
+  .q.answered.correct .verdict.ok{display:block;color:var(--good);}
+  .q.answered.wrong .verdict.no{display:block;color:var(--bad);}
+
+  .scorebar{display:flex;align-items:center;justify-content:space-between;font-size:14px;}
+  .scorebar .big{font-size:22px;font-weight:700;}
+
+  /* ---- submission bar ---- */
+  .submit{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px;margin-top:4px;
+  }
+  .submit .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .submit label{font-weight:600;font-size:14px;}
+  .submit .hint{font-size:12px;color:var(--ink-soft);}
+  .submit input[type="text"]{
+    font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line-strong);
+    border-radius:var(--radius-sm);width:100%;max-width:320px;
+  }
+  .submit .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .status{margin-top:14px;font-size:14px;border-radius:var(--radius-sm);padding:10px 12px;display:none;}
+  .status.show{display:block;}
+  .status.ok{background:var(--good-bg);color:var(--good);}
+  .status.err{background:var(--bad-bg);color:var(--bad);}
+  .status.info{background:#eaf2fd;color:var(--accent);}
+  .status a{color:inherit;font-weight:700;}
+
+  .footnote{font-size:12px;color:var(--ink-soft);max-width:1080px;margin:22px auto 0;line-height:1.5;}
+
+  /* ---- accessibility ---- */
+  :focus-visible{outline:3px solid #2f7fe0;outline-offset:2px;border-radius:4px;}
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important;}
+  }
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0;}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="lab-head">
+    <div>
+      <h1>Tuning the Update Cadence on a Workstation</h1>
+      <div>
+        <span class="obj">SY0-701 · 2.5 Patching</span>
+        <span class="obj">SY0-701 · 4.1 Hardening</span>
+      </div>
+    </div>
+    <div class="scenario" role="note" aria-label="Scenario">
+      <p><strong>Scenario.</strong> You are Priya Anand, the only IT specialist at
+      Marlowe &amp; Vance, a small architecture studio. A drafting workstation
+      named <strong>DRAFT-07</strong> keeps pulling brand-new Windows feature
+      releases that the studio's CAD vendor has not yet certified, which has
+      twice broken the plotting workflow mid-deadline.</p>
+      <p>Leadership wants a calmer cadence: hold the big feature releases back,
+      let routine security fixes through quickly, also patch the Office apps,
+      and let device drivers and icons install themselves so the wide-format
+      plotters set up without a help-desk visit.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ===================== SIMULATED SETTINGS APP ===================== -->
+    <main class="winapp" id="lab-canvas" aria-label="Simulated system settings">
+      <div class="titlebar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span>Settings — DRAFT-07</span>
+      </div>
+      <div class="winbody">
+        <nav class="sidenav" aria-label="Settings categories">
+          <div class="navitem"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 20h8"/></svg>System</div>
+          <div class="navitem"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L14.5 3h-5l-.4 2.6a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L3 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.6h5l.4-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5a7 7 0 0 0 .1-1Z"/></svg>Devices</div>
+          <div class="navitem active"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Update &amp; security</div>
+          <div class="navitem"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 4 6v6c0 5 3.5 7.5 8 10 4.5-2.5 8-5 8-10V6Z"/></svg>Privacy</div>
+        </nav>
+
+        <section class="pane" aria-label="Advanced update options">
+          <h2>Advanced options</h2>
+          <p class="crumb">Update &amp; security › Windows Update › Advanced options</p>
+
+          <!-- Task 1: other Microsoft products -->
+          <div class="row">
+            <div class="meta">
+              <div class="label">Receive updates for other Microsoft products</div>
+              <div class="help">When Windows updates, also update Office and other installed Microsoft apps.</div>
+            </div>
+            <div class="control">
+              <button type="button" id="tg-otherms" class="switch" role="switch" aria-checked="false" aria-label="Receive updates for other Microsoft products">
+                <span class="track" aria-hidden="true"><span class="knob"></span></span>
+                <span class="state" id="tg-otherms-state">Off</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Task 2: feature deferral -->
+          <div class="row">
+            <div class="meta">
+              <div class="label">Defer feature updates</div>
+              <div class="help">Hold new versions of Windows for a set number of days after release (0–365) so apps can be validated first.</div>
+            </div>
+            <div class="control">
+              <div class="stepper" role="group" aria-label="Defer feature updates, days">
+                <button type="button" data-step="feature" data-dir="-1" aria-label="Decrease feature update deferral">−</button>
+                <input type="number" id="in-feature" min="0" max="365" step="1" value="0" inputmode="numeric" aria-label="Feature update deferral in days" />
+                <button type="button" data-step="feature" data-dir="1" aria-label="Increase feature update deferral">+</button>
+              </div>
+              <span class="unit"><span id="echo-feature">0</span> days</span>
+            </div>
+          </div>
+
+          <!-- Task 3: quality deferral -->
+          <div class="row">
+            <div class="meta">
+              <div class="label">Defer quality updates</div>
+              <div class="help">Hold monthly security and reliability fixes for a set number of days after release (0–30).</div>
+            </div>
+            <div class="control">
+              <div class="stepper" role="group" aria-label="Defer quality updates, days">
+                <button type="button" data-step="quality" data-dir="-1" aria-label="Decrease quality update deferral">−</button>
+                <input type="number" id="in-quality" min="0" max="30" step="1" value="0" inputmode="numeric" aria-label="Quality update deferral in days" />
+                <button type="button" data-step="quality" data-dir="1" aria-label="Increase quality update deferral">+</button>
+              </div>
+              <span class="unit"><span id="echo-quality">0</span> days</span>
+            </div>
+          </div>
+
+          <!-- Task 4: device installation settings -->
+          <div class="row">
+            <div class="meta">
+              <div class="label">Device installation settings</div>
+              <div class="help">Choose whether Windows automatically downloads manufacturer apps and custom icons for your devices.
+                <br><span id="device-summary" style="color:var(--ink);font-weight:600;">Current: not set</span></div>
+            </div>
+            <div class="control">
+              <button type="button" class="btn" id="open-device">Change</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ===================== RIGHT COLUMN ===================== -->
+    <aside>
+      <div class="panel" aria-label="Task checklist">
+        <h3>Tasks (<span id="task-count">0</span>/4)</h3>
+        <div class="pbody" id="task-list">
+          <div class="check" data-task="otherms"><span class="mark" aria-hidden="true">✓</span><span class="ctext">Turn on updates for other Microsoft products.</span></div>
+          <div class="check" data-task="feature"><span class="mark" aria-hidden="true">✓</span><span class="ctext">Defer feature updates by 60 days.</span></div>
+          <div class="check" data-task="quality"><span class="mark" aria-hidden="true">✓</span><span class="ctext">Defer quality updates by 30 days.</span></div>
+          <div class="check" data-task="device"><span class="mark" aria-hidden="true">✓</span><span class="ctext">Allow automatic download of manufacturer apps and custom icons.</span></div>
+        </div>
+      </div>
+
+      <div class="panel" aria-label="Knowledge check">
+        <h3>Knowledge check (<span id="q-count">0</span>/3)</h3>
+        <div class="pbody" id="quiz"></div>
+      </div>
+
+      <div class="panel" aria-label="Score">
+        <h3>Score</h3>
+        <div class="pbody scorebar">
+          <span>Completed</span>
+          <span class="big"><span id="earned">0</span> / 7</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===================== SUBMISSION ===================== -->
+  <section class="submit" aria-label="Submit lab">
+    <div class="field">
+      <label for="hacker">Hacker name (pseudonym)</label>
+      <input type="text" id="hacker" maxlength="40" autocomplete="off" placeholder="e.g., NullByteOwl" />
+      <span class="hint">Use a nickname, not your real name. This is what your instructor will see.</span>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary" id="submit-btn">Submit completed lab</button>
+      <button type="button" class="btn" id="reset-btn">Reset lab</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <p class="footnote">
+    © 2026 [AUTHOR / ORGANIZATION]. Original clean-room training material built
+    from the public CompTIA Security+ SY0-701 objectives. Not affiliated with or
+    derived from any commercial courseware vendor. The task checklist and score
+    are evaluated in your browser and are self-reported; your instructor verifies
+    submissions on the server.
+  </p>
+</div>
+
+<!-- ===================== DEVICE INSTALLATION DIALOG ===================== -->
+<div class="scrim" id="device-scrim" role="presentation">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="device-title" id="device-dialog">
+    <h3 id="device-title">Device installation settings</h3>
+    <div class="dlgbody">
+      <fieldset>
+        <legend>Automatically download manufacturer apps and custom icons available for your devices?</legend>
+        <label class="opt">
+          <input type="radio" name="device" value="yes" />
+          <span><span class="t">Yes (recommended)</span><br><span class="d">Drivers, vendor apps, and device icons install on their own.</span></span>
+        </label>
+        <label class="opt">
+          <input type="radio" name="device" value="no" />
+          <span><span class="t">No</span><br><span class="d">Your device might not work as expected and may be missing its icon.</span></span>
+        </label>
+      </fieldset>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn" id="device-cancel">Cancel</button>
+      <button type="button" class="btn primary" id="device-save">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   LAB ENGINE + CONFIG + ANSWER KEY
+   ============================================================================ */
+"use strict";
+
+/* ---- per-lab config (the only block an instructor edits, with the URL/token) ---- */
+const CONFIG = {
+  assignmentId: "splus-update-policy-config",
+  title: "Tuning the Update Cadence on a Workstation",
+  objectives: ["2.5", "4.1"],
+  // Paste the deployed Apps Script Web App /exec URL here (same across the library):
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  // Per-cohort shared secret; must match the Script Property on the server:
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  maxNameLen: 40
+};
+
+/* ---- answer key (client-side; self-reported — see footnote & instructor doc) ---- */
+const KEY = {
+  tasks: {
+    otherms: { label: "Turn on updates for other Microsoft products",            test: s => s.otherMs === true },
+    feature: { label: "Defer feature updates by 60 days",                        test: s => s.featureDefer === 60 },
+    quality: { label: "Defer quality updates by 30 days",                        test: s => s.qualityDefer === 30 },
+    device:  { label: "Allow automatic download of manufacturer apps and icons", test: s => s.deviceAuto === "yes" }
+  },
+  questions: [
+    {
+      id: "q1",
+      prompt: "A feature update can change how Windows behaves and sometimes breaks line-of-business apps, while a quality update is mostly security and reliability fixes. Why hold feature updates for 60 days but release quality updates after only 30?",
+      options: [
+        "Feature updates are smaller, so they can safely wait longer.",
+        "The longer feature delay buys time to confirm app compatibility, while security-focused quality updates should ship sooner to close holes.",
+        "Windows requires feature deferral to be exactly double the quality deferral.",
+        "Quality updates can't be deferred at all, so 30 is just the minimum."
+      ],
+      correct: 1
+    },
+    {
+      id: "q2",
+      prompt: "Deferring and scheduling operating-system updates like this is an example of which Security+ mitigation technique?",
+      options: ["Segmentation", "Patching", "Least privilege", "Encryption"],
+      correct: 1
+    },
+    {
+      id: "q3",
+      prompt: "Quality updates often fix actively exploited vulnerabilities. What is the main risk of pushing the quality-update deferral to its maximum on internet-facing workstations?",
+      options: [
+        "The machine runs out of disk space while waiting.",
+        "Device drivers stop loading until the deferral expires.",
+        "Known vulnerabilities stay unpatched for the length of the delay, widening the window an attacker can use.",
+        "Feature updates install immediately to compensate."
+      ],
+      correct: 2
+    }
+  ]
+};
+
+/* ---- runtime state (in-memory only; no storage APIs) ---- */
+const state = {
+  otherMs: false,
+  featureDefer: 0,
+  qualityDefer: 0,
+  deviceAuto: null,
+  answers: { q1: null, q2: null, q3: null }
+};
+
+/* ---- element refs ---- */
+const $ = sel => document.querySelector(sel);
+const statusEl = $("#status");
+
+/* ============================================================================
+   QUIZ RENDER
+   ============================================================================ */
+(function buildQuiz(){
+  const quiz = $("#quiz");
+  KEY.questions.forEach((q, qi) => {
+    const wrap = document.createElement("div");
+    wrap.className = "q";
+    wrap.dataset.qid = q.id;
+    const opts = q.options.map((opt, oi) =>
+      `<label><input type="radio" name="${q.id}" value="${oi}"> <span>${opt}</span></label>`
+    ).join("");
+    wrap.innerHTML =
+      `<div class="prompt"><span class="qnum">Q${qi+1}.</span>${q.prompt}</div>` +
+      opts +
+      `<div class="verdict ok">Correct.</div>` +
+      `<div class="verdict no">Not quite — review the difference between feature and quality updates and try again.</div>`;
+    quiz.appendChild(wrap);
+  });
+  quiz.addEventListener("change", e => {
+    if (e.target.name && e.target.name.startsWith("q")) {
+      state.answers[e.target.name] = parseInt(e.target.value, 10);
+      evaluate();
+    }
+  });
+})();
+
+/* ============================================================================
+   CONTROL WIRING
+   ============================================================================ */
+// toggle
+$("#tg-otherms").addEventListener("click", () => {
+  state.otherMs = !state.otherMs;
+  const btn = $("#tg-otherms");
+  btn.setAttribute("aria-checked", String(state.otherMs));
+  $("#tg-otherms-state").textContent = state.otherMs ? "On" : "Off";
+  evaluate();
+});
+
+// steppers + direct entry
+function clampField(kind, val){
+  const max = kind === "feature" ? 365 : 30;
+  if (isNaN(val)) val = 0;
+  return Math.max(0, Math.min(max, Math.round(val)));
+}
+function setField(kind, val){
+  val = clampField(kind, val);
+  if (kind === "feature") state.featureDefer = val; else state.qualityDefer = val;
+  $("#in-" + kind).value = val;
+  $("#echo-" + kind).textContent = val;
+  evaluate();
+}
+document.querySelectorAll(".stepper button").forEach(b => {
+  b.addEventListener("click", () => {
+    const kind = b.dataset.step, dir = parseInt(b.dataset.dir, 10);
+    const cur = kind === "feature" ? state.featureDefer : state.qualityDefer;
+    setField(kind, cur + dir);
+  });
+});
+["feature","quality"].forEach(kind => {
+  $("#in-" + kind).addEventListener("input", e => setField(kind, parseInt(e.target.value, 10)));
+});
+
+// device dialog
+const scrim = $("#device-scrim");
+let lastFocus = null;
+function openDevice(){
+  lastFocus = document.activeElement;
+  if (state.deviceAuto) {
+    const r = document.querySelector(`input[name="device"][value="${state.deviceAuto}"]`);
+    if (r) r.checked = true;
+  }
+  scrim.classList.add("open");
+  const first = document.querySelector('input[name="device"]');
+  if (first) first.focus();
+}
+function closeDevice(){
+  scrim.classList.remove("open");
+  if (lastFocus) lastFocus.focus();
+}
+$("#open-device").addEventListener("click", openDevice);
+$("#device-cancel").addEventListener("click", closeDevice);
+$("#device-save").addEventListener("click", () => {
+  const sel = document.querySelector('input[name="device"]:checked');
+  if (!sel) { flashDialogError(); return; }
+  state.deviceAuto = sel.value;
+  const txt = sel.value === "yes"
+    ? "Current: Yes — manufacturer apps and icons download automatically"
+    : "Current: No — automatic download is off";
+  $("#device-summary").textContent = txt;
+  closeDevice();
+  evaluate();
+});
+function flashDialogError(){
+  const legend = scrim.querySelector("legend");
+  legend.style.color = "var(--bad)";
+  legend.textContent = "Pick an option before saving: automatically download manufacturer apps and custom icons?";
+}
+scrim.addEventListener("click", e => { if (e.target === scrim) closeDevice(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && scrim.classList.contains("open")) closeDevice(); });
+
+/* ============================================================================
+   EVALUATION
+   ============================================================================ */
+function evaluate(){
+  // tasks
+  let taskDone = 0;
+  Object.keys(KEY.tasks).forEach(id => {
+    const passed = KEY.tasks[id].test(state);
+    if (passed) taskDone++;
+    const node = document.querySelector(`.check[data-task="${id}"]`);
+    node.classList.toggle("done", passed);
+  });
+  $("#task-count").textContent = taskDone;
+
+  // questions
+  let qDone = 0;
+  KEY.questions.forEach(q => {
+    const ans = state.answers[q.id];
+    const node = document.querySelector(`.q[data-qid="${q.id}"]`);
+    if (ans === null || ans === undefined) {
+      node.classList.remove("answered","correct","wrong");
+      return;
+    }
+    node.classList.add("answered");
+    const ok = ans === q.correct;
+    node.classList.toggle("correct", ok);
+    node.classList.toggle("wrong", !ok);
+    if (ok) qDone++;
+  });
+  $("#q-count").textContent = qDone;
+  $("#earned").textContent = taskDone + qDone;
+  return { taskDone, qDone, total: 7 };
+}
+
+/* ============================================================================
+   SCREENSHOT — dependency-free (SVG foreignObject -> canvas -> PNG)
+   Works because the lab DOM is fully self-rendered inline with system fonts,
+   so there is nothing cross-origin to taint the canvas.
+   ============================================================================ */
+async function captureLab(node){
+  const css = document.getElementById("lab-style").textContent;
+  const rect = node.getBoundingClientRect();
+  const w = Math.max(1, Math.ceil(rect.width));
+  const h = Math.max(1, Math.ceil(rect.height));
+
+  // clone and mirror live form values into attributes so they render
+  const clone = node.cloneNode(true);
+  const live = node.querySelectorAll("input, textarea, select");
+  const cl = clone.querySelectorAll("input, textarea, select");
+  live.forEach((el, i) => {
+    const c = cl[i]; if (!c) return;
+    if (el.type === "checkbox" || el.type === "radio") {
+      if (el.checked) c.setAttribute("checked", "checked"); else c.removeAttribute("checked");
+    } else {
+      c.setAttribute("value", el.value);
+    }
+  });
+
+  const serialized = new XMLSerializer().serializeToString(clone);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+      '<foreignObject x="0" y="0" width="100%" height="100%">' +
+        '<div xmlns="http://www.w3.org/1999/xhtml">' +
+          '<style>' + css + '</style>' + serialized +
+        '</div>' +
+      '</foreignObject>' +
+    '</svg>';
+
+  const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+
+  const scale = Math.min(2, window.devicePixelRatio || 1);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = getComputedStyle(document.body).backgroundColor || "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.drawImage(img, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+/* ============================================================================
+   PAYLOAD + SUBMIT
+   ============================================================================ */
+function buildPayload(screenshot){
+  const tasks = Object.keys(KEY.tasks).map(id => ({
+    id, label: KEY.tasks[id].label, passed: KEY.tasks[id].test(state)
+  }));
+  const questions = KEY.questions.map(q => {
+    const ans = state.answers[q.id];
+    return {
+      id: q.id,
+      prompt: q.prompt,
+      answer: (ans === null || ans === undefined) ? null : q.options[ans],
+      correct: ans === q.correct
+    };
+  });
+  const earned = tasks.filter(t => t.passed).length + questions.filter(q => q.correct).length;
+  return {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: $("#hacker").value.trim().slice(0, CONFIG.maxNameLen),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks,
+    questions,
+    score: { earned, total: 7 },
+    screenshot: screenshot || "",
+    submissionToken: CONFIG.submissionToken
+  };
+}
+
+function showStatus(kind, html){
+  statusEl.className = "status show " + kind;
+  statusEl.innerHTML = html;
+}
+
+$("#submit-btn").addEventListener("click", async () => {
+  const name = $("#hacker").value.trim();
+  if (!name) { showStatus("err", "Enter a hacker name before submitting."); $("#hacker").focus(); return; }
+
+  const r = evaluate();
+  if (r.taskDone + r.qDone < 7) {
+    showStatus("err", `Not finished yet — you have ${r.taskDone + r.qDone} of 7. Complete every task and answer all three questions correctly, then submit.`);
+    return;
+  }
+
+  const btn = $("#submit-btn");
+  btn.disabled = true;
+  showStatus("info", "Capturing your work and submitting…");
+
+  let screenshot = "";
+  try { screenshot = await captureLab($("#lab-canvas")); }
+  catch (err) { /* capture failed; submit without it */ screenshot = ""; }
+
+  const payload = buildPayload(screenshot);
+
+  if (CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0) {
+    showStatus("err", "This lab isn't connected yet: your instructor still needs to paste the Apps Script URL. Your work is complete (7/7) — let them know.");
+    btn.disabled = false;
+    return;
+  }
+
+  // Simple request: no custom headers, default text/plain body -> no CORS preflight.
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if (out && out.success) {
+      const link = out.docUrl ? ` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission</a>.` : "";
+      showStatus("ok", `Submitted — 7/7. Your instructor has the record.${link}`);
+    } else {
+      showStatus("err", "The server rejected the submission: " + ((out && out.error) || "unknown error") + ". Check with your instructor.");
+      btn.disabled = false;
+    }
+  } catch (err) {
+    // Fallback: fire-and-forget (can't read the response/Doc link).
+    try {
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+      showStatus("info", "Submission sent, but the confirmation couldn't be read in this browser. Confirm with your instructor that it arrived.");
+    } catch (err2) {
+      showStatus("err", "Couldn't reach the submission server. Check your connection and try again, or tell your instructor.");
+      btn.disabled = false;
+    }
+  }
+});
+
+/* ============================================================================
+   RESET
+   ============================================================================ */
+$("#reset-btn").addEventListener("click", () => {
+  state.otherMs = false;
+  state.featureDefer = 0;
+  state.qualityDefer = 0;
+  state.deviceAuto = null;
+  state.answers = { q1: null, q2: null, q3: null };
+
+  $("#tg-otherms").setAttribute("aria-checked", "false");
+  $("#tg-otherms-state").textContent = "Off";
+  $("#in-feature").value = 0; $("#echo-feature").textContent = "0";
+  $("#in-quality").value = 0; $("#echo-quality").textContent = "0";
+  $("#device-summary").textContent = "Current: not set";
+  document.querySelectorAll('input[name="device"]').forEach(r => r.checked = false);
+  const legend = scrim.querySelector("legend");
+  legend.style.color = "";
+  legend.textContent = "Automatically download manufacturer apps and custom icons available for your devices?";
+  document.querySelectorAll('#quiz input[type="radio"]').forEach(r => r.checked = false);
+  $("#hacker").value = "";
+  statusEl.className = "status";
+  $("#submit-btn").disabled = false;
+  evaluate();
+});
+
+/* initial paint */
+evaluate();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-uac-hardening.html",title:"Lab \u2014 Harden User Account Control (UAC)"}, NEXT={href:"splus-clear-browser-cache.html",title:"Lab: Clear Browsing Data \u2014 Aurora Browser (Security+ SY0-701)"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.3 Protecting Devices";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

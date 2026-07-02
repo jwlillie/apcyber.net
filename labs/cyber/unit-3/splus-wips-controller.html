@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Security+ Lab Simulation  —  Configure Wireless Intrusion Prevention (WIPS)
+  assignmentId: splus-wips-controller
+  SY0-701 objectives: 2.4, 3.2, 4.1
+  ----------------------------------------------------------------------------
+  Clean-room original work. Built from the public CompTIA SY0-701 objectives and
+  the documented behavior of wireless-LAN controllers. The product UI, brand,
+  scenario, persona, file/host values, and all wording are original and are not
+  copied from any vendor's lab.
+
+  Copyright © 2026 [INSTRUCTOR / AUTHOR NAME].  All rights reserved.
+  Licensed for use within your own course. Replace this notice with your own.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Configure Wireless Intrusion Prevention (Halonet WC-7)</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-wips-controller",
+  "title": "Lab — Configure Wireless Intrusion Prevention (Halonet WC-7)",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.5 Detecting Network Attacks"
+    ],
+    "skills": [
+      "3.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.4",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<style id="lab-style">
+  /* ---- Tokens (declared on :root AND #capture so the screenshot clone resolves them) ---- */
+  :root, #capture {
+    --bg:        #0e1620;
+    --chrome:    #0a1019;
+    --surface:   #16212e;
+    --surface-2: #1d2a39;
+    --raised:    #223344;
+    --line:      rgba(150,180,210,.14);
+    --line-soft: rgba(150,180,210,.08);
+    --text:      #e7eef6;
+    --muted:     #8ea2b8;
+    --faint:     #607589;
+    --signal:    #34d8c6;   /* radio / signal cyan — the accent */
+    --signal-dk: #16a596;
+    --amber:     #f4ad4a;   /* detection / advisory */
+    --ok:        #46c98b;
+    --danger:    #ef5f5f;
+    --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(900px 500px at 78% -8%, rgba(52,216,198,.10), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--signal); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 18px 56px; }
+
+  /* ---- Lab framing header (outside the simulated console) ---- */
+  .labhead { display:flex; flex-wrap:wrap; gap:14px 22px; align-items:flex-end; justify-content:space-between; margin-bottom:18px; }
+  .labhead h1 { font-size: 1.18rem; margin:0; letter-spacing:.2px; font-weight:650; }
+  .labhead .sub { color: var(--muted); font-size:.82rem; margin-top:4px; }
+  .objtags { display:flex; gap:6px; flex-wrap:wrap; }
+  .objtag {
+    font-family: var(--mono); font-size:.68rem; letter-spacing:.5px;
+    color: var(--signal); border:1px solid rgba(52,216,198,.35);
+    background: rgba(52,216,198,.07); padding:3px 8px; border-radius:999px;
+  }
+
+  /* ---- Two-column layout: console + side panel ---- */
+  .grid { display:grid; grid-template-columns: minmax(0,1.65fr) minmax(280px,.9fr); gap:18px; align-items:start; }
+  @media (max-width: 880px){ .grid { grid-template-columns: 1fr; } }
+
+  /* ================= Simulated controller console ================= */
+  #capture { border-radius:14px; overflow:hidden; border:1px solid var(--line);
+             box-shadow: 0 24px 60px -28px rgba(0,0,0,.8); background: var(--surface); }
+
+  .browserbar { display:flex; align-items:center; gap:10px; background:#070b11; padding:9px 12px; border-bottom:1px solid var(--line-soft); }
+  .dots { display:flex; gap:6px; }
+  .dots i { width:10px; height:10px; border-radius:50%; display:block; background:#33414f; }
+  .urlbar { flex:1; display:flex; align-items:center; gap:8px; background:#121b25; border:1px solid var(--line-soft);
+            border-radius:7px; padding:5px 10px; font-family:var(--mono); font-size:.74rem; color:var(--muted); min-width:0; }
+  .urlbar svg { flex:none; }
+  .urlbar .host { color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .console { display:grid; grid-template-columns: 196px 1fr; min-height: 540px; }
+  @media (max-width: 620px){ .console { grid-template-columns: 1fr; } }
+
+  /* top identity strip spans both columns */
+  .idstrip { grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:12px;
+             background: linear-gradient(180deg,#0c141d,#0a1019); border-bottom:1px solid var(--line); padding:12px 16px; }
+  .brand { display:flex; align-items:center; gap:11px; }
+  .brand .mark { position:relative; width:30px; height:30px; flex:none; }
+  .brand b { font-weight:700; letter-spacing:.3px; }
+  .brand .model { color:var(--muted); font-family:var(--mono); font-size:.7rem; letter-spacing:1px; }
+  .idstrip .who { text-align:right; font-size:.72rem; color:var(--muted); }
+  .idstrip .who b { color:var(--text); font-weight:600; }
+  .pill { display:inline-flex; align-items:center; gap:6px; font-size:.66rem; font-family:var(--mono);
+          padding:3px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .pill .led { width:7px; height:7px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 0 rgba(70,201,139,.5); animation:beat 2.4s infinite; }
+  @keyframes beat { 0%{box-shadow:0 0 0 0 rgba(70,201,139,.45);} 70%{box-shadow:0 0 0 7px rgba(70,201,139,0);} 100%{box-shadow:0 0 0 0 rgba(70,201,139,0);} }
+  @media (prefers-reduced-motion: reduce){ .pill .led{ animation:none; } }
+
+  /* left nav */
+  nav.side { background: var(--chrome); border-right:1px solid var(--line); padding:14px 10px; }
+  nav.side .grp { font-family:var(--mono); font-size:.62rem; letter-spacing:1.4px; color:var(--faint); text-transform:uppercase; margin:14px 8px 6px; }
+  nav.side .grp:first-child { margin-top:2px; }
+  nav.side .navitem { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px; color:var(--muted);
+                      font-size:.82rem; cursor:default; }
+  nav.side .navitem.cur { background: rgba(52,216,198,.12); color:var(--text); box-shadow: inset 2px 0 0 var(--signal); }
+  nav.side .navitem svg { flex:none; opacity:.8; }
+  @media (max-width: 620px){ nav.side { display:none; } }
+
+  /* main content */
+  main.panel { padding: 18px 20px 22px; min-width:0; }
+  .crumbs { font-size:.72rem; color:var(--muted); font-family:var(--mono); margin-bottom:4px; }
+  .crumbs b { color:var(--signal); }
+  main.panel > h2 { margin:2px 0 2px; font-size:1.12rem; font-weight:650; }
+  .lede { color:var(--muted); font-size:.83rem; margin:0 0 16px; max-width:60ch; }
+
+  .card { background: var(--surface-2); border:1px solid var(--line); border-radius:11px; padding:15px 16px; margin-bottom:14px; }
+  .card > h3 { margin:0 0 3px; font-size:.84rem; letter-spacing:.4px; display:flex; align-items:center; gap:8px; }
+  .card > h3 .ic { color:var(--signal); display:inline-flex; }
+  .card .hint { color:var(--muted); font-size:.76rem; margin:0 0 12px; }
+
+  .row { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-top:1px solid var(--line-soft); }
+  .row:first-of-type { border-top:0; }
+  .row .meta { min-width:0; }
+  .row .meta .t { font-size:.85rem; font-weight:550; }
+  .row .meta .d { font-size:.74rem; color:var(--muted); margin-top:2px; }
+  .row .ctl { flex:none; }
+
+  /* switch */
+  button.sw { appearance:none; border:0; cursor:pointer; width:46px; height:26px; border-radius:999px; position:relative;
+              background:#2a3a49; transition:background .18s; padding:0; }
+  button.sw::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%;
+                     background:#cdd9e5; transition:transform .18s; }
+  button.sw[aria-checked="true"] { background: var(--signal-dk); }
+  button.sw[aria-checked="true"]::after { transform: translateX(20px); background:#eafffb; }
+  button.sw:focus-visible { outline:2px solid var(--signal); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){ button.sw, button.sw::after { transition:none; } }
+
+  /* sub-controls revealed under a switch */
+  .sub { margin:2px 0 0; padding:11px 12px; background:#121c27; border:1px solid var(--line-soft); border-radius:9px;
+         display:grid; gap:10px; }
+  .sub[hidden]{ display:none; }
+  .field { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .field label { font-size:.8rem; color:var(--text); }
+  .field .unit { color:var(--muted); font-size:.74rem; font-family:var(--mono); }
+  input[type="number"] {
+    width:96px; background:#0c141d; border:1px solid var(--line); color:var(--text); font-family:var(--mono);
+    font-size:.84rem; border-radius:7px; padding:7px 9px; text-align:right;
+  }
+  input[type="number"]:focus-visible { outline:2px solid var(--signal); outline-offset:1px; border-color:var(--signal); }
+  select {
+    appearance:none; background:#0c141d; border:1px solid var(--line); color:var(--text); font-family:var(--sans);
+    font-size:.82rem; border-radius:7px; padding:7px 30px 7px 11px; cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%238ea2b8' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 10px center;
+  }
+  select:focus-visible { outline:2px solid var(--signal); outline-offset:1px; border-color:var(--signal); }
+
+  .applybar { display:flex; align-items:center; gap:12px; margin-top:4px; }
+  .btn { appearance:none; border:1px solid var(--line); background:#1f2e3d; color:var(--text); font-family:var(--sans);
+         font-size:.82rem; font-weight:600; padding:9px 16px; border-radius:9px; cursor:pointer; }
+  .btn:hover { border-color: rgba(52,216,198,.5); }
+  .btn:focus-visible { outline:2px solid var(--signal); outline-offset:2px; }
+  .btn.primary { background: var(--signal-dk); border-color: var(--signal-dk); color:#04201d; }
+  .btn.primary:hover { background: var(--signal); }
+  .btn.ghost { background:transparent; }
+  .btn[disabled]{ opacity:.5; cursor:not-allowed; }
+  .dirty { font-size:.74rem; color:var(--amber); font-family:var(--mono); display:none; }
+  .dirty.on { display:inline; }
+  .saved { font-size:.74rem; color:var(--ok); font-family:var(--mono); display:none; }
+  .saved.on { display:inline; }
+
+  /* ================= Side panel: tasks, questions, submit ================= */
+  aside { display:grid; gap:14px; position:sticky; top:18px; }
+  @media (max-width: 880px){ aside { position:static; } }
+  .pcard { background: var(--surface); border:1px solid var(--line); border-radius:12px; padding:15px 16px; }
+  .pcard h3 { margin:0 0 10px; font-size:.78rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); font-family:var(--mono); }
+
+  ul.checks { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  ul.checks li { display:flex; gap:9px; align-items:flex-start; font-size:.82rem; }
+  .box { flex:none; width:18px; height:18px; border-radius:5px; border:1.5px solid var(--faint); margin-top:1px;
+         display:grid; place-items:center; color:transparent; transition:.15s; }
+  li.done .box { background: var(--ok); border-color:var(--ok); color:#062b1a; }
+  li.done .label .t { color:var(--muted); }
+  .label .t { font-weight:550; }
+  .label .why { display:block; color:var(--faint); font-size:.72rem; margin-top:1px; }
+  li.done .label .why { color: var(--ok); }
+  @media (prefers-reduced-motion: reduce){ .box{ transition:none; } }
+
+  .q { padding:11px 0; border-top:1px solid var(--line-soft); }
+  .q:first-of-type{ border-top:0; padding-top:2px; }
+  .q .prompt { font-size:.82rem; font-weight:550; margin-bottom:7px; }
+  .q .opts { display:grid; gap:6px; }
+  .opt { display:flex; gap:8px; align-items:flex-start; font-size:.8rem; color:var(--muted); cursor:pointer;
+         padding:7px 9px; border:1px solid var(--line-soft); border-radius:8px; }
+  .opt:hover { border-color: var(--line); }
+  .opt input { accent-color: var(--signal); margin-top:2px; }
+  .opt.is-right { border-color: rgba(70,201,139,.5); color:var(--text); }
+  .opt.is-wrong { border-color: rgba(239,95,95,.5); }
+
+  .name-in { width:100%; background:#0c141d; border:1px solid var(--line); color:var(--text); font-family:var(--mono);
+             font-size:.86rem; border-radius:8px; padding:9px 11px; margin-bottom:10px; }
+  .name-in:focus-visible { outline:2px solid var(--signal); outline-offset:1px; }
+  .scoreline { display:flex; justify-content:space-between; align-items:baseline; font-family:var(--mono); font-size:.8rem;
+               color:var(--muted); margin:2px 0 12px; }
+  .scoreline b { color:var(--text); font-size:1.05rem; }
+  .submit { width:100%; justify-content:center; display:flex; }
+  .status { font-size:.78rem; margin-top:10px; min-height:1.1em; }
+  .status.err { color: var(--danger); }
+  .status.ok { color: var(--ok); }
+  .status.work { color: var(--muted); }
+  .status a { word-break:break-all; }
+
+  .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(12px); opacity:0;
+           background:#0c1a17; border:1px solid var(--signal-dk); color:#d6fff7; padding:10px 16px; border-radius:10px;
+           font-size:.82rem; pointer-events:none; transition:.22s; z-index:50; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce){ .toast{ transition:none; } }
+
+  footer.lic { color:var(--faint); font-size:.7rem; margin-top:22px; text-align:center; }
+  .vh { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="labhead">
+    <div>
+      <h1>Lab&nbsp;&middot;&nbsp;Configure Wireless Intrusion Prevention (WIPS)</h1>
+      <div class="sub">Scenario: harden the Wi-Fi for <b>Northgate Coffee Roasters</b> against wireless attacks on the Halonet&nbsp;WC-7 controller.</div>
+    </div>
+    <div class="objtags" aria-label="Exam objectives">
+      <span class="objtag">SY0-701 · 2.4</span>
+      <span class="objtag">SY0-701 · 3.2</span>
+      <span class="objtag">SY0-701 · 4.1</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============ SIMULATED CONTROLLER (capture target) ============ -->
+    <section id="capture" aria-label="Halonet WC-7 wireless controller console">
+      <div class="browserbar" aria-hidden="true">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="urlbar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="11" rx="2" stroke="#46c98b" stroke-width="1.7"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#46c98b" stroke-width="1.7"/></svg>
+          <span class="host">https://172.20.4.10</span><span>/admin/security/wips</span>
+        </div>
+      </div>
+
+      <div class="console">
+        <div class="idstrip">
+          <div class="brand">
+            <span class="mark" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                <circle cx="8" cy="22" r="2.6" fill="var(--signal)"/>
+                <path d="M12.5 22a6.5 6.5 0 0 0-6.5-6.5" stroke="var(--signal)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                <path d="M17 22A11 11 0 0 0 6 11" stroke="var(--signal)" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".7"/>
+                <path d="M21.5 22A15.5 15.5 0 0 0 6 6.5" stroke="var(--signal)" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".4"/>
+              </svg>
+            </span>
+            <div>
+              <b>Halonet</b> <span class="model">WC-7 · WLAN CONTROLLER</span>
+            </div>
+          </div>
+          <div class="who">
+            <span class="pill"><span class="led"></span> 3 APs online</span>
+            &nbsp; signed in as <b>wlc-admin</b>
+          </div>
+        </div>
+
+        <nav class="side" aria-label="Console sections">
+          <div class="grp">Monitor</div>
+          <div class="navitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 13h4l2 5 4-12 2 7h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg> Dashboard</div>
+          <div class="navitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.7"/><path d="M5 12a7 7 0 0 1 14 0M2 12a10 10 0 0 1 20 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg> Access Points</div>
+          <div class="grp">Configure</div>
+          <div class="navitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M4 10h16" stroke="currentColor" stroke-width="1.7"/></svg> WLANs</div>
+          <div class="navitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l3 3 3 .5L19 9l2 3-2 3 .5 2.5L18 21l-3 .5L12 24" stroke="currentColor" stroke-width="0" fill="none"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg> Radio</div>
+          <div class="grp">Security</div>
+          <div class="navitem cur" aria-current="page"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg> Intrusion Prevention</div>
+          <div class="navitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.7"/></svg> Authentication</div>
+        </nav>
+
+        <main class="panel">
+          <div class="crumbs">Security <span>›</span> <b>Intrusion Prevention (WIPS)</b></div>
+          <h2>Wireless Intrusion Prevention</h2>
+          <p class="lede">Detect and block wireless attacks against the WLAN. Apply your changes when finished — pending edits are not enforced until applied.</p>
+
+          <!-- DoS protection -->
+          <div class="card">
+            <h3><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l9 16H3l9-16z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 10v4M12 17v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span> Denial-of-service protection</h3>
+            <p class="hint">Limit attacks that exhaust the controller or flood it with connection attempts.</p>
+
+            <div class="row">
+              <div class="meta">
+                <div class="t">Excessive request protection</div>
+                <div class="d">Throttle clients that send abnormally high volumes of association / probe requests.</div>
+              </div>
+              <div class="ctl"><button class="sw" id="sw-flood" role="switch" aria-checked="false" aria-label="Excessive request protection"></button></div>
+            </div>
+
+            <div class="row">
+              <div class="meta">
+                <div class="t">Block on repeated authentication failures</div>
+                <div class="d">Temporarily lock out clients that fail authentication too many times.</div>
+              </div>
+              <div class="ctl"><button class="sw" id="sw-authblock" role="switch" aria-checked="false" aria-label="Block on repeated authentication failures"></button></div>
+            </div>
+            <div class="sub" id="authblock-sub" hidden>
+              <div class="field">
+                <label for="lockout">Lock out after</label>
+                <span><input type="number" id="lockout" min="1" max="20" value="5"> <span class="unit">failed attempts</span></span>
+              </div>
+              <div class="field">
+                <label for="blockdur">Block duration</label>
+                <span><input type="number" id="blockdur" min="0" max="3600" placeholder="0"> <span class="unit">seconds</span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- IDS/IPS -->
+          <div class="card">
+            <h3><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span> Intrusion detection &amp; prevention</h3>
+            <p class="hint">Identify unauthorized (rogue) devices and actively defend against rogue access points.</p>
+
+            <div class="row">
+              <div class="meta">
+                <div class="t">Rogue device reporting</div>
+                <div class="d">Which detected unauthorized devices the controller logs and alerts on.</div>
+              </div>
+              <div class="ctl">
+                <select id="rogue-report" aria-label="Rogue device reporting">
+                  <option value="off">Disabled</option>
+                  <option value="ap-only">Access points only</option>
+                  <option value="all">All device types</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="meta">
+                <div class="t">Rogue access point protection</div>
+                <div class="d">Actively contain rogue APs by deauthenticating clients that associate with them.</div>
+              </div>
+              <div class="ctl"><button class="sw" id="sw-rogueap" role="switch" aria-checked="false" aria-label="Rogue access point protection"></button></div>
+            </div>
+          </div>
+
+          <!-- Rogue services -->
+          <div class="card">
+            <h3><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="6" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="14" width="16" height="6" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M7.5 7h.5M7.5 17h.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span> Rogue services</h3>
+            <p class="hint">Watch for unauthorized infrastructure services advertised on the wireless network.</p>
+
+            <div class="row">
+              <div class="meta">
+                <div class="t">Rogue DHCP server detection</div>
+                <div class="d">Alert when an unauthorized device hands out IP leases on the WLAN.</div>
+              </div>
+              <div class="ctl"><button class="sw" id="sw-dhcp" role="switch" aria-checked="false" aria-label="Rogue DHCP server detection"></button></div>
+            </div>
+          </div>
+
+          <div class="applybar">
+            <button class="btn primary" id="apply">Apply changes</button>
+            <button class="btn ghost" id="reset">Reset lab</button>
+            <span class="dirty" id="dirty">● unsaved changes</span>
+            <span class="saved" id="saved">✓ configuration applied</span>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <!-- ============ SIDE PANEL ============ -->
+    <aside>
+      <div class="pcard">
+        <h3>Task checklist</h3>
+        <ul class="checks" id="checks"></ul>
+      </div>
+
+      <div class="pcard">
+        <h3>Knowledge check</h3>
+        <div id="questions"></div>
+      </div>
+
+      <div class="pcard">
+        <h3>Submit completed lab</h3>
+        <label class="vh" for="hacker">Hacker name (pseudonym)</label>
+        <input class="name-in" id="hacker" type="text" maxlength="40" autocomplete="off" placeholder="hacker name (no real names)">
+        <div class="scoreline"><span>Score</span> <b id="score">0 / 8</b></div>
+        <button class="btn primary submit" id="submit" disabled>Submit completed lab</button>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="lic">© 2026 [INSTRUCTOR / AUTHOR NAME] · Original clean-room Security+ lab · Halonet WC-7 is a fictional device.</footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ============================================================ -->
+<!-- SCRIPT 1: original, dependency-free DOM→PNG capture           -->
+<!-- (replaces an inlined screenshot library; no CDN, no runtime  -->
+<!--  network beyond the single submission POST)                  -->
+<!-- ============================================================ -->
+<script>
+/* captureNode(el, maxWidth) -> Promise<dataURL PNG>
+   Renders the element's live DOM inside an SVG <foreignObject>, embeds the
+   page's own stylesheet so classes resolve, rasterizes to a canvas, and
+   exports a PNG. Only same-origin / inline content is present (all art is
+   inline SVG), so the canvas is never tainted and toDataURL() succeeds. */
+async function captureNode(el, maxWidth) {
+  const rect = el.getBoundingClientRect();
+  const w = Math.ceil(rect.width), h = Math.ceil(rect.height);
+  const css = (document.getElementById('lab-style') || {}).textContent || '';
+
+  // Clone and strip interactive cruft that doesn't render meaningfully.
+  const clone = el.cloneNode(true);
+  clone.removeAttribute('id'); // avoid duplicate-id collisions in the SVG doc
+
+  const xhtml = new XMLSerializer().serializeToString(clone);
+  const scale = Math.min(2, Math.max(1, (maxWidth || 900) / w)); // crisp but capped
+
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+      '<foreignObject x="0" y="0" width="' + w + '" height="' + h + '">' +
+        '<div xmlns="http://www.w3.org/1999/xhtml" id="capture">' +
+          '<style>' + css + '</style>' + xhtml +
+        '</div>' +
+      '</foreignObject>' +
+    '</svg>';
+
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  const img = new Image();
+
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error('render failed'));
+    img.src = url;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0e1620';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.drawImage(img, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+</script>
+
+<!-- ============================================================ -->
+<!-- SCRIPT 2: engine + LAB CONFIG + ANSWER KEY                    -->
+<!-- ============================================================ -->
+<script>
+"use strict";
+
+/* ===================== LAB CONFIG (edit per activity) ===================== */
+const CONFIG = {
+  assignmentId: "splus-wips-controller",
+  title: "Configure Wireless Intrusion Prevention (WIPS)",
+  objectives: ["2.4", "3.2", "4.1"],
+
+  // ----- ANSWER KEY: required committed-config state for each task -----
+  tasks: [
+    { id: "flood",     label: "Enable excessive wireless request protection" },
+    { id: "authblock", label: "Block repeated auth failures for 120 seconds" },
+    { id: "report",    label: "Report all rogue device types" },
+    { id: "rogueap",   label: "Protect against rogue access points" },
+    { id: "dhcp",      label: "Enable rogue DHCP server detection" }
+  ],
+
+  // ----- Knowledge-check questions (original wording) -----
+  questions: [
+    {
+      id: "q1",
+      prompt: "Locking out a client after repeated authentication failures most directly limits which attack?",
+      options: [
+        "Online password / credential guessing",
+        "Cross-site scripting against the captive portal",
+        "ARP cache poisoning on the wired LAN"
+      ],
+      key: 0
+    },
+    {
+      id: "q2",
+      prompt: "An unauthorized DHCP server on the WLAN is dangerous mainly because it can hand clients a malicious gateway or DNS, enabling which result?",
+      options: [
+        "Stronger WPA3 key derivation",
+        "An on-path (man-in-the-middle) position over client traffic",
+        "Automatic firmware rollback on the access points"
+      ],
+      key: 1
+    },
+    {
+      id: "q3",
+      prompt: "How does rogue access point containment typically stop clients from using a rogue AP?",
+      options: [
+        "It encrypts the rogue AP's beacons",
+        "It raises the legitimate AP's transmit power to full",
+        "It sends deauthentication frames to clients associated with the rogue AP"
+      ],
+      key: 2
+    }
+  ],
+
+  // self-reported score: passed tasks + correct questions
+  passThreshold: "all tasks pass and all questions correct",
+
+  // ----- Deployment -----
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+};
+
+const REQUIRED_BLOCK_SECONDS = 120; // from the lab spec (two minutes)
+const TOTAL = CONFIG.tasks.length + CONFIG.questions.length;
+
+/* ===================== Working / committed state ===================== */
+const blank = () => ({
+  flood: false,
+  authblock: false,
+  lockout: 5,
+  blockdur: null,     // seconds
+  report: "off",      // off | ap-only | all
+  rogueap: false,
+  dhcp: false
+});
+let cfg = blank();        // live working config
+let applied = null;       // committed snapshot (null until first Apply)
+const answers = {};       // questionId -> chosen index
+
+/* ===================== Task evaluation ===================== */
+function evalTasks(state) {
+  if (!state) return CONFIG.tasks.map(t => ({ id: t.id, label: t.label, passed: false, why: "Apply your changes to enforce them." }));
+  return CONFIG.tasks.map(t => {
+    let passed = false, why = "";
+    switch (t.id) {
+      case "flood":
+        passed = state.flood === true;
+        why = passed ? "Request flood protection on." : "Turn on excessive request protection.";
+        break;
+      case "authblock":
+        passed = state.authblock === true && Number(state.blockdur) === REQUIRED_BLOCK_SECONDS;
+        why = passed ? "Auth-failure blocking set to 120 s."
+            : (state.authblock ? "Set the block duration to 120 seconds." : "Enable auth-failure blocking, then set 120 s.");
+        break;
+      case "report":
+        passed = state.report === "all";
+        why = passed ? "Reporting all rogue device types." : "Set rogue reporting to all device types.";
+        break;
+      case "rogueap":
+        passed = state.rogueap === true;
+        why = passed ? "Rogue AP protection on." : "Turn on rogue access point protection.";
+        break;
+      case "dhcp":
+        passed = state.dhcp === true;
+        why = passed ? "Rogue DHCP detection on." : "Turn on rogue DHCP server detection.";
+        break;
+    }
+    return { id: t.id, label: t.label, passed, why };
+  });
+}
+
+/* ===================== Rendering ===================== */
+const $ = id => document.getElementById(id);
+
+function renderChecks() {
+  const results = evalTasks(cfg); // live feedback against working config
+  const ul = $("checks");
+  ul.innerHTML = "";
+  results.forEach(r => {
+    const li = document.createElement("li");
+    li.className = r.passed ? "done" : "";
+    li.innerHTML =
+      '<span class="box">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</span>' +
+      '<span class="label"><span class="t">' + r.label + '</span><span class="why">' + r.why + '</span></span>';
+    ul.appendChild(li);
+  });
+}
+
+function renderQuestions() {
+  const host = $("questions");
+  host.innerHTML = "";
+  CONFIG.questions.forEach(q => {
+    const wrap = document.createElement("div");
+    wrap.className = "q";
+    const opts = q.options.map((o, i) => {
+      const chosen = answers[q.id] === i;
+      let cls = "opt";
+      if (chosen) cls += (i === q.key) ? " is-right" : " is-wrong";
+      return '<label class="' + cls + '">' +
+               '<input type="radio" name="' + q.id + '" value="' + i + '"' + (chosen ? ' checked' : '') + '>' +
+               '<span>' + o + '</span></label>';
+    }).join("");
+    wrap.innerHTML = '<div class="prompt">' + q.prompt + '</div><div class="opts">' + opts + '</div>';
+    host.appendChild(wrap);
+  });
+  host.querySelectorAll('input[type="radio"]').forEach(r => {
+    r.addEventListener("change", e => {
+      answers[e.target.name] = Number(e.target.value);
+      renderQuestions();
+      updateScore();
+      refreshSubmit();
+    });
+  });
+}
+
+function liveScore() {
+  const t = evalTasks(applied).filter(r => r.passed).length;
+  const q = CONFIG.questions.filter(x => answers[x.id] === x.key).length;
+  return { earned: t + q, total: TOTAL, tPass: t, qPass: q };
+}
+
+function updateScore() {
+  const s = liveScore();
+  $("score").textContent = s.earned + " / " + s.total;
+}
+
+/* ===================== Dirty / apply state ===================== */
+function isDirty() { return !applied || JSON.stringify(applied) !== JSON.stringify(cfg); }
+
+function refreshDirty() {
+  const dirty = isDirty();
+  $("dirty").classList.toggle("on", dirty && applied !== null);
+  $("saved").classList.toggle("on", !dirty && applied !== null);
+}
+
+function allQuestionsAnswered() {
+  return CONFIG.questions.every(q => typeof answers[q.id] === "number");
+}
+
+function refreshSubmit() {
+  const ready = $("hacker").value.trim().length > 0 && applied !== null && allQuestionsAnswered();
+  $("submit").disabled = !ready;
+}
+
+/* ===================== Control wiring ===================== */
+function bindSwitch(elId, key, after) {
+  const el = $(elId);
+  const toggle = () => {
+    cfg[key] = !cfg[key];
+    el.setAttribute("aria-checked", String(cfg[key]));
+    if (after) after();
+    onChange();
+  };
+  el.addEventListener("click", toggle);
+  el.addEventListener("keydown", e => {
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); }
+  });
+}
+
+function onChange() { renderChecks(); refreshDirty(); refreshSubmit(); }
+
+function init() {
+  bindSwitch("sw-flood", "flood");
+  bindSwitch("sw-authblock", "authblock", () => {
+    $("authblock-sub").hidden = !cfg.authblock;
+  });
+  bindSwitch("sw-rogueap", "rogueap");
+  bindSwitch("sw-dhcp", "dhcp");
+
+  $("lockout").addEventListener("input", e => { cfg.lockout = Number(e.target.value); onChange(); });
+  $("blockdur").addEventListener("input", e => {
+    cfg.blockdur = e.target.value === "" ? null : Number(e.target.value);
+    onChange();
+  });
+  $("rogue-report").addEventListener("change", e => { cfg.report = e.target.value; onChange(); });
+
+  $("apply").addEventListener("click", () => {
+    applied = JSON.parse(JSON.stringify(cfg));
+    refreshDirty(); updateScore(); refreshSubmit();
+    toast("Configuration applied to the WLAN.");
+  });
+
+  $("reset").addEventListener("click", () => {
+    cfg = blank();
+    $("sw-flood").setAttribute("aria-checked", "false");
+    $("sw-authblock").setAttribute("aria-checked", "false");
+    $("sw-rogueap").setAttribute("aria-checked", "false");
+    $("sw-dhcp").setAttribute("aria-checked", "false");
+    $("authblock-sub").hidden = true;
+    $("lockout").value = 5;
+    $("blockdur").value = "";
+    $("rogue-report").value = "off";
+    applied = null;
+    onChange(); updateScore();
+    toast("Settings reset.");
+  });
+
+  $("hacker").addEventListener("input", refreshSubmit);
+  $("submit").addEventListener("click", submit);
+
+  renderChecks();
+  renderQuestions();
+  updateScore();
+  refreshDirty();
+  refreshSubmit();
+}
+
+/* ===================== Toast ===================== */
+let toastTimer;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+/* ===================== Submission ===================== */
+function setStatus(msg, kind) {
+  const s = $("status");
+  s.className = "status " + (kind || "");
+  s.innerHTML = msg;
+}
+
+async function submit() {
+  const name = $("hacker").value.trim();
+  if (!name) { setStatus("Enter a hacker name first.", "err"); return; }
+  if (applied === null) { setStatus("Apply your configuration before submitting.", "err"); return; }
+
+  $("submit").disabled = true;
+  setStatus("Capturing lab and submitting…", "work");
+
+  // Build results from the committed config (the enforced state).
+  const taskResults = evalTasks(applied).map(r => ({ id: r.id, label: r.label, passed: r.passed }));
+  const questionResults = CONFIG.questions.map(q => ({
+    id: q.id,
+    prompt: q.prompt,
+    answer: typeof answers[q.id] === "number" ? q.options[answers[q.id]] : "",
+    correct: answers[q.id] === q.key
+  }));
+  const earned = taskResults.filter(r => r.passed).length + questionResults.filter(r => r.correct).length;
+
+  let screenshot = "";
+  try {
+    screenshot = await captureNode($("capture"), 900);
+  } catch (err) {
+    screenshot = ""; // server tolerates an empty screenshot; submission still records
+  }
+
+  const payload = {
+    assignmentId:    CONFIG.assignmentId,
+    hackerName:      name,
+    clientTimestamp: new Date().toISOString(),
+    objectives:      CONFIG.objectives,
+    tasks:           taskResults,
+    questions:       questionResults,
+    score:           { earned: earned, total: TOTAL },
+    screenshot:      screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0) {
+    setStatus("This lab isn’t connected to a submission endpoint yet. Ask your instructor to set APPS_SCRIPT_URL. (Score: " + earned + " / " + TOTAL + ")", "err");
+    $("submit").disabled = false;
+    return;
+  }
+
+  // Simple request: no custom headers, default text/plain body → no CORS preflight.
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    const out = await res.json();
+    if (out && out.success) {
+      const link = out.docUrl
+        ? ' Receipt: <a href="' + out.docUrl + '" target="_blank" rel="noopener">open submission doc</a>.'
+        : '';
+      setStatus("Submitted — score " + earned + " / " + TOTAL + "." + link, "ok");
+    } else {
+      setStatus("Submission rejected: " + ((out && out.error) || "unknown error") + ".", "err");
+      $("submit").disabled = false;
+    }
+  } catch (err) {
+    // Locked-down context fallback: fire-and-forget (cannot read docUrl).
+    try {
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+      setStatus("Submitted (delivery not confirmable here — verify with your instructor). Score " + earned + " / " + TOTAL + ".", "ok");
+    } catch (e2) {
+      setStatus("Could not reach the submission server. Check your connection and try again.", "err");
+      $("submit").disabled = false;
+    }
+  }
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-syn-flood-analysis.html",title:"Lab \u2014 Analyze a SYN Flood Attack"}, NEXT={href:"splus-arp-wireshark.html",title:"Lab \u2014 Detect ARP Poisoning with a Packet Capture"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.5 Detecting Network Attacks";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

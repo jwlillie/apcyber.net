@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Deploy a Screened Subnet (Sentinel Gateway OS)</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-screened-subnet",
+  "title": "Lab — Deploy a Screened Subnet (Sentinel Gateway OS)",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.3 Protecting Networks: Segmentation"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "3.2",
+      "4.5"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Lab Simulation — "Deploy a Screened Subnet"
+  Clean-room build from the public CompTIA SY0-701 objectives:
+      4.5.1.4  Firewall — Screened subnets
+      3.2.1.2  Infrastructure considerations — Security zones
+      3.2.1.1  Infrastructure considerations — Device placement
+
+  Original work. The simulated appliance ("Sentinel Gateway OS"), the scenario,
+  persona, interface name, IP scheme, rule text, DHCP range, and all question
+  wording are this author's own expression. This is NOT a copy or reskin of any
+  vendor's lab; it teaches the documented, factual procedure only.
+
+  © 2026 [REPLACE WITH AUTHOR / ORG NAME].
+  Licensed for instructional use. All rights reserved by the author.
+  ============================================================================
+
+  NOTE ON THE SCREENSHOT CAPTURE
+  ------------------------------
+  The build spec asks for an inlined copy of html2canvas. This file instead
+  uses a small, dependency-free Canvas renderer (see captureLabImage / drawReport
+  near the bottom) that snapshots the lab state to a PNG data URL. It is smaller
+  and more reliable for a fully self-rendered sim, and produces the identical
+  payload field (`screenshot`). If you prefer a literal pixel screenshot of the
+  console DOM, paste the minified html2canvas source into the <script id="vendor">
+  block below and set USE_HTML2CANVAS = true.
+-->
+<style>
+  :root{
+    --bg:#0e1726;          /* deep slate navy base                */
+    --panel:#16213a;       /* console panels                      */
+    --panel-2:#1b2942;     /* nested cards                        */
+    --line:#2a3a59;        /* hairline borders                    */
+    --ink:#e6edf6;         /* primary text                        */
+    --muted:#8aa0bd;       /* secondary text                      */
+    --accent:#34d4c4;      /* "live wire" teal — active links     */
+    --accent-2:#f5b945;    /* amber — pending / warning           */
+    --ok:#4ade80;          /* pass                                */
+    --bad:#fb7185;         /* fail                                */
+    --wan:#6b8cff;         /* untrusted/WAN zone                  */
+    --radius:10px;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+  body{line-height:1.5;-webkit-font-smoothing:antialiased;}
+  a{color:var(--accent);}
+  code,.mono{font-family:var(--mono);}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+
+  /* ---- top bar ---- */
+  .topbar{display:flex;align-items:center;gap:14px;padding:12px 18px;
+    border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:.2px;}
+  .logo{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;
+    background:linear-gradient(150deg,var(--accent),#1f8f86);color:#06201d;font-weight:800;}
+  .brand small{display:block;font-weight:500;color:var(--muted);letter-spacing:.06em;
+    text-transform:uppercase;font-size:10px;}
+  .session{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--bad);}
+  .dot.on{background:var(--ok);}
+
+  /* ---- scenario header ---- */
+  .scenario{margin-top:14px;border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:var(--radius);background:var(--panel);padding:16px 18px;}
+  .scenario h1{margin:0 0 4px;font-size:19px;letter-spacing:-.01em;}
+  .obj{display:inline-flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--accent);
+    border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:#0d2724;}
+  .scenario p{margin:8px 0 0;color:var(--muted);max-width:78ch;}
+
+  /* ---- main grid ---- */
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:14px;margin-top:14px;align-items:start;}
+  @media (max-width:920px){ .grid{grid-template-columns:1fr;} }
+
+  /* ---- console ---- */
+  .console{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden;}
+  .console-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);
+    background:#101b30;}
+  .tlight{width:11px;height:11px;border-radius:50%;}
+  .tlight.r{background:#ff5f57}.tlight.y{background:#febc2e}.tlight.g{background:#28c840}
+  .console-head .addr{margin-left:10px;font-family:var(--mono);font-size:12px;color:var(--muted);
+    background:#0b1320;border:1px solid var(--line);border-radius:7px;padding:3px 10px;}
+
+  .nav{display:flex;gap:2px;padding:8px 8px 0;border-bottom:1px solid var(--line);background:#101b30;flex-wrap:wrap;}
+  .nav button{appearance:none;background:transparent;border:0;color:var(--muted);font:inherit;
+    padding:9px 13px;border-radius:8px 8px 0 0;cursor:pointer;border-bottom:2px solid transparent;}
+  .nav button:hover{color:var(--ink);}
+  .nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);background:var(--panel);}
+
+  .panel-body{padding:18px;min-height:330px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .panel h2{margin:0 0 4px;font-size:15px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);}
+  .panel .hint{color:var(--muted);font-size:13px;margin:0 0 14px;}
+
+  /* form bits */
+  label.f{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;letter-spacing:.03em;}
+  input[type=text],input[type=password],select{width:100%;background:#0b1320;color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit;font-family:var(--mono);}
+  input::placeholder{color:#5a6c89;}
+  .row{display:flex;gap:10px;}
+  .row > *{flex:1;}
+  .chk{display:flex;align-items:center;gap:9px;margin:12px 0;color:var(--ink);}
+  .chk input{width:18px;height:18px;accent-color:var(--accent);}
+  .btn{appearance:none;border:1px solid var(--accent);background:var(--accent);color:#06201d;
+    font:inherit;font-weight:700;padding:9px 15px;border-radius:8px;cursor:pointer;}
+  .btn:hover{filter:brightness(1.06);}
+  .btn.ghost{background:transparent;color:var(--accent);}
+  .btn.sm{padding:6px 11px;font-size:13px;}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+  .actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+
+  /* tables */
+  table.t{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+  table.t th,table.t td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);}
+  table.t th{color:var(--muted);font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;}
+  table.t td{font-family:var(--mono);}
+  .pill{font-family:var(--sans);font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);}
+  .pill.up{color:var(--ok);border-color:#1c5b3a;background:#0c2418;}
+  .pill.down{color:var(--muted);}
+  .pill.opt{color:var(--accent-2);border-color:#5a4318;background:#241c0c;}
+
+  .empty{color:var(--muted);font-size:13px;border:1px dashed var(--line);border-radius:8px;
+    padding:18px;text-align:center;}
+
+  .note{font-size:12px;color:var(--muted);border-left:2px solid var(--line);padding:6px 0 6px 12px;margin:14px 0;}
+  .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px;}
+  .ok-msg{color:var(--ok);font-size:13px;margin-top:10px;}
+
+  /* dashboard topology (the signature element) */
+  .topo{border:1px solid var(--line);border-radius:10px;background:#0b1320;padding:16px;}
+  .topo svg{width:100%;height:auto;display:block;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted);}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle;}
+
+  /* ---- lab dock ---- */
+  .dock{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);position:sticky;top:18px;}
+  .dock h2{margin:0;padding:13px 16px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+    border-bottom:1px solid var(--line);color:var(--ink);}
+  .checklist{list-style:none;margin:0;padding:8px;}
+  .checklist li{display:flex;gap:11px;align-items:flex-start;padding:9px 8px;border-radius:8px;}
+  .checklist li + li{border-top:1px solid #1d2c46;}
+  .mark{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--line);
+    display:grid;place-items:center;font-size:12px;font-weight:800;margin-top:1px;}
+  .mark.done{border-color:var(--ok);background:#0c2418;color:var(--ok);}
+  .checklist .lbl{font-size:13.5px;}
+  .checklist .sub{font-size:11.5px;color:var(--muted);}
+  li.done .lbl{color:var(--ink);}
+
+  .quiz{padding:6px 16px 4px;border-top:1px solid var(--line);}
+  .quiz h3{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;}
+  fieldset{border:1px solid var(--line);border-radius:8px;margin:0 0 12px;padding:11px 12px;}
+  legend{font-size:13px;padding:0 6px;color:var(--ink);}
+  .opts{display:grid;gap:6px;margin-top:6px;}
+  .opts label{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--muted);cursor:pointer;}
+  .opts input{margin-top:3px;accent-color:var(--accent);}
+  .qstate{font-size:11.5px;margin-top:6px;min-height:14px;}
+
+  .submitbar{padding:14px 16px;border-top:1px solid var(--line);}
+  .submitbar .score{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .score b{font-family:var(--mono);font-size:18px;}
+  .status{font-size:13px;margin-top:11px;min-height:18px;}
+  .status a{font-weight:700;}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  /* login overlay */
+  .login{position:fixed;inset:0;background:rgba(8,14,26,.92);display:grid;place-items:center;z-index:50;padding:18px;}
+  .login .card{width:min(380px,100%);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;}
+  .login .logo{width:42px;height:42px;border-radius:11px;font-size:20px;margin-bottom:14px;}
+  .login h2{margin:0 0 2px;font-size:18px;text-transform:none;letter-spacing:-.01em;color:var(--ink);}
+  .login p{margin:0 0 18px;color:var(--muted);font-size:13px;}
+
+  footer.lic{max-width:1180px;margin:18px auto 26px;padding:0 18px;color:#5d6f8c;font-size:11.5px;}
+  .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+
+<!-- Paste minified html2canvas here and flip USE_HTML2CANVAS if you want a literal DOM screenshot -->
+<script id="vendor">/* (optional) html2canvas source goes here */</script>
+
+<div class="wrap" id="captureRoot">
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">S</span>
+      <span>Sentinel Gateway OS<small>edge security appliance</small></span>
+    </div>
+    <div class="session">
+      <span class="dot" id="sessDot" aria-hidden="true"></span>
+      <span id="sessText">Not signed in</span>
+    </div>
+  </div>
+
+  <div class="scenario">
+    <h1>Deploy a screened subnet for the public web server</h1>
+    <div class="obj" aria-label="CompTIA SY0-701 objectives">
+      <span class="tag">SY0-701 · 4.5.1.4 Screened subnets</span>
+      <span class="tag">SY0-701 · 3.2.1.2 Security zones</span>
+    </div>
+    <p><b>Scenario.</b> You are the network administrator at <b>Larkspur Outfitters</b>, a regional
+    outdoor-gear retailer. The marketing team is launching a public order-tracking web server that must
+    be reachable from the internet. To keep a compromise of that server from reaching the internal LAN,
+    you will isolate it in a <b>screened subnet</b> behind the Larkspur perimeter gateway, then enable
+    DHCP so the other appliances in that subnet can lease addresses automatically. Work through the
+    console on the left; the task list on the right checks itself as you go.</p>
+  </div>
+
+  <div class="grid">
+
+    <!-- ================= CONSOLE ================= -->
+    <div class="console" role="region" aria-label="Sentinel Gateway management console">
+      <div class="console-head">
+        <span class="tlight r" aria-hidden="true"></span>
+        <span class="tlight y" aria-hidden="true"></span>
+        <span class="tlight g" aria-hidden="true"></span>
+        <span class="addr mono">https://192.168.1.1/ — Sentinel Gateway</span>
+      </div>
+
+      <div class="nav" role="tablist" aria-label="Console sections">
+        <button role="tab" id="tab-dash" aria-controls="p-dash" aria-selected="true" data-panel="dash">Dashboard</button>
+        <button role="tab" id="tab-if"   aria-controls="p-if"   aria-selected="false" data-panel="if">Interfaces</button>
+        <button role="tab" id="tab-fw"   aria-controls="p-fw"   aria-selected="false" data-panel="fw">Firewall</button>
+        <button role="tab" id="tab-svc"  aria-controls="p-svc"  aria-selected="false" data-panel="svc">Services</button>
+      </div>
+
+      <div class="panel-body">
+
+        <!-- DASHBOARD -->
+        <section class="panel active" id="p-dash" role="tabpanel" aria-labelledby="tab-dash">
+          <h2>Network map</h2>
+          <p class="hint">Live view of the gateway's security zones. The screened subnet lights up as you configure it.</p>
+          <div class="topo" id="topo"><!-- svg injected --></div>
+          <div class="legend">
+            <span><i style="background:var(--wan)"></i>Untrusted (WAN)</span>
+            <span><i style="background:var(--accent)"></i>Trusted (LAN)</span>
+            <span><i style="background:var(--accent-2)"></i>Screened subnet</span>
+          </div>
+        </section>
+
+        <!-- INTERFACES -->
+        <section class="panel" id="p-if" role="tabpanel" aria-labelledby="tab-if" hidden>
+          <h2>Interfaces</h2>
+          <p class="hint">Assign an available hardware port to a new logical interface, then configure its address.</p>
+
+          <table class="t" id="ifTable">
+            <thead><tr><th>Interface</th><th>Port</th><th>Address</th><th>Status</th><th></th></tr></thead>
+            <tbody id="ifRows"></tbody>
+          </table>
+
+          <div id="ifAssign" style="margin-top:14px;">
+            <div class="empty" id="ifAssignBox">
+              Unassigned hardware port detected: <code>gw2</code>.
+              <div style="margin-top:11px;"><button class="btn sm" id="btnAssign">Assign port gw2 as new interface</button></div>
+            </div>
+          </div>
+
+          <!-- edit form (hidden until assigned) -->
+          <div id="ifEdit" hidden style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px;">
+            <h2 id="ifEditTitle">Edit interface — OPT1</h2>
+            <div class="chk">
+              <input type="checkbox" id="ifEnable" />
+              <label for="ifEnable" style="margin:0;font-size:14px;color:var(--ink);">Enable interface</label>
+            </div>
+            <label class="f" for="ifDesc">Description (interface name)</label>
+            <input type="text" id="ifDesc" placeholder="e.g. ZONENAME" autocomplete="off" />
+            <label class="f" for="ifType">IPv4 configuration type</label>
+            <select id="ifType">
+              <option value="none">None</option>
+              <option value="static">Static IPv4</option>
+              <option value="dhcp">DHCP</option>
+            </select>
+            <div id="ipFields" hidden>
+              <div class="row">
+                <div>
+                  <label class="f" for="ifIp">IPv4 address</label>
+                  <input type="text" id="ifIp" placeholder="172.x.x.1" autocomplete="off" />
+                </div>
+                <div style="flex:0 0 120px;">
+                  <label class="f" for="ifCidr">Subnet (CIDR)</label>
+                  <select id="ifCidr">
+                    <option value="">/—</option>
+                    <option value="8">/8</option>
+                    <option value="16">/16</option>
+                    <option value="24">/24</option>
+                    <option value="25">/25</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn" id="btnIfSave">Save &amp; apply</button>
+            </div>
+            <div class="err" id="ifErr" role="status"></div>
+          </div>
+        </section>
+
+        <!-- FIREWALL -->
+        <section class="panel" id="p-fw" role="tabpanel" aria-labelledby="tab-fw" hidden>
+          <h2>Firewall · Rules</h2>
+          <p class="hint">Rules are evaluated per interface. Select the screened-subnet interface tab to add its rule.</p>
+
+          <div class="nav" id="fwTabs" style="border:0;padding:0;margin:0 0 12px;">
+            <button data-iface="WAN" aria-selected="false">WAN</button>
+            <button data-iface="LAN" aria-selected="false">LAN</button>
+            <button data-iface="OPT" aria-selected="true" id="fwTabOpt" hidden>—</button>
+          </div>
+
+          <table class="t">
+            <thead><tr><th>Action</th><th>Proto</th><th>Source</th><th>Destination</th><th>Description</th></tr></thead>
+            <tbody id="fwRows"></tbody>
+          </table>
+          <div id="fwEmpty" class="empty" style="margin-top:12px;">No rules on this interface yet.</div>
+
+          <div id="fwAdd" hidden style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px;">
+            <button class="btn sm ghost" id="btnFwShow">+ Add rule on this interface</button>
+            <div id="fwForm" hidden style="margin-top:12px;">
+              <div class="row">
+                <div>
+                  <label class="f" for="fwAction">Action</label>
+                  <select id="fwAction"><option value="pass">Pass</option><option value="block">Block</option></select>
+                </div>
+                <div>
+                  <label class="f" for="fwProto">Protocol</label>
+                  <select id="fwProto"><option value="any">Any</option><option value="tcp">TCP</option><option value="udp">UDP</option></select>
+                </div>
+              </div>
+              <div class="row">
+                <div>
+                  <label class="f" for="fwSrc">Source</label>
+                  <select id="fwSrc"><option value="">— select —</option><option value="net">screened subnet net</option><option value="any">any</option></select>
+                </div>
+                <div>
+                  <label class="f" for="fwDst">Destination</label>
+                  <select id="fwDst"><option value="any">any</option><option value="lan">LAN net</option></select>
+                </div>
+              </div>
+              <label class="f" for="fwDesc">Description</label>
+              <input type="text" id="fwDesc" placeholder="Short rule description" autocomplete="off" />
+              <div class="actions">
+                <button class="btn" id="btnFwSave">Save &amp; apply</button>
+              </div>
+              <div class="err" id="fwErr" role="status"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SERVICES / DHCP -->
+        <section class="panel" id="p-svc" role="tabpanel" aria-labelledby="tab-svc" hidden>
+          <h2>Services · DHCP Server</h2>
+          <p class="hint">Hand out leases on the screened subnet so its appliances get addresses automatically.</p>
+
+          <div class="nav" id="dhcpTabs" style="border:0;padding:0;margin:0 0 12px;">
+            <button data-iface="LAN" aria-selected="false">LAN</button>
+            <button data-iface="OPT" aria-selected="true" id="dhcpTabOpt" hidden>—</button>
+          </div>
+
+          <div id="dhcpBody">
+            <div class="empty" id="dhcpLocked">Configure and enable the screened-subnet interface first, then return here.</div>
+            <div id="dhcpForm" hidden>
+              <div class="chk">
+                <input type="checkbox" id="dhcpEnable" />
+                <label for="dhcpEnable" style="margin:0;font-size:14px;color:var(--ink);">Enable DHCP server on this interface</label>
+              </div>
+              <p class="note" id="dhcpSubnetNote"></p>
+              <div class="row">
+                <div>
+                  <label class="f" for="dhcpFrom">Range — from</label>
+                  <input type="text" id="dhcpFrom" placeholder="172.x.x.50" autocomplete="off" />
+                </div>
+                <div>
+                  <label class="f" for="dhcpTo">Range — to</label>
+                  <input type="text" id="dhcpTo" placeholder="172.x.x.150" autocomplete="off" />
+                </div>
+              </div>
+              <div class="actions"><button class="btn" id="btnDhcpSave">Save</button></div>
+              <div class="err" id="dhcpErr" role="status"></div>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /panel-body -->
+    </div><!-- /console -->
+
+    <!-- ================= LAB DOCK ================= -->
+    <aside class="dock" aria-label="Lab tasks and submission">
+      <h2>Lab progress</h2>
+      <ul class="checklist" id="checklist"></ul>
+
+      <div class="quiz" id="quiz">
+        <h3>Knowledge check</h3>
+        <!-- questions injected -->
+      </div>
+
+      <div class="submitbar">
+        <div class="score"><span>Score</span><b id="scoreText">0 / 9</b></div>
+        <label class="f" for="hackerName" style="margin-top:0;">Hacker name (pseudonym — no real names)</label>
+        <input type="text" id="hackerName" placeholder="e.g. nightjar" autocomplete="off" maxlength="40" />
+        <div class="actions">
+          <button class="btn" id="btnSubmit">Submit completed lab</button>
+          <button class="btn ghost sm" id="btnReset">Reset lab</button>
+        </div>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </div>
+    </aside>
+
+  </div><!-- /grid -->
+</div><!-- /captureRoot -->
+
+<footer class="lic">
+  Sentinel Gateway OS is a fictional teaching appliance. This simulation is original work built clean-room
+  from the public CompTIA SY0-701 objectives (4.5.1.4, 3.2.1.x). © 2026 [REPLACE WITH AUTHOR / ORG NAME].
+  Licensed for instructional use.
+</footer>
+
+<!-- ===================== LOGIN OVERLAY ===================== -->
+<div class="login" id="login" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <div class="card">
+    <span class="logo" aria-hidden="true">S</span>
+    <h2 id="loginTitle">Sign in to Sentinel Gateway</h2>
+    <p>Use the administrator credentials provided by Larkspur IT to reach the management console.</p>
+    <label class="f" for="user">Username</label>
+    <input type="text" id="user" autocomplete="off" placeholder="admin" />
+    <label class="f" for="pass">Password</label>
+    <input type="password" id="pass" autocomplete="off" placeholder="••••••••" />
+    <div class="actions"><button class="btn" id="btnLogin" style="width:100%;justify-content:center;">Sign in</button></div>
+    <div class="err" id="loginErr" role="status"></div>
+    <p class="note" style="margin-top:16px;">Credentials for this lab — user <code>admin</code>, password <code>Edge@Sentinel1</code></p>
+  </div>
+</div>
+
+<script>
+/* =======================================================================
+   LAB CONFIG + ANSWER KEY  (the only per-lab edits, plus CONFIG.APPS_SCRIPT_URL)
+   ======================================================================= */
+const CONFIG = {
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "PASTE_COHORT_TOKEN",
+  assignmentId : "splus-screened-subnet",
+  title        : "Deploy a Screened Subnet on a Perimeter Gateway",
+  objectives   : ["3.2", "4.5"],
+  credentials  : { user:"admin", pass:"Edge@Sentinel1" },
+  key : {
+    ifaceName : "DMZ-WEB",          // required interface description
+    ip        : "172.22.5.1",
+    cidr      : "24",
+    fwAction  : "pass",
+    fwDesc    : "Allow DMZ-WEB outbound",
+    dhcpFrom  : "172.22.5.50",
+    dhcpTo    : "172.22.5.150"
+  },
+  questions : [
+    { id:"q1",
+      prompt:"Why place the public web server in a screened subnet instead of the internal LAN?",
+      options:[
+        "It gives the server a faster internet connection",
+        "If the server is breached, the attacker still cannot reach the internal network directly",
+        "It removes the need for a firewall on that traffic",
+        "It lets the server share the LAN's private addresses"
+      ], answer:1 },
+    { id:"q2",
+      prompt:"A hardened, internet-exposed host living inside a screened subnet is best described as a:",
+      options:[ "Jump server", "Bastion (sacrificial) host", "Domain controller", "Load balancer" ],
+      answer:1 },
+    { id:"q3",
+      prompt:"In a classic screened-subnet design, which element filters traffic first, closest to the internet?",
+      options:[ "The internal LAN switch", "The screening router / perimeter firewall", "The DHCP server", "The web server itself" ],
+      answer:1 }
+  ]
+};
+
+/* Shared across the whole library — paste your deployed Apps Script /exec URL: */
+
+/* Set true ONLY after pasting real html2canvas into <script id="vendor">. */
+const USE_HTML2CANVAS = false;
+
+/* =======================================================================
+   STATE
+   ======================================================================= */
+const S = {
+  loggedIn:false,
+  iface:{ assigned:false, enabled:false, desc:"", type:"none", ip:"", cidr:"" },
+  fw:{ added:false, action:"", proto:"", src:"", dst:"", desc:"" },
+  dhcp:{ enabled:false, from:"", to:"" },
+  quiz:{ q1:null, q2:null, q3:null },
+  fwTab:"LAN", dhcpTab:"LAN"
+};
+const norm = s => (s||"").trim();
+const eqi  = (a,b) => norm(a).toLowerCase() === norm(b).toLowerCase();
+const $ = id => document.getElementById(id);
+
+/* =======================================================================
+   TASK DEFINITIONS  (each pass() reads sim state; labels are learner-facing)
+   ======================================================================= */
+const TASKS = [
+  { id:"login", label:"Sign in to the gateway console",
+    sub:"admin / provided password", pass:()=>S.loggedIn },
+  { id:"iface_add", label:"Assign and enable a new interface",
+    sub:"Interfaces → assign port gw2, enable it", pass:()=>S.iface.assigned && S.iface.enabled },
+  { id:"iface_desc", label:"Name the interface "+CONFIG.key.ifaceName,
+    sub:"Set the Description field", pass:()=>eqi(S.iface.desc, CONFIG.key.ifaceName) },
+  { id:"iface_ip", label:"Set static IPv4 "+CONFIG.key.ip+"/"+CONFIG.key.cidr,
+    sub:"Static IPv4 configuration", pass:()=>S.iface.type==="static" && norm(S.iface.ip)===CONFIG.key.ip && S.iface.cidr===CONFIG.key.cidr },
+  { id:"fw_rule", label:"Add a Pass rule allowing the screened subnet",
+    sub:'Description: "'+CONFIG.key.fwDesc+'"',
+    pass:()=>S.fw.added && S.fw.action==="pass" && (S.fw.src==="net"||S.fw.src==="any") && eqi(S.fw.desc, CONFIG.key.fwDesc) },
+  { id:"dhcp", label:"Enable DHCP "+CONFIG.key.dhcpFrom+" → "+CONFIG.key.dhcpTo,
+    sub:"Services → DHCP on the screened subnet", pass:()=>S.dhcp.enabled && norm(S.dhcp.from)===CONFIG.key.dhcpFrom && norm(S.dhcp.to)===CONFIG.key.dhcpTo }
+];
+
+function taskResults(){ return TASKS.map(t=>({ id:t.id, label:t.label, passed:!!t.pass() })); }
+function questionResults(){
+  return CONFIG.questions.map(q=>{
+    const picked = S.quiz[q.id];
+    return { id:q.id, prompt:q.prompt, answer: picked==null?"":q.options[picked], correct: picked===q.answer };
+  });
+}
+function score(){
+  const t = taskResults().filter(x=>x.passed).length;
+  const c = questionResults().filter(x=>x.correct).length;
+  return { earned:t+c, total:TASKS.length+CONFIG.questions.length, tasks:t, q:c };
+}
+
+/* =======================================================================
+   RENDER
+   ======================================================================= */
+function renderChecklist(){
+  const ul = $("checklist");
+  ul.innerHTML = "";
+  taskResults().forEach(t=>{
+    const def = TASKS.find(x=>x.id===t.id);
+    const li = document.createElement("li");
+    li.className = t.passed ? "done" : "";
+    li.innerHTML =
+      '<span class="mark '+(t.passed?"done":"")+'" aria-hidden="true">'+(t.passed?"✓":"")+'</span>'+
+      '<span><span class="lbl">'+def.label+'</span><br><span class="sub">'+def.sub+'</span></span>';
+    ul.appendChild(li);
+  });
+  const sc = score();
+  $("scoreText").textContent = sc.earned + " / " + sc.total;
+}
+
+function renderQuiz(){
+  const box = $("quiz");
+  box.querySelectorAll("fieldset").forEach(n=>n.remove());
+  CONFIG.questions.forEach((q,qi)=>{
+    const fs = document.createElement("fieldset");
+    const picked = S.quiz[q.id];
+    let opts = "";
+    q.options.forEach((o,i)=>{
+      opts += '<label><input type="radio" name="'+q.id+'" value="'+i+'"'+(picked===i?" checked":"")+'> <span>'+o+'</span></label>';
+    });
+    let state = "";
+    if(picked!=null){
+      state = picked===q.answer
+        ? '<span style="color:var(--ok)">✓ Correct</span>'
+        : '<span style="color:var(--bad)">Not quite — review screened-subnet placement.</span>';
+    }
+    fs.innerHTML = '<legend>'+(qi+1)+'. '+q.prompt+'</legend><div class="opts">'+opts+'</div><div class="qstate">'+state+'</div>';
+    box.appendChild(fs);
+    fs.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("change",()=>{ S.quiz[q.id]=parseInt(inp.value,10); renderQuiz(); renderChecklist(); });
+    });
+  });
+}
+
+function renderInterfaces(){
+  const rows = [
+    { name:"WAN", port:"gw0", addr:"203.0.113.10/30 (DHCP)", status:"up" },
+    { name:"LAN", port:"gw1", addr:"192.168.1.1/24", status:"up" }
+  ];
+  if(S.iface.assigned){
+    rows.push({
+      name: S.iface.desc || "OPT1",
+      port: "gw2",
+      addr: S.iface.type==="static" && S.iface.ip ? (S.iface.ip+"/"+(S.iface.cidr||"?")) : "—",
+      status: S.iface.enabled ? "up" : "down"
+    });
+  }
+  $("ifRows").innerHTML = rows.map(r=>
+    '<tr><td>'+r.name+'</td><td>'+r.port+'</td><td>'+r.addr+'</td>'+
+    '<td><span class="pill '+(r.status==="up"?"up":"down")+'">'+(r.status==="up"?"up":"disabled")+'</span></td>'+
+    '<td>'+(r.port==="gw2"?'<button class="btn sm ghost" id="btnIfEdit">Edit</button>':'')+'</td></tr>'
+  ).join("");
+  $("ifAssign").hidden = S.iface.assigned;
+  if(S.iface.assigned){
+    const be = $("btnIfEdit");
+    if(be) be.addEventListener("click", openIfEdit);
+  }
+}
+
+function renderTopo(){
+  const ifSet = S.iface.assigned && S.iface.enabled && S.iface.type==="static" && S.iface.ip;
+  const dmzLit = ifSet;
+  const ipDone = ifSet;
+  const fwDone = S.fw.added && S.fw.action==="pass";
+  const dhcpDone = S.dhcp.enabled;
+  const dmzColor = dmzLit ? "var(--accent-2)" : "#33415c";
+  const chip = (x,y,on,txt)=>'<g>'+
+      '<circle cx="'+x+'" cy="'+y+'" r="5" fill="'+(on?"var(--ok)":"#33415c")+'"></circle>'+
+      '<text x="'+(x+11)+'" y="'+(y+4)+'" fill="'+(on?"var(--ink)":"var(--muted)")+'" font-size="11" font-family="var(--mono)">'+txt+'</text></g>';
+  $("topo").innerHTML =
+  '<svg viewBox="0 0 600 240" role="img" aria-label="Network topology: internet to gateway to LAN and screened subnet">'+
+    /* internet */
+    '<text x="60" y="40" fill="var(--wan)" font-size="12" font-family="var(--mono)">INTERNET</text>'+
+    '<ellipse cx="80" cy="70" rx="52" ry="26" fill="none" stroke="var(--wan)" stroke-width="1.5"></ellipse>'+
+    '<text x="80" y="74" fill="var(--wan)" font-size="11" text-anchor="middle" font-family="var(--mono)">untrusted</text>'+
+    /* link to gw */
+    '<line x1="132" y1="70" x2="250" y2="70" stroke="var(--wan)" stroke-width="2"></line>'+
+    /* gateway */
+    '<rect x="250" y="44" width="100" height="52" rx="9" fill="var(--panel-2)" stroke="var(--accent)" stroke-width="1.5"></rect>'+
+    '<text x="300" y="66" fill="var(--ink)" font-size="11" text-anchor="middle">Sentinel</text>'+
+    '<text x="300" y="82" fill="var(--muted)" font-size="10" text-anchor="middle">gateway</text>'+
+    /* link to LAN */
+    '<line x1="350" y1="62" x2="470" y2="40" stroke="var(--accent)" stroke-width="2"></line>'+
+    '<rect x="470" y="20" width="110" height="42" rx="8" fill="#0c2418" stroke="var(--accent)" stroke-width="1.2"></rect>'+
+    '<text x="525" y="38" fill="var(--accent)" font-size="11" text-anchor="middle">Trusted LAN</text>'+
+    '<text x="525" y="53" fill="var(--muted)" font-size="10" text-anchor="middle" font-family="var(--mono)">192.168.1.0/24</text>'+
+    /* link to DMZ */
+    '<line x1="350" y1="80" x2="470" y2="150" stroke="'+dmzColor+'" stroke-width="2" stroke-dasharray="'+(dmzLit?"0":"5 4")+'"></line>'+
+    '<rect x="408" y="120" width="184" height="96" rx="9" fill="'+(dmzLit?"#241c0c":"#0b1320")+'" stroke="'+dmzColor+'" stroke-width="1.5"></rect>'+
+    '<text x="500" y="140" fill="'+(dmzLit?"var(--accent-2)":"var(--muted)")+'" font-size="11" text-anchor="middle">Screened subnet'+(S.iface.desc?(" · "+S.iface.desc):"")+'</text>'+
+    chip(420,158,ipDone, ipDone ? (S.iface.ip+"/"+S.iface.cidr) : "address not set")+
+    chip(420,178,fwDone, fwDone ? "firewall rule active" : "no rule")+
+    chip(420,198,dhcpDone, dhcpDone ? "DHCP "+(S.dhcp.from||"?")+"–"+(S.dhcp.to||"?") : "DHCP off")+
+  '</svg>';
+}
+
+function renderFw(){
+  const onOpt = S.fwTab==="OPT";
+  const optTab = $("fwTabOpt");
+  if(S.iface.assigned){ optTab.hidden=false; optTab.textContent = S.iface.desc || "OPT1"; }
+  document.querySelectorAll('#fwTabs button').forEach(b=> b.setAttribute("aria-selected", b.dataset.iface===S.fwTab ? "true":"false"));
+  const rows = [];
+  if(S.fwTab==="LAN") rows.push({a:"pass",p:"any",s:"LAN net",d:"any",t:"Default allow LAN to any"});
+  if(onOpt && S.fw.added) rows.push({a:S.fw.action,p:S.fw.proto,s:(S.fw.src==="net"?(S.iface.desc||"OPT1")+" net":"any"),d:S.fw.dst,t:S.fw.desc});
+  $("fwRows").innerHTML = rows.map(r=>
+    '<tr><td><span class="pill '+(r.a==="pass"?"up":"down")+'">'+r.a+'</span></td><td>'+r.p+'</td><td>'+r.s+'</td><td>'+r.d+'</td><td style="font-family:var(--sans)">'+r.t+'</td></tr>'
+  ).join("");
+  $("fwEmpty").hidden = rows.length>0;
+  $("fwAdd").hidden = !onOpt;
+}
+
+function renderDhcp(){
+  const ready = S.iface.assigned && S.iface.enabled && S.iface.type==="static" && S.iface.ip;
+  const optTab = $("dhcpTabOpt");
+  if(S.iface.assigned){ optTab.hidden=false; optTab.textContent = S.iface.desc || "OPT1"; }
+  document.querySelectorAll('#dhcpTabs button').forEach(b=> b.setAttribute("aria-selected", b.dataset.iface===S.dhcpTab ? "true":"false"));
+  const onOpt = S.dhcpTab==="OPT";
+  $("dhcpLocked").hidden = onOpt && ready;
+  $("dhcpForm").hidden = !(onOpt && ready);
+  if(onOpt && ready){
+    $("dhcpSubnetNote").textContent = "Subnet for this interface: "+S.iface.ip+"/"+S.iface.cidr+". The range must fall inside it.";
+    $("dhcpEnable").checked = S.dhcp.enabled;
+    $("dhcpFrom").value = S.dhcp.from;
+    $("dhcpTo").value = S.dhcp.to;
+  }
+  if(!onOpt){ $("dhcpLocked").hidden=false; $("dhcpLocked").textContent="Select the screened-subnet interface tab to configure its DHCP scope."; $("dhcpForm").hidden=true; }
+}
+
+function renderAll(){ renderChecklist(); renderTopo(); renderInterfaces(); renderFw(); renderDhcp(); }
+
+/* =======================================================================
+   NAV
+   ======================================================================= */
+document.querySelectorAll('.nav[role="tablist"] button').forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll('.nav[role="tablist"] button').forEach(b=>b.setAttribute("aria-selected","false"));
+    btn.setAttribute("aria-selected","true");
+    document.querySelectorAll(".panel").forEach(p=>{ p.classList.remove("active"); p.hidden=true; });
+    const p = $("p-"+btn.dataset.panel); p.classList.add("active"); p.hidden=false;
+  });
+});
+
+/* =======================================================================
+   LOGIN
+   ======================================================================= */
+$("btnLogin").addEventListener("click",()=>{
+  const u=$("user").value, p=$("pass").value;
+  if(eqi(u,CONFIG.credentials.user) && p===CONFIG.credentials.pass){
+    S.loggedIn=true;
+    $("login").style.display="none";
+    $("sessDot").classList.add("on"); $("sessText").textContent="admin · connected";
+    renderAll();
+  } else {
+    $("loginErr").textContent = "Sign-in failed. Check the username and password, then try again.";
+  }
+});
+$("pass").addEventListener("keydown",e=>{ if(e.key==="Enter") $("btnLogin").click(); });
+
+/* =======================================================================
+   INTERFACES
+   ======================================================================= */
+$("btnAssign").addEventListener("click",()=>{
+  S.iface.assigned=true;
+  renderInterfaces(); renderTopo();
+  openIfEdit();
+});
+function openIfEdit(){
+  $("ifEdit").hidden=false;
+  $("ifEnable").checked=S.iface.enabled;
+  $("ifDesc").value=S.iface.desc;
+  $("ifType").value=S.iface.type;
+  $("ipFields").hidden = S.iface.type!=="static";
+  $("ifIp").value=S.iface.ip; $("ifCidr").value=S.iface.cidr;
+  $("ifEdit").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+$("ifType").addEventListener("change",()=>{ $("ipFields").hidden = $("ifType").value!=="static"; });
+$("btnIfSave").addEventListener("click",()=>{
+  const err=$("ifErr"); err.textContent="";
+  const desc=norm($("ifDesc").value);
+  const type=$("ifType").value;
+  if(!$("ifEnable").checked){ err.textContent="Enable the interface before applying."; return; }
+  if(!desc){ err.textContent="Give the interface a description (its zone name)."; return; }
+  if(type==="static"){
+    const ip=norm($("ifIp").value), cidr=$("ifCidr").value;
+    if(!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)){ err.textContent="Enter a valid IPv4 address, e.g. 172.22.5.1."; return; }
+    if(!cidr){ err.textContent="Choose a subnet (CIDR) value."; return; }
+    S.iface.ip=ip; S.iface.cidr=cidr;
+  } else {
+    err.textContent="This interface needs a Static IPv4 address to anchor the screened subnet."; return;
+  }
+  S.iface.enabled=$("ifEnable").checked; S.iface.desc=desc; S.iface.type=type;
+  renderAll();
+  err.style.color="var(--ok)"; err.textContent="Interface saved and applied.";
+  setTimeout(()=>{ err.style.color=""; err.textContent=""; },2200);
+});
+
+/* =======================================================================
+   FIREWALL
+   ======================================================================= */
+document.querySelectorAll('#fwTabs button').forEach(b=>{
+  b.addEventListener("click",()=>{ if(b.hidden) return; S.fwTab=b.dataset.iface; renderFw(); });
+});
+$("btnFwShow").addEventListener("click",()=>{ $("fwForm").hidden=false; });
+$("btnFwSave").addEventListener("click",()=>{
+  const err=$("fwErr"); err.textContent="";
+  const src=$("fwSrc").value, desc=norm($("fwDesc").value);
+  if(!src){ err.textContent="Choose a source — allow the screened subnet net (or any)."; return; }
+  if(!desc){ err.textContent="Add a short description so the rule is identifiable."; return; }
+  S.fw={ added:true, action:$("fwAction").value, proto:$("fwProto").value, src:src, dst:$("fwDst").value, desc:desc };
+  renderAll();
+  err.style.color="var(--ok)"; err.textContent="Rule saved and applied.";
+  setTimeout(()=>{ err.style.color=""; err.textContent=""; },2200);
+});
+
+/* =======================================================================
+   DHCP
+   ======================================================================= */
+document.querySelectorAll('#dhcpTabs button').forEach(b=>{
+  b.addEventListener("click",()=>{ if(b.hidden) return; S.dhcpTab=b.dataset.iface; renderDhcp(); });
+});
+$("btnDhcpSave").addEventListener("click",()=>{
+  const err=$("dhcpErr"); err.textContent="";
+  const on=$("dhcpEnable").checked, from=norm($("dhcpFrom").value), to=norm($("dhcpTo").value);
+  if(!on){ err.textContent="Enable the DHCP server to start handing out leases."; return; }
+  const ipre=/^\d{1,3}(\.\d{1,3}){3}$/;
+  if(!ipre.test(from)||!ipre.test(to)){ err.textContent="Enter valid start and end addresses for the range."; return; }
+  S.dhcp={ enabled:on, from:from, to:to };
+  renderAll();
+  err.style.color="var(--ok)"; err.textContent="DHCP scope saved.";
+  setTimeout(()=>{ err.style.color=""; err.textContent=""; },2200);
+});
+
+/* =======================================================================
+   RESET
+   ======================================================================= */
+$("btnReset").addEventListener("click",()=>{
+  if(!confirm("Reset the lab? All progress in this session will be cleared.")) return;
+  S.iface={ assigned:false, enabled:false, desc:"", type:"none", ip:"", cidr:"" };
+  S.fw={ added:false, action:"", proto:"", src:"", dst:"", desc:"" };
+  S.dhcp={ enabled:false, from:"", to:"" };
+  S.quiz={ q1:null, q2:null, q3:null };
+  S.fwTab="LAN"; S.dhcpTab="LAN";
+  $("ifEdit").hidden=true; $("fwForm").hidden=true;
+  $("status").innerHTML="";
+  renderAll(); renderQuiz();
+});
+
+/* =======================================================================
+   SCREENSHOT  (dependency-free; see header note)
+   ======================================================================= */
+async function captureLabImage(){
+  if(USE_HTML2CANVAS && typeof html2canvas==="function"){
+    try{ const c = await html2canvas(document.getElementById("captureRoot"),{backgroundColor:"#0e1726"}); return c.toDataURL("image/png"); }
+    catch(e){ /* fall through to drawn report */ }
+  }
+  return drawReport();
+}
+function drawReport(){
+  const tasks=taskResults(), qs=questionResults(), sc=score();
+  const W=960, pad=40, lh=30;
+  let lines = 8 + tasks.length + qs.length;
+  const H = 360 + lines*lh;
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  const x=cv.getContext("2d");
+  x.fillStyle="#0e1726"; x.fillRect(0,0,W,H);
+  x.fillStyle="#16213a"; x.fillRect(0,0,W,96);
+  x.fillStyle="#34d4c4"; x.fillRect(0,0,6,96);
+  x.fillStyle="#e6edf6"; x.font="700 24px system-ui,Segoe UI,Arial";
+  x.fillText("Sentinel Gateway OS — Lab completion snapshot", pad, 44);
+  x.fillStyle="#8aa0bd"; x.font="14px ui-monospace,Menlo,Consolas,monospace";
+  x.fillText(CONFIG.assignmentId+"  ·  objectives "+CONFIG.objectives.join(", "), pad, 72);
+
+  let y=140;
+  const row=(k,v,c)=>{ x.fillStyle="#8aa0bd"; x.font="14px system-ui,Arial"; x.fillText(k, pad, y);
+    x.fillStyle=c||"#e6edf6"; x.font="14px ui-monospace,Menlo,Consolas,monospace"; x.fillText(v, pad+250, y); y+=lh; };
+  row("Hacker name", (window.__hacker||"—"));
+  row("Submitted (client)", new Date().toISOString());
+  row("Interface", (S.iface.desc||"—")+"  "+(S.iface.type==="static"?(S.iface.ip+"/"+S.iface.cidr):"(no static IP)"));
+  row("Firewall rule", S.fw.added?(S.fw.action+" — "+S.fw.desc):"—");
+  row("DHCP scope", S.dhcp.enabled?(S.dhcp.from+" → "+S.dhcp.to):"disabled");
+
+  y+=10; x.fillStyle="#2a3a59"; x.fillRect(pad,y,W-pad*2,1); y+=28;
+  x.fillStyle="#e6edf6"; x.font="700 16px system-ui,Arial"; x.fillText("Tasks", pad, y); y+=lh;
+  tasks.forEach(t=>{ x.fillStyle=t.passed?"#4ade80":"#fb7185"; x.font="16px system-ui,Arial";
+    x.fillText(t.passed?"✓":"✗", pad, y); x.fillStyle="#cdd9ea"; x.font="14px system-ui,Arial";
+    x.fillText(t.label, pad+26, y); y+=lh; });
+
+  y+=8; x.fillStyle="#e6edf6"; x.font="700 16px system-ui,Arial"; x.fillText("Knowledge check", pad, y); y+=lh;
+  qs.forEach((q,i)=>{ x.fillStyle=q.correct?"#4ade80":"#fb7185"; x.font="16px system-ui,Arial";
+    x.fillText(q.correct?"✓":"✗", pad, y); x.fillStyle="#cdd9ea"; x.font="14px system-ui,Arial";
+    x.fillText("Q"+(i+1)+": "+(q.answer||"(no answer)"), pad+26, y); y+=lh; });
+
+  y+=12; x.fillStyle="#34d4c4"; x.font="700 20px ui-monospace,Menlo,Consolas,monospace";
+  x.fillText("Score  "+sc.earned+" / "+sc.total, pad, y);
+  return cv.toDataURL("image/png");
+}
+
+/* =======================================================================
+   SUBMIT
+   ======================================================================= */
+$("btnSubmit").addEventListener("click", submitLab);
+async function submitLab(){
+  const status=$("status");
+  const hacker=norm($("hackerName").value);
+  if(!hacker){ status.style.color="var(--bad)"; status.textContent="Enter a hacker name (pseudonym) before submitting."; return; }
+  window.__hacker = hacker;
+
+  const sc=score();
+  if(sc.earned < sc.total){
+    if(!confirm("You have "+sc.earned+" of "+sc.total+" complete. Submit anyway?")) return;
+  }
+
+  status.style.color="var(--muted)";
+  status.innerHTML='<span class="spin" aria-hidden="true"></span>Capturing and submitting…';
+  $("btnSubmit").disabled=true;
+
+  let shot=""; try{ shot=await captureLabImage(); }catch(e){ shot=""; }
+
+  const payload = {
+    assignmentId   : CONFIG.assignmentId,
+    hackerName     : hacker,
+    clientTimestamp: new Date().toISOString(),
+    objectives     : CONFIG.objectives,
+    tasks          : taskResults(),
+    questions      : questionResults(),
+    score          : { earned: sc.earned, total: sc.total },
+    screenshot     : shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_YOUR")===0){
+    status.style.color="var(--accent-2)";
+    status.textContent="Demo mode: CONFIG.APPS_SCRIPT_URL is not set, so nothing was sent. Your score is "+sc.earned+"/"+sc.total+".";
+    $("btnSubmit").disabled=false; return;
+  }
+
+  try{
+    // Simple request (no custom headers, text/plain body) avoids a CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      status.style.color="var(--ok)";
+      status.innerHTML = "Submitted ✓ — "+sc.earned+"/"+sc.total+
+        (out.docUrl ? '. <a href="'+out.docUrl+'" target="_blank" rel="noopener">View your report</a>' : ".");
+    } else {
+      status.style.color="var(--bad)";
+      status.textContent = "Submission rejected: "+((out&&out.error)||"unknown error")+". Tell your instructor.";
+    }
+  }catch(e){
+    // Locked-down contexts may block reading the response; fire-and-forget fallback.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      status.style.color="var(--accent-2)";
+      status.textContent="Sent, but the response couldn't be read here. Confirm receipt with your instructor.";
+    }catch(e2){
+      status.style.color="var(--bad)";
+      status.textContent="Couldn't reach the submission service. Check your connection and try again.";
+    }
+  }finally{
+    $("btnSubmit").disabled=false;
+  }
+}
+
+/* =======================================================================
+   INIT
+   ======================================================================= */
+renderQuiz();
+renderAll();
+$("user").focus();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-guest-byod-wlan.html",title:"Lab \u2014 Stand Up a Guest BYOD Wireless Network"}, NEXT={href:"splus-router-acl-permit.html",title:"Permit Traffic on a Standard ACL"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.3 Protecting Networks: Segmentation";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

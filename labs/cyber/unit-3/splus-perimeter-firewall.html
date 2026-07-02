@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab: Publish a DMZ Web Server Through the Perimeter Firewall</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-perimeter-firewall",
+  "title": "Lab: Publish a DMZ Web Server Through the Perimeter Firewall",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.4 Protecting Networks: Firewalls"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "3.2",
+      "4.5"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  CompTIA Security+ (SY0-701) Simulation Lab
+  Title : Publish a DMZ Web Server Through the Perimeter Firewall
+  Slug  : splus-perimeter-firewall
+  Objs  : SY0-701 3.2 (device placement / security zones / firewall types),
+          4.5.1.1 (firewall rules), 4.5.1.3 (ports/protocols),
+          4.5.1.4 (screened subnets)
+   topic area (objective coverage
+          only; this lab is an independent clean-room build).
+
+  Copyright (c) 2026 — Lab author. All rights reserved.
+  Licensed for the author's CompTIA Security+ course library. This is an
+  original work built from the public SY0-701 exam objectives and the publicly
+  documented pfSense rule-creation workflow. It is NOT derived from, and does
+  not reproduce the scenario, names, values, wording, ordering, or imagery of,
+  any third-party courseware lab. "pfSense" is a trademark of Netgate; this
+  educational simulation is independent and unaffiliated.
+
+  Dependency note: §2 of the build spec calls for inlined html2canvas. This
+  file instead uses a native, zero-dependency SVG foreignObject -> canvas
+  capture (with a canvas-drawn evidence-card fallback) to satisfy the same
+  "self-contained, no CDN, no runtime deps" requirement without shipping a
+  large third-party library.
+  ============================================================================
+-->
+<style id="labstyle">
+  :root{
+    --bg:#0e1620;            /* page backdrop */
+    --console:#16202b;       /* console chrome */
+    --console-2:#1f2c3a;     /* raised chrome */
+    --surface:#f5f7f9;       /* working surface */
+    --surface-2:#ffffff;
+    --line:#d4dbe2;
+    --ink:#1b2733;
+    --ink-soft:#516072;
+    --accent:#2f7fb5;        /* primary action */
+    --accent-ink:#ffffff;
+    --pass:#1f8a4c;
+    --pass-bg:#e7f6ee;
+    --warn:#b06a00;
+    --warn-bg:#fff4e0;
+    --danger:#c23b3b;
+    --danger-bg:#fbeaea;
+    --radius:8px;
+    --shadow:0 1px 2px rgba(13,30,48,.10),0 6px 18px rgba(13,30,48,.10);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);
+    color:var(--ink);
+    background:var(--bg);
+    line-height:1.45;
+    padding:18px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;display:grid;gap:18px;grid-template-columns:1fr;}
+  @media(min-width:960px){
+    .wrap{grid-template-columns:1.55fr .95fr;align-items:start;}
+    #lab{grid-column:1;}
+    .side{grid-column:2;position:sticky;top:18px;}
+  }
+  h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+  a{color:var(--accent)}
+  .muted{color:var(--ink-soft)}
+  .small{font-size:.82rem}
+  .mono{font-family:var(--mono)}
+
+  /* ---------- console (the simulated firewall) ---------- */
+  #lab{
+    background:var(--surface);
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    border:1px solid #0a121c;
+  }
+  .topbar{
+    background:var(--console);
+    color:#cfe0ee;
+    display:flex;align-items:center;gap:10px;
+    padding:10px 14px;
+  }
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;color:#fff}
+  .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--accent)}
+  .topbar .crumbs{margin-left:auto;font-size:.82rem;color:#9fb6c9}
+  .sysbar{
+    background:var(--console-2);color:#aebfce;
+    font-size:.78rem;padding:6px 14px;display:flex;gap:16px;flex-wrap:wrap;
+  }
+  .sysbar b{color:#dce8f2;font-weight:600}
+
+  .pane{padding:18px}
+
+  /* login */
+  .login{max-width:380px;margin:26px auto;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
+  .login h2{font-size:1.1rem;margin-bottom:4px}
+  .field{display:block;margin:14px 0}
+  .field label{display:block;font-size:.82rem;color:var(--ink-soft);margin-bottom:5px;font-weight:600}
+  input[type=text],input[type=password],select{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;
+    font:inherit;background:var(--surface-2);color:var(--ink);
+  }
+  input:focus,select:focus,button:focus-visible,a:focus-visible{
+    outline:3px solid #9cc6e6;outline-offset:1px;
+  }
+  .hint{font-size:.78rem;color:var(--ink-soft);margin-top:10px}
+  .credchip{font-family:var(--mono);background:#eef3f7;border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+
+  /* buttons */
+  button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid transparent;padding:9px 14px;font-weight:600}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);border-color:#256a98}
+  .btn-primary:hover{filter:brightness(1.05)}
+  .btn-ghost{background:var(--surface-2);color:var(--ink);border-color:var(--line)}
+  .btn-ghost:hover{background:#eef3f7}
+  .btn-pass{background:var(--pass);color:#fff;border-color:#176c3c}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .btn-sm{padding:6px 10px;font-size:.85rem}
+
+  /* interface tabs */
+  .tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:0}
+  .tab{
+    appearance:none;background:transparent;border:1px solid transparent;border-bottom:none;
+    padding:9px 16px;font-weight:650;color:var(--ink-soft);border-radius:8px 8px 0 0;margin-bottom:-2px;
+  }
+  .tab[aria-selected=true]{background:var(--surface-2);color:var(--ink);border-color:var(--line);border-bottom:2px solid var(--surface-2)}
+  .tab .ct{font-weight:600;color:var(--accent);margin-left:6px;font-size:.8rem}
+
+  .panel-head{display:flex;align-items:center;gap:12px;padding:14px 2px 12px}
+  .panel-head h3{font-size:1rem}
+  .panel-head .desc{color:var(--ink-soft);font-size:.85rem}
+  .panel-head .right{margin-left:auto;display:flex;gap:8px}
+
+  /* apply banner */
+  .applybar{background:var(--warn-bg);border:1px solid #f0d9a8;color:#6b4a00;border-radius:6px;padding:9px 12px;display:flex;align-items:center;gap:12px;margin:0 0 12px;font-size:.88rem}
+  .applybar .grow{flex:1}
+
+  /* rules table */
+  .rules{width:100%;border-collapse:collapse;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;overflow:hidden;font-size:.86rem}
+  .rules th,.rules td{text-align:left;padding:8px 10px;border-bottom:1px solid #e7ecf1;vertical-align:top}
+  .rules th{background:#eef3f7;color:var(--ink-soft);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+  .rules tr:last-child td{border-bottom:none}
+  .rules tr.pending td{background:#fffbf2}
+  .rules .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:99px}
+  .pill.pass{background:var(--pass-bg);color:var(--pass)}
+  .pill.block{background:var(--danger-bg);color:var(--danger)}
+  .pill.reject{background:#eee;color:#555}
+  .pill.pend{background:var(--warn-bg);color:var(--warn)}
+  .rowdel{color:var(--danger);background:transparent;border:none;padding:2px 6px;font-weight:700}
+  .empty{padding:18px;text-align:center;color:var(--ink-soft);background:var(--surface-2);border:1px dashed var(--line);border-radius:6px;font-size:.88rem}
+
+  /* add-rule form */
+  .modal-back{position:fixed;inset:0;background:rgba(10,18,28,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px;z-index:40;overflow:auto}
+  .modal{background:var(--surface-2);border-radius:10px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .modal header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+  .modal header h3{font-size:1rem}
+  .modal .body{padding:16px 18px;display:grid;gap:12px}
+  .modal footer{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.row2{grid-template-columns:1fr}}
+  .inline-hint{font-size:.74rem;color:var(--ink-soft);margin-top:3px}
+
+  /* ---------- side panel (task / questions / submit) ---------- */
+  .card{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .card + .card{margin-top:14px}
+  .card h2{font-size:.95rem;padding:13px 16px;border-bottom:1px solid var(--line);background:#fbfdfe;display:flex;align-items:center;gap:8px}
+  .card .inner{padding:14px 16px}
+  .scenario{font-size:.9rem}
+  .scenario p{margin:0 0 9px}
+  .specs{font-size:.84rem;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:8px}
+  .specs div{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-bottom:1px solid #eef2f6}
+  .specs div:last-child{border-bottom:none}
+  .specs b{font-family:var(--mono);font-weight:600}
+
+  ul.checklist,ul.qlist{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+  .checklist li,.qlist li{display:flex;gap:10px;align-items:flex-start;font-size:.88rem}
+  .mark{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.72rem;font-weight:800;color:#fff;background:#fff;margin-top:1px}
+  li.done .mark{background:var(--pass);border-color:var(--pass)}
+  li.done .mark::after{content:"\2713"}
+  li.done .txt{color:var(--ink)}
+  .checklist .txt,.qlist .txt{color:var(--ink-soft)}
+
+  .qlist .q{display:block;color:var(--ink);font-weight:600;margin-bottom:6px}
+  .qlist select{font-size:.85rem}
+  li.correct .mark{background:var(--pass);border-color:var(--pass)}
+  li.correct .mark::after{content:"\2713"}
+  li.wrong .mark{background:var(--danger);border-color:var(--danger)}
+  li.wrong .mark::after{content:"\2715"}
+
+  .score{font-weight:700;font-size:.9rem}
+  .submitbar{display:grid;gap:10px}
+  .status{font-size:.85rem;border-radius:6px;padding:9px 11px;display:none}
+  .status.show{display:block}
+  .status.ok{background:var(--pass-bg);color:var(--pass);border:1px solid #b8e2c8}
+  .status.err{background:var(--danger-bg);color:var(--danger);border:1px solid #eccaca}
+  .status.work{background:#eef3f7;color:var(--ink-soft);border:1px solid var(--line)}
+
+  .footnote{color:#7e93a6;font-size:.74rem;padding:4px 2px;text-align:center}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <!-- ============================ SIMULATED FIREWALL ============================ -->
+  <section id="lab" aria-label="Firewall management console">
+    <div class="topbar">
+      <span class="brand"><span class="dot"></span> pfSense<span class="muted" style="font-weight:500;color:#7e97ab"> &nbsp;perimeter appliance</span></span>
+      <span class="crumbs" id="crumbs">Sign in</span>
+    </div>
+    <div class="sysbar" id="sysbar" hidden>
+      <span>Host: <b>fw-edge-01</b></span>
+      <span>WAN: <b>198.51.100.7</b></span>
+      <span>LAN: <b>192.168.50.1/24</b></span>
+      <span>DMZ: <b>10.20.30.1/24</b></span>
+      <span>State: <b id="stateLabel">3 interfaces up</b></span>
+    </div>
+
+    <!-- LOGIN VIEW -->
+    <div class="pane" id="loginView">
+      <form class="login" id="loginForm" autocomplete="off">
+        <h2>Sign in to the appliance</h2>
+        <p class="muted small">Harborview Outfitters &mdash; edge firewall management</p>
+        <span class="field">
+          <label for="u">Username</label>
+          <input type="text" id="u" name="u" autocomplete="off" spellcheck="false">
+        </span>
+        <span class="field">
+          <label for="p">Password</label>
+          <input type="password" id="p" name="p" autocomplete="off">
+        </span>
+        <button class="btn-primary" type="submit" style="width:100%">Sign in</button>
+        <p id="loginErr" class="status err" role="alert" style="margin-top:12px"></p>
+        <p class="hint">Use the lab credentials from the task card:
+          username <span class="credchip">admin</span>,
+          password <span class="credchip">Tr@ilhead2025!</span></p>
+      </form>
+    </div>
+
+    <!-- RULES VIEW -->
+    <div class="pane" id="rulesView" hidden>
+      <div class="tabs" role="tablist" aria-label="Firewall interfaces">
+        <button class="tab" role="tab" id="tab-WAN" aria-selected="true"  data-if="WAN">WAN <span class="ct" id="ct-WAN"></span></button>
+        <button class="tab" role="tab" id="tab-LAN" aria-selected="false" data-if="LAN">LAN <span class="ct" id="ct-LAN"></span></button>
+        <button class="tab" role="tab" id="tab-DMZ" aria-selected="false" data-if="DMZ">DMZ <span class="ct" id="ct-DMZ"></span></button>
+      </div>
+
+      <div class="applybar" id="applyBar" hidden>
+        <span class="grow"><strong>Pending changes.</strong> The rules below are staged but not active yet.</span>
+        <button class="btn-pass btn-sm" id="applyBtn" type="button">Apply changes</button>
+      </div>
+
+      <div class="panel-head">
+        <div>
+          <h3 id="ifTitle">Rules &mdash; WAN</h3>
+          <div class="desc" id="ifDesc">Traffic arriving on the WAN interface. Default policy: block unsolicited inbound.</div>
+        </div>
+        <div class="right">
+          <button class="btn-ghost btn-sm" id="resetIfaceBtn" type="button">Reset lab</button>
+          <button class="btn-primary btn-sm" id="addRuleBtn" type="button">+ Add rule</button>
+        </div>
+      </div>
+
+      <div id="rulesTableWrap"></div>
+    </div>
+  </section>
+
+  <!-- ============================ TASK / QUESTION / SUBMIT ============================ -->
+  <aside class="side">
+    <div class="card">
+      <h2>Scenario</h2>
+      <div class="inner scenario">
+        <p>You are the IT security administrator for <strong>Harborview Outfitters</strong>, a regional
+        outdoor-gear retailer. The team just stood up a public product-catalog web server inside the
+        <strong>screened subnet (DMZ)</strong>. You must configure the edge <strong>pfSense</strong> firewall so the
+        internet can reach that one server over the web ports, and so internal staff on the LAN can reach
+        the whole DMZ.</p>
+        <div class="specs" aria-label="Lab values">
+          <div><span>Catalog web server (DMZ host)</span><b>10.20.30.40</b></div>
+          <div><span>DMZ network</span><b>10.20.30.0/24</b></div>
+          <div><span>Web ports to publish</span><b>HTTP 80 / HTTPS 443</b></div>
+          <div><span>Sign-in</span><b>admin / Tr@ilhead2025!</b></div>
+        </div>
+        <p class="small muted" style="margin-top:10px">Objectives covered: SY0-701 3.2, 4.5.1.1, 4.5.1.3, 4.5.1.4.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tasks</h2>
+      <div class="inner">
+        <ul class="checklist" id="taskList"></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Check your understanding</h2>
+      <div class="inner">
+        <ul class="qlist" id="questionList"></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Submit completed lab</h2>
+      <div class="inner submitbar">
+        <span class="field" style="margin:0">
+          <label for="hacker">Hacker name (pseudonym &mdash; no real names)</label>
+          <input type="text" id="hacker" maxlength="40" placeholder="e.g. nightowl-42" spellcheck="false">
+        </span>
+        <div class="score" id="scoreLine">Progress: 0 / 0</div>
+        <button class="btn-primary" id="submitBtn" type="button" disabled>Submit completed lab</button>
+        <div class="status" id="subStatus" role="status" aria-live="polite"></div>
+        <p class="footnote">Self-reported scoring (answer key is client-side). Screenshot + server
+          timestamp are supporting evidence only.</p>
+      </div>
+    </div>
+    <p class="footnote">&copy; 2026 Lab author &middot; Independent SY0-701 practice lab &middot; not affiliated with Netgate/pfSense or CompTIA.</p>
+  </aside>
+</div>
+
+<!-- =================== ADD-RULE MODAL =================== -->
+<div class="modal-back" id="modalBack" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header><h3 id="modalTitle">Add firewall rule &mdash; WAN</h3></header>
+    <div class="body">
+      <div class="row2">
+        <span class="field" style="margin:0">
+          <label for="f-action">Action</label>
+          <select id="f-action">
+            <option value="Pass">Pass</option>
+            <option value="Block">Block</option>
+            <option value="Reject">Reject</option>
+          </select>
+        </span>
+        <span class="field" style="margin:0">
+          <label for="f-proto">Protocol</label>
+          <select id="f-proto">
+            <option value="Any">Any</option>
+            <option value="TCP">TCP</option>
+            <option value="UDP">UDP</option>
+            <option value="TCP/UDP">TCP/UDP</option>
+            <option value="ICMP">ICMP</option>
+          </select>
+        </span>
+      </div>
+
+      <div class="row2">
+        <span class="field" style="margin:0">
+          <label for="f-srcType">Source</label>
+          <select id="f-srcType">
+            <option value="any">any</option>
+            <option value="WAN net">WAN net</option>
+            <option value="LAN net">LAN net</option>
+            <option value="DMZ net">DMZ net</option>
+            <option value="single">Single host</option>
+          </select>
+        </span>
+        <span class="field" style="margin:0">
+          <label for="f-srcHost">Source host (if single)</label>
+          <input type="text" id="f-srcHost" placeholder="e.g. 203.0.113.9" spellcheck="false">
+        </span>
+      </div>
+
+      <div class="row2">
+        <span class="field" style="margin:0">
+          <label for="f-dstType">Destination</label>
+          <select id="f-dstType">
+            <option value="any">any</option>
+            <option value="WAN net">WAN net</option>
+            <option value="LAN net">LAN net</option>
+            <option value="DMZ net">DMZ net</option>
+            <option value="single">Single host</option>
+          </select>
+        </span>
+        <span class="field" style="margin:0">
+          <label for="f-dstHost">Destination host (if single)</label>
+          <input type="text" id="f-dstHost" placeholder="e.g. 10.20.30.40" spellcheck="false">
+        </span>
+      </div>
+
+      <div class="row2">
+        <span class="field" style="margin:0">
+          <label for="f-port">Destination port</label>
+          <select id="f-port">
+            <option value="any">any</option>
+            <option value="HTTP">HTTP (80)</option>
+            <option value="HTTPS">HTTPS (443)</option>
+            <option value="SSH">SSH (22)</option>
+            <option value="DNS">DNS (53)</option>
+            <option value="custom">Custom&hellip;</option>
+          </select>
+          <div class="inline-hint">Leave on <em>any</em> for rules that aren't port-specific.</div>
+        </span>
+        <span class="field" style="margin:0">
+          <label for="f-portCustom">Custom port (if custom)</label>
+          <input type="text" id="f-portCustom" placeholder="e.g. 8443" spellcheck="false">
+        </span>
+      </div>
+
+      <span class="field" style="margin:0">
+        <label for="f-desc">Description</label>
+        <input type="text" id="f-desc" maxlength="80" placeholder="Short, human-readable label" spellcheck="false">
+      </span>
+      <p id="modalErr" class="status err" role="alert" style="margin:0"></p>
+    </div>
+    <footer>
+      <button class="btn-ghost" id="modalCancel" type="button">Cancel</button>
+      <button class="btn-primary" id="modalSave" type="button">Save rule</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+  const CONFIG = {
+    assignmentId: "splus-perimeter-firewall",
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "PASTE_COHORT_TOKEN",
+    objectives: ["3.2", "4.5"],
+    maxHandle: 40
+  };
+
+/* ===========================================================================
+   ENGINE + CONFIG + ANSWER KEY
+   =========================================================================== */
+"use strict";
+
+/* ---------- LAB CONFIG (the only per-lab edits live in this block + key) ---------- */
+
+const LAB = {
+  assignmentId: "splus-perimeter-firewall",
+  title: "Publish a DMZ Web Server Through the Perimeter Firewall",
+  objectives: ["3.2", "4.5"],
+  creds: { user: "admin", pass: "Tr@ilhead2025!" },
+  webServer: "10.20.30.40",
+  dmzNet: "DMZ net"            // canonical dropdown value for 10.20.30.0/24
+};
+
+/* Task definitions. `pass` reads live sim STATE and returns boolean. */
+const TASKS = [
+  { id:"signin",  label:"Sign in to the firewall console",
+    pass:s => s.loggedIn },
+  { id:"wanHttp", label:"WAN rule: pass HTTP to the catalog server (10.20.30.40:80)",
+    pass:s => s.applied.some(r => r.iface==="WAN" && r.action==="Pass" &&
+              (r.proto==="TCP"||r.proto==="TCP/UDP") &&
+              r.dstType==="single" && norm(r.dstHost)===LAB.webServer && r.port==="HTTP") },
+  { id:"wanHttps",label:"WAN rule: pass HTTPS to the catalog server (10.20.30.40:443)",
+    pass:s => s.applied.some(r => r.iface==="WAN" && r.action==="Pass" &&
+              (r.proto==="TCP"||r.proto==="TCP/UDP") &&
+              r.dstType==="single" && norm(r.dstHost)===LAB.webServer && r.port==="HTTPS") },
+  { id:"lanDmz",  label:"LAN rule: pass all traffic from LAN to the DMZ network",
+    pass:s => s.applied.some(r => r.iface==="LAN" && r.action==="Pass" &&
+              r.proto==="Any" && r.dstType==="DMZ net" && r.port==="any") },
+  { id:"apply",   label:"Apply changes so the new rules are active",
+    pass:s => s.applied.length>0 && s.pending.length===0 && s.everApplied }
+];
+
+/* Knowledge-check questions (original wording). `key` is the correct option value. */
+const QUESTIONS = [
+  { id:"q1", prompt:"Where do you place rules that filter traffic coming in from the internet?",
+    options:[["WAN","On the WAN interface"],["LAN","On the LAN interface"],["DMZ","On the DMZ interface"]],
+    key:"WAN" },
+  { id:"q2", prompt:"To publish one internal server while limiting exposure, what destination type fits best?",
+    options:[["single","A single host"],["net","The whole subnet"],["any","Any destination"]],
+    key:"single" },
+  { id:"q3", prompt:"Which rule action permits traffic that matches it?",
+    options:[["pass","Pass"],["block","Block"],["reject","Reject"]],
+    key:"pass" },
+  { id:"q4", prompt:"With no matching rule, how does the WAN interface treat unsolicited inbound traffic by default?",
+    options:[["deny","It is denied (default-deny)"],["allow","It is allowed"],["log","It is allowed but logged"]],
+    key:"deny" }
+];
+
+/* ---------- live state ---------- */
+const STATE = {
+  loggedIn:false,
+  everApplied:false,
+  pending:[],          // staged rules not yet applied
+  applied:[],          // active rules
+  activeIface:"WAN",
+  answers:{}           // questionId -> selected option value
+};
+
+let ruleSeq = 1;
+const $  = id => document.getElementById(id);
+const norm = v => (v||"").trim();
+const IFACE_DESC = {
+  WAN:"Traffic arriving on the WAN interface. Default policy: block unsolicited inbound.",
+  LAN:"Traffic originating on the LAN interface.",
+  DMZ:"Traffic originating on the DMZ (screened subnet) interface."
+};
+
+/* =================== LOGIN =================== */
+$("loginForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const u = norm($("u").value), p = $("p").value;
+  const err = $("loginErr");
+  if(u===LAB.creds.user && p===LAB.creds.pass){
+    STATE.loggedIn = true;
+    err.classList.remove("show");
+    $("loginView").hidden = true;
+    $("rulesView").hidden = false;
+    $("sysbar").hidden = false;
+    $("crumbs").textContent = "Firewall \u203a Rules";
+    selectIface("WAN");
+    refresh();
+  } else {
+    err.textContent = "Sign-in failed. Check the username and password on the task card, then try again.";
+    err.classList.add("show");
+  }
+});
+
+/* =================== INTERFACE TABS =================== */
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => selectIface(t.dataset.if));
+});
+function selectIface(iface){
+  STATE.activeIface = iface;
+  document.querySelectorAll(".tab").forEach(t =>
+    t.setAttribute("aria-selected", String(t.dataset.if===iface)));
+  $("ifTitle").textContent = "Rules \u2014 " + iface;
+  $("ifDesc").textContent = IFACE_DESC[iface];
+  renderRules();
+}
+
+/* =================== ADD-RULE MODAL =================== */
+$("addRuleBtn").addEventListener("click", openModal);
+$("modalCancel").addEventListener("click", closeModal);
+$("modalBack").addEventListener("click", e => { if(e.target===$("modalBack")) closeModal(); });
+document.addEventListener("keydown", e => { if(e.key==="Escape" && !$("modalBack").hidden) closeModal(); });
+
+function openModal(){
+  $("modalTitle").textContent = "Add firewall rule \u2014 " + STATE.activeIface;
+  ["f-action","f-proto","f-srcType","f-dstType","f-port"].forEach(id => $(id).selectedIndex=0);
+  ["f-srcHost","f-dstHost","f-portCustom","f-desc"].forEach(id => $(id).value="");
+  $("modalErr").classList.remove("show");
+  $("modalBack").hidden = false;
+  $("f-action").focus();
+}
+function closeModal(){ $("modalBack").hidden = true; $("addRuleBtn").focus(); }
+
+$("modalSave").addEventListener("click", () => {
+  const err = $("modalErr");
+  const r = {
+    id: ruleSeq++,
+    iface: STATE.activeIface,
+    action: $("f-action").value,
+    proto: $("f-proto").value,
+    srcType: $("f-srcType").value,
+    srcHost: $("f-srcType").value==="single" ? norm($("f-srcHost").value) : "",
+    dstType: $("f-dstType").value,
+    dstHost: $("f-dstType").value==="single" ? norm($("f-dstHost").value) : "",
+    port: $("f-port").value,
+    portCustom: $("f-port").value==="custom" ? norm($("f-portCustom").value) : "",
+    desc: norm($("f-desc").value)
+  };
+  // validation with actionable messages
+  if(r.srcType==="single" && !isIp(r.srcHost)){
+    return fail(err,"Enter a valid source host IP (e.g. 203.0.113.9), or change Source away from Single host.");
+  }
+  if(r.dstType==="single" && !isIp(r.dstHost)){
+    return fail(err,"Enter a valid destination host IP (e.g. 10.20.30.40), or change Destination away from Single host.");
+  }
+  if(r.port==="custom" && !/^\d{1,5}$/.test(r.portCustom)){
+    return fail(err,"Enter a numeric custom port (1-65535), or pick a named port.");
+  }
+  if(!r.desc){
+    return fail(err,"Add a short description so the rule is identifiable.");
+  }
+  STATE.pending.push(r);
+  STATE.activeIface = r.iface;
+  closeModal();
+  refresh();
+});
+function fail(el,msg){ el.textContent=msg; el.classList.add("show"); }
+function isIp(v){
+  return /^(\d{1,3})(\.\d{1,3}){3}$/.test(v) &&
+         v.split(".").every(n => +n>=0 && +n<=255);
+}
+
+/* =================== APPLY =================== */
+$("applyBtn").addEventListener("click", () => {
+  STATE.applied = STATE.applied.concat(STATE.pending);
+  STATE.pending = [];
+  STATE.everApplied = true;
+  refresh();
+});
+
+/* =================== RESET =================== */
+$("resetIfaceBtn").addEventListener("click", () => {
+  if(!confirm("Reset the lab? This clears all rules and answers and signs you out.")) return;
+  STATE.loggedIn=false; STATE.everApplied=false;
+  STATE.pending=[]; STATE.applied=[]; STATE.answers={}; STATE.activeIface="WAN";
+  ruleSeq=1;
+  $("u").value=""; $("p").value=""; $("hacker").value="";
+  $("loginView").hidden=false; $("rulesView").hidden=true; $("sysbar").hidden=true;
+  $("crumbs").textContent="Sign in";
+  $("subStatus").className="status";
+  buildQuestions(); refresh();
+  $("u").focus();
+});
+
+/* =================== RENDER: rules table =================== */
+function renderRules(){
+  const iface = STATE.activeIface;
+  const rows = [
+    ...STATE.applied.filter(r=>r.iface===iface).map(r=>({r,pending:false})),
+    ...STATE.pending.filter(r=>r.iface===iface).map(r=>({r,pending:true}))
+  ];
+  const wrap = $("rulesTableWrap");
+  if(rows.length===0){
+    wrap.innerHTML = '<div class="empty">No rules on '+iface+
+      ' yet. Use <strong>+ Add rule</strong> to create one.</div>';
+    return;
+  }
+  let html = '<table class="rules"><thead><tr>'+
+    '<th>Action</th><th>Proto</th><th>Source</th><th>Destination</th><th>Port</th><th>Description</th><th></th>'+
+    '</tr></thead><tbody>';
+  rows.forEach(({r,pending}) => {
+    const portTxt = portLabel(r);
+    const dst = r.dstType==="single" ? r.dstHost : r.dstType;
+    const src = r.srcType==="single" ? r.srcHost : r.srcType;
+    html += '<tr'+(pending?' class="pending"':'')+'>'+
+      '<td><span class="pill '+r.action.toLowerCase()+'">'+r.action+'</span>'+
+        (pending?' <span class="pill pend">staged</span>':'')+'</td>'+
+      '<td class="mono">'+r.proto+'</td>'+
+      '<td class="mono">'+esc(src)+'</td>'+
+      '<td class="mono">'+esc(dst)+'</td>'+
+      '<td class="mono">'+portTxt+'</td>'+
+      '<td>'+esc(r.desc)+'</td>'+
+      '<td>'+(pending?'<button class="rowdel" data-del="'+r.id+'" title="Remove staged rule">\u2715</button>':'')+'</td>'+
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  wrap.querySelectorAll("[data-del]").forEach(b =>
+    b.addEventListener("click", () => {
+      STATE.pending = STATE.pending.filter(r => String(r.id)!==b.dataset.del);
+      refresh();
+    }));
+}
+function portLabel(r){
+  if(r.port==="any") return "*";
+  if(r.port==="custom") return r.portCustom||"?";
+  const m={HTTP:"80",HTTPS:"443",SSH:"22",DNS:"53"};
+  return r.port+" ("+m[r.port]+")";
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* =================== RENDER: tab counts + apply bar =================== */
+function renderChrome(){
+  ["WAN","LAN","DMZ"].forEach(i=>{
+    const n = STATE.applied.filter(r=>r.iface===i).length +
+              STATE.pending.filter(r=>r.iface===i).length;
+    $("ct-"+i).textContent = n? n : "";
+  });
+  $("applyBar").hidden = STATE.pending.length===0;
+}
+
+/* =================== TASKS + QUESTIONS + SCORE =================== */
+function buildTasks(){
+  $("taskList").innerHTML = TASKS.map(t =>
+    '<li id="t-'+t.id+'"><span class="mark" aria-hidden="true"></span>'+
+    '<span class="txt">'+esc(t.label)+'</span></li>').join("");
+}
+function renderTasks(){
+  TASKS.forEach(t => {
+    const li=$("t-"+t.id), ok=t.pass(STATE);
+    li.classList.toggle("done", ok);
+  });
+}
+function buildQuestions(){
+  $("questionList").innerHTML = QUESTIONS.map(q => {
+    const opts = q.options.map(([v,l]) =>
+      '<option value="'+v+'">'+esc(l)+'</option>').join("");
+    return '<li id="ql-'+q.id+'"><span class="mark" aria-hidden="true"></span>'+
+      '<span class="txt" style="flex:1"><span class="q">'+esc(q.prompt)+'</span>'+
+      '<label class="sr-only" for="ans-'+q.id+'">Answer for: '+esc(q.prompt)+'</label>'+
+      '<select id="ans-'+q.id+'" data-q="'+q.id+'">'+
+      '<option value="">\u2014 choose \u2014</option>'+opts+'</select></span></li>';
+  }).join("");
+  $("questionList").querySelectorAll("select").forEach(sel =>
+    sel.addEventListener("change", () => { STATE.answers[sel.dataset.q]=sel.value; refresh(); }));
+}
+function renderQuestions(){
+  QUESTIONS.forEach(q => {
+    const li=$("ql-"+q.id), a=STATE.answers[q.id];
+    li.classList.remove("correct","wrong");
+    if(a){ li.classList.add(a===q.key ? "correct":"wrong"); }
+  });
+}
+function score(){
+  const tasksOk = TASKS.filter(t=>t.pass(STATE)).length;
+  const qOk = QUESTIONS.filter(q=>STATE.answers[q.id]===q.key).length;
+  const total = TASKS.length + QUESTIONS.length;
+  return { earned: tasksOk+qOk, total, tasksOk, qOk };
+}
+function renderScore(){
+  const s=score();
+  $("scoreLine").textContent = "Progress: "+s.earned+" / "+s.total+
+    "  (tasks "+s.tasksOk+"/"+TASKS.length+", questions "+s.qOk+"/"+QUESTIONS.length+")";
+  const ready = STATE.loggedIn && norm($("hacker").value).length>0;
+  $("submitBtn").disabled = !ready;
+}
+$("hacker").addEventListener("input", renderScore);
+
+/* =================== central refresh =================== */
+function refresh(){ renderChrome(); renderRules(); renderTasks(); renderQuestions(); renderScore(); }
+
+/* =================== SCREENSHOT (zero-dependency) =================== */
+async function captureEvidence(el){
+  // sync live form values into attributes so they serialize in the clone
+  try{
+    const w = Math.max(320, Math.ceil(el.offsetWidth));
+    const h = Math.max(200, Math.ceil(el.offsetHeight));
+    const css = $("labstyle").textContent;
+    const clone = el.cloneNode(true);
+    // strip elements that don't serialize well
+    clone.querySelectorAll("button").forEach(b=>b.setAttribute("disabled","disabled"));
+    const xhtml = new XMLSerializer().serializeToString(clone);
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject x="0" y="0" width="100%" height="100%">'+
+      '<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px;background:#f5f7f9">'+
+      '<style>'+css+'</style>'+xhtml+'</div></foreignObject></svg>';
+    const dataUrl = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+    const img = await loadImg(dataUrl);
+    const scale = Math.min(2, 1400/w);
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(w*scale); cv.height = Math.round(h*scale);
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = "#f5f7f9"; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.setTransform(scale,0,0,scale,0,0);
+    ctx.drawImage(img,0,0);
+    const out = cv.toDataURL("image/png");
+    if(out.length < 400) throw new Error("blank");
+    return out;
+  }catch(_){
+    return drawSummaryCard();   // reliable fallback
+  }
+}
+function loadImg(src){
+  return new Promise((res,rej)=>{
+    const i=new Image();
+    i.onload=()=>res(i); i.onerror=rej;
+    setTimeout(()=>rej(new Error("timeout")),4000);
+    i.src=src;
+  });
+}
+/* Canvas-drawn evidence card — always succeeds, no tainting, no library. */
+function drawSummaryCard(){
+  const s=score();
+  const W=900, pad=32;
+  const lines=[];
+  lines.push(["h", LAB.title]);
+  lines.push(["s", "Assignment: "+LAB.assignmentId+"   |   Objectives: "+LAB.objectives.join(", ")]);
+  lines.push(["s", "Hacker: "+(norm($("hacker").value)||"(none)")+"   |   "+new Date().toLocaleString()]);
+  lines.push(["gap"]);
+  lines.push(["t","Tasks"]);
+  TASKS.forEach(t=> lines.push(["i",(t.pass(STATE)?"\u2713":"\u2717")+"  "+t.label, t.pass(STATE)]));
+  lines.push(["gap"]);
+  lines.push(["t","Questions"]);
+  QUESTIONS.forEach(q=>{
+    const ok=STATE.answers[q.id]===q.key;
+    lines.push(["i",(ok?"\u2713":"\u2717")+"  "+q.prompt, ok]);
+  });
+  lines.push(["gap"]);
+  lines.push(["t","Score: "+s.earned+" / "+s.total]);
+  const lineH=26, H=pad*2 + lines.reduce((a,l)=>a+(l[0]==="gap"?14:(l[0]==="h"?40:lineH)),0);
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  const x=cv.getContext("2d");
+  x.fillStyle="#16202b"; x.fillRect(0,0,W,H);
+  x.fillStyle="#1f2c3a"; x.fillRect(0,0,W,8);
+  let y=pad;
+  lines.forEach(l=>{
+    if(l[0]==="gap"){ y+=14; return; }
+    if(l[0]==="h"){ x.fillStyle="#ffffff"; x.font="700 22px sans-serif"; x.fillText(l[1],pad,y+24); y+=40; return; }
+    if(l[0]==="t"){ x.fillStyle="#9fc6e6"; x.font="700 16px sans-serif"; x.fillText(l[1],pad,y+18); y+=lineH; return; }
+    if(l[0]==="s"){ x.fillStyle="#aebfce"; x.font="13px sans-serif"; x.fillText(l[1],pad,y+18); y+=lineH; return; }
+    if(l[0]==="i"){ x.fillStyle=l[2]?"#7ee0a3":"#f0a0a0"; x.font="14px sans-serif"; x.fillText(l[1],pad+8,y+18); y+=lineH; return; }
+  });
+  return cv.toDataURL("image/png");
+}
+
+/* =================== SUBMIT =================== */
+$("submitBtn").addEventListener("click", submitLab);
+async function submitLab(){
+  const btn=$("submitBtn"), st=$("subStatus");
+  const hacker=norm($("hacker").value);
+  if(!hacker){ return showStatus(st,"err","Enter a hacker name first."); }
+  btn.disabled=true;
+  showStatus(st,"work","Capturing your work and submitting\u2026");
+
+  let shot="";
+  try{ shot = await captureEvidence($("lab")); }catch(_){ shot = drawSummaryCard(); }
+
+  const s=score();
+  const payload = {
+    assignmentId: LAB.assignmentId,
+    hackerName: hacker.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: LAB.objectives,
+    tasks: TASKS.map(t=>({id:t.id,label:t.label,passed:!!t.pass(STATE)})),
+    questions: QUESTIONS.map(q=>({
+      id:q.id, prompt:q.prompt,
+      answer: STATE.answers[q.id]||"",
+      correct: STATE.answers[q.id]===q.key
+    })),
+    score: { earned:s.earned, total:s.total },
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+    btn.disabled=false;
+    return showStatus(st,"err",
+      "No submission endpoint configured. Ask your instructor to set CONFIG.APPS_SCRIPT_URL in this file.");
+  }
+
+  // Simple request (no custom headers, text/plain body) => no CORS preflight.
+  try{
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open submission</a>' : "";
+      showStatus(st,"ok","Submitted. Score "+s.earned+"/"+s.total+"."+link, true);
+    }else{
+      btn.disabled=false;
+      showStatus(st,"err","The server rejected the submission"+(out&&out.error?": "+out.error:".")+" Tell your instructor.");
+    }
+  }catch(e){
+    // Locked-down context: fire-and-forget so the Doc is still created.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      showStatus(st,"ok","Submitted (delivery couldn't be confirmed from the browser). "+
+        "Confirm with your instructor that it arrived.", true);
+    }catch(_){
+      btn.disabled=false;
+      showStatus(st,"err","Couldn't reach the submission server. Check your connection and try again.");
+    }
+  }
+}
+function showStatus(el,kind,msg,html){
+  el.className="status show "+kind;
+  if(html){ el.innerHTML=msg; } else { el.textContent=msg; }
+}
+
+/* =================== boot =================== */
+buildTasks();
+buildQuestions();
+refresh();
+$("u").focus();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-edge-appliance-setup.html",title:"AegisWall Console \u2014 Edge Appliance Setup Lab"}, NEXT={href:"splus-rogue-ap-hardening.html",title:"WaveCore Controller \u2014 RF Hardening Lab"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.4 Protecting Networks: Firewalls";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

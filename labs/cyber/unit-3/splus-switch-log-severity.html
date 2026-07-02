@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Severity-Tiered Switch Logging — Security+ Lab</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-switch-log-severity",
+  "title": "Severity-Tiered Switch Logging — Security+ Lab",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.5 Detecting Network Attacks"
+    ],
+    "skills": [
+      "3.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.4",
+      "4.9"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Severity-Tiered Switch Logging — a CompTIA Security+ (SY0-701) practice lab
+  Objective coverage: 4.4 (security alerting & monitoring / log aggregation),
+                      4.9 (network log data)
+
+  Copyright (c) 2026 [Author Name]. All rights reserved.
+  Licensed for use within the author's Security+ lab library. This is an
+  original, clean-room simulation written from the public SY0-701 objectives
+  and documented managed-switch behavior. It is not derived from, and contains
+  no content copied from, any third-party courseware. The eight severity names
+  (Emergency..Debug) are the public RFC 5424 standard.
+
+  Single file. No build step, no external runtime dependencies, no storage.
+  The only network call at runtime is the submission POST to Apps Script.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0e151c;
+    --panel:#16212b;
+    --panel-2:#1b2935;
+    --raised:#22323f;
+    --line:#2a3a47;
+    --line-soft:#223039;
+    --ink:#e8eff4;
+    --ink-dim:#8aa0ad;
+    --ink-faint:#5d7280;
+    --accent:#4fd8e8;       /* signal cyan — active/link */
+    --accent-ink:#06222a;
+    --teal:#34d6c0;         /* "on" state */
+    --amber:#f4b740;        /* save / unsaved warning */
+    --good:#5ad17a;
+    --bad:#ff6b6b;
+    /* severity ladder — number encodes urgency (0 = most urgent) */
+    --sev0:#ff4d4d; --sev1:#ff7a45; --sev2:#ffa033; --sev3:#ffc94d;
+    --sev4:#ece24a; --sev5:#9bdc5a; --sev6:#4fd8e8; --sev7:#8aa0ad;
+    --radius:14px;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #15303a 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:24px 16px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---------- masthead ---------- */
+  .masthead{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:42px;height:42px;border-radius:11px;flex:0 0 auto;
+    background:linear-gradient(150deg,#1c3a44,#0f242c);
+    border:1px solid var(--line);
+    display:grid;place-items:center;position:relative;
+  }
+  .logo span{display:block;width:7px;height:7px;border-radius:2px;background:var(--accent);
+    box-shadow:0 0 0 2px #0e151c, 12px 0 0 0 var(--teal), 12px 0 0 2px #0e151c;
+    margin-left:-6px}
+  .brand h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;margin:0;font-weight:700}
+  .brand p{margin:1px 0 0;font-size:12px;color:var(--ink-dim);font-family:var(--mono)}
+  .obj{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--accent);
+    border:1px solid var(--line);background:#0f1f27;border-radius:999px;padding:4px 10px}
+
+  .scenario{
+    background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:var(--radius);padding:16px 18px;margin-bottom:22px;
+  }
+  .scenario .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+  .scenario h2{margin:0 0 6px;font-size:18px}
+  .scenario p{margin:0;color:var(--ink-dim);font-size:14px;max-width:78ch}
+
+  /* ---------- layout grid ---------- */
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+  /* ---------- console (simulated device) ---------- */
+  .console{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .console-top{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#1d2c38,#16212b)}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good)}
+  .console-top .dev{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+  .console-top .dev b{color:var(--accent);font-weight:600}
+  .console-top .where{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+
+  .console-body{display:grid;grid-template-columns:148px 1fr}
+  @media (max-width:560px){.console-body{grid-template-columns:1fr}}
+  .nav{border-right:1px solid var(--line);background:#121c24;padding:8px}
+  @media (max-width:560px){.nav{display:flex;gap:6px;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}}
+  .nav button{
+    width:100%;text-align:left;background:transparent;border:0;color:var(--ink-dim);
+    font:inherit;font-size:13px;padding:9px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;
+  }
+  .nav button[aria-current="true"]{background:#1c3540;color:var(--ink);box-shadow:inset 2px 0 0 var(--accent)}
+  .nav button:hover{color:var(--ink)}
+
+  .page{padding:18px}
+  .page h3{margin:0 0 2px;font-size:16px}
+  .page .sub{margin:0 0 16px;color:var(--ink-dim);font-size:13px}
+
+  .card{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:12px;padding:14px;margin-bottom:14px}
+  .card > .row{display:flex;align-items:center;gap:12px}
+  .card .row + .row{margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
+  .row .meta{flex:1;min-width:0}
+  .row .meta b{display:block;font-size:14px}
+  .row .meta small{color:var(--ink-dim);font-size:12px}
+
+  /* toggle switch */
+  .switch{appearance:none;border:0;cursor:pointer;flex:0 0 auto;
+    width:52px;height:28px;border-radius:999px;background:#33444f;position:relative;
+    transition:background .18s ease;outline-offset:3px}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+    background:#cdd9df;transition:transform .18s ease}
+  .switch[aria-checked="true"]{background:var(--teal)}
+  .switch[aria-checked="true"]::after{transform:translateX(24px);background:#06241f}
+  .switch:focus-visible{outline:2px solid var(--accent)}
+
+  /* severity matrix — the signature element */
+  .matrix-head{display:grid;grid-template-columns:1fr 92px 92px;align-items:end;gap:8px;
+    padding:0 2px 8px;border-bottom:1px solid var(--line);margin-bottom:6px}
+  .matrix-head .h{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);text-align:center}
+  .matrix-head .h.left{text-align:left}
+  .matrix-head .h .store{display:block;color:var(--ink-dim)}
+  .sevrow{display:grid;grid-template-columns:1fr 92px 92px;align-items:center;gap:8px;
+    padding:7px 2px;border-bottom:1px solid var(--line-soft)}
+  .sevrow:last-child{border-bottom:0}
+  .sevname{display:flex;align-items:center;gap:10px;min-width:0}
+  .sevbadge{font-family:var(--mono);font-weight:700;font-size:12px;color:#08121a;
+    width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex:0 0 auto}
+  .sevname .t{min-width:0}
+  .sevname .t b{display:block;font-size:13px;line-height:1.2}
+  .sevname .t small{color:var(--ink-faint);font-size:11px}
+  .cell{display:flex;justify-content:center}
+  /* compact pill toggle for matrix */
+  .pill{appearance:none;font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+    background:#16242c;color:var(--ink-faint);font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+    padding:6px 0;width:72px;text-transform:uppercase;outline-offset:3px;transition:.15s ease}
+  .pill[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#062420;font-weight:700}
+  .pill:hover{border-color:var(--accent)}
+  .pill:focus-visible{outline:2px solid var(--accent)}
+
+  /* save bar */
+  .savebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .btn{appearance:none;font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
+    background:var(--raised);color:var(--ink);padding:10px 16px;font-weight:600;outline-offset:3px}
+  .btn:hover{border-color:var(--accent)}
+  .btn:focus-visible{outline:2px solid var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.amber{background:var(--amber);border-color:var(--amber);color:#2a1d00}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .statepill{font-family:var(--mono);font-size:12px;padding:6px 11px;border-radius:999px;border:1px solid var(--line)}
+  .statepill.dirty{color:var(--amber);border-color:#5a4a1f;background:#241d09}
+  .statepill.saved{color:var(--good);border-color:#274a30;background:#0f2417}
+
+  /* ---------- side rail: tasks + questions ---------- */
+  .rail{display:flex;flex-direction:column;gap:20px;position:sticky;top:18px}
+  @media (max-width:900px){.rail{position:static}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .panel-head{padding:12px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .panel-head h4{margin:0;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+  .panel-head .count{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink-dim)}
+  .panel-body{padding:6px 8px}
+
+  .task{display:flex;gap:11px;padding:9px 8px;border-radius:9px;align-items:flex-start}
+  .task .box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);flex:0 0 auto;margin-top:1px;
+    display:grid;place-items:center;color:#08121a;font-size:13px;font-weight:800}
+  .task.done .box{background:var(--good);border-color:var(--good)}
+  .task .lbl{font-size:13px;color:var(--ink-dim)}
+  .task.done .lbl{color:var(--ink)}
+
+  .q{padding:11px 9px;border-bottom:1px solid var(--line-soft)}
+  .q:last-child{border-bottom:0}
+  .q .prompt{font-size:13.5px;margin:0 0 9px;display:flex;gap:8px}
+  .q .prompt .n{font-family:var(--mono);color:var(--accent);font-size:12px;margin-top:1px}
+  .opt{display:flex;gap:9px;align-items:flex-start;padding:6px 7px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink-dim)}
+  .opt:hover{background:#15222a}
+  .opt input{margin-top:3px;accent-color:var(--accent);flex:0 0 auto}
+  .opt.correct{color:var(--good)}
+  .opt.wrong{color:var(--bad)}
+  .qmark{font-family:var(--mono);font-size:11px;margin-top:6px}
+  .qmark.ok{color:var(--good)}
+  .qmark.no{color:var(--bad)}
+
+  /* ---------- submission ---------- */
+  .submit{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .submit h4{margin:0 0 4px;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+  .submit p{margin:0 0 14px;color:var(--ink-dim);font-size:13px}
+  .submit .field{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .submit label{font-size:13px;color:var(--ink-dim)}
+  .submit input[type=text]{font:inherit;background:#0f1c23;border:1px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:10px 12px;min-width:220px;outline-offset:2px}
+  .submit input[type=text]:focus-visible{outline:2px solid var(--accent)}
+  .status{margin-top:14px;font-size:13.5px;font-family:var(--mono);min-height:20px}
+  .status.ok{color:var(--good)}
+  .status.err{color:var(--bad)}
+  .status.busy{color:var(--accent)}
+  .status a{color:var(--accent)}
+  .scoreline{font-family:var(--mono);font-size:13px;color:var(--ink-dim);margin-left:auto}
+  .scoreline b{color:var(--ink)}
+
+  .credit{margin-top:26px;text-align:center;color:var(--ink-faint);font-size:11.5px;font-family:var(--mono)}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important}
+  }
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><span></span></div>
+      <div>
+        <h1>Aravel SwitchManager</h1>
+        <p>edge-sw-03 &middot; firmware v4.6.1</p>
+      </div>
+    </div>
+    <div class="obj" aria-label="Exam objectives">
+      <span class="tag">SY0-701 &middot; 4.4</span>
+      <span class="tag">SY0-701 &middot; 4.9</span>
+    </div>
+  </header>
+
+  <section class="scenario">
+    <p class="eyebrow">Lab scenario</p>
+    <h2>Tier the switch's event logging by severity</h2>
+    <p>You just started as the security admin at <b>Foxglen Outfitters</b>, a regional outdoor-gear
+      distributor. The managed access switch in the warehouse mezzanine closet ships with logging
+      switched off. Before it goes into service you need to turn logging on, point it at the company's
+      log aggregator, and tier which event severities are kept in fast volatile memory versus written to
+      the device's limited persistent flash — then make the change survive a reboot.</p>
+  </section>
+
+  <div class="grid">
+
+    <!-- ============ SIMULATED DEVICE CONSOLE ============ -->
+    <main class="console" aria-label="Switch management console">
+      <div class="console-top">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="dev">Connected to <b>edge-sw-03</b> (10.40.12.2)</span>
+        <span class="where">Warehouse / Mezzanine IDF</span>
+      </div>
+      <div class="console-body">
+        <nav class="nav" aria-label="Console sections">
+          <button type="button">System Status</button>
+          <button type="button">Ports &amp; VLANs</button>
+          <button type="button" aria-current="true">Event Logging</button>
+          <button type="button">Maintenance</button>
+        </nav>
+
+        <div class="page">
+          <h3>Event Logging</h3>
+          <p class="sub">Control whether the switch records events, where it forwards them, and which
+            severities are retained in each store.</p>
+
+          <!-- service + aggregator -->
+          <div class="card">
+            <div class="row">
+              <div class="meta">
+                <b>Logging Service</b>
+                <small>Master control. While off, the switch records nothing.</small>
+              </div>
+              <button class="switch" id="sw-service" role="switch" aria-checked="false"
+                      aria-label="Logging Service"></button>
+            </div>
+            <div class="row">
+              <div class="meta">
+                <b>Syslog Aggregator</b>
+                <small>Forward events to the central collector at logs.foxglen.internal for correlation.</small>
+              </div>
+              <button class="switch" id="sw-agg" role="switch" aria-checked="false"
+                      aria-label="Syslog Aggregator"></button>
+            </div>
+          </div>
+
+          <!-- severity matrix -->
+          <div class="card">
+            <div class="matrix-head">
+              <span class="h left">Severity level (RFC 5424)</span>
+              <span class="h"><span class="store">Volatile</span>RAM buffer</span>
+              <span class="h"><span class="store">Persistent</span>Flash store</span>
+            </div>
+            <div id="matrix" role="group" aria-label="Severity retention matrix"></div>
+            <p class="sub" style="margin:12px 0 0;font-size:12px">
+              Lower numbers are more urgent. Flash has finite write endurance, so reserve it for events
+              that must survive a reboot.</p>
+          </div>
+
+          <!-- save -->
+          <div class="card">
+            <div class="savebar">
+              <div class="meta">
+                <b>Configuration</b>
+                <small>Running changes are live but volatile until committed to the startup config.</small>
+              </div>
+              <span class="statepill dirty" id="cfg-state">No changes yet</span>
+              <button class="btn amber" id="btn-save" type="button">Save running &rarr; startup</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============ SIDE RAIL ============ -->
+    <aside class="rail">
+      <section class="panel" aria-label="Task checklist">
+        <div class="panel-head">
+          <h4>Tasks</h4>
+          <span class="count" id="task-count">0 / 5</span>
+        </div>
+        <div class="panel-body" id="tasklist"></div>
+      </section>
+
+      <section class="panel" aria-label="Knowledge check">
+        <div class="panel-head">
+          <h4>Knowledge check</h4>
+          <span class="count" id="q-count">0 / 4</span>
+        </div>
+        <div class="panel-body" id="questions"></div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- ============ SUBMISSION ============ -->
+  <section class="submit" aria-label="Submit lab">
+    <h4>Submit completed lab</h4>
+    <p>Enter a pseudonymous handle (no real names). Submitting captures a snapshot of your work and
+      sends it to your instructor.</p>
+    <div class="field">
+      <label for="handle">Hacker name</label>
+      <input type="text" id="handle" maxlength="40" autocomplete="off" spellcheck="false"
+             placeholder="e.g. nightjar-07">
+      <button class="btn primary" id="btn-submit" type="button">Submit completed lab</button>
+      <button class="btn ghost" id="btn-reset" type="button">Reset lab</button>
+      <span class="scoreline" id="scoreline">Score <b id="score-now">0</b> / 9</span>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <p class="credit">Severity-Tiered Switch Logging &middot; Security+ SY0-701 lab &middot;
+    &copy; 2026 [Author Name]. Original clean-room simulation.</p>
+</div>
+
+<!--
+  ============================================================================
+  ENGINE + LAB CONFIG + ANSWER KEY
+  ============================================================================
+  Dependency note: the screenshot is produced by a small, self-contained
+  Canvas-2D renderer (captureEvidence) instead of html2canvas, so the file
+  carries zero third-party libraries. captureEvidence() returns a
+  data:image/png URL, which is exactly what the Apps Script handler expects.
+  To use real html2canvas instead, paste its minified source above this block
+  and replace the captureEvidence() body with:
+      const c = await html2canvas(document.querySelector('.console'));
+      return c.toDataURL('image/png');
+  ============================================================================
+-->
+<script>
+"use strict";
+
+/* ---------------------------- LAB CONFIG ---------------------------------- */
+const CONFIG = {
+  assignmentId: "splus-switch-log-severity",
+  title: "Severity-Tiered Switch Logging",
+  objectives: ["4.4", "4.9"],
+  // Same deployed /exec URL across the whole library. Replace before use.
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "REPLACE_PER_COHORT_TOKEN",
+  maxHandle: 40
+};
+
+/* eight RFC 5424 severities, most urgent first (the public standard) */
+const SEVERITIES = [
+  { key:"emerg",  num:0, name:"Emergency",     desc:"System is unusable",            v:"--sev0" },
+  { key:"alert",  num:1, name:"Alert",         desc:"Act immediately",               v:"--sev1" },
+  { key:"crit",   num:2, name:"Critical",      desc:"Critical condition",            v:"--sev2" },
+  { key:"err",    num:3, name:"Error",         desc:"Error condition",               v:"--sev3" },
+  { key:"warn",   num:4, name:"Warning",       desc:"Warning condition",             v:"--sev4" },
+  { key:"notice", num:5, name:"Notice",        desc:"Normal but significant",        v:"--sev5" },
+  { key:"info",   num:6, name:"Informational", desc:"Informational message",         v:"--sev6" },
+  { key:"debug",  num:7, name:"Debug",         desc:"Debug-level message",           v:"--sev7" }
+];
+
+/* -------------------------- ANSWER KEY (target) --------------------------- */
+const TARGET = {
+  loggingService:true,
+  aggregator:true,
+  ram:  { emerg:true,  alert:true,  crit:true,  err:false, warn:false, notice:false, info:false, debug:false },
+  flash:{ emerg:true,  alert:true,  crit:false, err:false, warn:false, notice:false, info:false, debug:false }
+};
+
+const QUESTIONS = [
+  { id:"q1",
+    prompt:"The persistent store keeps fewer severities than the volatile buffer. What's the main reason to limit what's written to Flash?",
+    options:[
+      "Flash has finite write endurance and capacity, so it's reserved for events that must survive a reboot",
+      "Flash cannot store text-based log messages",
+      "The volatile buffer is encrypted and Flash is not",
+      "Writing to Flash disables the syslog aggregator"
+    ], answer:0 },
+  { id:"q2",
+    prompt:"Using RFC 5424 severity levels, how does the numeric level relate to urgency?",
+    options:[
+      "A lower number is more urgent — Emergency is 0",
+      "A higher number is more urgent — Debug is the most urgent",
+      "The numbers are random identifiers with no ordering",
+      "Only even-numbered levels indicate urgent events"
+    ], answer:0 },
+  { id:"q3",
+    prompt:"Why commit the running configuration to the startup configuration after making changes?",
+    options:[
+      "So the switch reloads the same settings after a reboot or power loss",
+      "It encrypts the running configuration in memory",
+      "It's required before the switch will forward any traffic",
+      "It clears all stored log entries"
+    ], answer:0 },
+  { id:"q4",
+    prompt:"What does a syslog aggregator primarily provide?",
+    options:[
+      "A central place to collect and correlate log events from many devices",
+      "A faster CPU for the switch",
+      "Automatic firmware patching",
+      "Encryption of all switch ports"
+    ], answer:0 }
+];
+
+const TASKS = [
+  { id:"service", label:"Turn on the Logging Service",
+    pass:s => s.loggingService === true },
+  { id:"agg", label:"Enable the Syslog Aggregator",
+    pass:s => s.aggregator === true },
+  { id:"ram", label:"Set the RAM buffer to Emergency, Alert, Critical only",
+    pass:s => sameStore(s.ram, TARGET.ram) },
+  { id:"flash", label:"Set the Flash store to Emergency and Alert only",
+    pass:s => sameStore(s.flash, TARGET.flash) },
+  { id:"save", label:"Commit the correct running config to startup",
+    pass:s => s.startup !== null && configMatchesTarget(s.startup) }
+];
+
+/* ------------------------------- STATE ------------------------------------ */
+const state = {
+  loggingService:false,
+  aggregator:false,
+  ram:   blankStore(),
+  flash: blankStore(),
+  startup:null,                 // snapshot committed via Save
+  answers:{}                    // qid -> chosen index
+};
+
+function blankStore(){ const o={}; SEVERITIES.forEach(s=>o[s.key]=false); return o; }
+function cloneStore(st){ const o={}; SEVERITIES.forEach(s=>o[s.key]=!!st[s.key]); return o; }
+function sameStore(a,b){ return SEVERITIES.every(s=>!!a[s.key]===!!b[s.key]); }
+function configMatchesTarget(c){
+  return c.loggingService===TARGET.loggingService &&
+         c.aggregator===TARGET.aggregator &&
+         sameStore(c.ram,TARGET.ram) && sameStore(c.flash,TARGET.flash);
+}
+function runningSnapshot(){
+  return { loggingService:state.loggingService, aggregator:state.aggregator,
+           ram:cloneStore(state.ram), flash:cloneStore(state.flash) };
+}
+function isDirty(){
+  if(!state.startup) return true;
+  return JSON.stringify(state.startup) !== JSON.stringify(runningSnapshot());
+}
+
+/* ------------------------------- RENDER ----------------------------------- */
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function buildMatrix(){
+  const host = document.getElementById("matrix");
+  host.innerHTML = "";
+  SEVERITIES.forEach(sev=>{
+    const row = document.createElement("div");
+    row.className = "sevrow";
+    const color = cssVar(sev.v);
+    row.innerHTML =
+      '<div class="sevname">' +
+        '<span class="sevbadge" style="background:'+color+'">'+sev.num+'</span>' +
+        '<span class="t"><b>'+sev.name+'</b><small>'+sev.desc+'</small></span>' +
+      '</div>' +
+      '<div class="cell"><button class="pill" type="button" data-store="ram" data-key="'+sev.key+'" aria-pressed="false" aria-label="'+sev.name+' in RAM buffer">Off</button></div>' +
+      '<div class="cell"><button class="pill" type="button" data-store="flash" data-key="'+sev.key+'" aria-pressed="false" aria-label="'+sev.name+' in Flash store">Off</button></div>';
+    host.appendChild(row);
+  });
+  host.querySelectorAll(".pill").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const store = btn.dataset.store, key = btn.dataset.key;
+      state[store][key] = !state[store][key];
+      sync();
+    });
+  });
+}
+
+function buildTasks(){
+  const host = document.getElementById("tasklist");
+  host.innerHTML = "";
+  TASKS.forEach(t=>{
+    const el = document.createElement("div");
+    el.className = "task"; el.id = "task-"+t.id;
+    el.innerHTML = '<span class="box" aria-hidden="true"></span><span class="lbl">'+t.label+'</span>';
+    host.appendChild(el);
+  });
+}
+
+function buildQuestions(){
+  const host = document.getElementById("questions");
+  host.innerHTML = "";
+  QUESTIONS.forEach((q,qi)=>{
+    const block = document.createElement("div");
+    block.className = "q"; block.id = "q-"+q.id;
+    let html = '<p class="prompt"><span class="n">'+(qi+1)+'</span><span>'+q.prompt+'</span></p>';
+    q.options.forEach((opt,oi)=>{
+      const id = q.id+"-"+oi;
+      html += '<label class="opt" for="'+id+'">' +
+              '<input type="radio" id="'+id+'" name="'+q.id+'" value="'+oi+'">' +
+              '<span>'+opt+'</span></label>';
+    });
+    html += '<div class="qmark" id="mark-'+q.id+'"></div>';
+    block.innerHTML = html;
+    host.appendChild(block);
+  });
+  host.querySelectorAll('input[type=radio]').forEach(r=>{
+    r.addEventListener("change",()=>{
+      state.answers[r.name] = parseInt(r.value,10);
+      sync();
+    });
+  });
+}
+
+/* ---------------------------- SYNC / SCORING ------------------------------ */
+function evalTasks(){ return TASKS.map(t=>({id:t.id,label:t.label,passed:!!t.pass(state)})); }
+function evalQuestions(){
+  return QUESTIONS.map(q=>{
+    const chosen = state.answers[q.id];
+    const correct = chosen === q.answer;
+    return { id:q.id, prompt:q.prompt,
+             answer: chosen==null ? null : q.options[chosen],
+             chosen: chosen==null?null:chosen, correct };
+  });
+}
+
+function sync(){
+  // toggles reflect state
+  setSwitch("sw-service", state.loggingService);
+  setSwitch("sw-agg", state.aggregator);
+  document.querySelectorAll(".pill").forEach(btn=>{
+    const on = state[btn.dataset.store][btn.dataset.key];
+    btn.setAttribute("aria-pressed", on?"true":"false");
+    btn.textContent = on ? "On" : "Off";
+  });
+
+  // tasks
+  const tr = evalTasks();
+  let tPass = 0;
+  tr.forEach(t=>{
+    const el = document.getElementById("task-"+t.id);
+    el.classList.toggle("done", t.passed);
+    el.querySelector(".box").textContent = t.passed ? "\u2713" : "";
+    if(t.passed) tPass++;
+  });
+  document.getElementById("task-count").textContent = tPass+" / "+TASKS.length;
+
+  // questions
+  const qr = evalQuestions();
+  let qPass = 0;
+  qr.forEach(q=>{
+    const mark = document.getElementById("mark-"+q.id);
+    if(q.chosen==null){ mark.textContent=""; mark.className="qmark"; }
+    else if(q.correct){ mark.textContent="\u2713 Correct"; mark.className="qmark ok"; qPass++; }
+    else { mark.textContent="\u2717 Not quite — review the scenario"; mark.className="qmark no"; }
+  });
+  document.getElementById("q-count").textContent = qPass+" / "+QUESTIONS.length;
+
+  // config state pill
+  const pill = document.getElementById("cfg-state");
+  if(!state.startup){ pill.textContent="No changes yet"; pill.className="statepill dirty"; }
+  else if(isDirty()){ pill.textContent="Unsaved changes"; pill.className="statepill dirty"; }
+  else { pill.textContent="Saved to startup"; pill.className="statepill saved"; }
+
+  // score
+  document.getElementById("score-now").textContent = (tPass+qPass);
+}
+
+function setSwitch(id,on){
+  document.getElementById(id).setAttribute("aria-checked", on?"true":"false");
+}
+
+/* ------------------------------ EVENTS ------------------------------------ */
+function wire(){
+  document.getElementById("sw-service").addEventListener("click",()=>{ state.loggingService=!state.loggingService; sync(); });
+  document.getElementById("sw-agg").addEventListener("click",()=>{ state.aggregator=!state.aggregator; sync(); });
+  document.getElementById("btn-save").addEventListener("click",()=>{
+    state.startup = runningSnapshot();
+    sync();
+  });
+  document.getElementById("btn-reset").addEventListener("click", resetLab);
+  document.getElementById("btn-submit").addEventListener("click", submit);
+
+  // nav is illustrative; keep "Event Logging" current
+  document.querySelectorAll(".nav button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll(".nav button").forEach(x=>x.removeAttribute("aria-current"));
+      b.setAttribute("aria-current","true");
+    });
+  });
+}
+
+function resetLab(){
+  state.loggingService=false; state.aggregator=false;
+  state.ram=blankStore(); state.flash=blankStore();
+  state.startup=null; state.answers={};
+  document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+  document.getElementById("handle").value="";
+  const s=document.getElementById("status"); s.textContent=""; s.className="status";
+  sync();
+}
+
+/* ----------------- SCREENSHOT: dependency-free evidence card -------------- */
+async function captureEvidence(handle){
+  const scale = 2;
+  const W = 760, H = 1120;
+  const cv = document.createElement("canvas");
+  cv.width = W*scale; cv.height = H*scale;
+  const ctx = cv.getContext("2d");
+  ctx.scale(scale,scale);
+  const C = n => cssVar(n) || "#888";
+
+  // background
+  ctx.fillStyle = C("--bg"); ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = C("--panel"); roundRect(ctx,16,16,W-32,H-32,16); ctx.fill();
+  ctx.strokeStyle = C("--line"); ctx.lineWidth=1; roundRect(ctx,16,16,W-32,H-32,16); ctx.stroke();
+
+  let y = 44;
+  const L = 44;
+  // header
+  ctx.fillStyle = C("--accent");
+  ctx.font = "700 12px " + monoFont();
+  ctx.fillText("ARAVEL SWITCHMANAGER · SUBMISSION RECORD", L, y); y+=26;
+  ctx.fillStyle = C("--ink");
+  ctx.font = "700 22px " + sansFont();
+  ctx.fillText(CONFIG.title, L, y); y+=24;
+  ctx.fillStyle = C("--ink-dim");
+  ctx.font = "13px " + monoFont();
+  ctx.fillText("assignment: "+CONFIG.assignmentId+"   objectives: "+CONFIG.objectives.join(", "), L, y); y+=20;
+  ctx.fillText("handle: "+handle+"   captured: "+new Date().toISOString(), L, y); y+=14;
+
+  // divider
+  y+=10; ctx.strokeStyle=C("--line"); ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-L,y); ctx.stroke(); y+=24;
+
+  const tr = evalTasks(), qr = evalQuestions();
+  const score = tr.filter(t=>t.passed).length + qr.filter(q=>q.correct).length;
+
+  // score
+  ctx.fillStyle=C("--ink"); ctx.font="700 16px "+sansFont();
+  ctx.fillText("Score: "+score+" / "+(TASKS.length+QUESTIONS.length), L, y); y+=28;
+
+  // tasks
+  ctx.fillStyle=C("--ink-dim"); ctx.font="700 11px "+monoFont();
+  ctx.fillText("TASKS", L, y); y+=18;
+  ctx.font="13px "+sansFont();
+  tr.forEach(t=>{
+    drawMark(ctx, L, y-11, t.passed, C);
+    ctx.fillStyle = t.passed ? C("--ink") : C("--ink-faint");
+    ctx.fillText(t.label, L+22, y); y+=22;
+  });
+  y+=8;
+
+  // severity matrix
+  ctx.fillStyle=C("--ink-dim"); ctx.font="700 11px "+monoFont();
+  ctx.fillText("SEVERITY RETENTION", L, y);
+  ctx.fillStyle=C("--ink-faint");
+  ctx.fillText("RAM", L+360, y); ctx.fillText("FLASH", L+440, y); y+=18;
+  ctx.font="12px "+monoFont();
+  SEVERITIES.forEach(sev=>{
+    // badge
+    ctx.fillStyle=C(sev.v); roundRect(ctx,L,y-12,18,16,4); ctx.fill();
+    ctx.fillStyle="#08121a"; ctx.font="700 11px "+monoFont();
+    ctx.fillText(String(sev.num), L+5, y); 
+    ctx.fillStyle=C("--ink"); ctx.font="12px "+sansFont();
+    ctx.fillText(sev.name, L+26, y);
+    drawState(ctx, L+360, y, state.ram[sev.key], C);
+    drawState(ctx, L+440, y, state.flash[sev.key], C);
+    y+=20;
+  });
+  y+=10;
+  ctx.fillStyle=C("--ink-faint"); ctx.font="11px "+monoFont();
+  ctx.fillText("startup config committed: "+(state.startup && configMatchesTarget(state.startup) ? "yes (matches target)" : (state.startup?"yes (differs)":"no")), L, y);
+  y+=24;
+
+  // questions
+  ctx.fillStyle=C("--ink-dim"); ctx.font="700 11px "+monoFont();
+  ctx.fillText("KNOWLEDGE CHECK", L, y); y+=18;
+  ctx.font="12px "+sansFont();
+  qr.forEach((q,i)=>{
+    drawMark(ctx, L, y-11, q.correct, C);
+    ctx.fillStyle = q.correct ? C("--ink") : C("--ink-faint");
+    ctx.fillText("Q"+(i+1)+": "+(q.answer==null?"(no answer)":truncate(q.answer,58)), L+22, y); y+=22;
+  });
+
+  // footer
+  ctx.fillStyle=C("--ink-faint"); ctx.font="10px "+monoFont();
+  ctx.fillText("\u00A9 2026 [Author Name] · original clean-room Security+ lab", L, H-30);
+
+  return cv.toDataURL("image/png");
+}
+function monoFont(){ return 'ui-monospace, Consolas, monospace'; }
+function sansFont(){ return 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'; }
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function drawMark(ctx,x,y,ok,C){ ctx.fillStyle = ok?C("--good"):C("--bad");
+  ctx.font="700 14px "+monoFont(); ctx.fillText(ok?"\u2713":"\u2717", x, y+11); }
+function drawState(ctx,x,y,on,C){ ctx.fillStyle = on?C("--teal"):C("--ink-faint");
+  ctx.font="700 11px "+monoFont(); ctx.fillText(on?"ON":"off", x, y); }
+function truncate(s,n){ return s.length>n ? s.slice(0,n-1)+"\u2026" : s; }
+
+/* ------------------------------ SUBMIT ------------------------------------ */
+async function submit(){
+  const status = document.getElementById("status");
+  const handle = document.getElementById("handle").value.trim();
+  const btn = document.getElementById("btn-submit");
+
+  if(!handle){ status.className="status err"; status.textContent="Enter a hacker name before submitting."; return; }
+  if(handle.length > CONFIG.maxHandle){ status.className="status err";
+    status.textContent="Hacker name is too long (max "+CONFIG.maxHandle+")."; return; }
+  if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_YOUR") === 0){
+    status.className="status err";
+    status.textContent="This lab isn't wired to a submission endpoint yet. See INSTRUCTOR_SETUP.md.";
+    return;
+  }
+
+  const tr = evalTasks(), qr = evalQuestions();
+  const earned = tr.filter(t=>t.passed).length + qr.filter(q=>q.correct).length;
+  const total = TASKS.length + QUESTIONS.length;
+
+  status.className="status busy"; status.textContent="Capturing snapshot and submitting\u2026";
+  btn.disabled = true;
+
+  let screenshot = "";
+  try { screenshot = await captureEvidence(handle); } catch(e){ screenshot = ""; }
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: handle,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: tr,
+    questions: qr.map(q=>({ id:q.id, prompt:q.prompt, answer:q.answer, correct:q.correct })),
+    score: { earned, total },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  try{
+    // Simple request: no custom headers, text/plain body avoids CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      status.className="status ok";
+      status.innerHTML = "Submitted. Score "+earned+"/"+total+". " +
+        (out.docUrl ? 'Receipt: <a href="'+out.docUrl+'" target="_blank" rel="noopener">open document</a>' : "");
+    } else {
+      status.className="status err";
+      status.textContent = "Submission rejected: " + ((out && out.error) || "unknown error") + ".";
+    }
+  } catch(err){
+    // Fallback for locked-down contexts: fire-and-forget, can't read the response.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      status.className="status ok";
+      status.textContent = "Submitted (no receipt available in this browser). Confirm with your instructor.";
+    } catch(e2){
+      status.className="status err";
+      status.textContent = "Couldn't reach the submission service. Check your connection and try again.";
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ------------------------------- INIT ------------------------------------- */
+buildMatrix();
+buildTasks();
+buildQuestions();
+wire();
+sync();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-snort-ips-edge.html",title:"Edge IPS Lab \u2014 Configure Snort Inline Protection (pfSense)"}, NEXT=null, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.5 Detecting Network Attacks";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

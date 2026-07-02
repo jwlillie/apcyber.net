@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Scan and Remediate Windows Host Vulnerabilities (SY0-701 5.2.3)</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-win-vuln-scan",
+  "title": "Lab — Scan and Remediate Windows Host Vulnerabilities (SY0-701 5.2.3)",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.1 Network Vulnerabilities and Attacks"
+    ],
+    "skills": [
+      "1.B"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.3",
+      "5.2"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ SY0-701 Single-File Lab Simulation
+  Lab: Scan and Remediate Windows Host Vulnerabilities
+  assignmentId: splus-win-vuln-scan
+  Objective(s): 5.2.3 (Scan for vulnerabilities); supports 2.2, 4.3, 4.4, 4.9
+
+  CLEAN-ROOM ORIGINAL WORK. Built from the public CompTIA SY0-701 objective and
+  the documented behavior of generic vulnerability scanners and Windows admin
+  tools. Scenario, personas, IP addresses, host names, account names, file
+  paths, version values, task wording, and question wording are all original.
+  This file is not derived from, and does not reproduce, any third-party
+  vendor's lab text, screenshots, ordering, or values.
+
+  Copyright (c) 2026 [Author Name]. All rights reserved.
+  License: Provided to licensed instructors for use within their own course.
+  You may not redistribute or resell this file or its derivatives without the
+  author's written permission.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Palette: "blue-team console" — deep slate + signal cyan + alert amber */
+    --bg:            #0c1018;
+    --bg-grid:       #121826;
+    --panel:         #161d2b;
+    --panel-2:       #1a2230;
+    --panel-soft:    #1c2433;
+    --line:          #2a3447;
+    --line-soft:     #232c3d;
+    --ink:           #e7edf6;
+    --ink-soft:      #9fb0c7;
+    --ink-faint:     #6b7c96;
+    --accent:        #35d0d6;  /* signal cyan */
+    --accent-deep:   #1f9aa0;
+    --ok:            #4fd07a;
+    --ok-deep:       #2f9b56;
+    --warn:          #f2b13c;
+    --crit:          #ff6b6b;
+    --crit-deep:     #c93f3f;
+    --shadow:        0 18px 50px rgba(0,0,0,.45);
+    --radius:        14px;
+    --radius-sm:     9px;
+    --mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  :root{ --panel-soft:#1c2433; }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(53,208,214,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(242,177,60,.06), transparent 55%),
+      var(--bg);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+
+  a{ color:var(--accent); }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:22px 18px 80px; }
+
+  /* ---------- Masthead ---------- */
+  .mast{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:14px 18px; margin-bottom:18px;
+    border:1px solid var(--line); border-radius:var(--radius);
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    box-shadow:var(--shadow);
+  }
+  .crest{
+    width:42px; height:42px; flex:0 0 auto;
+  }
+  .mast h1{
+    font-size:1.02rem; margin:0; letter-spacing:.2px; font-weight:650;
+  }
+  .mast .sub{ margin:1px 0 0; font-size:.78rem; color:var(--ink-soft); }
+  .obj-pill{
+    margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; align-items:center;
+  }
+  .obj-pill .tag{
+    font-family:var(--mono); font-size:.7rem; letter-spacing:.4px;
+    color:var(--accent); border:1px solid var(--accent-deep);
+    background:rgba(53,208,214,.08); padding:3px 8px; border-radius:999px;
+  }
+
+  /* ---------- Layout ---------- */
+  .grid{ display:grid; grid-template-columns: 1fr 360px; gap:18px; align-items:start; }
+  @media (max-width: 940px){ .grid{ grid-template-columns:1fr; } }
+
+  .stage{ display:flex; flex-direction:column; gap:16px; }
+
+  /* ---------- "Window" chrome ---------- */
+  .win{
+    border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--panel); box-shadow:var(--shadow); overflow:hidden;
+  }
+  .win-bar{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 12px; background:var(--panel-2); border-bottom:1px solid var(--line);
+  }
+  .dots{ display:flex; gap:6px; }
+  .dots i{ width:11px; height:11px; border-radius:50%; display:block; }
+  .dots i:nth-child(1){ background:#ff5f57; }
+  .dots i:nth-child(2){ background:#febc2e; }
+  .dots i:nth-child(3){ background:#28c840; }
+  .win-title{ font-size:.78rem; color:var(--ink-soft); font-weight:600; }
+  .addr{
+    margin-left:auto; min-width:0; flex:1 1 240px; max-width:520px;
+    display:flex; align-items:center; gap:8px;
+    background:var(--bg-grid); border:1px solid var(--line-soft);
+    border-radius:999px; padding:5px 12px; font-family:var(--mono);
+    font-size:.74rem; color:var(--ink-soft);
+  }
+  .addr .lock{ color:var(--ink-faint); }
+  .addr .url{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .win-body{ padding:18px; }
+
+  /* ---------- Scanner console ---------- */
+  .console-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--line); margin:-4px -4px 16px; padding:0 4px; }
+  .console-tabs button{
+    appearance:none; background:transparent; border:0; color:var(--ink-soft);
+    font:inherit; font-size:.82rem; font-weight:600; padding:10px 14px;
+    border-bottom:2px solid transparent; cursor:pointer; border-radius:6px 6px 0 0;
+  }
+  .console-tabs button[aria-selected="true"]{ color:var(--accent); border-bottom-color:var(--accent); }
+  .console-tabs button:disabled{ color:var(--ink-faint); cursor:not-allowed; }
+  .console-tabs button:hover:not(:disabled){ color:var(--ink); }
+
+  /* login */
+  .login{ max-width:380px; margin:6px auto 8px; text-align:left; }
+  .login h2{ font-size:1.05rem; margin:0 0 2px; }
+  .login p.note{ color:var(--ink-soft); font-size:.82rem; margin:0 0 16px; }
+
+  label.field{ display:block; margin:0 0 12px; }
+  label.field .lbl{ display:block; font-size:.74rem; letter-spacing:.3px; color:var(--ink-soft); margin:0 0 5px; font-weight:600; text-transform:uppercase; }
+  input[type=text], input[type=password], select{
+    width:100%; padding:10px 12px; border-radius:var(--radius-sm);
+    border:1px solid var(--line); background:var(--bg-grid); color:var(--ink);
+    font:inherit; font-size:.92rem;
+  }
+  input::placeholder{ color:var(--ink-faint); }
+  input:focus-visible, select:focus-visible, button:focus-visible, .swatch:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+
+  .btn{
+    appearance:none; cursor:pointer; font:inherit; font-weight:650;
+    border-radius:var(--radius-sm); padding:10px 16px; border:1px solid transparent;
+    background:linear-gradient(180deg, var(--accent), var(--accent-deep)); color:#04181a;
+    transition:transform .08s ease, filter .15s ease;
+  }
+  .btn:hover{ filter:brightness(1.07); }
+  .btn:active{ transform:translateY(1px); }
+  .btn[disabled]{ opacity:.5; cursor:not-allowed; filter:none; }
+  .btn.ghost{ background:transparent; border-color:var(--line); color:var(--ink); }
+  .btn.ghost:hover{ border-color:var(--accent-deep); }
+  .btn.danger{ background:linear-gradient(180deg,#ff8080,var(--crit-deep)); color:#190606; }
+  .btn.sm{ padding:7px 11px; font-size:.82rem; }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .spacer{ flex:1; }
+
+  .err{ color:var(--crit); font-size:.82rem; margin:8px 0 0; min-height:1em; }
+  .helpline{ color:var(--ink-faint); font-size:.78rem; margin:4px 0 0; }
+
+  /* generic cards/tables inside console */
+  .pane h2{ font-size:.98rem; margin:0 0 4px; }
+  .pane p.lead{ color:var(--ink-soft); font-size:.84rem; margin:0 0 14px; }
+
+  table.data{ width:100%; border-collapse:collapse; font-size:.84rem; }
+  table.data th, table.data td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--line-soft); }
+  table.data th{ color:var(--ink-faint); font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.4px; }
+  table.data tr:last-child td{ border-bottom:0; }
+  .empty{ color:var(--ink-faint); font-size:.84rem; padding:14px 2px; font-style:italic; }
+
+  .sev{ font-family:var(--mono); font-size:.72rem; padding:2px 8px; border-radius:999px; display:inline-block; font-weight:700; }
+  .sev.crit{ color:#ffd9d9; background:rgba(201,63,63,.22); border:1px solid var(--crit-deep); }
+  .sev.high{ color:#ffe2c2; background:rgba(242,177,60,.16); border:1px solid #9c722a; }
+  .sev.none{ color:#cdeedd; background:rgba(47,155,86,.18); border:1px solid var(--ok-deep); }
+
+  .scanbar-wrap{ margin:14px 0 4px; }
+  .scanbar{ height:10px; border-radius:999px; background:var(--bg-grid); border:1px solid var(--line); overflow:hidden; }
+  .scanbar > i{ display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--ok)); transition:width .12s linear; }
+  .scan-status{ font-family:var(--mono); font-size:.76rem; color:var(--ink-soft); margin-top:7px; }
+
+  .pill-status{ font-family:var(--mono); font-size:.72rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--ink-soft); }
+  .pill-status.run{ color:var(--warn); border-color:#9c722a; }
+  .pill-status.done{ color:var(--ok); border-color:var(--ok-deep); }
+
+  .report-summary{ display:flex; gap:10px; flex-wrap:wrap; margin:0 0 14px; }
+  .metric{ border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 14px; background:var(--panel-2); min-width:96px; }
+  .metric .n{ font-size:1.4rem; font-weight:700; font-family:var(--mono); line-height:1; }
+  .metric .k{ font-size:.7rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.4px; margin-top:4px; }
+  .metric.crit .n{ color:var(--crit); }
+  .metric.clean .n{ color:var(--ok); }
+
+  .finding{ border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px; margin:0 0 10px; background:var(--panel-2); }
+  .finding h4{ margin:0 0 3px; font-size:.9rem; display:flex; gap:8px; align-items:center; }
+  .finding .meta{ font-family:var(--mono); font-size:.72rem; color:var(--ink-faint); }
+  .finding p{ margin:7px 0 0; font-size:.83rem; color:var(--ink-soft); }
+  .finding.resolved{ opacity:.62; }
+  .finding.resolved h4 .ttl{ text-decoration:line-through; }
+
+  /* ---------- Windows tools window ---------- */
+  .tool-tabs{ display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--line); margin:-4px -4px 16px; padding:0 4px; }
+  .tool-tabs button{
+    appearance:none; background:transparent; border:0; color:var(--ink-soft);
+    font:inherit; font-size:.8rem; font-weight:600; padding:9px 12px; cursor:pointer;
+    border-bottom:2px solid transparent; border-radius:6px 6px 0 0; display:flex; gap:7px; align-items:center;
+  }
+  .tool-tabs button[aria-selected="true"]{ color:var(--ink); border-bottom-color:var(--accent); }
+  .tool-tabs button:hover{ color:var(--ink); }
+  .tdot{ width:8px; height:8px; border-radius:2px; background:var(--ink-faint); }
+  .tool-tabs button[aria-selected="true"] .tdot{ background:var(--accent); }
+
+  .toggle{
+    --on:0;
+    position:relative; width:46px; height:26px; border-radius:999px; cursor:pointer;
+    border:1px solid var(--line); background:var(--bg-grid); padding:0; flex:0 0 auto;
+  }
+  .toggle::after{
+    content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%;
+    background:var(--ink-faint); transition:left .14s ease, background .14s ease;
+  }
+  .toggle[aria-checked="true"]{ background:rgba(79,208,122,.22); border-color:var(--ok-deep); }
+  .toggle[aria-checked="true"]::after{ left:22px; background:var(--ok); }
+
+  .kv{ display:flex; align-items:center; gap:12px; padding:11px 2px; border-bottom:1px solid var(--line-soft); }
+  .kv:last-child{ border-bottom:0; }
+  .kv .kvmain{ min-width:0; }
+  .kv .kvmain .t{ font-size:.88rem; font-weight:600; }
+  .kv .kvmain .d{ font-size:.78rem; color:var(--ink-soft); margin-top:2px; }
+  .kv .kvright{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+  .state-on{ color:var(--ok); font-size:.78rem; font-family:var(--mono); }
+  .state-off{ color:var(--crit); font-size:.78rem; font-family:var(--mono); }
+
+  .files{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .file{
+    border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px; background:var(--panel-2);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .file .fic{ font-size:1.4rem; }
+  .file .fn{ font-size:.82rem; font-weight:600; word-break:break-word; }
+  .file .fd{ font-size:.72rem; color:var(--ink-faint); font-family:var(--mono); }
+  .file .shared{ font-size:.72rem; color:var(--warn); font-family:var(--mono); }
+  .file .priv{ font-size:.72rem; color:var(--ok); font-family:var(--mono); }
+
+  .grouprow{ display:flex; align-items:center; gap:12px; padding:10px 2px; border-bottom:1px solid var(--line-soft); }
+  .grouprow:last-child{ border-bottom:0; }
+  .grouprow .who{ min-width:0; }
+  .grouprow .who .n{ font-size:.88rem; font-weight:600; }
+  .grouprow .who .r{ font-size:.76rem; color:var(--ink-soft); margin-top:2px; }
+  .badge-auth{ font-family:var(--mono); font-size:.68rem; color:var(--ok); border:1px solid var(--ok-deep); padding:2px 7px; border-radius:999px; }
+  .badge-rogue{ font-family:var(--mono); font-size:.68rem; color:var(--crit); border:1px solid var(--crit-deep); padding:2px 7px; border-radius:999px; }
+
+  .field-inline{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+  .field-inline label.field{ margin-bottom:0; }
+  .field-inline input[type=text]{ width:120px; }
+
+  /* ---------- Right rail ---------- */
+  .rail{ display:flex; flex-direction:column; gap:16px; position:sticky; top:14px; }
+  @media (max-width:940px){ .rail{ position:static; } }
+
+  .card{ border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); box-shadow:var(--shadow); }
+  .card > h3{ margin:0; padding:13px 16px; font-size:.82rem; letter-spacing:.4px; text-transform:uppercase; color:var(--ink-soft); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; }
+  .card .body{ padding:14px 16px; }
+
+  .progress-head{ display:flex; align-items:baseline; gap:8px; margin-bottom:10px; }
+  .progress-head .pct{ font-family:var(--mono); font-size:1.5rem; font-weight:700; color:var(--accent); }
+  .progress-head .of{ font-size:.78rem; color:var(--ink-faint); }
+  .pbar{ height:8px; border-radius:999px; background:var(--bg-grid); border:1px solid var(--line); overflow:hidden; margin-bottom:6px; }
+  .pbar > i{ display:block; height:100%; width:0; background:linear-gradient(90deg,var(--accent-deep),var(--accent)); transition:width .35s ease; }
+
+  ul.checklist{ list-style:none; margin:6px 0 0; padding:0; }
+  ul.checklist li{ display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--line-soft); font-size:.83rem; align-items:flex-start; }
+  ul.checklist li:last-child{ border-bottom:0; }
+  .ck{ width:18px; height:18px; flex:0 0 auto; border-radius:5px; border:1px solid var(--line); margin-top:1px; display:grid; place-items:center; color:transparent; font-size:.7rem; font-weight:900; }
+  li.done .ck{ background:var(--ok); border-color:var(--ok-deep); color:#06210f; }
+  li.done .lbl{ color:var(--ink-soft); }
+
+  .q{ border-bottom:1px solid var(--line-soft); padding:12px 0; }
+  .q:last-child{ border-bottom:0; }
+  .q .prompt{ font-size:.86rem; font-weight:600; margin:0 0 9px; }
+  .opts{ display:flex; flex-direction:column; gap:7px; }
+  .opt{ display:flex; gap:9px; align-items:flex-start; font-size:.83rem; cursor:pointer; padding:7px 9px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--panel-2); }
+  .opt:hover{ border-color:var(--accent-deep); }
+  .opt input{ margin-top:2px; accent-color:var(--accent); }
+  .q.correct .opt.chosen{ border-color:var(--ok-deep); background:rgba(47,155,86,.12); }
+  .q.wrong .opt.chosen{ border-color:var(--crit-deep); background:rgba(201,63,63,.12); }
+  .qfb{ font-size:.78rem; margin:8px 0 0; min-height:1em; }
+  .qfb.ok{ color:var(--ok); }
+  .qfb.no{ color:var(--crit); }
+
+  /* submission bar */
+  .submit-card .body{ display:flex; flex-direction:column; gap:11px; }
+  .status{ font-size:.82rem; min-height:1.1em; }
+  .status.ok{ color:var(--ok); }
+  .status.no{ color:var(--crit); }
+  .status.busy{ color:var(--warn); }
+  .doclink{ font-size:.82rem; word-break:break-all; }
+
+  .legal{ font-size:.7rem; color:var(--ink-faint); margin-top:24px; line-height:1.6; text-align:center; }
+  .legal code{ font-family:var(--mono); }
+
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <!-- ===================== MASTHEAD ===================== -->
+  <header class="mast">
+    <svg class="crest" viewBox="0 0 48 48" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#35d0d6"/><stop offset="1" stop-color="#1f9aa0"/>
+      </linearGradient></defs>
+      <path d="M24 3 L42 10 V24 C42 35 34 42 24 45 C14 42 6 35 6 24 V10 Z"
+            fill="none" stroke="url(#g)" stroke-width="2.4"/>
+      <path d="M16 24 l5.5 5.5 L33 18" fill="none" stroke="#35d0d6" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <h1>Larkfield Analytics — Endpoint Vulnerability Lab</h1>
+      <p class="sub">Scan a Windows workstation, read the report, remediate findings, and validate the fix.</p>
+    </div>
+    <div class="obj-pill" aria-label="Mapped exam objective">
+      <span class="tag">SY0-701 · 5.2.3</span>
+      <span class="tag">Vuln Mgmt</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ===================== STAGE (left) ===================== -->
+    <main class="stage">
+
+      <!-- ---------- Scenario brief ---------- -->
+      <section class="win" aria-label="Scenario brief">
+        <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span>
+          <span class="win-title">Ticket · SEC-4471</span></div>
+        <div class="win-body" style="padding:16px 18px;">
+          <p style="margin:0 0 8px; font-size:.88rem; color:var(--ink-soft);">
+            You are the security administrator at <strong>Larkfield Analytics</strong>. Your
+            workstation hardening policy requires that <strong>local passwords be at least
+            14 characters</strong>, that the <strong>host firewall stay enabled</strong>, and
+            that <strong>personal user folders are never shared</strong>.
+            <strong>Priya Desai</strong> is the only person authorized to hold local
+            administrator rights on staff machines.
+          </p>
+          <p style="margin:0; font-size:.88rem; color:var(--ink-soft);">
+            A new finance workstation, <strong>FINANCE-PC3 (10.20.5.66)</strong>, just joined the
+            network. Scan it with the OpenScan appliance, review what turns up, fix every issue
+            on the host, then re-scan to confirm the workstation is clean.
+          </p>
+        </div>
+      </section>
+
+      <!-- ---------- Vulnerability scanner console ---------- -->
+      <section class="win" aria-label="Vulnerability scanner console">
+        <div class="win-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="win-title">Chrome</span>
+          <span class="addr"><span class="lock">🔒</span><span class="url" id="addrUrl">http://10.20.5.10/openscan/login</span></span>
+        </div>
+        <div class="win-body">
+
+          <!-- LOGIN -->
+          <div id="loginView" class="login">
+            <h2>OpenScan Appliance</h2>
+            <p class="note">Sign in to manage scan targets and tasks.</p>
+            <label class="field">
+              <span class="lbl">Username</span>
+              <input type="text" id="userIn" autocomplete="off" placeholder="username" />
+            </label>
+            <label class="field">
+              <span class="lbl">Password</span>
+              <input type="password" id="passIn" autocomplete="off" placeholder="••••••••" />
+            </label>
+            <div class="row">
+              <button class="btn" id="signInBtn">Sign in</button>
+              <span class="spacer"></span>
+            </div>
+            <p class="err" id="loginErr" role="alert"></p>
+            <p class="helpline">Hint: credentials are on the lab card — user <code>scanadmin</code>.</p>
+          </div>
+
+          <!-- CONSOLE (after login) -->
+          <div id="consoleView" hidden>
+            <div class="console-tabs" role="tablist" aria-label="Scanner sections">
+              <button role="tab" id="tabTargets"  aria-selected="true"  data-pane="targets">Targets</button>
+              <button role="tab" id="tabTasks"    aria-selected="false" data-pane="tasks">Tasks</button>
+              <button role="tab" id="tabReports"  aria-selected="false" data-pane="reports">Reports</button>
+            </div>
+
+            <!-- TARGETS -->
+            <div class="pane" id="paneTargets" role="tabpanel" aria-labelledby="tabTargets">
+              <h2>Scan targets</h2>
+              <p class="lead">A target is the host you intend to scan. Add the finance workstation by its IP.</p>
+              <div class="field-inline" style="margin-bottom:14px;">
+                <label class="field" style="flex:1; min-width:160px;">
+                  <span class="lbl">Target name</span>
+                  <input type="text" id="tgtName" placeholder="e.g. Finance workstation" />
+                </label>
+                <label class="field" style="min-width:160px;">
+                  <span class="lbl">Host / IP address</span>
+                  <input type="text" id="tgtIp" placeholder="10.20.5.66" />
+                </label>
+                <button class="btn" id="addTargetBtn">Add target</button>
+              </div>
+              <p class="err" id="tgtErr" role="alert"></p>
+              <table class="data" aria-label="Defined targets">
+                <thead><tr><th>Name</th><th>Address</th><th>Added</th></tr></thead>
+                <tbody id="targetRows"><tr><td colspan="3" class="empty">No targets yet.</td></tr></tbody>
+              </table>
+            </div>
+
+            <!-- TASKS -->
+            <div class="pane" id="paneTasks" role="tabpanel" aria-labelledby="tabTasks" hidden>
+              <h2>Scan tasks</h2>
+              <p class="lead">A task pairs a target with a scan policy, then runs it. Create one for your target and start the scan.</p>
+              <div class="field-inline" style="margin-bottom:14px;">
+                <label class="field" style="flex:1; min-width:150px;">
+                  <span class="lbl">Task name</span>
+                  <input type="text" id="taskName" placeholder="e.g. Finance baseline scan" />
+                </label>
+                <label class="field" style="min-width:170px;">
+                  <span class="lbl">Target</span>
+                  <select id="taskTarget"><option value="">— choose a target —</option></select>
+                </label>
+                <button class="btn" id="createTaskBtn">Create &amp; run</button>
+              </div>
+              <p class="err" id="taskErr" role="alert"></p>
+
+              <div class="scanbar-wrap" id="scanProgWrap" hidden>
+                <div class="scanbar"><i id="scanProg"></i></div>
+                <div class="scan-status" id="scanStatus">Initializing scan engine…</div>
+              </div>
+
+              <table class="data" aria-label="Scan tasks" style="margin-top:6px;">
+                <thead><tr><th>Task</th><th>Target</th><th>Status</th><th></th></tr></thead>
+                <tbody id="taskRows"><tr><td colspan="4" class="empty">No tasks yet.</td></tr></tbody>
+              </table>
+            </div>
+
+            <!-- REPORTS -->
+            <div class="pane" id="paneReports" role="tabpanel" aria-labelledby="tabReports" hidden>
+              <h2>Scan reports</h2>
+              <p class="lead">Open a finished scan to review findings. Remediate each one on the host, then re-scan.</p>
+              <div id="reportEmpty" class="empty">No completed scans yet. Run a task first.</div>
+              <div id="reportBody" hidden>
+                <div class="report-summary" id="reportMetrics"></div>
+                <div id="findingsList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- Windows remediation tools ---------- -->
+      <section class="win" id="winTools" aria-label="Windows administration tools" hidden>
+        <div class="win-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="win-title">FINANCE-PC3 — Administrative Tools</span>
+          <span class="addr" style="max-width:280px;"><span class="lock">🖥️</span><span class="url">Connected: 10.20.5.66 · Priya Desai (admin)</span></span>
+        </div>
+        <div class="win-body">
+          <p class="lead" style="margin-top:-2px;">Use these consoles to fix what the scan reported. Each correct change clears the matching finding.</p>
+          <div class="tool-tabs" role="tablist" aria-label="Windows tools">
+            <button role="tab" id="ttUsers"  aria-selected="true"  data-tool="users"><span class="tdot"></span>Computer Management · Users &amp; Groups</button>
+            <button role="tab" id="ttPolicy" aria-selected="false" data-tool="policy"><span class="tdot"></span>Security Policy</button>
+            <button role="tab" id="ttFw"     aria-selected="false" data-tool="fw"><span class="tdot"></span>Settings · Firewall</button>
+            <button role="tab" id="ttFiles"  aria-selected="false" data-tool="files"><span class="tdot"></span>File Explorer · Sharing</button>
+          </div>
+
+          <!-- USERS & GROUPS -->
+          <div class="tool-pane" id="toolUsers" role="tabpanel" aria-labelledby="ttUsers">
+            <h2 class="pane" style="font-size:.95rem; margin:0 0 4px;">Members of <span style="font-family:var(--mono)">Administrators</span></h2>
+            <p class="lead">Only authorized administrators belong in this group. Remove anyone who shouldn't be here.</p>
+            <div id="adminGroup"></div>
+          </div>
+
+          <!-- SECURITY POLICY -->
+          <div class="tool-pane" id="toolPolicy" role="tabpanel" aria-labelledby="ttPolicy" hidden>
+            <h2 class="pane" style="font-size:.95rem; margin:0 0 4px;">Local Security Policy — Account Policies</h2>
+            <p class="lead">Bring the minimum password length in line with company policy, then apply.</p>
+            <div class="kv">
+              <div class="kvmain">
+                <div class="t">Minimum password length</div>
+                <div class="d">Number of characters a local password must contain.</div>
+              </div>
+              <div class="kvright">
+                <input type="text" id="pwLenIn" inputmode="numeric" style="width:74px;" aria-label="Minimum password length" />
+                <button class="btn sm" id="applyPwBtn">Apply</button>
+              </div>
+            </div>
+            <div class="kv">
+              <div class="kvmain">
+                <div class="t">Current effective length</div>
+                <div class="d">What the host is enforcing right now.</div>
+              </div>
+              <div class="kvright"><span id="pwLenState" class="state-off">8 characters</span></div>
+            </div>
+            <p class="err" id="pwErr" role="alert"></p>
+          </div>
+
+          <!-- FIREWALL -->
+          <div class="tool-pane" id="toolFw" role="tabpanel" aria-labelledby="ttFw" hidden>
+            <h2 class="pane" style="font-size:.95rem; margin:0 0 4px;">Windows Defender Firewall</h2>
+            <p class="lead">The host firewall must be enabled on all profiles.</p>
+            <div class="kv">
+              <div class="kvmain">
+                <div class="t">Private / Domain profile firewall</div>
+                <div class="d">Filters inbound traffic on trusted networks.</div>
+              </div>
+              <div class="kvright">
+                <span id="fwState" class="state-off">Off</span>
+                <button class="toggle" id="fwToggle" role="switch" aria-checked="false" aria-label="Firewall on or off"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- FILES -->
+          <div class="tool-pane" id="toolFiles" role="tabpanel" aria-labelledby="ttFiles" hidden>
+            <h2 class="pane" style="font-size:.95rem; margin:0 0 4px;"><span style="font-family:var(--mono)">C:\Users\jbrooks\</span></h2>
+            <p class="lead">Personal folders must not be shared. Stop sharing anything that's exposed to the network.</p>
+            <div class="files" id="fileGrid"></div>
+            <p class="helpline" id="fileHint" style="margin-top:12px;"></p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ===================== RIGHT RAIL ===================== -->
+    <aside class="rail">
+
+      <!-- Progress / checklist -->
+      <section class="card" aria-label="Lab progress">
+        <h3>Lab progress</h3>
+        <div class="body">
+          <div class="progress-head">
+            <span class="pct" id="progPct">0%</span>
+            <span class="of" id="progOf">0 of 0 steps</span>
+          </div>
+          <div class="pbar"><i id="progBar"></i></div>
+          <ul class="checklist" id="checklist"></ul>
+        </div>
+      </section>
+
+      <!-- Knowledge questions -->
+      <section class="card" aria-label="Knowledge check">
+        <h3>Knowledge check</h3>
+        <div class="body" id="questions"></div>
+      </section>
+
+      <!-- Submission -->
+      <section class="card submit-card" aria-label="Submit lab">
+        <h3>Submit completed lab</h3>
+        <div class="body">
+          <label class="field" style="margin-bottom:0;">
+            <span class="lbl">Hacker name (pseudonym — no real names)</span>
+            <input type="text" id="hackerName" placeholder="e.g. cipher_owl" autocomplete="off" maxlength="40" />
+          </label>
+          <div class="row">
+            <button class="btn" id="submitBtn">Submit completed lab</button>
+            <button class="btn ghost sm" id="resetBtn" type="button">Reset lab</button>
+          </div>
+          <p class="status" id="submitStatus" role="status" aria-live="polite"></p>
+          <p class="doclink" id="docLink"></p>
+        </div>
+      </section>
+
+    </aside>
+  </div>
+
+  <p class="legal">
+    Original clean-room training simulation. Scenario, hosts, accounts, paths, and values are fictional.
+    Maps to CompTIA Security+ SY0-701 objective <code>5.2.3</code>.<br/>
+    Copyright © 2026 [Author Name]. All rights reserved. Not affiliated with or derived from any third-party courseware vendor.
+  </p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SCRIPT 1 — dependency-free DOM screenshot (no html2canvas)    -->
+<!-- ============================================================ -->
+<script>
+/* Native, library-free screenshot of a DOM subtree.
+   Technique: clone the node, inline computed styles + live form values,
+   wrap as XHTML inside an SVG <foreignObject>, rasterize to <canvas>.
+   The lab draws everything with CSS/SVG and loads no external images,
+   so the canvas is never tainted and toDataURL() returns a real PNG.
+   This replaces inlining ~150KB of html2canvas; same outcome, far smaller. */
+window.LabShot = (function () {
+  const SKIP = new Set(["SCRIPT", "NOSCRIPT", "STYLE", "LINK", "META"]);
+
+  function inlineTree(src, dst) {
+    if (src.nodeType === 1) {
+      const cs = getComputedStyle(src);
+      let css = "";
+      for (let i = 0; i < cs.length; i++) {
+        const p = cs[i];
+        css += p + ":" + cs.getPropertyValue(p) + ";";
+      }
+      dst.setAttribute("style", css);
+      // capture live form values (serialized DOM does not include them)
+      const tag = src.tagName;
+      if (tag === "INPUT") {
+        if (src.type === "checkbox" || src.type === "radio") {
+          if (src.checked) dst.setAttribute("checked", "checked");
+        } else {
+          dst.setAttribute("value", src.value);
+        }
+      } else if (tag === "SELECT") {
+        const opts = dst.querySelectorAll("option");
+        const liveOpts = src.querySelectorAll("option");
+        liveOpts.forEach((o, idx) => {
+          if (o.selected && opts[idx]) opts[idx].setAttribute("selected", "selected");
+        });
+      } else if (tag === "TEXTAREA") {
+        dst.textContent = src.value;
+      }
+    }
+    const sc = src.childNodes, dc = dst.childNodes;
+    for (let i = 0; i < sc.length; i++) {
+      if (dc[i]) inlineTree(sc[i], dc[i]);
+    }
+  }
+
+  function prune(node) {
+    [...node.childNodes].forEach((c) => {
+      if (c.nodeType === 1) {
+        if (SKIP.has(c.tagName) || c.hasAttribute("hidden")) { c.remove(); return; }
+        prune(c);
+      }
+    });
+  }
+
+  async function capture(node, opts) {
+    opts = opts || {};
+    const rect = node.getBoundingClientRect();
+    const scale = opts.scale || Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.max(1, Math.ceil(rect.width));
+    const h = Math.max(1, Math.ceil(rect.height));
+
+    const clone = node.cloneNode(true);
+    prune(clone);
+    inlineTree(node, clone);
+    clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+
+    const serialized = new XMLSerializer().serializeToString(clone);
+    const bg = opts.background || "#0c1018";
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+      '<rect width="100%" height="100%" fill="' + bg + '"/>' +
+      '<foreignObject x="0" y="0" width="' + w + '" height="' + h + '">' +
+      serialized +
+      "</foreignObject></svg>";
+
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    try {
+      const img = await new Promise((res, rej) => {
+        const im = new Image();
+        im.onload = () => res(im);
+        im.onerror = () => rej(new Error("Could not rasterize the lab view."));
+        im.src = url;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = w * scale;
+      canvas.height = h * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0);
+      return canvas.toDataURL("image/png");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  return { capture };
+})();
+</script>
+
+<!-- ============================================================ -->
+<!-- SCRIPT 2 — engine, CONFIG, answer key, scoring, submission    -->
+<!-- ============================================================ -->
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     LAB CONFIG  (the only per-lab edits live in this block)
+     ========================================================= */
+  const CONFIG = {
+    assignmentId: "splus-win-vuln-scan",
+    title: "Scan and Remediate Windows Host Vulnerabilities",
+    objectives: ["4.3", "5.2"],
+
+    // Scanner console credentials (clean-room originals)
+    login: { user: "scanadmin", pass: "Sc@nM3!2026" },
+
+    // Expected target
+    target: { ip: "10.20.5.66", host: "FINANCE-PC3" },
+
+    // Host policy requirements (clean-room originals)
+    policy: { minPwLen: 14 },
+
+    // ---- DELIVERABLE WIRING (instructor fills these in per cohort) ----
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+  };
+
+  /* Findings the seeded host exhibits. Each maps to a remediation task. */
+  const FINDINGS = [
+    { id: "f_admin", sev: "crit", title: "Unauthorized account in local Administrators group",
+      detail: "Local account 'tcollins' holds administrative rights. Policy permits only Priya Desai to administer staff workstations.",
+      taskId: "t_fix_admin" },
+    { id: "f_pwlen", sev: "high", title: "Minimum password length below policy",
+      detail: "The host enforces an 8-character minimum. Company policy requires at least 14 characters for local passwords.",
+      taskId: "t_fix_pwlen" },
+    { id: "f_fw", sev: "high", title: "Host firewall disabled on Private/Domain profile",
+      detail: "Windows Defender Firewall is turned off, leaving inbound traffic unfiltered on trusted networks.",
+      taskId: "t_fix_fw" },
+    { id: "f_share", sev: "high", title: "Personal user folder shared to the network",
+      detail: "The folder 'TaxDocs' under a user profile is shared. Sharing personal user files is not permitted.",
+      taskId: "t_fix_share" }
+  ];
+
+  /* Knowledge questions — original wording. */
+  const QUESTIONS = [
+    { id: "q1",
+      prompt: "Which assessment identifies known weaknesses on a host without exploiting them?",
+      options: ["Penetration test", "Vulnerability scan", "Brute-force attack", "Threat hunt"],
+      answerIndex: 1 },
+    { id: "q2",
+      prompt: "After remediating the findings, what do you call running the scan again to confirm the host is clean?",
+      options: ["Baselining", "Rescanning to validate remediation", "Threat modeling", "Patch rollback"],
+      answerIndex: 1 },
+    { id: "q3",
+      prompt: "Removing the extra account from the Administrators group most directly enforces which principle?",
+      options: ["Defense in depth", "Separation of duties", "Least privilege", "Implicit deny"],
+      answerIndex: 2 }
+  ];
+
+  /* Task checklist (auto-evaluated against sim state). */
+  const TASKS = [
+    { id: "t_login",      label: "Sign in to the OpenScan appliance" },
+    { id: "t_target",     label: "Add a target for FINANCE-PC3 (10.20.5.66)" },
+    { id: "t_task",       label: "Create a scan task and run it" },
+    { id: "t_report1",    label: "Open the first scan report" },
+    { id: "t_fix_admin",  label: "Remove the unauthorized admin account" },
+    { id: "t_fix_pwlen",  label: "Set minimum password length to 14" },
+    { id: "t_fix_fw",     label: "Enable the host firewall" },
+    { id: "t_fix_share",  label: "Stop sharing the personal folder" },
+    { id: "t_rescan",     label: "Re-scan and confirm zero findings" }
+  ];
+
+  /* =========================================================
+     STATE  (all in-memory; no localStorage)
+     ========================================================= */
+  function freshState() {
+    return {
+      signedIn: false,
+      targets: [],
+      tasks: [],            // {name, ip, status}
+      scanRuns: 0,          // how many completed scans
+      reportOpenedOnce: false,
+      lastReportClean: false,
+      host: {
+        adminMembers: [
+          { id: "u_priya",  name: "Priya Desai",  role: "Authorized administrator", authorized: true },
+          { id: "u_tcollins", name: "tcollins",   role: "Standard user — added to Administrators", authorized: false }
+        ],
+        minPwLen: 8,
+        firewallOn: false,
+        files: [
+          { id: "d_taxdocs", name: "TaxDocs", kind: "folder", shared: true },
+          { id: "d_notes",   name: "Notes",   kind: "folder", shared: false },
+          { id: "f_resume",  name: "resume.docx", kind: "file", shared: false }
+        ]
+      },
+      answers: {},          // qId -> chosen index
+      tasksPassed: {}       // taskId -> bool
+    };
+  }
+  let S = freshState();
+
+  /* =========================================================
+     DOM helpers
+     ========================================================= */
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, props) => Object.assign(document.createElement(tag), props || {});
+
+  /* =========================================================
+     Remediation correctness (drives findings + tasks)
+     ========================================================= */
+  function fixedAdmin()  { return S.host.adminMembers.every((m) => m.authorized); }
+  function fixedPwLen()  { return S.host.minPwLen >= CONFIG.policy.minPwLen; }
+  function fixedFw()     { return S.host.firewallOn === true; }
+  function fixedShare()  { return !S.host.files.some((f) => f.shared); }
+
+  function findingResolved(id) {
+    return { f_admin: fixedAdmin(), f_pwlen: fixedPwLen(), f_fw: fixedFw(), f_share: fixedShare() }[id];
+  }
+  function openFindingsCount() {
+    return FINDINGS.filter((f) => !findingResolved(f.id)).length;
+  }
+
+  /* =========================================================
+     Task evaluation
+     ========================================================= */
+  function evalTasks() {
+    const t = {};
+    t.t_login    = S.signedIn;
+    t.t_target   = S.targets.some((x) => x.ip === CONFIG.target.ip);
+    t.t_task     = S.tasks.some((x) => x.ip === CONFIG.target.ip && x.status === "done");
+    t.t_report1  = S.reportOpenedOnce;
+    t.t_fix_admin = fixedAdmin();
+    t.t_fix_pwlen = fixedPwLen();
+    t.t_fix_fw    = fixedFw();
+    t.t_fix_share = fixedShare();
+    // re-scan must happen AFTER all host fixes, producing a clean report
+    t.t_rescan   = S.scanRuns >= 2 && S.lastReportClean;
+    S.tasksPassed = t;
+    return t;
+  }
+
+  /* =========================================================
+     RENDER: checklist + progress
+     ========================================================= */
+  function renderChecklist() {
+    const t = evalTasks();
+    const list = $("checklist");
+    list.innerHTML = "";
+    let done = 0;
+    TASKS.forEach((task) => {
+      const ok = !!t[task.id];
+      if (ok) done++;
+      const li = el("li", { className: ok ? "done" : "" });
+      const ck = el("div", { className: "ck", textContent: "✓" });
+      ck.setAttribute("aria-hidden", "true");
+      const lbl = el("span", { className: "lbl", textContent: task.label });
+      li.append(ck, lbl);
+      list.appendChild(li);
+    });
+
+    // questions contribute to overall progress display
+    const qDone = QUESTIONS.filter((q) => S.answers[q.id] === q.answerIndex).length;
+    const total = TASKS.length + QUESTIONS.length;
+    const earned = done + qDone;
+    const pct = Math.round((earned / total) * 100);
+    $("progPct").textContent = pct + "%";
+    $("progOf").textContent = earned + " of " + total + " steps";
+    $("progBar").style.width = pct + "%";
+  }
+
+  /* =========================================================
+     RENDER: scanner — targets / tasks / reports
+     ========================================================= */
+  function renderTargets() {
+    const tb = $("targetRows");
+    if (!S.targets.length) {
+      tb.innerHTML = '<tr><td colspan="3" class="empty">No targets yet.</td></tr>';
+    } else {
+      tb.innerHTML = "";
+      S.targets.forEach((t) => {
+        const tr = el("tr");
+        tr.append(
+          el("td", { textContent: t.name }),
+          el("td", { textContent: t.ip }),
+          el("td", { textContent: t.added })
+        );
+        tr.querySelector("td:nth-child(2)").style.fontFamily = "var(--mono)";
+        tb.appendChild(tr);
+      });
+    }
+    // refresh task target dropdown
+    const sel = $("taskTarget");
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— choose a target —</option>';
+    S.targets.forEach((t) => sel.append(el("option", { value: t.ip, textContent: t.name + " (" + t.ip + ")" })));
+    sel.value = cur;
+  }
+
+  function renderTasks() {
+    const tb = $("taskRows");
+    if (!S.tasks.length) {
+      tb.innerHTML = '<tr><td colspan="4" class="empty">No tasks yet.</td></tr>';
+      return;
+    }
+    tb.innerHTML = "";
+    S.tasks.forEach((t, i) => {
+      const tr = el("tr");
+      const status = t.status === "running"
+        ? '<span class="pill-status run">running</span>'
+        : '<span class="pill-status done">completed</span>';
+      const tdName = el("td", { textContent: t.name });
+      const tdTgt = el("td", { textContent: t.ip }); tdTgt.style.fontFamily = "var(--mono)";
+      const tdStat = el("td"); tdStat.innerHTML = status;
+      const tdAct = el("td");
+      if (t.status === "done") {
+        const b = el("button", { className: "btn ghost sm", textContent: "View report" });
+        b.addEventListener("click", () => { openReportTab(); });
+        tdAct.appendChild(b);
+      }
+      tr.append(tdName, tdTgt, tdStat, tdAct);
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderReport() {
+    const empty = $("reportEmpty"), body = $("reportBody");
+    if (S.scanRuns === 0) { empty.hidden = false; body.hidden = true; return; }
+    empty.hidden = true; body.hidden = false;
+
+    const open = openFindingsCount();
+    const resolved = FINDINGS.length - open;
+    S.lastReportClean = open === 0;
+
+    const metrics = $("reportMetrics");
+    metrics.innerHTML = "";
+    const m1 = el("div", { className: "metric" + (open ? " crit" : " clean") });
+    m1.append(el("div", { className: "n", textContent: String(open) }), el("div", { className: "k", textContent: "Open findings" }));
+    const m2 = el("div", { className: "metric" });
+    m2.append(el("div", { className: "n", textContent: String(resolved) }), el("div", { className: "k", textContent: "Resolved" }));
+    const m3 = el("div", { className: "metric" });
+    m3.append(el("div", { className: "n", textContent: CONFIG.target.host }), el("div", { className: "k", textContent: "Host" }));
+    metrics.append(m1, m2, m3);
+
+    const list = $("findingsList");
+    list.innerHTML = "";
+    if (open === 0) {
+      const clean = el("div", { className: "finding resolved" });
+      clean.innerHTML = '<h4><span class="sev none">CLEAN</span><span class="ttl">No outstanding vulnerabilities</span></h4>' +
+                        '<p>All previously reported issues have been remediated on ' + CONFIG.target.host + '.</p>';
+      list.appendChild(clean);
+    } else {
+      FINDINGS.forEach((f) => {
+        const done = findingResolved(f.id);
+        const card = el("div", { className: "finding" + (done ? " resolved" : "") });
+        const sevClass = f.sev === "crit" ? "crit" : "high";
+        const sevTxt = f.sev === "crit" ? "CRITICAL" : "HIGH";
+        card.innerHTML =
+          '<h4><span class="sev ' + (done ? "none" : sevClass) + '">' + (done ? "FIXED" : sevTxt) + '</span>' +
+          '<span class="ttl">' + f.title + '</span></h4>' +
+          '<div class="meta">finding ' + f.id + ' · host ' + CONFIG.target.ip + '</div>' +
+          '<p>' + f.detail + '</p>';
+        list.appendChild(card);
+      });
+    }
+  }
+
+  /* =========================================================
+     RENDER: Windows tools
+     ========================================================= */
+  function renderUsers() {
+    const wrap = $("adminGroup");
+    wrap.innerHTML = "";
+    S.host.adminMembers.forEach((m) => {
+      const row = el("div", { className: "grouprow" });
+      const who = el("div", { className: "who" });
+      who.append(el("div", { className: "n", textContent: m.name }),
+                 el("div", { className: "r", textContent: m.role }));
+      const right = el("div", { className: "kvright" });
+      const badge = el("span", { className: m.authorized ? "badge-auth" : "badge-rogue",
+                                 textContent: m.authorized ? "authorized" : "not authorized" });
+      right.appendChild(badge);
+      if (!m.authorized) {
+        const btn = el("button", { className: "btn danger sm", textContent: "Remove from group" });
+        btn.addEventListener("click", () => {
+          S.host.adminMembers = S.host.adminMembers.filter((x) => x.id !== m.id);
+          refresh();
+        });
+        right.appendChild(btn);
+      }
+      row.append(who, right);
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderPolicy() {
+    const inp = $("pwLenIn");
+    if (document.activeElement !== inp) inp.value = String(S.host.minPwLen);
+    const st = $("pwLenState");
+    const ok = fixedPwLen();
+    st.textContent = S.host.minPwLen + " characters";
+    st.className = ok ? "state-on" : "state-off";
+  }
+
+  function renderFw() {
+    const tog = $("fwToggle"), st = $("fwState");
+    tog.setAttribute("aria-checked", S.host.firewallOn ? "true" : "false");
+    st.textContent = S.host.firewallOn ? "On" : "Off";
+    st.className = S.host.firewallOn ? "state-on" : "state-off";
+  }
+
+  function renderFiles() {
+    const grid = $("fileGrid");
+    grid.innerHTML = "";
+    S.host.files.forEach((f) => {
+      const card = el("div", { className: "file" });
+      card.append(el("div", { className: "fic", textContent: f.kind === "folder" ? "📁" : "📄" }));
+      card.append(el("div", { className: "fn", textContent: f.name }));
+      if (f.shared) {
+        card.append(el("div", { className: "shared", textContent: "⚠ Shared (Everyone)" }));
+        const btn = el("button", { className: "btn danger sm", textContent: "Stop sharing" });
+        btn.addEventListener("click", () => {
+          f.shared = false;
+          refresh();
+        });
+        card.appendChild(btn);
+      } else {
+        card.append(el("div", { className: "priv", textContent: "✓ Not shared" }));
+      }
+      grid.appendChild(card);
+    });
+    $("fileHint").textContent = fixedShare()
+      ? "No personal folders are shared. Good."
+      : "Tip: a shared personal folder is the finding to clear here.";
+  }
+
+  function renderTools() {
+    renderUsers(); renderPolicy(); renderFw(); renderFiles();
+  }
+
+  /* =========================================================
+     RENDER: questions
+     ========================================================= */
+  function renderQuestions() {
+    const box = $("questions");
+    box.innerHTML = "";
+    QUESTIONS.forEach((q) => {
+      const wrap = el("div", { className: "q" });
+      const chosen = S.answers[q.id];
+      const answered = chosen !== undefined;
+      const correct = chosen === q.answerIndex;
+      if (answered) wrap.classList.add(correct ? "correct" : "wrong");
+
+      wrap.appendChild(el("p", { className: "prompt", textContent: q.prompt }));
+      const opts = el("div", { className: "opts" });
+      q.options.forEach((text, idx) => {
+        const lab = el("label", { className: "opt" + (chosen === idx ? " chosen" : "") });
+        const radio = el("input", { type: "radio", name: q.id, value: String(idx) });
+        radio.checked = chosen === idx;
+        radio.addEventListener("change", () => { S.answers[q.id] = idx; refresh(); });
+        lab.append(radio, el("span", { textContent: text }));
+        opts.appendChild(lab);
+      });
+      wrap.appendChild(opts);
+      const fb = el("p", { className: "qfb" });
+      if (answered) {
+        fb.classList.add(correct ? "ok" : "no");
+        fb.textContent = correct ? "Correct." : "Not quite — review and try again.";
+      }
+      wrap.appendChild(fb);
+      box.appendChild(wrap);
+    });
+  }
+
+  /* =========================================================
+     Master refresh
+     ========================================================= */
+  function refresh() {
+    renderTargets(); renderTasks(); renderReport(); renderTools();
+    renderQuestions(); renderChecklist();
+  }
+
+  /* =========================================================
+     Scanner interactions
+     ========================================================= */
+  function selectConsoleTab(pane) {
+    ["targets", "tasks", "reports"].forEach((p) => {
+      const btn = $("tab" + p.charAt(0).toUpperCase() + p.slice(1));
+      const panel = $("pane" + p.charAt(0).toUpperCase() + p.slice(1));
+      const active = p === pane;
+      btn.setAttribute("aria-selected", active ? "true" : "false");
+      panel.hidden = !active;
+    });
+  }
+  function openReportTab() {
+    S.reportOpenedOnce = true;
+    selectConsoleTab("reports");
+    renderReport(); renderChecklist();
+    $("winTools").hidden = false;
+  }
+
+  function signIn() {
+    const u = $("userIn").value.trim();
+    const p = $("passIn").value;
+    const err = $("loginErr");
+    if (!u || !p) { err.textContent = "Enter both a username and password to sign in."; return; }
+    if (u !== CONFIG.login.user || p !== CONFIG.login.pass) {
+      err.textContent = "Sign-in failed. Check the username and password on your lab card.";
+      return;
+    }
+    err.textContent = "";
+    S.signedIn = true;
+    $("loginView").hidden = true;
+    $("consoleView").hidden = false;
+    $("addrUrl").textContent = "http://10.20.5.10/openscan/dashboard";
+    refresh();
+  }
+
+  function addTarget() {
+    const name = $("tgtName").value.trim();
+    const ip = $("tgtIp").value.trim();
+    const err = $("tgtErr");
+    const ipOk = /^(\d{1,3})(\.\d{1,3}){3}$/.test(ip);
+    if (!name) { err.textContent = "Give the target a name so you can find it later."; return; }
+    if (!ipOk) { err.textContent = "Enter a valid IPv4 address, e.g. 10.20.5.66."; return; }
+    if (S.targets.some((t) => t.ip === ip)) { err.textContent = "A target with that address already exists."; return; }
+    err.textContent = "";
+    const now = new Date();
+    S.targets.push({ name, ip, added: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) });
+    $("tgtName").value = ""; $("tgtIp").value = "";
+    if (ip !== CONFIG.target.ip) {
+      err.textContent = "Target added — but the lab asks specifically for FINANCE-PC3 at " + CONFIG.target.ip + ".";
+    }
+    refresh();
+  }
+
+  let scanning = false;
+  function createAndRunTask() {
+    const name = $("taskName").value.trim();
+    const ip = $("taskTarget").value;
+    const err = $("taskErr");
+    if (scanning) { err.textContent = "A scan is already running — let it finish first."; return; }
+    if (!name) { err.textContent = "Name the task before running it."; return; }
+    if (!ip) { err.textContent = "Choose which target this task should scan."; return; }
+    err.textContent = "";
+
+    const task = { name, ip, status: "running" };
+    S.tasks.push(task);
+    $("taskName").value = "";
+    renderTasks();
+
+    // simulated scan progress
+    scanning = true;
+    const wrap = $("scanProgWrap"), bar = $("scanProg"), stat = $("scanStatus");
+    wrap.hidden = false; bar.style.width = "0%";
+    const phases = [
+      "Discovering host 10.20.5.66…",
+      "Enumerating local accounts and groups…",
+      "Reading account and password policy…",
+      "Checking firewall profiles…",
+      "Inspecting shared resources…",
+      "Compiling report…"
+    ];
+    let pct = 0, pi = 0;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const step = () => {
+      pct += reduce ? 50 : 7 + Math.random() * 6;
+      if (pct > 100) pct = 100;
+      bar.style.width = pct + "%";
+      const idx = Math.min(phases.length - 1, Math.floor((pct / 100) * phases.length));
+      if (idx !== pi) { pi = idx; }
+      stat.textContent = phases[Math.min(phases.length - 1, pi)] + "  (" + Math.round(pct) + "%)";
+      if (pct >= 100) {
+        task.status = "done";
+        S.scanRuns += 1;
+        scanning = false;
+        stat.textContent = "Scan complete. Open the report.";
+        setTimeout(() => { wrap.hidden = true; }, reduce ? 0 : 900);
+        renderTasks(); renderReport(); renderChecklist();
+      } else {
+        setTimeout(step, reduce ? 0 : 230);
+      }
+    };
+    setTimeout(step, reduce ? 0 : 200);
+  }
+
+  /* =========================================================
+     Windows tool interactions
+     ========================================================= */
+  function selectToolTab(tool) {
+    [["users", "ttUsers", "toolUsers"], ["policy", "ttPolicy", "toolPolicy"],
+     ["fw", "ttFw", "toolFw"], ["files", "ttFiles", "toolFiles"]].forEach(([k, tb, pn]) => {
+      const active = k === tool;
+      $(tb).setAttribute("aria-selected", active ? "true" : "false");
+      $(pn).hidden = !active;
+    });
+  }
+
+  function applyPwLen() {
+    const raw = $("pwLenIn").value.trim();
+    const err = $("pwErr");
+    const n = parseInt(raw, 10);
+    if (!/^\d+$/.test(raw) || isNaN(n)) { err.textContent = "Enter the length as a whole number."; return; }
+    if (n < 1 || n > 128) { err.textContent = "Choose a length between 1 and 128 characters."; return; }
+    err.textContent = "";
+    S.host.minPwLen = n;
+    if (n < CONFIG.policy.minPwLen) {
+      err.textContent = "Applied " + n + ", but policy requires at least " + CONFIG.policy.minPwLen + ".";
+    }
+    refresh();
+  }
+
+  function toggleFw() {
+    S.host.firewallOn = !S.host.firewallOn;
+    refresh();
+  }
+
+  /* =========================================================
+     Scoring + payload
+     ========================================================= */
+  function buildPayload(screenshot) {
+    const t = evalTasks();
+    const tasksOut = TASKS.map((task) => ({ id: task.id, label: task.label, passed: !!t[task.id] }));
+    const questionsOut = QUESTIONS.map((q) => {
+      const chosen = S.answers[q.id];
+      return {
+        id: q.id, prompt: q.prompt,
+        answer: chosen === undefined ? "" : q.options[chosen],
+        correct: chosen === q.answerIndex
+      };
+    });
+    const earned = tasksOut.filter((x) => x.passed).length + questionsOut.filter((x) => x.correct).length;
+    const total = tasksOut.length + questionsOut.length;
+    return {
+      assignmentId: CONFIG.assignmentId,
+      hackerName: $("hackerName").value.trim(),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives.slice(),
+      tasks: tasksOut,
+      questions: questionsOut,
+      score: { earned, total },
+      screenshot: screenshot,
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  function setStatus(msg, kind) {
+    const s = $("submitStatus");
+    s.textContent = msg;
+    s.className = "status" + (kind ? " " + kind : "");
+  }
+
+  async function submit() {
+    const name = $("hackerName").value.trim();
+    $("docLink").textContent = "";
+    if (!name) { setStatus("Enter a hacker name (a pseudonym) before submitting.", "no"); return; }
+    if (name.length > 40) { setStatus("Shorten the hacker name to 40 characters or fewer.", "no"); return; }
+
+    const t = evalTasks();
+    const allTasks = TASKS.every((x) => t[x.id]);
+    const allQ = QUESTIONS.every((q) => S.answers[q.id] === q.answerIndex);
+    if (!allTasks || !allQ) {
+      setStatus("Not all steps are complete yet — finish every checklist item and knowledge question first. You can still submit, but the score will reflect what's done.", "busy");
+    }
+
+    const btn = $("submitBtn");
+    btn.disabled = true;
+    setStatus("Capturing the lab view…", "busy");
+
+    let shot = "";
+    try {
+      shot = await window.LabShot.capture(document.querySelector(".stage"), { background: "#0c1018", scale: 1 });
+    } catch (e) {
+      shot = "";
+    }
+
+    const payload = buildPayload(shot);
+
+    if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0) {
+      setStatus("This copy isn't wired to a submission endpoint yet. Ask your instructor to set APPS_SCRIPT_URL. (Score this run: " + payload.score.earned + "/" + payload.score.total + ".)", "no");
+      btn.disabled = false;
+      return;
+    }
+
+    setStatus("Submitting to the instructor…", "busy");
+    try {
+      // SIMPLE request: no custom headers, text/plain body — avoids CORS preflight.
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const out = await res.json();
+      if (out && out.success) {
+        setStatus("Submitted. Score " + payload.score.earned + "/" + payload.score.total + ".", "ok");
+        if (out.docUrl) {
+          const a = el("a", { href: out.docUrl, textContent: "Open your submission record", target: "_blank", rel: "noopener" });
+          $("docLink").innerHTML = ""; $("docLink").appendChild(a);
+        }
+      } else {
+        setStatus("The server rejected the submission: " + ((out && out.error) || "unknown error") + ". Confirm with your instructor.", "no");
+      }
+    } catch (e) {
+      // Locked-down context fallback: fire-and-forget, can't read docUrl.
+      try {
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+        setStatus("Submission sent, but this browser blocked reading the reply. Confirm receipt with your instructor.", "busy");
+      } catch (e2) {
+        setStatus("Couldn't reach the submission endpoint. Check your connection, then try again.", "no");
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* =========================================================
+     Reset
+     ========================================================= */
+  function resetLab() {
+    S = freshState();
+    scanning = false;
+    $("loginView").hidden = false;
+    $("consoleView").hidden = true;
+    $("winTools").hidden = true;
+    $("userIn").value = ""; $("passIn").value = "";
+    $("loginErr").textContent = ""; $("tgtErr").textContent = "";
+    $("taskErr").textContent = ""; $("pwErr").textContent = "";
+    $("scanProgWrap").hidden = true;
+    $("addrUrl").textContent = "http://10.20.5.10/openscan/login";
+    selectConsoleTab("targets");
+    selectToolTab("users");
+    $("hackerName").value = "";
+    setStatus("", "");
+    $("docLink").textContent = "";
+    $("scanStatus").textContent = "Initializing scan engine…";
+    refresh();
+    $("userIn").focus();
+  }
+
+  /* =========================================================
+     Wire up
+     ========================================================= */
+  function init() {
+    $("signInBtn").addEventListener("click", signIn);
+    $("passIn").addEventListener("keydown", (e) => { if (e.key === "Enter") signIn(); });
+    $("userIn").addEventListener("keydown", (e) => { if (e.key === "Enter") $("passIn").focus(); });
+
+    ["targets", "tasks", "reports"].forEach((p) => {
+      $("tab" + p.charAt(0).toUpperCase() + p.slice(1)).addEventListener("click", () => {
+        selectConsoleTab(p);
+        if (p === "reports" && S.scanRuns > 0) {
+          S.reportOpenedOnce = true;
+          $("winTools").hidden = false;
+          renderReport(); renderChecklist();
+        }
+      });
+    });
+
+    $("addTargetBtn").addEventListener("click", addTarget);
+    $("tgtIp").addEventListener("keydown", (e) => { if (e.key === "Enter") addTarget(); });
+    $("createTaskBtn").addEventListener("click", createAndRunTask);
+
+    $("ttUsers").addEventListener("click", () => selectToolTab("users"));
+    $("ttPolicy").addEventListener("click", () => selectToolTab("policy"));
+    $("ttFw").addEventListener("click", () => selectToolTab("fw"));
+    $("ttFiles").addEventListener("click", () => selectToolTab("files"));
+
+    $("applyPwBtn").addEventListener("click", applyPwLen);
+    $("pwLenIn").addEventListener("keydown", (e) => { if (e.key === "Enter") applyPwLen(); });
+    $("fwToggle").addEventListener("click", toggleFw);
+    $("fwToggle").addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleFw(); } });
+
+    $("submitBtn").addEventListener("click", submit);
+    $("resetBtn").addEventListener("click", resetLab);
+
+    refresh();
+    $("userIn").focus();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else { init(); }
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-ftp-vuln-scan.html",title:"Lab \u2014 Scan an FTP Server for Vulnerabilities | VANTAGE VM"}, NEXT={href:"splus-linux-vuln-scan.html",title:"ScanForge Lab \u2014 Scan a Linux Network for Vulnerabilities"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.1 Network Vulnerabilities and Attacks";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

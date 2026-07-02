@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Provision Active Directory User Accounts — Security+ Lab</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-ad-user-provisioning",
+  "title": "Provision Active Directory User Accounts — Security+ Lab",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "1.2",
+      "2.5",
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Provision Active Directory User Accounts  (assignmentId: splus-ad-user-provisioning)
+  CompTIA Security+ SY0-701 objectives: 1.2 (AAA), 2.5 (hardening / default
+  password changes), 4.6 (identity & access management: provisioning,
+  time-of-day restrictions, temporal accounts).
+
+  Clean-room original work. Built from the public SY0-701 objective and the
+  documented behavior of directory-administration consoles. Scenario, persona
+  names, organizational units, domain, file/logon values, and all question
+  wording are original and are NOT derived from any third-party lab.
+
+  © 2026 <AUTHOR NAME — replace>. All rights reserved.
+  Licensed to instructors for classroom use. No warranty.
+
+  NOTE ON DEPENDENCIES: This file is fully self-contained and makes no runtime
+  network calls except the single submission POST. The build spec calls for an
+  inlined html2canvas; instead this lab uses a small, self-written
+  SVG <foreignObject> rasterizer (captureLabPng, below). It achieves the same
+  goal — a dependency-free PNG of the simulated DOM with no CDN — without
+  shipping a large third-party library. See the author's note in chat.
+  ============================================================================
+-->
+<style>
+  :root{
+    --shell:#1f2430;          /* deep slate console chrome */
+    --shell-2:#272d3b;
+    --rail:#f5f3ef;           /* warm parchment navigation */
+    --rail-line:#e4ded3;
+    --panel:#ffffff;
+    --ink:#1b2128;
+    --muted:#5b6470;
+    --line:#dbe0e7;
+    --line-soft:#eef1f5;
+    --accent:#b45309;         /* trail amber (Ridgeline brand) */
+    --accent-ink:#7c3a06;
+    --accent-soft:#fdf3e7;
+    --ok:#15803d;
+    --ok-soft:#e9f6ee;
+    --bad:#b42318;
+    --bad-soft:#fdecea;
+    --sel:#fbe7cf;            /* ember selection */
+    --focus:#1d4ed8;
+    --radius:10px;
+    --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans);color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #2a3142 0%, transparent 60%),
+      var(--shell);
+    padding:18px;line-height:1.45;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  .masthead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:2px 4px 14px}
+  .masthead h1{color:#fff;font-size:18px;letter-spacing:.2px;margin:0;font-weight:650}
+  .masthead .obj{color:#aeb6c4;font-size:12.5px}
+  .masthead .tag{display:inline-block;background:#323a4d;color:#cdd4e0;border:1px solid #3c455a;
+    border-radius:999px;padding:2px 9px;font-size:11px;font-family:var(--mono)}
+
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:14px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  /* ---- console window ---- */
+  .console{background:var(--panel);border-radius:var(--radius);overflow:hidden;
+    border:1px solid #11151c;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+  .titlebar{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,var(--shell-2),var(--shell));
+    color:#e7eaf0;padding:9px 12px;border-bottom:1px solid #11151c}
+  .titlebar .app{font-weight:650;font-size:13px;letter-spacing:.2px}
+  .titlebar .conn{margin-left:auto;font-family:var(--mono);font-size:11px;color:#aab2c2;
+    background:#161b24;border:1px solid #2c3444;border-radius:999px;padding:3px 10px;display:flex;align-items:center;gap:7px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(21,128,61,.18)}
+
+  .toolbar{display:flex;align-items:center;gap:6px;padding:8px 10px;background:#fafbfc;border-bottom:1px solid var(--line)}
+  .toolbar .crumb{font-size:12px;color:var(--muted);font-family:var(--mono);margin-left:4px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .body{display:grid;grid-template-columns:266px 1fr;min-height:430px}
+  @media (max-width:620px){.body{grid-template-columns:1fr}}
+
+  /* ---- tree ---- */
+  .tree{background:var(--rail);border-right:1px solid var(--rail-line);padding:8px 6px;overflow:auto}
+  .tree h2{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#9a8f7c;margin:6px 8px 6px}
+  .node{display:flex;align-items:center;gap:6px;width:100%;text-align:left;border:0;background:transparent;
+    font:inherit;color:var(--ink);padding:5px 8px;border-radius:7px;cursor:pointer;font-size:13px}
+  .node:hover{background:#efe9dd}
+  .node[aria-current="true"]{background:var(--sel);font-weight:600;box-shadow:inset 0 0 0 1px #f1cfa2}
+  .node:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+  .tw{width:14px;display:inline-flex;justify-content:center;color:#9a8f7c;flex:0 0 auto}
+  .nico{flex:0 0 auto}
+  .children{margin-left:14px;border-left:1px dashed #e0d8c8;padding-left:2px}
+  .leafcount{margin-left:auto;font-size:11px;color:#a99e89;font-family:var(--mono)}
+
+  /* ---- detail / list pane ---- */
+  .pane{padding:0;display:flex;flex-direction:column;min-width:0}
+  .pane-head{padding:12px 14px 6px}
+  .pane-head .ou{font-size:15px;font-weight:650}
+  .pane-head .path{font-size:11.5px;color:var(--muted);font-family:var(--mono);word-break:break-all}
+  .listwrap{padding:4px 14px 14px;overflow:auto}
+  table.users{width:100%;border-collapse:collapse;font-size:13px}
+  table.users th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--line);padding:6px 8px;font-weight:600}
+  table.users td{border-bottom:1px solid var(--line-soft);padding:7px 8px;vertical-align:middle}
+  table.users tr:hover td{background:#fafafa}
+  .uname{display:flex;align-items:center;gap:8px;font-weight:600}
+  .badge{font-size:10.5px;border-radius:999px;padding:1px 8px;border:1px solid;white-space:nowrap}
+  .badge.season{color:var(--accent-ink);background:var(--accent-soft);border-color:#f0d3ab}
+  .badge.perm{color:#3b4a5a;background:#eef2f7;border-color:#d8e0ea}
+  .rowbtns{display:flex;gap:6px;justify-content:flex-end}
+  .empty{color:var(--muted);font-size:13px;padding:26px 8px;text-align:center;border:1px dashed var(--line);border-radius:8px}
+
+  /* ---- buttons ---- */
+  button.btn{font:inherit;font-size:12.5px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);
+    padding:6px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  button.btn:hover{background:#f3f5f8}
+  button.btn:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+  button.btn[disabled]{opacity:.45;cursor:not-allowed}
+  button.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.btn.primary:hover{background:#9a4708}
+  button.btn.ghost{border-color:transparent;background:transparent}
+  button.btn.tiny{padding:4px 8px;font-size:11.5px}
+  button.btn.danger{color:var(--bad);border-color:#f3c9c4}
+  button.btn.danger:hover{background:var(--bad-soft)}
+
+  /* ---- side tasks panel ---- */
+  .side{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border-radius:var(--radius);border:1px solid #11151c;overflow:hidden;
+    box-shadow:0 12px 28px rgba(0,0,0,.28)}
+  .card h3{margin:0;font-size:12.5px;letter-spacing:.04em;padding:11px 14px;background:#fafbfc;border-bottom:1px solid var(--line)}
+  .card .inner{padding:12px 14px}
+  .brief{font-size:13px;color:#2a313b}
+  .brief p{margin:0 0 8px}
+  .brief ul{margin:6px 0 0;padding-left:18px}
+  .brief li{margin:3px 0}
+  .brief code{font-family:var(--mono);font-size:12px;background:#f3f0ea;border:1px solid #e7e1d6;border-radius:5px;padding:1px 5px}
+
+  .check{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:13px;align-items:flex-start}
+  .check:last-child{border-bottom:0}
+  .mark{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:2px solid var(--line);margin-top:1px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+  .check.pass .mark{background:var(--ok);border-color:var(--ok)}
+  .check.fail .mark{background:#fff;border-color:var(--line)}
+  .check .lab{color:#2a313b}
+  .check.pass .lab{color:#16331f}
+
+  .q{padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .q:last-child{border-bottom:0}
+  .q .prompt{font-size:13px;font-weight:600;margin-bottom:6px}
+  .opts{display:flex;flex-direction:column;gap:5px}
+  .opt{display:flex;align-items:center;gap:8px;font-size:12.5px;border:1px solid var(--line);border-radius:8px;
+    padding:6px 9px;cursor:pointer}
+  .opt:hover{background:#f7f8fa}
+  .opt input{accent-color:var(--accent)}
+  .opt.correct{border-color:#bfe3cb;background:var(--ok-soft)}
+  .opt.wrong{border-color:#f1c7c1;background:var(--bad-soft)}
+
+  .scorebar{display:flex;align-items:center;gap:10px;font-size:13px}
+  .scorebar .pct{font-family:var(--mono);font-weight:700;font-size:15px}
+  .meter{flex:1;height:9px;border-radius:999px;background:#eceff3;overflow:hidden}
+  .meter > i{display:block;height:100%;width:0;background:var(--accent);transition:width .35s ease}
+
+  /* ---- submission ---- */
+  .submit .inner{display:flex;flex-direction:column;gap:10px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;font-weight:600;color:#39414c}
+  .field .hint{font-size:11px;color:var(--muted)}
+  input[type=text],input[type=password],input[type=date],select{
+    font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;color:var(--ink);width:100%}
+  input:focus,select:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus)}
+  .status{font-size:12.5px;border-radius:8px;padding:9px 11px;display:none}
+  .status.show{display:block}
+  .status.info{background:#eef2f9;border:1px solid #d6e0f0;color:#2a3b58}
+  .status.ok{background:var(--ok-soft);border:1px solid #bfe3cb;color:#16331f}
+  .status.err{background:var(--bad-soft);border:1px solid #f1c7c1;color:#6e1813}
+  .status a{color:var(--accent-ink);font-weight:600}
+
+  /* ---- modal ---- */
+  .overlay{position:fixed;inset:0;background:rgba(15,18,24,.55);display:none;align-items:center;justify-content:center;
+    padding:18px;z-index:50}
+  .overlay.show{display:flex}
+  .modal{background:#fff;border-radius:12px;width:520px;max-width:100%;max-height:92vh;overflow:auto;
+    box-shadow:0 30px 70px rgba(0,0,0,.5)}
+  .modal header{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .modal header .mt{font-weight:650;font-size:14px}
+  .modal header .step{margin-left:auto;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+  .modal .mbody{padding:16px}
+  .modal .mfoot{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);background:#fafbfc}
+  .frow{display:flex;gap:10px}
+  .frow > .field{flex:1}
+  .logonrow{display:flex;gap:8px;align-items:flex-end}
+  .logonrow .at{font-size:13px;color:var(--muted);padding-bottom:9px}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0}
+  .chk input{accent-color:var(--accent);width:auto}
+  .err-inline{color:var(--bad);font-size:12px;margin-top:4px;display:none}
+  .err-inline.show{display:block}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px -4px 12px}
+  .tab{border:0;background:transparent;font:inherit;font-size:13px;padding:8px 12px;cursor:pointer;color:var(--muted);
+    border-bottom:2px solid transparent}
+  .tab[aria-selected="true"]{color:var(--ink);font-weight:650;border-bottom-color:var(--accent)}
+  .tab:focus-visible{outline:2px solid var(--focus)}
+
+  /* ---- logon hours grid ---- */
+  .hours{overflow:auto;border:1px solid var(--line);border-radius:8px}
+  table.hgrid{border-collapse:collapse;font-size:10px;width:100%}
+  table.hgrid th{font-weight:600;color:var(--muted);padding:2px;text-align:center;position:sticky;top:0;background:#fff}
+  table.hgrid th.day{text-align:right;padding-right:6px;white-space:nowrap;font-size:11px;cursor:pointer}
+  table.hgrid th.hr{cursor:pointer;font-family:var(--mono)}
+  .cell{width:15px;height:18px;padding:0;border:1px solid #eceef2;background:#fff;cursor:pointer}
+  .cell[aria-pressed="true"]{background:var(--accent)}
+  .cell:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+  .hlegend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin-top:8px;align-items:center;flex-wrap:wrap}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid #ddd}
+  .sw.on{background:var(--accent);border-color:var(--accent)}
+
+  .expire{display:flex;flex-direction:column;gap:8px;font-size:13px}
+  .expire label{display:flex;gap:8px;align-items:center}
+  .expire input[type=date]{max-width:200px}
+  .policy-note{font-size:12px;color:var(--muted);background:#fafafa;border:1px solid var(--line-soft);border-radius:8px;padding:8px 10px;margin-top:6px}
+
+  .footer{color:#8a93a3;font-size:11px;text-align:center;margin:16px 4px 2px}
+  .footer a{color:#aeb6c4}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Provision Active Directory User Accounts</h1>
+    <span class="tag">SY0-701 · 1.2 / 2.5 / 4.6</span>
+    <span class="obj">Identity &amp; access management — user provisioning, time-of-day restrictions, temporal accounts</span>
+  </div>
+
+  <div class="grid">
+
+    <!-- ========================= SIMULATED CONSOLE ========================= -->
+    <div id="labArea">
+      <section class="console" aria-label="Directory administration console">
+        <div class="titlebar">
+          <span class="app">Ridgeline Directory Console</span>
+          <span class="conn"><span class="dot" aria-hidden="true"></span>RIDGE-DC1 · ridgeline.local</span>
+        </div>
+
+        <div class="toolbar">
+          <button class="btn primary" id="btnNewUser" disabled>＋ New user</button>
+          <button class="btn" id="btnProps" disabled>Properties</button>
+          <button class="btn" id="btnExpand">Expand all</button>
+          <span class="crumb" id="crumb">Select an organizational unit to begin.</span>
+        </div>
+
+        <div class="body">
+          <nav class="tree" id="tree" aria-label="Directory tree">
+            <h2>Forest · ridgeline.local</h2>
+            <!-- tree rendered by JS -->
+          </nav>
+
+          <div class="pane">
+            <div class="pane-head">
+              <div class="ou" id="paneOu">No container selected</div>
+              <div class="path" id="panePath">—</div>
+            </div>
+            <div class="listwrap" id="listwrap">
+              <div class="empty">Choose an organizational unit on the left, then use <strong>New user</strong> to provision an account.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- task checklist sits inside the captured area so it appears in the proof image -->
+      <div class="card" style="margin-top:14px">
+        <h3>Lab progress — completes automatically as you work</h3>
+        <div class="inner" id="checklist"><!-- rendered by JS --></div>
+      </div>
+    </div>
+
+    <!-- ========================= SIDE PANEL ========================= -->
+    <aside class="side">
+
+      <div class="card">
+        <h3>Your assignment</h3>
+        <div class="inner brief">
+          <p>You administer the network for <strong>Ridgeline Outfitters</strong>. New hires need domain accounts so they can reach shared resources. Provision the four accounts below on <code>RIDGE-DC1</code>, each in its department's organizational unit.</p>
+          <ul>
+            <li><strong>Dana Whitfield</strong> — Operations manager — <code>Operations\OpsManagers</code></li>
+            <li><strong>Renata Cole</strong> — Fulfillment manager — <code>Fulfillment\FulfillmentManagers</code></li>
+            <li><strong>Theo Park</strong> — Permanent fulfillment associate — <code>Fulfillment\FulfillmentStaff</code></li>
+            <li><strong>Avery Lin</strong> — Seasonal fulfillment associate — <code>Fulfillment\SeasonalStaff</code></li>
+          </ul>
+          <p style="margin-top:10px">Account standard for every new hire:</p>
+          <ul>
+            <li>Display name: <code>First Last</code></li>
+            <li>Logon name: first initial + last name, domain <code>@ridgeline.local</code> (e.g. <code>dwhitfield</code>)</li>
+            <li>Initial password: <code>Tr@ilhead2026</code>, and the user must change it at first logon</li>
+          </ul>
+          <p style="margin-top:10px">For the <strong>seasonal</strong> associate only:</p>
+          <ul>
+            <li>Permit sign-in just on weekday business hours, <code>7:00&nbsp;a.m.–6:00&nbsp;p.m.</code>, Monday–Friday</li>
+            <li>Set the account to expire at the end of the current calendar year</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Knowledge check</h3>
+        <div class="inner" id="questions"><!-- rendered by JS --></div>
+      </div>
+
+      <div class="card">
+        <h3>Score</h3>
+        <div class="inner">
+          <div class="scorebar">
+            <span class="pct" id="pct">0%</span>
+            <span class="meter"><i id="meter"></i></span>
+            <span id="scoreText" style="font-family:var(--mono);font-size:12px;color:var(--muted)">0 / 10</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card submit">
+        <h3>Submit completed lab</h3>
+        <div class="inner">
+          <div class="field">
+            <label for="hacker">Hacker name (pseudonym — no real names)</label>
+            <input type="text" id="hacker" maxlength="40" autocomplete="off" placeholder="e.g. trailblazer_07">
+            <span class="hint">This is what your instructor sees in the gradebook. Keep personal info out of it.</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn primary" id="btnSubmit">Submit completed lab</button>
+            <button class="btn" id="btnReset" type="button">Reset lab</button>
+          </div>
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <p class="footer">
+    Ridgeline Outfitters is a fictional company created for this exercise. Clean-room original lab · © 2026 &lt;Author&gt; · CompTIA Security+ SY0-701.
+  </p>
+</div>
+
+<!-- ============================ MODAL HOST ============================ -->
+<div class="overlay" id="overlay" role="presentation">
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<script>
+/* =======================================================================
+   Engine + CONFIG + ANSWER KEY for: splus-ad-user-provisioning
+   ======================================================================= */
+"use strict";
+
+/* ---------------- LAB CONFIG ---------------- */
+const CONFIG = {
+  assignmentId: "splus-ad-user-provisioning",
+  title: "Provision Active Directory User Accounts",
+  objectives: ["1.2","2.5","4.6"],            // SY0-701
+  domain: "ridgeline.local",
+  initialPassword: "Tr@ilhead2026",
+  // Same /exec URL across the whole library; instructor pastes it in.
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "REPLACE_WITH_COHORT_TOKEN"
+};
+const CURRENT_YEAR = new Date().getFullYear();
+
+/* ---------------- OU TREE (original structure) ---------------- */
+const TREE = {
+  name: "ridgeline.local", type:"domain", path:"ridgeline.local", children:[
+    { name:"Operations", type:"ou", path:"ridgeline.local/Operations", children:[
+        { name:"OpsManagers", type:"ou", path:"ridgeline.local/Operations/OpsManagers", children:[] },
+        { name:"OpsStaff",    type:"ou", path:"ridgeline.local/Operations/OpsStaff", children:[] }
+    ]},
+    { name:"Fulfillment", type:"ou", path:"ridgeline.local/Fulfillment", children:[
+        { name:"FulfillmentManagers", type:"ou", path:"ridgeline.local/Fulfillment/FulfillmentManagers", children:[] },
+        { name:"FulfillmentStaff",    type:"ou", path:"ridgeline.local/Fulfillment/FulfillmentStaff", children:[] },
+        { name:"SeasonalStaff",       type:"ou", path:"ridgeline.local/Fulfillment/SeasonalStaff", children:[] }
+    ]},
+    { name:"Users", type:"container", path:"ridgeline.local/Users", children:[] } // decoy default container
+  ]
+};
+
+/* ---------------- ANSWER KEY ---------------- */
+// keyed by "first|last" (lowercased)
+const TARGETS = {
+  "dana|whitfield":  { ou:"ridgeline.local/Operations/OpsManagers",        upn:"dwhitfield", seasonal:false },
+  "renata|cole":     { ou:"ridgeline.local/Fulfillment/FulfillmentManagers", upn:"rcole",    seasonal:false },
+  "theo|park":       { ou:"ridgeline.local/Fulfillment/FulfillmentStaff",   upn:"tpark",      seasonal:false },
+  "avery|lin":       { ou:"ridgeline.local/Fulfillment/SeasonalStaff",      upn:"alin",       seasonal:true }
+};
+// Seasonal logon-hours target: weekday (Mon=1..Fri=5), hour blocks 7..17 (07:00–18:00)
+function hourAllowedTarget(day,hour){ return (day>=1 && day<=5) && (hour>=7 && hour<=17); }
+
+const QUESTIONS = [
+  { id:"q1",
+    prompt:"Creating these four accounts so new hires can reach network resources is best described as which IAM activity?",
+    options:["Provisioning user accounts","De-provisioning user accounts","Identity federation","Attestation"],
+    answerIndex:0 },
+  { id:"q2",
+    prompt:"Limiting the seasonal associate to weekday business hours is an example of which access control?",
+    options:["Mandatory access control","Time-of-day restrictions","Discretionary access control","Geofencing"],
+    answerIndex:1 },
+  { id:"q3",
+    prompt:"Setting the seasonal associate's account to lapse at year end creates what kind of account?",
+    options:["Service account","Shared account","Temporal account","Privileged account"],
+    answerIndex:2 },
+  { id:"q4",
+    prompt:"Requiring each new user to set a new password at first logon enforces which hardening practice?",
+    options:["Single sign-on","Changing default passwords","Password reuse","Account lockout"],
+    answerIndex:1 }
+];
+
+/* ---------------- STATE ---------------- */
+const state = {
+  selectedPath: null,
+  expanded: new Set(["ridgeline.local","ridgeline.local/Operations","ridgeline.local/Fulfillment"]),
+  users: [],            // {id,first,last,upn,domain,ouPath,password,mustChange,logonAllowed:Set("d-h"),expires:'YYYY-MM-DD'|null,seasonal}
+  answers: {},          // qid -> chosen index
+  uid: 1
+};
+
+/* ---------------- helpers ---------------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function nodeByPath(p,node=TREE){ if(node.path===p) return node; for(const c of (node.children||[])){const r=nodeByPath(p,c); if(r) return r;} return null; }
+function keyOf(f,l){ return (f+"|"+l).toLowerCase().trim(); }
+function expectedUpn(f,l){ return (f.trim()[0]+l.trim()).toLowerCase().replace(/[^a-z0-9.\-]/g,""); }
+
+/* =======================================================================
+   TREE RENDER
+   ======================================================================= */
+function iconFor(type){
+  if(type==="domain") return svgIcon("M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z","#7c6a4d");
+  if(type==="container") return svgIcon("M4 6h6l2 2h8v10H4z","#9a8f7c");
+  return svgIcon("M4 6h6l2 2h8v10H4z","#b45309"); // OU folder, ember
+}
+function userIcon(seasonal){
+  const c = seasonal ? "#b45309" : "#3b6db4";
+  return svgIcon("M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-4 0-7 2-7 5v1h14v-1c0-3-3-5-7-5z", c);
+}
+function svgIcon(d,fill){
+  return `<svg class="nico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="${fill}"/></svg>`;
+}
+function renderTree(){
+  const root = $("#tree");
+  // keep the heading, rebuild list
+  root.querySelectorAll(".node, .children, .treelist").forEach(n=>n.remove());
+  const list = document.createElement("div");
+  list.className="treelist";
+  list.appendChild(renderNode(TREE,0));
+  root.appendChild(list);
+}
+function renderNode(node,depth){
+  const frag = document.createDocumentFragment();
+  const hasKids = (node.children||[]).length>0;
+  const isOpen = state.expanded.has(node.path);
+  const btn = document.createElement("button");
+  btn.className="node"; btn.type="button";
+  btn.setAttribute("aria-current", state.selectedPath===node.path ? "true":"false");
+  const count = state.users.filter(u=>u.ouPath===node.path).length;
+  btn.innerHTML =
+    `<span class="tw">${hasKids ? (isOpen?"▾":"▸") : ""}</span>`+
+    iconFor(node.type)+
+    `<span>${esc(node.name)}</span>`+
+    (count? `<span class="leafcount">${count}</span>`:"");
+  btn.addEventListener("click",()=>{
+    if(hasKids){ if(state.expanded.has(node.path)) state.expanded.delete(node.path); else state.expanded.add(node.path); }
+    selectOu(node.path);
+  });
+  frag.appendChild(btn);
+  if(hasKids && isOpen){
+    const kids = document.createElement("div");
+    kids.className="children";
+    node.children.forEach(c=>kids.appendChild(renderNode(c,depth+1)));
+    frag.appendChild(kids);
+  }
+  return frag;
+}
+
+/* =======================================================================
+   SELECTION + LIST PANE
+   ======================================================================= */
+function selectOu(path){
+  state.selectedPath = path;
+  const node = nodeByPath(path);
+  $("#crumb").textContent = path.replace(/\//g," \u203A ");
+  $("#paneOu").textContent = node.name + (node.type==="ou" ? "  (Organizational Unit)" : node.type==="domain"?"  (Domain)":"  (Container)");
+  $("#panePath").textContent = path;
+  $("#btnNewUser").disabled = false;
+  $("#btnProps").disabled = true;
+  renderTree(); renderList();
+}
+function renderList(){
+  const wrap = $("#listwrap");
+  const here = state.users.filter(u=>u.ouPath===state.selectedPath);
+  if(!state.selectedPath){ wrap.innerHTML = `<div class="empty">Select an organizational unit to begin.</div>`; return; }
+  if(here.length===0){
+    wrap.innerHTML = `<div class="empty">No accounts in this OU yet. Use <strong>New user</strong> to provision one here.</div>`;
+    return;
+  }
+  let rows = here.map(u=>{
+    const type = u.seasonal ? `<span class="badge season">Seasonal</span>` : `<span class="badge perm">Permanent</span>`;
+    return `<tr data-id="${u.id}">
+      <td><span class="uname">${userIcon(u.seasonal)} ${esc(u.first)} ${esc(u.last)}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${esc(u.upn)}@${esc(u.domain)}</td>
+      <td>${type}</td>
+      <td class="rowbtns">
+        <button class="btn tiny" data-act="props" data-id="${u.id}">Properties</button>
+        <button class="btn tiny danger" data-act="del" data-id="${u.id}">Delete</button>
+      </td>
+    </tr>`;
+  }).join("");
+  wrap.innerHTML = `<table class="users"><thead><tr><th>Name</th><th>Logon name</th><th>Type</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  $$('button[data-act]',wrap).forEach(b=>{
+    b.addEventListener("click",e=>{
+      const id = +b.dataset.id;
+      if(b.dataset.act==="del"){ state.users = state.users.filter(u=>u.id!==id); renderTree(); renderList(); evaluate(); }
+      else openProps(id);
+    });
+  });
+  $$('tr[data-id]',wrap).forEach(tr=>{
+    tr.addEventListener("dblclick",()=>openProps(+tr.dataset.id));
+    tr.addEventListener("click",()=>{ $("#btnProps").disabled=false; $("#btnProps").dataset.id=tr.dataset.id; });
+  });
+}
+
+/* =======================================================================
+   MODAL PLUMBING
+   ======================================================================= */
+let lastFocus=null;
+function openModal(html){
+  lastFocus = document.activeElement;
+  $("#modal").innerHTML = html;
+  $("#overlay").classList.add("show");
+  const f = $("#modal").querySelector("input,select,button,[tabindex]");
+  if(f) f.focus();
+}
+function closeModal(){
+  $("#overlay").classList.remove("show");
+  $("#modal").innerHTML="";
+  if(lastFocus && lastFocus.focus) lastFocus.focus();
+}
+$("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeModal(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#overlay").classList.contains("show")) closeModal(); });
+
+/* =======================================================================
+   NEW USER WIZARD
+   ======================================================================= */
+function openNewUser(){
+  const node = nodeByPath(state.selectedPath);
+  openModal(`
+    <header>
+      <span class="mt" id="modalTitle">New user</span>
+      <span class="step">in ${esc(node.path)} · step 1 of 2</span>
+    </header>
+    <div class="mbody">
+      <div class="frow">
+        <div class="field"><label for="nf">First name</label><input type="text" id="nf" autocomplete="off"></div>
+        <div class="field"><label for="nl">Last name</label><input type="text" id="nl" autocomplete="off"></div>
+      </div>
+      <div class="field" style="margin-top:10px"><label for="ndisp">Full name (display name)</label><input type="text" id="ndisp" autocomplete="off"></div>
+      <div class="field" style="margin-top:10px">
+        <label for="nupn">User logon name</label>
+        <div class="logonrow">
+          <input type="text" id="nupn" autocomplete="off" placeholder="firstinitial + lastname">
+          <select id="ndom"><option value="ridgeline.local">@ridgeline.local</option><option value="ridgeline.lab">@ridgeline.lab</option></select>
+        </div>
+        <span class="hint">Standard: first initial + last name, all lowercase.</span>
+      </div>
+      <div class="err-inline" id="nerr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" id="nCancel">Cancel</button>
+      <button class="btn primary" id="nNext">Next →</button>
+    </div>
+  `);
+  const f=$("#nf"), l=$("#nl"), disp=$("#ndisp"), upn=$("#nupn");
+  function sync(){
+    const fn=f.value.trim(), ln=l.value.trim();
+    disp.value = (fn+" "+ln).trim();
+    if(!upn.dataset.touched) upn.value = (fn&&ln)? expectedUpn(fn,ln):"";
+  }
+  f.addEventListener("input",sync); l.addEventListener("input",sync);
+  upn.addEventListener("input",()=>upn.dataset.touched="1");
+  $("#nCancel").addEventListener("click",closeModal);
+  $("#nNext").addEventListener("click",()=>{
+    const fn=f.value.trim(), ln=l.value.trim();
+    const err=$("#nerr");
+    if(!fn||!ln){ err.textContent="Enter both a first and last name."; err.classList.add("show"); return; }
+    if(!upn.value.trim()){ err.textContent="Enter a user logon name."; err.classList.add("show"); return; }
+    const dup = state.users.some(u=>u.upn.toLowerCase()===upn.value.trim().toLowerCase() && u.domain===$("#ndom").value);
+    if(dup){ err.textContent="That logon name already exists in the domain. Choose another."; err.classList.add("show"); return; }
+    newUserStep2({first:fn,last:ln,display:disp.value.trim(),upn:upn.value.trim(),domain:$("#ndom").value});
+  });
+}
+function newUserStep2(d){
+  openModal(`
+    <header>
+      <span class="mt" id="modalTitle">New user — ${esc(d.first)} ${esc(d.last)}</span>
+      <span class="step">step 2 of 2</span>
+    </header>
+    <div class="mbody">
+      <div class="frow">
+        <div class="field"><label for="pw1">Password</label><input type="password" id="pw1" autocomplete="new-password"></div>
+        <div class="field"><label for="pw2">Confirm password</label><input type="password" id="pw2" autocomplete="new-password"></div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="chk"><input type="checkbox" id="cMust" checked> User must change password at next logon</label>
+        <label class="chk"><input type="checkbox" id="cNever"> Password never expires</label>
+        <label class="chk"><input type="checkbox" id="cDis"> Account is disabled</label>
+      </div>
+      <div class="err-inline" id="perr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" id="pBack">← Back</button>
+      <button class="btn primary" id="pFinish">Create account</button>
+    </div>
+  `);
+  $("#pBack").addEventListener("click",()=>{ openNewUser();
+    // restore step-1 values
+    $("#nf").value=d.first;$("#nl").value=d.last;$("#ndisp").value=d.display;
+    $("#nupn").value=d.upn;$("#nupn").dataset.touched="1";$("#ndom").value=d.domain;
+  });
+  $("#pFinish").addEventListener("click",()=>{
+    const p1=$("#pw1").value, p2=$("#pw2").value, err=$("#perr");
+    if(!p1){ err.textContent="Enter a password."; err.classList.add("show"); return; }
+    if(p1!==p2){ err.textContent="The passwords don't match. Re-enter them."; err.classList.add("show"); return; }
+    const u = {
+      id: state.uid++, first:d.first, last:d.last, upn:d.upn, domain:d.domain,
+      ouPath: state.selectedPath, password:p1, mustChange:$("#cMust").checked,
+      neverExpires:$("#cNever").checked, disabled:$("#cDis").checked,
+      logonAllowed: allDays(), expires:null,
+      seasonal: false
+    };
+    state.users.push(u);
+    closeModal();
+    renderTree(); selectOu(state.selectedPath); renderList(); evaluate();
+  });
+}
+function allDays(){ const s=new Set(); for(let d=0;d<7;d++) for(let h=0;h<24;h++) s.add(d+"-"+h); return s; } // default: always allowed
+
+/* =======================================================================
+   PROPERTIES (General / Account: logon hours + expiration)
+   ======================================================================= */
+let propsTab="general";
+function openProps(id){
+  const u = state.users.find(x=>x.id===id); if(!u) return;
+  propsTab="general";
+  renderProps(u);
+}
+function renderProps(u){
+  openModal(`
+    <header><span class="mt" id="modalTitle">${esc(u.first)} ${esc(u.last)} — properties</span></header>
+    <div class="mbody">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tGen" aria-selected="${propsTab==='general'}">General</button>
+        <button class="tab" role="tab" id="tAcc" aria-selected="${propsTab==='account'}">Account</button>
+      </div>
+      <div id="tabBody"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" id="pClose">Close</button>
+      <button class="btn primary" id="pSave">Save</button>
+    </div>
+  `);
+  // working copy edited live; committed on Save
+  u._work = {
+    logonAllowed:new Set(u.logonAllowed),
+    expires:u.expires,
+    seasonal:u.seasonal,
+    mustChange:u.mustChange,
+    password:u.password
+  };
+  $("#tGen").addEventListener("click",()=>{propsTab="general";paintTab(u);});
+  $("#tAcc").addEventListener("click",()=>{propsTab="account";paintTab(u);});
+  $("#pClose").addEventListener("click",closeModal);
+  $("#pSave").addEventListener("click",()=>{ saveProps(u); });
+  paintTab(u);
+}
+function paintTab(u){
+  $("#tGen").setAttribute("aria-selected", propsTab==="general");
+  $("#tAcc").setAttribute("aria-selected", propsTab==="account");
+  const body=$("#tabBody");
+  if(propsTab==="general"){
+    body.innerHTML = `
+      <div class="frow"><div class="field"><label>First name</label><input type="text" value="${esc(u.first)}" disabled></div>
+      <div class="field"><label>Last name</label><input type="text" value="${esc(u.last)}" disabled></div></div>
+      <div class="field" style="margin-top:10px"><label>User logon name</label>
+        <input type="text" value="${esc(u.upn)}@${esc(u.domain)}" disabled></div>
+      <div class="field" style="margin-top:10px"><label>Located in</label>
+        <input type="text" value="${esc(u.ouPath)}" disabled></div>
+      <label class="chk" style="margin-top:10px"><input type="checkbox" id="gSeason" ${u._work?.seasonal?"checked":""}>
+        Flag this as a seasonal / temporary account</label>
+      <p class="policy-note">Tip: seasonal accounts at Ridgeline get restricted logon hours and an end-of-year expiration. Set those on the <strong>Account</strong> tab.</p>
+    `;
+    $("#gSeason").addEventListener("change",e=>{ u._work.seasonal=e.target.checked; });
+  } else {
+    body.innerHTML = `
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:6px">Logon hours</div>
+      <div class="hours" id="hours"></div>
+      <div class="hlegend">
+        <span><span class="sw on"></span>Logon permitted</span>
+        <span><span class="sw"></span>Logon denied</span>
+        <button class="btn tiny" id="hAll" type="button">Permit all</button>
+        <button class="btn tiny" id="hNone" type="button">Deny all</button>
+      </div>
+      <div style="font-size:12.5px;font-weight:600;margin:16px 0 6px">Account expires</div>
+      <div class="expire">
+        <label><input type="radio" name="exp" id="expNever" ${u._work.expires?'':'checked'}> Never</label>
+        <label><input type="radio" name="exp" id="expEnd" ${u._work.expires?'checked':''}> End of:
+          <input type="date" id="expDate" value="${u._work.expires||''}"></label>
+        <p class="policy-note">Company policy: temporary accounts expire on the last day of the current calendar year.</p>
+      </div>
+    `;
+    buildHoursGrid(u);
+    $("#hAll").addEventListener("click",()=>{ u._work.logonAllowed=allDays(); refreshHours(u); });
+    $("#hNone").addEventListener("click",()=>{ u._work.logonAllowed=new Set(); refreshHours(u); });
+    $("#expNever").addEventListener("change",()=>{ u._work.expires=null; $("#expDate").value=""; });
+    $("#expEnd").addEventListener("change",()=>{ if(!$("#expDate").value){ $("#expDate").value = CURRENT_YEAR+"-12-31"; } u._work.expires=$("#expDate").value||null; });
+    $("#expDate").addEventListener("input",e=>{ $("#expEnd").checked=true; u._work.expires=e.target.value||null; });
+  }
+}
+const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function buildHoursGrid(u){
+  const host=$("#hours");
+  let html = `<table class="hgrid"><thead><tr><th></th>`;
+  for(let h=0;h<24;h++) html += `<th class="hr" data-h="${h}" title="Toggle ${pad(h)}:00 for all days">${h%2===0?pad(h):""}</th>`;
+  html += `</tr></thead><tbody>`;
+  for(let d=0;d<7;d++){
+    html += `<tr><th class="day" data-d="${d}" title="Toggle ${DAYS[d]}">${DAYS[d].slice(0,3)}</th>`;
+    for(let h=0;h<24;h++){
+      const on=u._work.logonAllowed.has(d+"-"+h);
+      html += `<td><button class="cell" data-d="${d}" data-h="${h}" aria-pressed="${on}"
+        aria-label="${DAYS[d]} ${pad(h)}:00, ${on?'permitted':'denied'}"></button></td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table>`;
+  host.innerHTML = html;
+
+  let painting=false, paintVal=null;
+  function setCell(d,h,val){
+    const k=d+"-"+h;
+    if(val) u._work.logonAllowed.add(k); else u._work.logonAllowed.delete(k);
+    const c=host.querySelector(`.cell[data-d="${d}"][data-h="${h}"]`);
+    if(c){ c.setAttribute("aria-pressed",String(val));
+      c.setAttribute("aria-label",`${DAYS[d]} ${pad(h)}:00, ${val?'permitted':'denied'}`); }
+  }
+  host.querySelectorAll(".cell").forEach(c=>{
+    const d=+c.dataset.d, h=+c.dataset.h;
+    c.addEventListener("pointerdown",e=>{ e.preventDefault(); painting=true;
+      paintVal = c.getAttribute("aria-pressed")!=="true"; setCell(d,h,paintVal); });
+    c.addEventListener("pointerenter",()=>{ if(painting) setCell(d,h,paintVal); });
+    c.addEventListener("keydown",e=>{ if(e.key===" "||e.key==="Enter"){ e.preventDefault();
+      setCell(d,h, c.getAttribute("aria-pressed")!=="true"); }});
+  });
+  window.addEventListener("pointerup",()=>{painting=false;},{once:false});
+  host.querySelectorAll("th.day").forEach(th=>{
+    th.addEventListener("click",()=>{ const d=+th.dataset.d;
+      const anyOff=[...Array(24).keys()].some(h=>!u._work.logonAllowed.has(d+"-"+h));
+      for(let h=0;h<24;h++) setCell(d,h,anyOff); });
+  });
+  host.querySelectorAll("th.hr").forEach(th=>{
+    th.addEventListener("click",()=>{ const h=+th.dataset.h;
+      const anyOff=[...Array(7).keys()].some(d=>!u._work.logonAllowed.has(d+"-"+h));
+      for(let d=0;d<7;d++) setCell(d,h,anyOff); });
+  });
+}
+function refreshHours(u){ buildHoursGrid(u); }
+function pad(n){ return String(n).padStart(2,"0"); }
+
+function saveProps(u){
+  if(u._work){
+    u.logonAllowed = new Set(u._work.logonAllowed);
+    u.expires = u._work.expires;
+    u.seasonal = u._work.seasonal;
+  }
+  delete u._work;
+  closeModal();
+  renderTree(); renderList(); evaluate();
+}
+
+/* =======================================================================
+   QUESTIONS
+   ======================================================================= */
+function renderQuestions(){
+  const host=$("#questions");
+  host.innerHTML = QUESTIONS.map(q=>{
+    const chosen = state.answers[q.id];
+    const opts = q.options.map((o,i)=>{
+      let cls="opt";
+      if(chosen!==undefined){
+        if(i===q.answerIndex && i===chosen) cls+=" correct";
+        else if(i===chosen) cls+=" wrong";
+        else if(i===q.answerIndex) cls+=" correct";
+      }
+      return `<label class="${cls}"><input type="radio" name="${q.id}" value="${i}" ${chosen===i?"checked":""}> ${esc(o)}</label>`;
+    }).join("");
+    return `<div class="q"><div class="prompt">${esc(q.prompt)}</div><div class="opts">${opts}</div></div>`;
+  }).join("");
+  $$('input[type=radio]',host).forEach(r=>{
+    r.addEventListener("change",()=>{ state.answers[r.name]=+r.value; renderQuestions(); evaluate(); });
+  });
+}
+
+/* =======================================================================
+   EVALUATION  (tasks + questions -> checklist, score)
+   ======================================================================= */
+function gradeTasks(){
+  const present = {}; // key -> user
+  for(const u of state.users){ const k=keyOf(u.first,u.last); if(TARGETS[k] && !present[k]) present[k]=u; }
+  const targetKeys = Object.keys(TARGETS);
+
+  const allCreated = targetKeys.every(k=>present[k]);
+  const ouOk = allCreated && targetKeys.every(k=>present[k].ouPath===TARGETS[k].ou);
+  const logonOk = allCreated && targetKeys.every(k=>{
+    const u=present[k];
+    return u.upn.toLowerCase()===TARGETS[k].upn && u.domain===CONFIG.domain
+        && u.upn.toLowerCase()===expectedUpn(u.first,u.last);
+  });
+  const pwOk = allCreated && targetKeys.every(k=> present[k].password===CONFIG.initialPassword && present[k].mustChange===true );
+
+  const avery = present["avery|lin"];
+  const hoursOk = !!avery && (()=>{
+    for(let d=0;d<7;d++) for(let h=0;h<24;h++){
+      const on=avery.logonAllowed.has(d+"-"+h);
+      if(on!==hourAllowedTarget(d,h)) return false;
+    } return true;
+  })();
+  const expireOk = !!avery && avery.expires===`${CURRENT_YEAR}-12-31`;
+
+  return [
+    {id:"create", label:"Provision all four user accounts", passed:allCreated},
+    {id:"ou",     label:"Place each account in its department OU", passed:ouOk},
+    {id:"logon",  label:"Apply the logon-name standard (first initial + last name @ridgeline.local)", passed:logonOk},
+    {id:"pw",     label:"Set the initial password and require a change at next logon", passed:pwOk},
+    {id:"hours",  label:"Restrict the seasonal account to weekday hours (7 a.m.–6 p.m., Mon–Fri)", passed:hoursOk},
+    {id:"expire", label:`Expire the seasonal account on Dec 31, ${CURRENT_YEAR}`, passed:expireOk}
+  ];
+}
+function gradeQuestions(){
+  return QUESTIONS.map(q=>({
+    id:q.id, prompt:q.prompt,
+    answer: state.answers[q.id]!==undefined ? q.options[state.answers[q.id]] : null,
+    correct: state.answers[q.id]===q.answerIndex
+  }));
+}
+function evaluate(){
+  const tasks=gradeTasks();
+  $("#checklist").innerHTML = tasks.map(t=>`
+    <div class="check ${t.passed?'pass':'fail'}">
+      <span class="mark">${t.passed?'✓':''}</span>
+      <span class="lab">${esc(t.label)}</span>
+    </div>`).join("");
+  const qs=gradeQuestions();
+  const earned = tasks.filter(t=>t.passed).length + qs.filter(q=>q.correct).length;
+  const total = tasks.length + qs.length;
+  const pct = Math.round(earned/total*100);
+  $("#pct").textContent = pct+"%";
+  $("#meter").style.width = pct+"%";
+  $("#meter").style.background = pct===100 ? "var(--ok)" : "var(--accent)";
+  $("#scoreText").textContent = earned+" / "+total;
+  return {tasks,qs,earned,total};
+}
+
+/* =======================================================================
+   SCREENSHOT — self-contained SVG <foreignObject> rasterizer (no CDN)
+   ======================================================================= */
+async function captureLabPng(node){
+  try{
+    const rect=node.getBoundingClientRect();
+    const w=Math.max(1,Math.ceil(rect.width)), h=Math.max(1,Math.ceil(rect.height));
+    // collect this document's CSS so the clone renders styled inside the SVG
+    let css="";
+    for(const sheet of document.styleSheets){
+      try{ for(const r of sheet.cssRules) css+=r.cssText+"\n"; }catch(e){/* cross-origin: skip */}
+    }
+    const clone=node.cloneNode(true);
+    clone.style.margin="0";
+    const xml=new XMLSerializer().serializeToString(clone);
+    const svg=
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+      `<foreignObject x="0" y="0" width="${w}" height="${h}">`+
+      `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:#1f2430;padding:0">`+
+      `<style>${css}</style>${xml}</div></foreignObject></svg>`;
+    const url=URL.createObjectURL(new Blob([svg],{type:"image/svg+xml;charset=utf-8"}));
+    const img=new Image();
+    await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej(new Error("raster"));img.src=url;});
+    const scale=Math.min(2,window.devicePixelRatio||1);
+    const cv=document.createElement("canvas"); cv.width=w*scale; cv.height=h*scale;
+    const ctx=cv.getContext("2d"); ctx.scale(scale,scale);
+    ctx.fillStyle="#1f2430"; ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img,0,0); URL.revokeObjectURL(url);
+    return cv.toDataURL("image/png");
+  }catch(e){
+    return fallbackPng();   // never block submission on a render glitch
+  }
+}
+function fallbackPng(){
+  const cv=document.createElement("canvas"); cv.width=640; cv.height=180;
+  const ctx=cv.getContext("2d");
+  ctx.fillStyle="#1f2430"; ctx.fillRect(0,0,640,180);
+  ctx.fillStyle="#fff"; ctx.font="600 16px system-ui";
+  ctx.fillText("Ridgeline Directory Console — submission proof",18,34);
+  ctx.font="13px system-ui"; ctx.fillStyle="#cdd4e0";
+  const r=evaluate();
+  ctx.fillText(`Score ${r.earned}/${r.total}   ·   ${state.users.length} accounts provisioned`,18,64);
+  ctx.fillText(new Date().toString(),18,90);
+  return cv.toDataURL("image/png");
+}
+
+/* =======================================================================
+   SUBMISSION  (direct simple-request POST to Apps Script — no preflight)
+   ======================================================================= */
+async function submitLab(){
+  const status=$("#status");
+  const hacker=$("#hacker").value.trim();
+  const show=(cls,html)=>{ status.className="status show "+cls; status.innerHTML=html; };
+
+  if(!hacker){ show("err","Enter a hacker handle before submitting."); $("#hacker").focus(); return; }
+
+  const r=evaluate();
+  const btn=$("#btnSubmit"); btn.disabled=true; const old=btn.textContent; btn.textContent="Capturing…";
+  show("info","Capturing your work and packaging the submission…");
+
+  const screenshot=await captureLabPng($("#labArea"));
+
+  const payload={
+    assignmentId:CONFIG.assignmentId,
+    hackerName:hacker,
+    clientTimestamp:new Date().toISOString(),
+    objectives:CONFIG.objectives,
+    tasks:r.tasks.map(t=>({id:t.id,label:t.label,passed:t.passed})),
+    questions:r.qs.map(q=>({id:q.id,prompt:q.prompt,answer:q.answer,correct:q.correct})),
+    score:{earned:r.earned,total:r.total},
+    screenshot,
+    submissionToken:CONFIG.submissionToken
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    show("err","This lab isn't wired up yet: the instructor still needs to paste the Apps Script <code>/exec</code> URL. Your score is "+r.earned+" / "+r.total+". Nothing was sent.");
+    btn.disabled=false; btn.textContent=old; return;
+  }
+
+  btn.textContent="Submitting…";
+  try{
+    // Simple request: no custom headers, default text/plain body -> no CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+    const out=await res.json();
+    if(out && out.success){
+      const link=out.docUrl?` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission</a>.`:"";
+      show("ok","Submitted. Score "+r.earned+" / "+r.total+"."+link);
+      btn.textContent="Submitted ✓";
+    }else{
+      show("err","The server rejected the submission: "+esc((out&&out.error)||"unknown error")+" Check with your instructor.");
+      btn.disabled=false; btn.textContent=old;
+    }
+  }catch(err){
+    // Fallback: fire-and-forget (can't read the Doc link in a locked-down context).
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+      show("info","Submission sent, but this browser blocked reading the response. Confirm receipt with your instructor. Score "+r.earned+" / "+r.total+".");
+      btn.textContent="Sent";
+    }catch(e2){
+      show("err","Couldn't reach the submission service. Check your connection and try again.");
+      btn.disabled=false; btn.textContent=old;
+    }
+  }
+}
+
+/* =======================================================================
+   RESET + WIRING
+   ======================================================================= */
+function resetLab(){
+  state.users=[]; state.answers={}; state.uid=1; state.selectedPath=null;
+  $("#hacker").value="";
+  $("#status").className="status"; $("#status").innerHTML="";
+  $("#btnSubmit").disabled=false; $("#btnSubmit").textContent="Submit completed lab";
+  $("#crumb").textContent="Select an organizational unit to begin.";
+  $("#paneOu").textContent="No container selected"; $("#panePath").textContent="—";
+  $("#btnNewUser").disabled=true; $("#btnProps").disabled=true;
+  renderTree(); renderList(); renderQuestions(); evaluate();
+}
+$("#btnNewUser").addEventListener("click",openNewUser);
+$("#btnProps").addEventListener("click",()=>{ const id=+$("#btnProps").dataset.id; if(id) openProps(id); });
+$("#btnExpand").addEventListener("click",()=>{
+  const all=[]; (function walk(n){ if((n.children||[]).length){ all.push(n.path); n.children.forEach(walk);} })(TREE);
+  const allOpen=all.every(p=>state.expanded.has(p));
+  if(allOpen){ state.expanded=new Set(["ridgeline.local"]); $("#btnExpand").textContent="Expand all"; }
+  else{ all.forEach(p=>state.expanded.add(p)); $("#btnExpand").textContent="Collapse all"; }
+  renderTree();
+});
+$("#btnSubmit").addEventListener("click",submitLab);
+$("#btnReset").addEventListener("click",resetLab);
+
+/* init */
+renderTree(); renderQuestions(); evaluate();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-ad-create-group.html",title:"Lab \u2014 Create a Security Group (Directory Console)"}, NEXT={href:"splus-rainbow-tables.html",title:"Hashfall \u2014 Rainbow Table Hash Recovery"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

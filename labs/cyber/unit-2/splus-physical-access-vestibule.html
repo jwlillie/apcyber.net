@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Security+ (SY0-701) / AP Cybersecurity — Single-File Lab Simulation
+  Lab:           Secure a Research Wing with Physical Access Controls
+  assignmentId:  splus-physical-access-vestibule
+  Built to Build Prompt v2 (reference implementation).
+
+  Clean-room original. Scenario, facility, persona, door names, values, question
+  wording, and the self-drawn console UI are original expression authored for this
+  library from the public CompTIA SY0-701 objectives and the documented behavior
+  of physical access control systems. Not derived from, and not a reskin of, any
+  third-party lab.
+
+  © 2026 [AUTHOR / INSTITUTION]. Licensed for classroom use within your cohort.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab: Secure a Research Wing with Physical Access Controls</title>
+
+<!-- §2a Required machine-readable alignment header (mirrors labs.json entry) -->
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-physical-access-vestibule",
+  "title": "Secure a Research Wing with Physical Access Controls",
+  "version": "1.0.0",
+  "ap": {
+    "unit": 2,
+    "unitTitle": "Securing Spaces",
+    "topics": [
+      "2.3 Protecting Physical Spaces",
+      "2.4 Detecting Physical Attacks"
+    ],
+    "skills": [
+      "2.D",
+      "3.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "1.2",
+      "2.4",
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+
+<style id="labcss">
+  :root{
+    --bg:#0f172a; --panel:#16213a; --panel2:#1e2b48; --line:#2c3a5e;
+    --ink:#e8eefc; --muted:#9fb0d4; --accent:#22d3ee; --accent-ink:#062a31;
+    --ok:#34d399; --bad:#f87171; --warn:#fbbf24; --warn-ink:#3a2c05;
+    --focus:#7dd3fc; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    padding:18px;
+  }
+  h1{font-size:1.25rem;margin:0 0 2px}
+  .sub{color:var(--muted);margin:0 0 14px;font-size:.92rem}
+  a{color:var(--accent)}
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+  @media (max-width:880px){ .wrap{grid-template-columns:1fr} }
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+  .card h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  .console{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .console-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--line)}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+  .console-bar b{font-size:.92rem}
+  .console-body{padding:14px}
+
+  table{width:100%;border-collapse:collapse;font-size:.92rem}
+  th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600}
+  td.center,th.center{text-align:center}
+  .door-list{display:grid;gap:10px}
+  .door{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--panel2)}
+  .door .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  .door h3{margin:0;font-size:.98rem}
+  .door .meta{color:var(--muted);font-size:.82rem;margin-top:2px}
+  .field{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  label.inline{display:flex;align-items:center;gap:8px;cursor:pointer}
+  select,input[type=text]{
+    background:#0c1730;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;min-width:120px;
+  }
+  .switch{appearance:none;width:42px;height:24px;border-radius:99px;position:relative;cursor:pointer;border:1px solid var(--line);background:#27324f;transition:background .15s}
+  .switch:checked{background:var(--ok)}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+  .switch:checked::after{left:20px}
+  @media (prefers-reduced-motion: reduce){ .switch,.switch::after{transition:none} }
+
+  input[type=checkbox].grant{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+
+  .pending{display:none;align-items:center;gap:10px;background:var(--warn);color:var(--warn-ink);border-radius:10px;padding:9px 12px;margin-top:12px;font-size:.9rem;font-weight:600}
+  .pending.show{display:flex}
+
+  .btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;padding:9px 14px;cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+
+  /* alignment panel */
+  .align{font-size:.82rem;color:var(--muted)}
+  .align b{color:var(--ink)}
+  .align .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:2px 9px;margin:3px 4px 0 0;color:var(--ink)}
+
+  /* tasks + questions */
+  .tasklist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  .tasklist li{display:flex;gap:9px;align-items:flex-start;font-size:.9rem}
+  .mark{flex:0 0 auto;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);display:grid;place-items:center;font-size:12px;margin-top:1px}
+  .mark.pass{background:var(--ok);color:#04261a;border-color:transparent}
+  .mark.fail{background:transparent;color:var(--muted)}
+  .q{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .q p{margin:0 0 7px;font-size:.9rem}
+  .opt{display:flex;gap:8px;align-items:flex-start;margin:5px 0;font-size:.88rem;cursor:pointer}
+  .opt input{margin-top:3px;accent-color:var(--accent)}
+  .score{font-weight:700}
+  .hname{width:100%;margin-top:4px}
+  .status{margin-top:10px;min-height:1.2em;font-size:.9rem}
+  .status.ok{color:var(--ok)} .status.err{color:var(--bad)} .status.busy{color:var(--warn)}
+
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  footer{color:var(--muted);font-size:.78rem;margin-top:16px}
+</style>
+</head>
+<body>
+
+<h1>Secure a Research Wing with Physical Access Controls</h1>
+<p class="sub">AegisGate Physical Access Console — Larkfield Biologics, Beacon Hall</p>
+
+<div class="wrap">
+
+  <!-- ====================== SIMULATED CONSOLE (lab area) ===================== -->
+  <div id="labArea">
+    <div class="console" role="region" aria-label="Physical access console">
+      <div class="console-bar"><span class="dot" aria-hidden="true"></span>
+        <b>AegisGate</b><span class="sub" style="margin:0;color:var(--muted)">Beacon Hall · operator k.adeyemi</span>
+      </div>
+      <div class="console-body">
+
+        <div class="card">
+          <h2>Scenario</h2>
+          <p style="margin:0;font-size:.92rem;color:var(--muted)">
+            Beacon Hall's new genomics wing opens Monday. As the physical security
+            administrator you must restrict the wing to authorized staff, stop
+            tailgating at the lab entrance, add a second factor at cold storage,
+            limit lobby exposure after hours, and make sure forced-entry attempts
+            are detected. Configure the controls below, then <b>Apply configuration</b>.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>Badge access by group</h2>
+          <table>
+            <thead><tr>
+              <th>Group</th>
+              <th class="center">Lobby (D1)</th>
+              <th class="center">Lab Vestibule (D2)</th>
+              <th class="center">Cold Storage (D3)</th>
+            </tr></thead>
+            <tbody id="accessBody"><!-- rendered --></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>Doors</h2>
+          <div class="door-list" id="doorList"><!-- rendered --></div>
+        </div>
+
+        <div class="card">
+          <h2>Surveillance</h2>
+          <div class="door">
+            <div class="row">
+              <div><h3>Vestibule ingress camera (D2)</h3>
+                <div class="meta">Covers the point of entry to the lab wing.</div></div>
+              <div class="field">
+                <label class="inline"><input type="checkbox" class="switch" id="camAssigned"> Camera assigned</label>
+                <label class="inline"><input type="checkbox" class="switch" id="camRecording"> Recording</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pending" id="pending" role="status">
+          <span aria-hidden="true">●</span> You have unapplied changes — click <b>Apply configuration</b> to commit.
+        </div>
+        <div class="bar">
+          <button class="btn primary" id="applyBtn" type="button">Apply configuration</button>
+          <span class="sub" style="margin:0;color:var(--muted)" id="appliedNote">Last applied: never</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== SIDE PANEL =============================== -->
+  <div>
+    <div class="card">
+      <h2>Objective alignment</h2>
+      <div class="align">
+        <div id="align-ap"></div>
+        <div id="align-splus" style="margin-top:6px"></div>
+        <div id="align-pills" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tasks <span class="score" id="taskScore" style="float:right"></span></h2>
+      <ul class="tasklist" id="taskList"><!-- rendered --></ul>
+    </div>
+
+    <div class="card">
+      <h2>Knowledge check</h2>
+      <div id="questionList"><!-- rendered --></div>
+    </div>
+
+    <div class="card">
+      <h2>Submit completed lab</h2>
+      <label for="hname">Hacker name</label>
+      <input class="hname" id="hname" type="text" autocomplete="off"
+             placeholder="choose a pseudonym (no real names)" maxlength="40">
+      <div class="bar">
+        <button class="btn primary" id="submitBtn" type="button" disabled>Submit completed lab</button>
+        <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+      </div>
+      <div class="status busy" id="status" role="status" aria-live="polite">Enter a hacker name to enable submission.</div>
+    </div>
+  </div>
+</div>
+
+<footer>© 2026 [AUTHOR / INSTITUTION] · Original clean-room lab for CompTIA Security+ (SY0-701) / AP Cybersecurity exam prep.</footer>
+
+<!-- Optional pixel-capture upgrade: paste minified html2canvas here. -->
+<script id="html2canvas-slot"></script>
+
+<!-- ===================== SCRIPT 1 — proof capture ========================== -->
+<script>
+/* captureProofPNG(): dependency-free. Prefers html2canvas if present (slot above),
+   then a foreignObject snapshot, then a deterministic drawn summary card. */
+async function captureProofPNG(evalFn){
+  const node=document.getElementById('labArea');
+  if(window.html2canvas){
+    try{ const c=await window.html2canvas(node,{backgroundColor:null,scale:1}); return c.toDataURL('image/png'); }
+    catch(e){/* fall through */}
+  }
+  try{ return await foSnapshot_(node); }
+  catch(e){ return drawSummaryCard_(evalFn); }
+}
+function foSnapshot_(node){
+  return new Promise((resolve,reject)=>{
+    try{
+      const rect=node.getBoundingClientRect();
+      const w=Math.max(1,Math.ceil(rect.width)), h=Math.max(1,Math.ceil(rect.height));
+      const css=document.getElementById('labcss').textContent;
+      const xhtml=new XMLSerializer().serializeToString(node);
+      const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+        '<foreignObject width="100%" height="100%">'+
+        '<div xmlns="http://www.w3.org/1999/xhtml"><style>'+css+'</style>'+xhtml+'</div>'+
+        '</foreignObject></svg>';
+      const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const img=new Image();
+      img.onload=function(){ try{
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        const ctx=cv.getContext('2d'); ctx.fillStyle='#0f172a'; ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img,0,0); URL.revokeObjectURL(url); resolve(cv.toDataURL('image/png'));
+      }catch(err){ URL.revokeObjectURL(url); reject(err);} };
+      img.onerror=function(){ URL.revokeObjectURL(url); reject(new Error('foreignObject render failed')); };
+      img.src=url;
+    }catch(err){ reject(err); }
+  });
+}
+function drawSummaryCard_(evalFn){
+  const data = evalFn ? evalFn() : {tasks:[],questions:[],earned:0,total:0};
+  const W=720, pad=28; let y=70;
+  const lines=[]; 
+  data.tasks.forEach(t=>lines.push((t.passed?'\u2713 ':'\u2717 ')+t.label));
+  lines.push('');
+  data.questions.forEach((q,i)=>lines.push((q.correct?'\u2713 ':'\u2717 ')+'Q'+(i+1)+' answered'));
+  const H=Math.max(360, 150 + lines.length*26 + pad*2);
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#0f172a'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#22d3ee'; ctx.fillRect(0,0,W,6);
+  ctx.fillStyle='#e8eefc'; ctx.font='bold 22px system-ui,Segoe UI,Arial';
+  ctx.fillText('AegisGate — Physical Access Lab proof', pad, 44);
+  ctx.font='13px system-ui,Segoe UI,Arial'; ctx.fillStyle='#9fb0d4';
+  ctx.fillText('Score '+data.earned+' / '+data.total+'   ·   '+new Date().toISOString(), pad, y); y+=22;
+  ctx.font='14px system-ui,Segoe UI,Arial';
+  lines.forEach(function(ln){
+    ctx.fillStyle = ln.charAt(0)==='\u2713' ? '#34d399' : (ln.charAt(0)==='\u2717' ? '#f87171' : '#9fb0d4');
+    ctx.fillText(ln, pad, y); y+=26;
+  });
+  return cv.toDataURL('image/png');
+}
+</script>
+
+<!-- ===================== SCRIPT 2 — engine + CONFIG ======================== -->
+<script>
+(function(){
+  "use strict";
+
+  // §4a Fixed wiring block — identical shape across the library.
+  const CONFIG = {
+    assignmentId:    "splus-physical-access-vestibule",  // == #lab-meta; in ALLOWED_ASSIGNMENTS
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",        // identical across the whole library
+    submissionToken: "PASTE_COHORT_TOKEN",                // matches SUBMISSION_TOKEN Script Property
+    objectives:      ["1.2", "2.4", "4.6"],                // == #lab-meta.splus.objectives
+    maxHandle:       40
+  };
+
+  const $=function(s){return document.querySelector(s);};
+  const META=JSON.parse(document.getElementById('lab-meta').textContent);
+
+  /* ---- §3 alignment panel, hydrated from #lab-meta (can't drift) ---- */
+  $('#align-ap').innerHTML='<b>AP Cybersecurity:</b> Unit '+META.ap.unit+' · '+META.ap.unitTitle+
+    ' — '+META.ap.topics.join('; ')+' · Skills '+META.ap.skills.join(', ');
+  $('#align-splus').innerHTML='<b>Security+ SY0-701:</b> '+META.splus.objectives.join(', ');
+  $('#align-pills').innerHTML=META.ap.topics.map(function(t){return '<span class="pill">'+esc(t)+'</span>';}).join('');
+
+  /* ----------------------------- sim state ------------------------------ */
+  const GROUPS=['Researchers','Facilities','Visitors'];
+  const DOORS=['D1','D2','D3'];
+  function freshState(){
+    return {
+      access:{
+        Researchers:{D1:true,  D2:false, D3:false},
+        Facilities: {D1:true,  D2:true,  D3:true },
+        Visitors:   {D1:true,  D2:false, D3:true } // seeded WRONG: remove D3
+      },
+      doors:{
+        D1:{schedule:'always'},        // target: business
+        D2:{interlock:false},          // target: true
+        D3:{secondFactor:'badge', alarm:false} // targets: badge_pin, true
+      },
+      cameras:{ D2:{assigned:false, recording:false} } // targets: true,true
+    };
+  }
+  let cfg=freshState();
+  let committed=clone(cfg);
+  let lastApplied=null;
+
+  function clone(o){return JSON.parse(JSON.stringify(o));}
+  function dirty(){return JSON.stringify(cfg)!==JSON.stringify(committed);}
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
+
+  /* ----------------------------- rendering ------------------------------ */
+  function renderAccess(){
+    const body=$('#accessBody'); body.innerHTML='';
+    GROUPS.forEach(function(g){
+      const tr=document.createElement('tr');
+      tr.innerHTML='<td>'+g+'</td>'+DOORS.map(function(d){
+        return '<td class="center"><input type="checkbox" class="grant" data-g="'+g+'" data-d="'+d+'" '+
+          (cfg.access[g][d]?'checked':'')+' aria-label="'+g+' access to '+d+'"></td>';
+      }).join('');
+      body.appendChild(tr);
+    });
+  }
+  function renderDoors(){
+    const wrap=$('#doorList'); wrap.innerHTML='';
+    wrap.appendChild(door_('D1','Lobby entrance',
+      '<div class="field"><label for="d1sched">Unlock schedule</label>'+
+      '<select id="d1sched">'+
+        opt('always','Always unlocked',cfg.doors.D1.schedule)+
+        opt('business','Business hours only (07:00–19:00)',cfg.doors.D1.schedule)+
+        opt('locked','Always locked (badge only)',cfg.doors.D1.schedule)+
+      '</select></div>'));
+    wrap.appendChild(door_('D2','Lab wing vestibule',
+      '<label class="inline"><input type="checkbox" class="switch" id="d2interlock" '+(cfg.doors.D2.interlock?'checked':'')+'> Two-door interlock (mantrap)</label>'));
+    wrap.appendChild(door_('D3','Genomics cold storage',
+      '<div class="field"><label for="d3factor">Credential</label>'+
+      '<select id="d3factor">'+
+        opt('badge','Badge only',cfg.doors.D3.secondFactor)+
+        opt('badge_pin','Badge + PIN',cfg.doors.D3.secondFactor)+
+      '</select>'+
+      '<label class="inline"><input type="checkbox" class="switch" id="d3alarm" '+(cfg.doors.D3.alarm?'checked':'')+'> Forced / held-open alarm</label></div>'));
+    $('#camAssigned').checked=cfg.cameras.D2.assigned;
+    $('#camRecording').checked=cfg.cameras.D2.recording;
+  }
+  function door_(id,name,inner){
+    const d=document.createElement('div'); d.className='door';
+    d.innerHTML='<div class="row"><div><h3>'+name+' ('+id+')</h3></div><div class="field">'+inner+'</div></div>';
+    return d;
+  }
+  function opt(v,label,cur){return '<option value="'+v+'"'+(cur===v?' selected':'')+'>'+esc(label)+'</option>';}
+
+  function renderPending(){
+    $('#pending').classList.toggle('show',dirty());
+    $('#appliedNote').textContent='Last applied: '+(lastApplied?lastApplied:'never');
+  }
+
+  /* ----------------------------- evaluation ----------------------------- */
+  const TASKS=[
+    {id:'res-access', label:'Grant Researchers access to the Lab Vestibule and Cold Storage.',
+      pass:function(s){return s.access.Researchers.D2 && s.access.Researchers.D3;}},
+    {id:'visitor-deny', label:'Ensure Visitors have no access to Cold Storage.',
+      pass:function(s){return s.access.Visitors.D3===false;}},
+    {id:'interlock', label:'Enable the two-door interlock on the Lab Vestibule.',
+      pass:function(s){return s.doors.D2.interlock===true;}},
+    {id:'mfa', label:'Require Badge + PIN at Cold Storage.',
+      pass:function(s){return s.doors.D3.secondFactor==='badge_pin';}},
+    {id:'alarm', label:'Enable the forced / held-open alarm at Cold Storage.',
+      pass:function(s){return s.doors.D3.alarm===true;}},
+    {id:'schedule', label:'Set the Lobby to unlock during business hours only.',
+      pass:function(s){return s.doors.D1.schedule==='business';}},
+    {id:'camera', label:'Assign the vestibule camera and set it to record.',
+      pass:function(s){return s.cameras.D2.assigned && s.cameras.D2.recording;}}
+  ];
+
+  const QUESTIONS=[
+    {id:'q1', prompt:'Why does an access control vestibule reduce tailgating better than a single locked door?',
+      opts:[['a','It is faster to walk through.'],
+            ['b','Its two interlocked doors let only one credentialed entry pass at a time, so an authorized person can\u2019t admit an unauthorized one.'],
+            ['c','It automatically records video of everyone.'],
+            ['d','It always requires a fingerprint scan.']], key:'b'},
+    {id:'q2', prompt:'A badge reader that records and timestamps every badge used at a door primarily provides which control function?',
+      opts:[['a','Preventive'],['b','Deterrent'],['c','Detective'],['d','Corrective']], key:'c'},
+    {id:'q3', prompt:'Requiring both an access badge and a PIN at the cold-storage door is an example of\u2026',
+      opts:[['a','Single sign-on'],
+            ['b','Multifactor authentication (something you have + something you know)'],
+            ['c','Least privilege'],['d','A honeypot']], key:'b'},
+    {id:'q4', prompt:'A forced / held-open alarm on the cold-storage door helps detect which physical-attack indicator?',
+      opts:[['a','RFID cloning'],['b','Brute force (forcing the door)'],['c','Phishing'],['d','SQL injection']], key:'b'}
+  ];
+
+  function renderTasks(){
+    const ul=$('#taskList'); ul.innerHTML='';
+    let pass=0;
+    TASKS.forEach(function(t){
+      const ok=t.pass(committed); if(ok)pass++;
+      const li=document.createElement('li');
+      li.innerHTML='<span class="mark '+(ok?'pass':'fail')+'">'+(ok?'\u2713':'')+'</span><span>'+esc(t.label)+'</span>';
+      ul.appendChild(li);
+    });
+    $('#taskScore').textContent=pass+'/'+TASKS.length;
+  }
+  function renderQuestions(){
+    const box=$('#questionList'); box.innerHTML='';
+    QUESTIONS.forEach(function(q,i){
+      const div=document.createElement('div'); div.className='q';
+      div.innerHTML='<p><b>Q'+(i+1)+'.</b> '+esc(q.prompt)+'</p>'+
+        q.opts.map(function(o){
+          return '<label class="opt"><input type="radio" name="'+q.id+'" value="'+o[0]+'"> <span>'+esc(o[1])+'</span></label>';
+        }).join('');
+      box.appendChild(div);
+    });
+  }
+
+  function evalAll(){
+    const tasks=TASKS.map(function(t){return {id:t.id,label:t.label,passed:!!t.pass(committed)};});
+    const questions=QUESTIONS.map(function(q){
+      const sel=document.querySelector('input[name="'+q.id+'"]:checked');
+      const ans=sel?sel.value:'';
+      return {id:q.id,prompt:q.prompt,answer:ans,correct:ans===q.key};
+    });
+    const earned=tasks.filter(function(t){return t.passed;}).length+
+                 questions.filter(function(q){return q.correct;}).length;
+    const total=tasks.length+questions.length;
+    return {tasks:tasks,questions:questions,earned:earned,total:total};
+  }
+
+  /* ----------------------------- interactions --------------------------- */
+  function wire(){
+    $('#accessBody').addEventListener('change',function(e){
+      const c=e.target.closest('.grant'); if(!c)return;
+      cfg.access[c.dataset.g][c.dataset.d]=c.checked; renderPending();
+    });
+    $('#doorList').addEventListener('change',function(e){
+      const t=e.target;
+      if(t.id==='d1sched') cfg.doors.D1.schedule=t.value;
+      else if(t.id==='d2interlock') cfg.doors.D2.interlock=t.checked;
+      else if(t.id==='d3factor') cfg.doors.D3.secondFactor=t.value;
+      else if(t.id==='d3alarm') cfg.doors.D3.alarm=t.checked;
+      renderPending();
+    });
+    $('#camAssigned').addEventListener('change',function(e){cfg.cameras.D2.assigned=e.target.checked;renderPending();});
+    $('#camRecording').addEventListener('change',function(e){cfg.cameras.D2.recording=e.target.checked;renderPending();});
+
+    $('#applyBtn').addEventListener('click',function(){
+      committed=clone(cfg);
+      lastApplied=new Date().toLocaleString();
+      renderPending(); renderTasks();
+      setStatus('Configuration applied. Task checklist updated.','busy');
+    });
+
+    $('#hname').addEventListener('input',gate);
+    $('#questionList').addEventListener('change',function(){ /* allow re-eval on submit */ });
+    $('#submitBtn').addEventListener('click',submit);
+    $('#resetBtn').addEventListener('click',reset);
+  }
+
+  function gate(){
+    const has=$('#hname').value.trim().length>0;
+    $('#submitBtn').disabled=!has;
+    if(has) setStatus('Ready. Apply your configuration and submit when done.','busy');
+    else setStatus('Enter a hacker name to enable submission.','busy');
+  }
+  function setStatus(html,cls){const s=$('#status');s.className='status '+(cls||'');s.innerHTML=html;}
+
+  function reset(){
+    cfg=freshState(); committed=clone(cfg); lastApplied=null;
+    document.querySelectorAll('input[type=radio]').forEach(function(r){r.checked=false;});
+    $('#hname').value='';
+    renderAccess(); renderDoors(); renderPending(); renderTasks();
+    gate();
+  }
+
+  async function submit(){
+    const name=$('#hname').value.trim().slice(0,CONFIG.maxHandle);
+    if(!name){ setStatus('Enter a hacker name to enable submission.','err'); return; }
+    if(String(CONFIG.APPS_SCRIPT_URL).indexOf('PASTE')===0){
+      setStatus('This lab isn\u2019t wired to a submission endpoint yet. See INSTRUCTOR_SETUP.md.','err'); return;
+    }
+    const r=evalAll();
+    setStatus('Capturing proof and submitting\u2026','busy');
+    $('#submitBtn').disabled=true;
+
+    let screenshot=''; try{ screenshot=await captureProofPNG(evalAll); }catch(e){ screenshot=''; }
+
+    const payload={
+      assignmentId:CONFIG.assignmentId, title:META.title, hackerName:name,
+      clientTimestamp:new Date().toISOString(), objectives:CONFIG.objectives,
+      tasks:r.tasks, questions:r.questions, score:{earned:r.earned,total:r.total},
+      screenshot:screenshot, submissionToken:CONFIG.submissionToken
+    };
+    try{
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+      const out=await res.json();
+      if(out&&out.success){
+        const link=out.docUrl?' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission</a>':'';
+        setStatus('Submitted as <b>'+esc(name)+'</b> — scored '+r.earned+'/'+r.total+'.'+link,'ok');
+      }else{
+        setStatus('Submission rejected: '+esc((out&&out.error)||'unknown error')+'.','err');
+        $('#submitBtn').disabled=false;
+      }
+    }catch(err){
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
+        setStatus('Submitted, but this browser couldn\u2019t read the receipt. Confirm with your instructor.','ok');
+      }catch(e2){
+        setStatus('Couldn\u2019t reach the submission service. Check your connection and try again.','err');
+        $('#submitBtn').disabled=false;
+      }
+    }
+  }
+
+  /* ------------------------------- init --------------------------------- */
+  renderAccess(); renderDoors(); renderPending(); renderTasks(); renderQuestions(); wire(); gate();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-physical-security-plan.html",title:"Site Survey \u2014 Physical Security Deployment (SY0-701 1.2.6)"}, NEXT=null, CRUMB="All Labs \u203a Unit 2 \u2014 Securing Spaces \u203a 2.3 Protecting Physical Spaces";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

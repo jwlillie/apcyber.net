@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab: Add Users to a Secondary Group (Linux) — Security+ SY0-701</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-linux-secondary-group",
+  "title": "Lab: Add Users to a Secondary Group (Linux) — Security+ SY0-701",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ SY0-701 Single-File Lab Simulation
+  Lab: Add Users to a Secondary Group (Linux)
+  assignmentId: splus-linux-secondary-group
+  Objective: SY0-701 4.6 / 4.6.1 (Provisioning user accounts)
+              1.1.2 Manage Linux users and groups
+
+  Copyright (c) 2026 [AUTHOR / ORGANIZATION].  All rights reserved.
+  Original clean-room work authored from the public CompTIA SY0-701 objective
+  and the documented behavior of standard Linux account tools (usermod,
+  gpasswd, groups, id). No third-party lab content, wording, scenario, names,
+  paths, values, ordering, or screenshots were copied. UI is self-rendered.
+  License: proprietary to the author; redistribution only with permission.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0c1014;
+    --panel:#11161c;
+    --panel-2:#161d25;
+    --ink:#d6e2ea;
+    --ink-dim:#8a99a6;
+    --accent:#37d99e;       /* prompt green */
+    --accent-2:#f4b740;     /* amber */
+    --danger:#ff6b6b;
+    --ok:#37d99e;
+    --pending:#6b7783;
+    --border:#22303b;
+    --focus:#7cc7ff;
+    --radius:10px;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.45}
+  a{color:var(--focus)}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 60px}
+  header.top{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px}
+  header.top h1{font-size:1.18rem;margin:0;letter-spacing:.2px}
+  .obj-tag{font-family:var(--mono);font-size:.74rem;color:var(--bg);background:var(--accent-2);padding:2px 8px;border-radius:999px;font-weight:600}
+  .layout{display:grid;grid-template-columns:1.4fr .9fr;gap:16px}
+  @media (max-width:860px){.layout{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .card h2{font-size:.82rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-dim);margin:0;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--panel-2)}
+  .card .body{padding:14px}
+
+  /* Terminal */
+  .term-card .body{padding:0}
+  .term-chrome{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#0a0e12;border-bottom:1px solid var(--border)}
+  .dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .dot.r{background:#ff5f56}.dot.y{background:#ffbd2e}.dot.g{background:#27c93f}
+  .term-title{margin-left:8px;font-family:var(--mono);font-size:.78rem;color:var(--ink-dim)}
+  #screen{font-family:var(--mono);font-size:.86rem;padding:12px 14px;min-height:340px;max-height:48vh;overflow:auto;white-space:pre-wrap;word-break:break-word;background:#0a0e12}
+  #screen .cmd{color:var(--ink)}
+  #screen .cmd .ps{color:var(--accent)}
+  #screen .out{color:var(--ink)}
+  #screen .err{color:var(--danger)}
+  #screen .dim{color:var(--ink-dim)}
+  .inputline{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:#0a0e12;font-family:var(--mono)}
+  .inputline .ps{color:var(--accent);white-space:nowrap}
+  #cmd{flex:1;background:transparent;border:none;color:var(--ink);font-family:var(--mono);font-size:.9rem;outline:none}
+  #cmd::placeholder{color:#46535e}
+  .blink{display:inline-block;width:8px;height:1.05em;background:var(--accent);vertical-align:text-bottom;animation:bl 1s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  @media (prefers-reduced-motion: reduce){.blink{animation:none}}
+
+  /* Tasks & questions */
+  .scenario{font-size:.92rem;color:var(--ink);background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px}
+  .scenario b{color:var(--accent-2)}
+  ul.tasks{list-style:none;margin:0;padding:0}
+  ul.tasks li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--border)}
+  ul.tasks li:last-child{border-bottom:none}
+  .mark{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--pending);display:grid;place-items:center;font-size:.8rem;margin-top:1px}
+  li.done .mark{border-color:var(--ok);background:var(--ok);color:#06120c}
+  li.warn .mark{border-color:var(--accent-2);background:var(--accent-2);color:#1a1206}
+  .task-text small{display:block;color:var(--ink-dim);font-size:.8rem;margin-top:2px}
+
+  .q{margin:0 0 14px;padding:12px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px}
+  .q legend{font-size:.92rem;font-weight:600;padding:0;margin-bottom:8px}
+  .q .opts{display:flex;flex-direction:column;gap:6px}
+  .q label{display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:.86rem;cursor:pointer;padding:4px 6px;border-radius:6px}
+  .q label:hover{background:#1c2630}
+  .q .verdict{margin-top:8px;font-size:.82rem;min-height:1em}
+  .q .verdict.ok{color:var(--ok)}
+  .q .verdict.no{color:var(--danger)}
+
+  .hint{font-size:.82rem;color:var(--ink-dim);margin:8px 0 0}
+  .cmds code{background:#0a0e12;border:1px solid var(--border);padding:1px 6px;border-radius:5px;font-family:var(--mono);color:var(--accent)}
+
+  /* Submission bar */
+  .submitbar{position:sticky;bottom:0;margin-top:20px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end}
+  @media (max-width:680px){.submitbar{grid-template-columns:1fr}}
+  .field label{display:block;font-size:.78rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+  .field input{width:100%;background:#0a0e12;border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:.92rem}
+  .scorepill{font-family:var(--mono);font-size:.9rem;color:var(--ink-dim);align-self:center;white-space:nowrap}
+  .scorepill b{color:var(--accent)}
+  button{font-family:var(--sans);font-weight:600;border-radius:8px;border:1px solid transparent;cursor:pointer;font-size:.92rem;padding:11px 16px}
+  button.primary{background:var(--accent);color:#06120c}
+  button.primary:disabled{background:#27483b;color:#5e7c70;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--ink);border-color:var(--border)}
+  button:focus-visible,a:focus-visible,#cmd:focus-visible,input:focus-visible,label:focus-within{outline:3px solid var(--focus);outline-offset:2px}
+  .status{grid-column:1/-1;font-size:.88rem;min-height:1.2em;font-family:var(--mono)}
+  .status.ok{color:var(--ok)}.status.no{color:var(--danger)}.status.work{color:var(--accent-2)}
+  .status a{color:var(--focus);font-weight:600}
+  footer.note{margin-top:22px;font-size:.74rem;color:var(--ink-dim);border-top:1px solid var(--border);padding-top:12px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+  <header class="top">
+    <h1>Add Users to a Secondary Group <span style="color:var(--ink-dim);font-weight:400">— Linux account administration</span></h1>
+    <span class="obj-tag" title="CompTIA Security+ SY0-701">SY0-701 · 4.6.1</span>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: simulated terminal -->
+    <section class="card term-card" aria-label="Simulated Linux terminal">
+      <h2>workstation — bash</h2>
+      <div class="body">
+        <div class="term-chrome" aria-hidden="true">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="term-title">root@helpdesk-jump:~</span>
+        </div>
+        <div id="screen" role="log" aria-live="polite" aria-label="Terminal output" tabindex="0"></div>
+        <div class="inputline">
+          <span class="ps" aria-hidden="true">root@helpdesk-jump:~#</span>
+          <label for="cmd" class="sr-only" style="position:absolute;left:-9999px">Type a command</label>
+          <input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                 placeholder="type a command, then Enter  (try: help)">
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: scenario, tasks, questions -->
+    <div>
+      <section class="card" aria-label="Scenario and tasks">
+        <h2>Your assignment</h2>
+        <div class="body">
+          <div class="scenario">
+            You administer the Linux jump host for <b>Brightline Analytics</b>. Two analysts
+            just joined the data team — <b>Priya Venkat (pvenkat)</b> and <b>Theo Marsh (tmarsh)</b>.
+            Their accounts already exist. To grant them access to shared analytics resources,
+            add the existing <b>analysts</b> group to each account as a <b>secondary</b> group —
+            <b>without</b> disturbing the secondary groups they already hold
+            (<code>staff</code> and <code>vpn</code> respectively).
+          </div>
+
+          <ul class="tasks" id="taskList">
+            <li data-task="t1"><span class="mark" aria-hidden="true"></span>
+              <span class="task-text">Add <code>analysts</code> as a secondary group for <code>pvenkat</code>, keeping existing groups.
+                <small>Existing secondary group <code>staff</code> must be preserved.</small></span></li>
+            <li data-task="t2"><span class="mark" aria-hidden="true"></span>
+              <span class="task-text">Add <code>analysts</code> as a secondary group for <code>tmarsh</code>, keeping existing groups.
+                <small>Existing secondary group <code>vpn</code> must be preserved.</small></span></li>
+            <li data-task="t3"><span class="mark" aria-hidden="true"></span>
+              <span class="task-text">Verify your work.
+                <small>Run <code>groups</code> or <code>cat /etc/group</code> after both accounts are updated.</small></span></li>
+          </ul>
+
+          <p class="hint cmds">Useful commands: <code>usermod</code>, <code>gpasswd</code>,
+            <code>groups</code>, <code>id</code>, <code>cat /etc/group</code>, <code>help</code>, <code>reset</code>, <code>clear</code>.</p>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Knowledge check" style="margin-top:16px">
+        <h2>Knowledge check</h2>
+        <div class="body" id="questions">
+          <fieldset class="q" data-q="q1">
+            <legend>1. You must add an account to one more (secondary) group while leaving its current memberships untouched. Which <code>usermod</code> option set does that?</legend>
+            <div class="opts" role="radiogroup" aria-label="Question 1">
+              <label><input type="radio" name="q1" value="-aG"> -aG</label>
+              <label><input type="radio" name="q1" value="-G"> -G</label>
+              <label><input type="radio" name="q1" value="-g"> -g</label>
+              <label><input type="radio" name="q1" value="-d"> -d</label>
+            </div>
+            <div class="verdict" aria-live="polite"></div>
+          </fieldset>
+
+          <fieldset class="q" data-q="q2">
+            <legend>2. Which <code>usermod</code> option changes a user's <em>primary</em> (login) group rather than a secondary one?</legend>
+            <div class="opts" role="radiogroup" aria-label="Question 2">
+              <label><input type="radio" name="q2" value="-g"> -g</label>
+              <label><input type="radio" name="q2" value="-aG"> -aG</label>
+              <label><input type="radio" name="q2" value="-G"> -G</label>
+              <label><input type="radio" name="q2" value="-s"> -s</label>
+            </div>
+            <div class="verdict" aria-live="polite"></div>
+          </fieldset>
+
+          <fieldset class="q" data-q="q3">
+            <legend>3. After updating memberships, which command quickly lists every group a single user belongs to?</legend>
+            <div class="opts" role="radiogroup" aria-label="Question 3">
+              <label><input type="radio" name="q3" value="groups"> groups</label>
+              <label><input type="radio" name="q3" value="chmod"> chmod</label>
+              <label><input type="radio" name="q3" value="passwd"> passwd</label>
+              <label><input type="radio" name="q3" value="umask"> umask</label>
+            </div>
+            <div class="verdict" aria-live="polite"></div>
+          </fieldset>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- SUBMISSION BAR -->
+  <section class="submitbar" aria-label="Submit your completed lab">
+    <div class="field">
+      <label for="hacker">Hacker name (pseudonym — no real names)</label>
+      <input id="hacker" maxlength="40" placeholder="e.g. nullbyte_owl" autocomplete="off">
+    </div>
+    <div class="scorepill" id="scorePill">Score: <b>0</b> / 6</div>
+    <button class="primary" id="submitBtn" type="button">Submit completed lab</button>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <div class="toolbar">
+    <button class="ghost" id="resetBtn" type="button">Reset lab</button>
+  </div>
+
+  <footer class="note">
+    © 2026 [AUTHOR / ORGANIZATION]. Original clean-room lab for CompTIA Security+ SY0-701
+    (objective 4.6 / 4.6.1). Self-reported client-side scoring is intended for formative practice;
+    the screenshot and server timestamp are supporting evidence, not tamper-proof verification.
+    Use a pseudonymous hacker name only — keep real-name mapping in the instructor roster, never here.
+  </footer>
+</div>
+
+<!--
+  ============================================================================
+  OPTIONAL: pixel-perfect DOM screenshots.
+  This file ships with a dependency-free canvas capture (renderProofCanvas)
+  that needs no library. If you prefer html2canvas-style DOM capture, paste the
+  minified html2canvas source inside the script tag below; capture() will detect
+  window.html2canvas and use it automatically.
+  ============================================================================
+-->
+<script id="html2canvas-slot">/* (optional) paste minified html2canvas here */</script>
+
+<script>
+/* ===========================================================================
+   LAB CONFIG  (the only per-lab edits, per the build spec §8)
+   =========================================================================== */
+const CONFIG = {
+  assignmentId: "splus-linux-secondary-group",
+  title: "Add Users to a Secondary Group (Linux)",
+  objectives: ["4.6"],
+  passThreshold: { allTasks: true, allQuestions: true },
+  // --- shared across the whole library ---
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    submissionToken: "PASTE_COHORT_TOKEN",   // the /exec Web App URL
+  SUBMISSION_TOKEN: "PASTE_PER_COHORT_TOKEN",         // rotate per cohort
+  MAX_SCREENSHOT_BYTES: 1_500_000
+};
+
+/* ANSWER KEY (inspectable by design — formative scoring) */
+const ANSWER_KEY = { q1: "-aG", q2: "-g", q3: "groups" };
+
+/* ===========================================================================
+   SIMULATED SYSTEM STATE  (original values — clean-room)
+   =========================================================================== */
+function freshState(){
+  return {
+    hostname: "helpdesk-jump",
+    me: "root",
+    users: {
+      pvenkat: { full:"Priya Venkat", uid:1206, primaryGid:1206, primary:"pvenkat", secondary:["staff"] },
+      tmarsh:  { full:"Theo Marsh",   uid:1207, primaryGid:1207, primary:"tmarsh",  secondary:["vpn"]  }
+    },
+    // gid table for display in `id`
+    gids: { root:0, sudo:27, staff:50, vpn:870, analysts:1500, pvenkat:1206, tmarsh:1207 },
+    // groups that exist on the system (analysts already created in a prior task)
+    allGroups: ["root","sudo","staff","vpn","analysts","pvenkat","tmarsh"],
+    verifiedAfterDone: false
+  };
+}
+let S = freshState();
+
+/* ===========================================================================
+   TERMINAL ENGINE
+   =========================================================================== */
+const screenEl = document.getElementById("screen");
+const cmdEl = document.getElementById("cmd");
+const transcript = []; // {cls, text}
+const history = []; let hIdx = -1;
+
+function print(text, cls){ transcript.push({cls:cls||"out", text:text}); renderScreen(); }
+function printCmd(text){ transcript.push({cls:"cmd", text:text, isCmd:true}); }
+
+function renderScreen(){
+  screenEl.innerHTML = "";
+  for(const line of transcript){
+    const div = document.createElement("div");
+    div.className = line.cls;
+    if(line.isCmd){
+      const ps = document.createElement("span"); ps.className="ps";
+      ps.textContent = "root@"+S.hostname+":~# ";
+      div.appendChild(ps);
+      div.appendChild(document.createTextNode(line.text));
+    } else {
+      div.textContent = line.text;
+    }
+    screenEl.appendChild(div);
+  }
+  screenEl.scrollTop = screenEl.scrollHeight;
+}
+
+const BANNER = [
+  "Brightline Analytics — secured jump host",
+  "Authorized administrative use only. Type 'help' for available commands.",
+  ""
+];
+function boot(){ transcript.length = 0; BANNER.forEach(l=>print(l,"dim")); }
+
+/* ---- command handlers ---- */
+function groupMembers(gname){
+  // /etc/group lists supplementary (secondary) members only
+  const out = [];
+  for(const u in S.users){ if(S.users[u].secondary.includes(gname)) out.push(u); }
+  return out;
+}
+
+function cmd_help(){
+  [
+    "Available commands:",
+    "  usermod -aG <group> <user>     add <user> to a secondary <group> (keeps others)",
+    "  usermod -G <g1,g2> <user>      REPLACE the user's secondary groups (no -a)",
+    "  usermod -g <group> <user>      change the user's PRIMARY group",
+    "  gpasswd -a <user> <group>      add <user> to a secondary <group>",
+    "  groups [user]                  list group memberships",
+    "  id [user]                      show uid/gid/group ids",
+    "  cat /etc/group                 show the group database",
+    "  cat /etc/passwd                show the account database",
+    "  whoami | clear | reset | help"
+  ].forEach(l=>print(l));
+}
+
+function cmd_groups(arg){
+  const target = arg || "root";
+  if(target === "root"){ print("root : root sudo"); return; }
+  const u = S.users[target];
+  if(!u){ print("groups: '"+target+"': no such user","err"); return; }
+  print(target + " : " + u.primary + (u.secondary.length? " " + u.secondary.join(" ") : ""));
+  maybeVerify();
+}
+
+function cmd_id(arg){
+  const target = arg || "root";
+  if(target === "root"){ print("uid=0(root) gid=0(root) groups=0(root),27(sudo)"); return; }
+  const u = S.users[target];
+  if(!u){ print("id: '"+target+"': no such user","err"); return; }
+  const ids = [u.primaryGid+"("+u.primary+")"]
+    .concat(u.secondary.map(g => (S.gids[g]!==undefined? S.gids[g]:"?")+"("+g+")"));
+  print("uid="+u.uid+"("+target+") gid="+u.primaryGid+"("+u.primary+") groups="+ids.join(","));
+}
+
+function cmd_cat(path){
+  if(path === "/etc/group"){
+    const lines = S.allGroups.map(g=>{
+      const gid = S.gids[g]!==undefined? S.gids[g] : "";
+      return g+":x:"+gid+":"+groupMembers(g).join(",");
+    });
+    lines.forEach(l=>print(l));
+    maybeVerify();
+    return;
+  }
+  if(path === "/etc/passwd"){
+    print("root:x:0:0:root:/root:/bin/bash","out");
+    for(const u in S.users){
+      const o=S.users[u];
+      print(u+":x:"+o.uid+":"+o.primaryGid+":"+o.full+":/home/"+u+":/bin/bash");
+    }
+    return;
+  }
+  print("cat: "+(path||"")+": No such file or directory","err");
+}
+
+function applyUsermod(args){
+  // returns {error} | {ok, notes:[]}
+  let i=0, append=false, secondaryArg=null, primaryArg=null, positional=[];
+  while(i<args.length){
+    const a=args[i];
+    if(a==="-a"){ append=true; i++; continue; }
+    if(a==="-aG"||a==="-Ga"){ append=true; secondaryArg=args[i+1]; i+=2; continue; }
+    if(a==="-G"){ secondaryArg=args[i+1]; i+=2; continue; }
+    if(a==="-g"){ primaryArg=args[i+1]; i+=2; continue; }
+    if(a.startsWith("-")){ return {error:"usermod: invalid option -- '"+a.replace(/^-+/,"")+"'"}; }
+    positional.push(a); i++;
+  }
+  const uname = positional[positional.length-1];
+  if(!uname){ return {error:"usermod: missing user operand. Try: usermod -aG <group> <user>"}; }
+  const u = S.users[uname];
+  if(!u){ return {error:"usermod: user '"+uname+"' does not exist"}; }
+  if(secondaryArg===null && primaryArg===null){
+    return {error:"usermod: no changes requested. Use -aG to add a secondary group."};
+  }
+  const notes=[];
+
+  if(primaryArg!==null){
+    if(!S.allGroups.includes(primaryArg)) return {error:"usermod: group '"+primaryArg+"' does not exist"};
+    u.primary = primaryArg; u.primaryGid = S.gids[primaryArg];
+    notes.push("Note: -g changed the PRIMARY group to '"+primaryArg+"'. The task asks for a SECONDARY group (use -aG).");
+  }
+
+  if(secondaryArg!==null){
+    const list = secondaryArg.split(",").map(s=>s.trim()).filter(Boolean);
+    for(const g of list){ if(!S.allGroups.includes(g)) return {error:"usermod: group '"+g+"' does not exist"}; }
+    if(append){
+      for(const g of list){ if(!u.secondary.includes(g)) u.secondary.push(g); }
+    } else {
+      const removed = u.secondary.filter(g=>!list.includes(g));
+      u.secondary = list.slice();
+      if(removed.length) notes.push("Note: without -a, -G REPLACED the secondary groups and removed: "+removed.join(", ")+". Use -aG to keep existing groups.");
+    }
+  }
+  return {ok:true, notes};
+}
+
+function cmd_usermod(args){
+  const r = applyUsermod(args);
+  if(r.error){ print(r.error,"err"); return; }
+  r.notes.forEach(n=>print(n,"dim"));
+  // usermod is otherwise silent on success
+  refreshTasks();
+}
+
+function cmd_gpasswd(args){
+  // gpasswd -a <user> <group>
+  if(args[0]!=="-a" || args.length<3){ print("usage: gpasswd -a <user> <group>","err"); return; }
+  const uname=args[1], gname=args[2];
+  const u=S.users[uname];
+  if(!u){ print("gpasswd: user '"+uname+"' does not exist","err"); return; }
+  if(!S.allGroups.includes(gname)){ print("gpasswd: group '"+gname+"' does not exist","err"); return; }
+  if(!u.secondary.includes(gname)) u.secondary.push(gname);
+  print("Adding user "+uname+" to group "+gname);
+  refreshTasks();
+}
+
+function runCommand(raw){
+  const line = raw.trim();
+  printCmd(line); renderScreen();
+  if(line==="") { renderScreen(); return; }
+  const parts = line.split(/\s+/);
+  const c = parts[0]; const rest = parts.slice(1);
+  switch(c){
+    case "help": cmd_help(); break;
+    case "clear": transcript.length=0; break;
+    case "reset": resetLab(false); print("Lab state reset.","dim"); break;
+    case "whoami": print("root"); break;
+    case "ls": print("notes.txt  reports  scripts","out"); break;
+    case "usermod": cmd_usermod(rest); break;
+    case "gpasswd": cmd_gpasswd(rest); break;
+    case "groups": cmd_groups(rest[0]); break;
+    case "id": cmd_id(rest[0]); break;
+    case "cat": cmd_cat(rest[0]); break;
+    default: print(c+": command not found. Type 'help'.","err");
+  }
+  renderScreen();
+}
+
+/* ===========================================================================
+   TASK / SCORE LOGIC
+   =========================================================================== */
+function taskState(){
+  const p = S.users.pvenkat, t = S.users.tmarsh;
+  const t1 = p.secondary.includes("analysts") && p.secondary.includes("staff") && p.primary==="pvenkat";
+  const t2 = t.secondary.includes("analysts") && t.secondary.includes("vpn")  && t.primary==="tmarsh";
+  // partial / warn states for feedback
+  const t1warn = p.secondary.includes("analysts") && !t1;
+  const t2warn = t.secondary.includes("analysts") && !t2;
+  const t3 = t1 && t2 && S.verifiedAfterDone;
+  return {t1,t2,t3,t1warn,t2warn};
+}
+function maybeVerify(){
+  const p = S.users.pvenkat, t = S.users.tmarsh;
+  const done = p.secondary.includes("analysts")&&p.secondary.includes("staff")&&t.secondary.includes("analysts")&&t.secondary.includes("vpn");
+  if(done) S.verifiedAfterDone = true;
+  refreshTasks();
+}
+function refreshTasks(){
+  const st = taskState();
+  setTask("t1", st.t1, st.t1warn);
+  setTask("t2", st.t2, st.t2warn);
+  setTask("t3", st.t3, false);
+  updateScore();
+}
+function setTask(id, done, warn){
+  const li = document.querySelector('li[data-task="'+id+'"]');
+  li.classList.toggle("done", !!done);
+  li.classList.toggle("warn", !done && !!warn);
+  li.querySelector(".mark").textContent = done ? "✓" : (warn ? "!" : "");
+}
+
+/* questions */
+const qState = {q1:false,q2:false,q3:false};
+function wireQuestions(){
+  document.querySelectorAll('.q').forEach(fs=>{
+    const qid = fs.getAttribute("data-q");
+    fs.querySelectorAll('input[type="radio"]').forEach(r=>{
+      r.addEventListener("change", ()=>{
+        const correct = r.value === ANSWER_KEY[qid];
+        qState[qid] = correct;
+        const v = fs.querySelector(".verdict");
+        v.textContent = correct ? "Correct." : "Not quite — try again.";
+        v.className = "verdict " + (correct ? "ok":"no");
+        updateScore();
+      });
+    });
+  });
+}
+
+function tasksPassedCount(){ const st=taskState(); return [st.t1,st.t2,st.t3].filter(Boolean).length; }
+function questionsPassedCount(){ return Object.values(qState).filter(Boolean).length; }
+function score(){ return { earned: tasksPassedCount()+questionsPassedCount(), total: 6 }; }
+function allPassed(){ return tasksPassedCount()===3 && questionsPassedCount()===3; }
+
+function updateScore(){
+  const s = score();
+  document.getElementById("scorePill").innerHTML = "Score: <b>"+s.earned+"</b> / "+s.total;
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = !document.getElementById("hacker").value.trim();
+}
+
+/* ===========================================================================
+   PROOF CAPTURE  (dependency-free; uses html2canvas if present)
+   =========================================================================== */
+async function capture(){
+  const node = document.querySelector(".wrap");
+  if(window.html2canvas){
+    try{
+      const c = await window.html2canvas(node, {backgroundColor:"#0c1014", scale:1, logging:false});
+      return c.toDataURL("image/png");
+    }catch(e){ /* fall through to built-in */ }
+  }
+  return renderProofCanvas().toDataURL("image/png");
+}
+
+function renderProofCanvas(){
+  const W = 760, pad = 22, lh = 18;
+  const lines = [];
+  lines.push(["title", CONFIG.title]);
+  lines.push(["sub", "Security+ SY0-701 · objective "+CONFIG.objectives.join(", ")+"  ·  assignment: "+CONFIG.assignmentId]);
+  lines.push(["sub", "Hacker name: "+(document.getElementById("hacker").value.trim()||"(none)")+"    "+new Date().toISOString()]);
+  lines.push(["gap",""]);
+  const st = taskState();
+  lines.push(["hdr","TASKS"]);
+  lines.push([st.t1?"ok":"no", (st.t1?"✓":"✗")+" pvenkat — analysts added as secondary (staff kept)"]);
+  lines.push([st.t2?"ok":"no", (st.t2?"✓":"✗")+" tmarsh — analysts added as secondary (vpn kept)"]);
+  lines.push([st.t3?"ok":"no", (st.t3?"✓":"✗")+" verified with groups / cat /etc/group"]);
+  lines.push(["gap",""]);
+  lines.push(["hdr","KNOWLEDGE CHECK"]);
+  lines.push([qState.q1?"ok":"no",(qState.q1?"✓":"✗")+" Q1 add-secondary option (-aG)"]);
+  lines.push([qState.q2?"ok":"no",(qState.q2?"✓":"✗")+" Q2 primary-group option (-g)"]);
+  lines.push([qState.q3?"ok":"no",(qState.q3?"✓":"✗")+" Q3 list-groups command (groups)"]);
+  lines.push(["gap",""]);
+  lines.push(["hdr","TERMINAL (last lines)"]);
+  const tail = transcript.slice(-16);
+  tail.forEach(t=>{
+    const prefix = t.isCmd ? "root@"+S.hostname+":~# " : "";
+    lines.push([t.cls==="err"?"no":(t.isCmd?"cmd":"mono"), (prefix+t.text).slice(0,92)]);
+  });
+  const s = score();
+  lines.push(["gap",""]);
+  lines.push(["score","SCORE: "+s.earned+" / "+s.total+(allPassed()?"  — PASS":"")]);
+
+  const H = pad*2 + lines.length*lh + 8;
+  const cv = document.createElement("canvas");
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  cv.width = W*dpr; cv.height = H*dpr;
+  const ctx = cv.getContext("2d"); ctx.scale(dpr,dpr);
+  ctx.fillStyle = "#0c1014"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = "#37d99e"; ctx.fillRect(0,0,W,4);
+  let y = pad+6;
+  for(const [kind,text] of lines){
+    if(kind==="gap"){ y+=lh*0.5; continue; }
+    if(kind==="title"){ ctx.font="700 16px system-ui,sans-serif"; ctx.fillStyle="#d6e2ea"; }
+    else if(kind==="sub"){ ctx.font="11px ui-monospace,monospace"; ctx.fillStyle="#8a99a6"; }
+    else if(kind==="hdr"){ ctx.font="700 11px ui-monospace,monospace"; ctx.fillStyle="#f4b740"; }
+    else if(kind==="ok"){ ctx.font="12px ui-monospace,monospace"; ctx.fillStyle="#37d99e"; }
+    else if(kind==="no"){ ctx.font="12px ui-monospace,monospace"; ctx.fillStyle="#ff6b6b"; }
+    else if(kind==="cmd"){ ctx.font="12px ui-monospace,monospace"; ctx.fillStyle="#d6e2ea"; }
+    else if(kind==="score"){ ctx.font="700 13px ui-monospace,monospace"; ctx.fillStyle=allPassed()?"#37d99e":"#f4b740"; }
+    else { ctx.font="12px ui-monospace,monospace"; ctx.fillStyle="#aab6c0"; }
+    ctx.fillText(text, pad, y);
+    y += lh;
+  }
+  return cv;
+}
+
+/* ===========================================================================
+   SUBMISSION  (direct browser -> Apps Script, simple request, no preflight)
+   =========================================================================== */
+function dataUrlBytes(dataUrl){
+  const i = dataUrl.indexOf(","); const b64 = dataUrl.slice(i+1);
+  return Math.floor(b64.length * 3 / 4);
+}
+
+async function submitLab(){
+  const status = document.getElementById("status");
+  const btn = document.getElementById("submitBtn");
+  const hacker = document.getElementById("hacker").value.trim();
+  if(!hacker){ setStatus("Enter a hacker name first.","no"); return; }
+
+  if(!allPassed()){
+    if(!confirm("Not all tasks/questions are complete (score "+score().earned+"/6). Submit anyway?")) return;
+  }
+
+  btn.disabled = true; setStatus("Capturing proof…","work");
+  let shot;
+  try { shot = await capture(); }
+  catch(e){ setStatus("Could not capture proof image: "+e.message,"no"); btn.disabled=false; return; }
+
+  if(dataUrlBytes(shot) > CONFIG.MAX_SCREENSHOT_BYTES){
+    // downscale via re-render fallback (proof canvas is already compact); keep going
+  }
+
+  const st = taskState();
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: hacker.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: [
+      {id:"t1", label:"Add analysts as secondary group for pvenkat (keep staff)", passed: st.t1},
+      {id:"t2", label:"Add analysts as secondary group for tmarsh (keep vpn)",    passed: st.t2},
+      {id:"t3", label:"Verify with groups / cat /etc/group",                       passed: st.t3}
+    ],
+    questions: [
+      {id:"q1", prompt:"Option that adds a secondary group without removing others", answer: ANSWER_KEY.q1, correct: qState.q1},
+      {id:"q2", prompt:"Option that changes the primary group",                      answer: ANSWER_KEY.q2, correct: qState.q2},
+      {id:"q3", prompt:"Command that lists a user's group memberships",              answer: ANSWER_KEY.q3, correct: qState.q3}
+    ],
+    score: score(),
+    screenshot: shot,
+    submissionToken: CONFIG.SUBMISSION_TOKEN
+  };
+
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("Submission endpoint not configured yet — ask your instructor to set APPS_SCRIPT_URL. (Your work scored "+score().earned+"/6.)","no");
+    btn.disabled = false; return;
+  }
+
+  setStatus("Submitting to instructor…","work");
+  try{
+    // Simple request: NO custom headers, default text/plain -> avoids CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">View submission</a>' : "";
+      setStatus("Submitted ✓  Score "+score().earned+"/6."+link, "ok", true);
+    } else {
+      setStatus("Server rejected the submission: "+((out&&out.error)||"unknown error"), "no");
+      btn.disabled = false;
+    }
+  }catch(e){
+    // Fallback: fire-and-forget (cannot read docUrl in locked-down contexts)
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("Submission sent (could not read confirmation). Please confirm receipt with your instructor.","ok",true);
+    }catch(e2){
+      setStatus("Submission failed: "+e2.message+". Check your connection and try again.","no");
+      btn.disabled = false;
+    }
+  }
+}
+function setStatus(html, cls, html_ok){
+  const s = document.getElementById("status");
+  s.className = "status " + (cls||"");
+  if(html_ok || /<a /.test(html)) s.innerHTML = html; else s.textContent = html;
+}
+
+/* ===========================================================================
+   WIRING
+   =========================================================================== */
+function resetLab(reboot){
+  S = freshState();
+  Object.keys(qState).forEach(k=>qState[k]=false);
+  document.querySelectorAll('.q input[type=radio]').forEach(r=>r.checked=false);
+  document.querySelectorAll('.q .verdict').forEach(v=>{v.textContent="";v.className="verdict";});
+  if(reboot!==false){ boot(); }
+  refreshTasks();
+  setStatus("", "");
+}
+
+cmdEl.addEventListener("keydown", (e)=>{
+  if(e.key==="Enter"){
+    const v = cmdEl.value;
+    if(v.trim()) { history.push(v); hIdx = history.length; }
+    runCommand(v); cmdEl.value="";
+  } else if(e.key==="ArrowUp"){
+    if(history.length){ hIdx=Math.max(0,hIdx-1); cmdEl.value=history[hIdx]||""; e.preventDefault();
+      requestAnimationFrame(()=>cmdEl.setSelectionRange(cmdEl.value.length,cmdEl.value.length)); }
+  } else if(e.key==="ArrowDown"){
+    if(history.length){ hIdx=Math.min(history.length,hIdx+1); cmdEl.value=history[hIdx]||""; e.preventDefault(); }
+  }
+});
+document.getElementById("hacker").addEventListener("input", updateScore);
+document.getElementById("submitBtn").addEventListener("click", submitLab);
+document.getElementById("resetBtn").addEventListener("click", ()=>{ resetLab(true); print("Lab reset.","dim"); });
+// click terminal focuses input
+document.querySelector(".term-card").addEventListener("click",(e)=>{ if(e.target.tagName!=="INPUT") cmdEl.focus(); });
+
+wireQuestions();
+boot();
+refreshTasks();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-ad-account-lifecycle.html",title:"Lab \u2014 Manage Domain User Accounts (LARK-DC01)"}, NEXT={href:"splus-smartcard-logon-gpo.html",title:"Lab: Enforce Smart Card Logon via Group Policy"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

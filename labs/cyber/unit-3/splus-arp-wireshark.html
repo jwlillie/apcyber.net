@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Security+ SY0-701 Single-File Lab Simulation
+  Assignment: splus-arp-wireshark  ("Detect ARP Poisoning with a Packet Capture")
+  Objectives: 2.4 (On-path / 2.4.3.4) and 4.9 (Packet captures / 4.9.2.4)
+
+  CLEAN-ROOM ORIGINAL WORK.
+  This lab teaches the factual procedure of analyzing a packet capture to
+  detect ARP poisoning. All scenario narrative, host names, IP addresses, MAC
+  addresses, file names, question wording, ordering, and the self-rendered UI
+  are original expression created for this library. No third-party lab's
+  wording, scenario, values, layout, or screenshots were copied. The simulated
+  analyzer chrome is self-drawn markup, not a captured product screenshot.
+
+  Copyright (c) 2026 <REPLACE WITH AUTHOR / INSTITUTION NAME>.
+  All rights reserved. Licensed for instructional use within the author's
+  CompTIA Security+ course library. Wireshark is a trademark of its owner and
+  is referenced here only to name the real tool the procedure applies to.
+
+  NOTE ON SCREENSHOTS: the build spec calls for an inlined copy of
+  html2canvas. Because this build environment has no network access to fetch
+  that library's minified source, this file ships a small dependency-free
+  capturer (SVG foreignObject -> <canvas>, with a drawn evidence-card
+  fallback) so the deliverable stays truly self-contained. Capture of live
+  DOM works best in Chromium-based browsers (the lab target); if it fails,
+  the fallback always produces a legible PNG of the results.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Detect ARP Poisoning with a Packet Capture</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-arp-wireshark",
+  "title": "Lab — Detect ARP Poisoning with a Packet Capture",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.5 Detecting Network Attacks"
+    ],
+    "skills": [
+      "3.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.4",
+      "4.9"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<style>
+  :root{
+    --bg:#0e1119;            /* deep slate console */
+    --bg2:#141826;
+    --panel:#171c2b;
+    --panel-2:#1d2334;
+    --line:#2a3346;
+    --line-soft:#222a3b;
+    --ink:#e9edf6;
+    --ink-dim:#9aa3ba;
+    --ink-faint:#6c7591;
+    --teal:#3fb6a8;          /* "normal / safe" */
+    --teal-dim:#1f4742;
+    --amber:#f0a830;         /* alert / poisoning */
+    --amber-dim:#4a3411;
+    --lav:#b9a6ff;           /* ARP protocol tint */
+    --lav-dim:#2c2746;
+    --red:#ff6b6b;
+    --good:#46c98b;
+    --mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius:10px;
+    --focus:#7fd1ff;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #182036 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:22px clamp(10px,3vw,36px) 64px;
+  }
+
+  a{color:var(--focus)}
+
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:6px}
+
+  .wrap{max-width:1120px;margin:0 auto}
+
+  /* ---------- masthead ---------- */
+  header.masthead{
+    display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-end;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    padding-bottom:18px;margin-bottom:20px;
+  }
+  .title-block h1{
+    font-size:clamp(20px,2.6vw,28px);margin:0;letter-spacing:-.01em;font-weight:680;
+  }
+  .title-block p{margin:.35em 0 0;color:var(--ink-dim);font-size:14px;max-width:62ch}
+  .obj-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .tag{
+    font:600 11px/1 var(--mono);letter-spacing:.04em;
+    color:var(--lav);background:var(--lav-dim);
+    border:1px solid #3a3566;border-radius:999px;padding:6px 10px;
+  }
+  .crest{
+    font:700 12px/1.3 var(--mono);text-align:right;color:var(--ink-faint);
+  }
+  .crest b{display:block;color:var(--teal);font-size:13px;letter-spacing:.06em}
+
+  /* ---------- scenario ---------- */
+  .scenario{
+    background:linear-gradient(180deg,var(--panel),var(--bg2));
+    border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:var(--radius);padding:16px 18px;margin-bottom:20px;font-size:14.5px;
+  }
+  .scenario h2{margin:0 0 6px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber)}
+  .scenario p{margin:.5em 0;color:#d6dcea}
+  .scenario .you{color:var(--ink);font-weight:600}
+  .scenario code{font-family:var(--mono);background:#0d1018;border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:var(--lav)}
+
+  /* ---------- analyzer ---------- */
+  .analyzer{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:0 18px 40px -28px #000;
+  }
+  .toolbar{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    padding:11px 13px;background:var(--panel-2);border-bottom:1px solid var(--line);
+  }
+  .toolbar .grp{display:flex;align-items:center;gap:8px}
+  .toolbar label{font-size:12px;color:var(--ink-dim)}
+  select,input[type="text"]{
+    font-family:var(--mono);font-size:13px;color:var(--ink);
+    background:#0d1018;border:1px solid var(--line);border-radius:7px;padding:7px 9px;
+  }
+  .filter{min-width:200px;flex:1}
+  .filter input{width:100%}
+  button{
+    font:600 13px var(--sans);cursor:pointer;border-radius:8px;
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    padding:8px 13px;transition:transform .06s ease, background .15s ease, border-color .15s;
+  }
+  button:hover:not(:disabled){border-color:#3c465e}
+  button:active:not(:disabled){transform:translateY(1px)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:linear-gradient(180deg,#2c8c80,#216b62);border-color:#2c8c80;color:#eafffb}
+  button.primary:hover:not(:disabled){background:linear-gradient(180deg,#33a193,#247a6f)}
+  button.danger{background:#3a1f24;border-color:#5a2a30;color:#ffd2d2}
+  button.ghost{background:transparent}
+
+  .capstatus{
+    margin-left:auto;display:flex;align-items:center;gap:9px;font:600 12px var(--mono);color:var(--ink-dim)
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#3a4258}
+  .dot.live{background:var(--good);box-shadow:0 0 0 0 rgba(70,201,139,.7);animation:pulse 1.1s infinite}
+  .dot.done{background:var(--teal)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(70,201,139,.55)}70%{box-shadow:0 0 0 7px rgba(70,201,139,0)}100%{box-shadow:0 0 0 0 rgba(70,201,139,0)}}
+
+  /* expert alert banner — the signature element */
+  .alert-bar{
+    display:none;align-items:center;gap:12px;
+    padding:11px 15px;background:linear-gradient(90deg,var(--amber-dim),#1a1305);
+    border-bottom:1px solid #5a4318;color:#ffe2ad;font-size:13.5px;
+  }
+  .alert-bar.show{display:flex}
+  .alert-bar .badge{
+    font:700 11px/1 var(--mono);letter-spacing:.08em;color:#1a1305;background:var(--amber);
+    padding:6px 9px;border-radius:6px;text-transform:uppercase;white-space:nowrap;
+  }
+  .alert-bar strong{color:#fff}
+
+  .panes{display:grid;grid-template-columns:1fr;}
+  /* packet list */
+  .pane{min-width:0}
+  .pane-head{
+    font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);
+    padding:9px 13px;background:var(--bg2);border-bottom:1px solid var(--line-soft);
+  }
+  .list-scroll{max-height:300px;overflow:auto}
+  table.packets{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
+  table.packets th{
+    position:sticky;top:0;background:#10131c;color:var(--ink-dim);text-align:left;
+    font-weight:600;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:1;
+  }
+  table.packets td{padding:6px 9px;border-bottom:1px solid var(--line-soft);white-space:nowrap;color:#cdd4e6}
+  table.packets tbody tr{cursor:pointer}
+  table.packets tbody tr:hover{background:#1b2233}
+  table.packets tbody tr.sel{background:#243049 !important;box-shadow:inset 3px 0 0 var(--focus)}
+  tr.proto-arp td{color:#cdbcff}
+  tr.proto-arp{background:#191634}
+  tr.proto-arp:hover{background:#211d44}
+  tr.dup td{color:#ffdca0}
+  tr.dup{background:#241a07}
+  tr.dup:hover{background:#2e2109}
+  td.colno{color:var(--ink-faint)}
+  .warn-i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:5px}
+  .mac-hot{background:#5a4318;color:#fff !important;border-radius:3px;padding:0 3px;box-shadow:0 0 0 1px #8a6a22}
+
+  /* detail tree */
+  .detail{border-top:1px solid var(--line)}
+  .tree{font-family:var(--mono);font-size:12.5px;padding:10px 13px;max-height:230px;overflow:auto;color:#cdd4e6}
+  .tree details{margin:2px 0}
+  .tree summary{cursor:pointer;list-style:none;padding:2px 0;color:#dfe5f4}
+  .tree summary::-webkit-details-marker{display:none}
+  .tree summary::before{content:"▸";display:inline-block;width:1.1em;color:var(--ink-faint);transition:transform .12s}
+  .tree details[open]>summary::before{transform:rotate(90deg)}
+  .tree .leaf{padding:2px 0 2px 1.1em;color:#aab3c9}
+  .tree .leaf b{color:#e9edf6;font-weight:600}
+  .tree .leaf.hot{color:#ffdca0}
+  .tree .expert{margin:4px 0 4px 1.1em;padding:6px 9px;border-radius:6px;background:var(--amber-dim);border:1px solid #5a4318;color:#ffe2ad}
+  .tree .empty{color:var(--ink-faint);padding:6px 0}
+
+  .hex{
+    border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:#9fb0c9;
+    padding:10px 13px;max-height:120px;overflow:auto;white-space:pre;background:#0c0f17;
+  }
+  .hex .empty{color:var(--ink-faint)}
+
+  /* ---------- lab panel ---------- */
+  .lab-grid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:20px}
+  @media(min-width:900px){.lab-grid{grid-template-columns:minmax(0,360px) 1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .card > h2{
+    margin:0;padding:13px 16px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-dim);background:var(--panel-2);border-bottom:1px solid var(--line);
+  }
+  .card .body{padding:14px 16px}
+
+  ul.checklist{list-style:none;margin:0;padding:0}
+  ul.checklist li{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line-soft);align-items:flex-start}
+  ul.checklist li:last-child{border-bottom:0}
+  .chk{flex:0 0 auto;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line);
+    display:grid;place-items:center;color:transparent;font-size:13px;margin-top:1px;transition:.18s}
+  li.passed .chk{background:var(--teal);border-color:var(--teal);color:#06231f}
+  .task-txt b{display:block;font-size:14px;color:var(--ink);font-weight:600}
+  .task-txt span{font-size:13px;color:var(--ink-dim)}
+
+  /* host flag control */
+  .hosts{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+  .host{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    background:#0e1119;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;
+  }
+  .host:hover{border-color:#3c465e}
+  .host.sel{border-color:var(--focus);box-shadow:0 0 0 1px var(--focus)}
+  .host .ip{font:600 13px var(--mono);color:var(--ink)}
+  .host .mac{font:12px var(--mono);color:var(--ink-dim);margin-left:auto}
+  .flag-feedback{margin-top:10px;font-size:13px;min-height:1.2em}
+  .flag-feedback.ok{color:var(--good)}
+  .flag-feedback.no{color:var(--red)}
+
+  /* questions */
+  .q{padding:14px 0;border-bottom:1px solid var(--line-soft)}
+  .q:first-child{padding-top:2px}
+  .q:last-child{border-bottom:0}
+  .q .prompt{font-size:14px;color:var(--ink);margin-bottom:9px}
+  .q .prompt .qn{font:700 12px var(--mono);color:var(--teal);margin-right:7px}
+  .opts{display:flex;flex-direction:column;gap:7px}
+  .opt{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:#0e1119;font-size:13.5px;color:#d4dbec}
+  .opt:hover{border-color:#3c465e}
+  .opt input{accent-color:var(--teal);width:16px;height:16px}
+  .opt.correct{border-color:var(--good);background:#10241a}
+  .opt.wrong{border-color:var(--red);background:#2a1416}
+  .opt .verdict{margin-left:auto;font:700 11px var(--mono)}
+  .opt.correct .verdict{color:var(--good)}
+  .opt.wrong .verdict{color:var(--red)}
+
+  /* submission */
+  .submit-card{margin-top:18px}
+  .subrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;color:var(--ink-dim);letter-spacing:.02em}
+  .field input{min-width:220px}
+  .score-pill{
+    font:700 13px var(--mono);padding:9px 13px;border-radius:8px;background:#0e1119;border:1px solid var(--line);color:var(--ink)
+  }
+  .score-pill b{color:var(--teal)}
+  .status{margin-top:12px;font-size:13.5px;min-height:1.3em}
+  .status.ok{color:var(--good)}
+  .status.err{color:var(--red)}
+  .status.busy{color:var(--amber)}
+  .status a{color:var(--focus);font-weight:600}
+
+  .note{font-size:12px;color:var(--ink-faint);margin-top:12px}
+  footer.legal{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-faint);text-align:center}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important}
+  }
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="title-block">
+      <h1>Detect ARP Poisoning with a Packet Capture</h1>
+      <p>Capture live traffic, read the Address Resolution Protocol exchanges, and decide whether a host on the network is impersonating others to sit in the middle of their conversations.</p>
+      <div class="obj-tags">
+        <span class="tag">SY0-701 · 2.4 On-path</span>
+        <span class="tag">SY0-701 · 4.9 Packet captures</span>
+      </div>
+    </div>
+    <div class="crest">
+      <b>NET-OPS LAB</b>
+      meridian-tackle.lan<br>segment 10.42.7.0/24
+    </div>
+  </header>
+
+  <section class="scenario" aria-label="Scenario">
+    <h2>Scenario</h2>
+    <p><span class="you">You are the IT security administrator</span> for Meridian Tackle &amp; Marine, a small coastal retailer. The showroom workstation has been dropping its link to the gateway for a few seconds at a time, and a staff member's saved store credentials appear to have leaked. You suspect a host on the LAN is poisoning ARP tables to redirect traffic through itself.</p>
+    <p>Your job: capture traffic on interface <code>ens33</code> for about five seconds, study the ARP exchanges, and use the activity around <code>10.42.7.6</code> to decide whether ARP poisoning is happening — and which host is behind it.</p>
+  </section>
+
+  <!-- ============ region that gets screenshotted ============ -->
+  <div id="labArea">
+
+    <section class="analyzer" aria-label="Packet analyzer">
+      <div class="toolbar">
+        <div class="grp">
+          <label for="iface">Interface</label>
+          <select id="iface" aria-label="Capture interface">
+            <option value="ens33" selected>ens33</option>
+            <option value="lo">lo</option>
+            <option value="wlp1s0">wlp1s0</option>
+          </select>
+        </div>
+        <div class="grp">
+          <button id="btnStart" class="primary">▶ Start capture</button>
+          <button id="btnStop" class="danger" disabled>■ Stop</button>
+        </div>
+        <div class="grp filter">
+          <label for="cfilter" class="visually-hidden">Display filter</label>
+          <input id="cfilter" type="text" value="arp" aria-label="Display filter" autocomplete="off">
+        </div>
+        <div class="capstatus" id="capStatus" role="status" aria-live="polite">
+          <span class="dot" id="capDot"></span><span id="capText">Idle — no packets captured</span>
+        </div>
+      </div>
+
+      <div class="alert-bar" id="alertBar" role="alert">
+        <span class="badge">Expert · Warning</span>
+        <span><strong id="alertCount">0</strong> duplicate IP address events detected during capture. Two MAC addresses are claiming the same IPv4 address.</span>
+      </div>
+
+      <div class="panes">
+        <div class="pane">
+          <div class="pane-head">Packet list — <span id="pktCount">0</span> frames</div>
+          <div class="list-scroll" tabindex="0" aria-label="Captured packets, selectable rows">
+            <table class="packets" aria-describedby="pktHelp">
+              <thead>
+                <tr><th>No.</th><th>Time</th><th>Source</th><th>Destination</th><th>Protocol</th><th>Len</th><th>Info</th></tr>
+              </thead>
+              <tbody id="pktBody">
+                <tr><td colspan="7" style="color:var(--ink-faint);text-align:center;padding:26px">Start a capture to collect frames on <b style="color:var(--lav)">ens33</b>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p id="pktHelp" class="visually-hidden">Click a row to inspect that packet's layers. ARP packets are tinted; duplicate-address warnings are highlighted.</p>
+        </div>
+
+        <div class="pane detail">
+          <div class="pane-head">Packet detail</div>
+          <div class="tree" id="detailTree"><div class="empty">No packet selected. Click a row above to expand its protocol layers.</div></div>
+          <div class="hex" id="hexView"><span class="empty">No bytes to show.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="lab-grid">
+      <div>
+        <div class="card">
+          <h2>Lab tasks</h2>
+          <div class="body">
+            <ul class="checklist" id="taskList">
+              <li data-task="capture"><span class="chk">✓</span><span class="task-txt"><b>Capture for ~5 seconds on ens33</b><span>Run a capture and let it fill, or stop it once frames appear.</span></span></li>
+              <li data-task="inspect"><span class="chk">✓</span><span class="task-txt"><b>Inspect an ARP reply</b><span>Click any ARP packet to expand its layers in the detail pane.</span></span></li>
+              <li data-task="flag"><span class="chk">✓</span><span class="task-txt"><b>Flag the poisoning host</b><span>Identify the MAC address that claims more than one IP, then flag its host below.</span></span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:18px">
+          <h2>Hosts observed</h2>
+          <div class="body">
+            <p style="margin:0 0 10px;font-size:13px;color:var(--ink-dim)">Which host is poisoning the ARP cache? Select the one whose MAC address is bound to more than one IP.</p>
+            <div class="hosts" id="hostList" role="radiogroup" aria-label="Select the poisoning host"></div>
+            <div class="flag-feedback" id="flagFeedback" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Analysis questions</h2>
+        <div class="body" id="qWrap"></div>
+        <div class="body" style="border-top:1px solid var(--line-soft);padding-top:14px">
+          <button id="btnCheck" class="ghost">Check my answers</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ============ end screenshot region ============ -->
+
+  <div class="card submit-card">
+    <h2>Submit completed lab</h2>
+    <div class="body">
+      <div class="subrow">
+        <div class="field">
+          <label for="hacker">Hacker name (pseudonym — no real names)</label>
+          <input id="hacker" type="text" maxlength="40" placeholder="e.g. tideline-fox" autocomplete="off">
+        </div>
+        <div class="score-pill" id="scorePill" aria-live="polite">Score <b id="scoreNow">0</b> / <span id="scoreMax">8</span></div>
+        <button id="btnSubmit" class="primary">Submit completed lab</button>
+        <button id="btnReset" class="ghost">Reset lab</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+      <p class="note">Your selections and score are checked in your browser and submitted with a screenshot for your instructor to review. Use a pseudonym only — keep real names out of this system.</p>
+    </div>
+  </div>
+
+  <footer class="legal">
+    Original clean-room simulation for CompTIA Security+ SY0-701 (objectives 2.4 / 4.9).
+    © 2026 &lt;Author / Institution&gt;. Licensed for instructional use. Not affiliated with or derived from any vendor's lab.
+  </footer>
+</div>
+
+<script>
+/* ===========================================================================
+   LAB ENGINE  +  CONFIG  +  ANSWER KEY
+   Edit only the CONFIG and KEY blocks below to retune this lab.
+   =========================================================================== */
+
+/* ---------------------------- LAB CONFIG ---------------------------------- */
+const CONFIG = {
+  assignmentId: "splus-arp-wireshark",
+  title: "Detect ARP Poisoning with a Packet Capture",
+  objectives: ["2.4", "4.9"],
+  iface: "ens33",
+  investigateIp: "10.42.7.6",
+  // Same /exec URL across the whole library (see INSTRUCTOR_SETUP.md / apps-script.gs):
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  // Rotate per cohort; must match the SUBMISSION_TOKEN Script Property server-side:
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  maxPng: 5_000_000
+};
+
+/* ------------------------ HOSTS / NETWORK MODEL --------------------------- */
+const HOSTS = {
+  gateway: { ip:"10.42.7.1",  mac:"e8:6a:64:11:0c:5a", name:"Gateway / router" },
+  fileSrv: { ip:"10.42.7.20", mac:"9c:5c:8e:3a:21:7d", name:"File server (catch-of-day shares)" },
+  pos:     { ip:"10.42.7.30", mac:"3c:2a:f4:08:bd:19", name:"Point-of-sale terminal" },
+  adminWs: { ip:"10.42.7.45", mac:"b0:fc:0d:55:e2:84", name:"Showroom workstation" },
+  rogue:   { ip:"10.42.7.6",  mac:"00:0c:29:b4:7f:e1", name:"Unlabeled host" }   // <-- the attacker
+};
+const ATTACKER_MAC = HOSTS.rogue.mac;
+const ATTACKER_IP  = HOSTS.rogue.ip;
+
+/* ------------------------------ ANSWER KEY -------------------------------- */
+/* Client-side keys are inspectable in dev tools; scoring here is self-reported
+   formative work. For trustworthy grading, re-score server-side (see §7). */
+const KEY = {
+  flagHostIp: ATTACKER_IP,
+  questions: {
+    q1: "yes",
+    q2: "dupip",
+    q3: "10.42.7.6",
+    q4: "onpath",
+    q5: "00:0c:29:b4:7f:e1"
+  }
+};
+
+const QUESTIONS = [
+  { id:"q1", prompt:"Based on the capture, is ARP poisoning taking place on this segment?",
+    opts:[ {v:"yes",t:"Yes — the evidence shows an active poisoning attack"},
+           {v:"no",t:"No — the ARP traffic looks normal"},
+           {v:"maybe",t:"Cannot tell from a packet capture"} ] },
+  { id:"q2", prompt:"Which finding most directly confirms the attack?",
+    opts:[ {v:"dupip",t:"A “duplicate IP address detected” warning — two MACs claim the same IPv4"},
+           {v:"retrans",t:"A burst of TCP retransmissions"},
+           {v:"dnsnoq",t:"A DNS response with no matching query"},
+           {v:"icmp",t:"A flood of ICMP redirect messages"} ] },
+  { id:"q3", prompt:"Which IP address belongs to the host carrying out the poisoning?",
+    opts:[ {v:"10.42.7.1",t:"10.42.7.1"},
+           {v:"10.42.7.20",t:"10.42.7.20"},
+           {v:"10.42.7.6",t:"10.42.7.6"},
+           {v:"10.42.7.45",t:"10.42.7.45"} ] },
+  { id:"q4", prompt:"By poisoning ARP caches, what kind of attack position is the threat actor setting up?",
+    opts:[ {v:"onpath",t:"On-path (the attacker sits between two hosts to read and alter traffic)"},
+           {v:"reflect",t:"Reflected DDoS"},
+           {v:"privesc",t:"Privilege escalation"},
+           {v:"spray",t:"Password spraying"} ] },
+  { id:"q5", prompt:"What is the attacker's MAC address — the one bound to more than one IP?",
+    opts:[ {v:"e8:6a:64:11:0c:5a",t:"e8:6a:64:11:0c:5a"},
+           {v:"00:0c:29:b4:7f:e1",t:"00:0c:29:b4:7f:e1"},
+           {v:"9c:5c:8e:3a:21:7d",t:"9c:5c:8e:3a:21:7d"},
+           {v:"b0:fc:0d:55:e2:84",t:"b0:fc:0d:55:e2:84"} ] }
+];
+
+/* --------------------- SIMULATED CAPTURE (packet stream) ------------------ */
+/* type: arp | tcp | dns | icmp.  dupOf: IP that this gratuitous reply collides on. */
+const BCAST = "ff:ff:ff:ff:ff:ff";
+const PACKETS = [
+  {t:0.000000, src:HOSTS.adminWs, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:1, sip:HOSTS.adminWs.ip, smac:HOSTS.adminWs.mac, tip:HOSTS.gateway.ip, tmac:"00:00:00:00:00:00", info:`Who has ${HOSTS.gateway.ip}? Tell ${HOSTS.adminWs.ip}`},
+  {t:0.000241, src:HOSTS.gateway, dst:HOSTS.adminWs, proto:"ARP", len:60, type:"arp", op:2, sip:HOSTS.gateway.ip, smac:HOSTS.gateway.mac, tip:HOSTS.adminWs.ip, tmac:HOSTS.adminWs.mac, info:`${HOSTS.gateway.ip} is at ${HOSTS.gateway.mac}`},
+  {t:0.418553, src:HOSTS.pos, dst:HOSTS.fileSrv, proto:"TCP", len:66, type:"tcp", info:"49620 → 445 [SYN] Seq=0 Win=64240"},
+  {t:0.612097, src:HOSTS.rogue, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:1, sip:HOSTS.rogue.ip, smac:HOSTS.rogue.mac, tip:HOSTS.fileSrv.ip, tmac:"00:00:00:00:00:00", info:`Who has ${HOSTS.fileSrv.ip}? Tell ${HOSTS.rogue.ip}`},
+  {t:0.612310, src:HOSTS.fileSrv, dst:HOSTS.rogue, proto:"ARP", len:60, type:"arp", op:2, sip:HOSTS.fileSrv.ip, smac:HOSTS.fileSrv.mac, tip:HOSTS.rogue.ip, tmac:HOSTS.rogue.mac, info:`${HOSTS.fileSrv.ip} is at ${HOSTS.fileSrv.mac}`},
+  {t:1.003774, src:HOSTS.rogue, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:2, gratuitous:true, dupOf:HOSTS.gateway.ip, dupReal:HOSTS.gateway.mac, sip:HOSTS.gateway.ip, smac:HOSTS.rogue.mac, tip:HOSTS.gateway.ip, tmac:BCAST, info:`${HOSTS.gateway.ip} is at ${HOSTS.rogue.mac} (gratuitous)`},
+  {t:1.004001, src:HOSTS.rogue, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:2, gratuitous:true, dupOf:HOSTS.fileSrv.ip, dupReal:HOSTS.fileSrv.mac, sip:HOSTS.fileSrv.ip, smac:HOSTS.rogue.mac, tip:HOSTS.fileSrv.ip, tmac:BCAST, info:`${HOSTS.fileSrv.ip} is at ${HOSTS.rogue.mac} (gratuitous)`},
+  {t:1.251902, src:HOSTS.adminWs, dst:HOSTS.gateway, proto:"DNS", len:84, type:"dns", info:"Standard query A pos.meridian-tackle.lan"},
+  {t:1.300449, src:HOSTS.adminWs, dst:HOSTS.gateway, proto:"TCP", len:74, type:"tcp", info:"51188 → 443 [SYN] Seq=0 Win=64240"},
+  {t:2.010668, src:HOSTS.rogue, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:2, gratuitous:true, dupOf:HOSTS.gateway.ip, dupReal:HOSTS.gateway.mac, sip:HOSTS.gateway.ip, smac:HOSTS.rogue.mac, tip:HOSTS.gateway.ip, tmac:BCAST, info:`${HOSTS.gateway.ip} is at ${HOSTS.rogue.mac} (gratuitous)`},
+  {t:2.011007, src:HOSTS.rogue, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:2, gratuitous:true, dupOf:HOSTS.adminWs.ip, dupReal:HOSTS.adminWs.mac, sip:HOSTS.adminWs.ip, smac:HOSTS.rogue.mac, tip:HOSTS.adminWs.ip, tmac:BCAST, info:`${HOSTS.adminWs.ip} is at ${HOSTS.rogue.mac} (gratuitous)`},
+  {t:2.402230, src:HOSTS.pos, dst:HOSTS.fileSrv, proto:"TCP", len:512, type:"tcp", info:"49620 → 445 [PSH, ACK] SMB2 Read Request"},
+  {t:3.004551, src:HOSTS.rogue, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:2, gratuitous:true, dupOf:HOSTS.gateway.ip, dupReal:HOSTS.gateway.mac, sip:HOSTS.gateway.ip, smac:HOSTS.rogue.mac, tip:HOSTS.gateway.ip, tmac:BCAST, info:`${HOSTS.gateway.ip} is at ${HOSTS.rogue.mac} (gratuitous)`},
+  {t:3.005102, src:HOSTS.rogue, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:2, gratuitous:true, dupOf:HOSTS.fileSrv.ip, dupReal:HOSTS.fileSrv.mac, sip:HOSTS.fileSrv.ip, smac:HOSTS.rogue.mac, tip:HOSTS.fileSrv.ip, tmac:BCAST, info:`${HOSTS.fileSrv.ip} is at ${HOSTS.rogue.mac} (gratuitous)`},
+  {t:3.553818, src:HOSTS.adminWs, dst:HOSTS.gateway, proto:"ICMP", len:98, type:"icmp", info:"Echo (ping) request id=0x0a2f seq=12/3072"},
+  {t:4.007713, src:HOSTS.rogue, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:2, gratuitous:true, dupOf:HOSTS.gateway.ip, dupReal:HOSTS.gateway.mac, sip:HOSTS.gateway.ip, smac:HOSTS.rogue.mac, tip:HOSTS.gateway.ip, tmac:BCAST, info:`${HOSTS.gateway.ip} is at ${HOSTS.rogue.mac} (gratuitous)`},
+  {t:4.706655, src:HOSTS.pos, dst:{ip:"Broadcast",mac:BCAST}, proto:"ARP", len:42, type:"arp", op:1, sip:HOSTS.pos.ip, smac:HOSTS.pos.mac, tip:HOSTS.gateway.ip, tmac:"00:00:00:00:00:00", info:`Who has ${HOSTS.gateway.ip}? Tell ${HOSTS.pos.ip}`}
+];
+
+/* ============================= STATE ===================================== */
+const state = {
+  captured:false, capturing:false, inspected:false,
+  flaggedIp:null, flagCorrect:false,
+  answers:{}, checked:false,
+  selectedPkt:null, dupEvents:0
+};
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============================ CAPTURE FLOW =============================== */
+const pktBody = $('#pktBody');
+let captureTimers = [];
+
+function startCapture(){
+  if(state.capturing) return;
+  state.capturing = true;
+  state.captured = false;
+  state.dupEvents = 0;
+  pktBody.innerHTML = '';
+  $('#alertBar').classList.remove('show');
+  $('#btnStart').disabled = true;
+  $('#btnStop').disabled = false;
+  $('#capDot').className = 'dot live';
+  $('#capText').textContent = 'Capturing on ens33…';
+  clearTimers();
+
+  const total = PACKETS.length;
+  const finish = ()=>completeCapture();
+
+  if(reduceMotion){
+    PACKETS.forEach((p,i)=>addPacketRow(p,i+1));
+    finish();
+    return;
+  }
+  // stream packets along their relative timestamps, scaled into ~4.9s
+  PACKETS.forEach((p,i)=>{
+    const id = setTimeout(()=>{ addPacketRow(p,i+1); if(i===total-1) finish(); }, p.t*1000 + 120);
+    captureTimers.push(id);
+  });
+}
+function clearTimers(){ captureTimers.forEach(clearTimeout); captureTimers = []; }
+
+function stopCapture(){
+  if(!state.capturing) return;
+  clearTimers();
+  completeCapture(true);
+}
+
+function completeCapture(stoppedEarly){
+  state.capturing = false;
+  state.captured = true;
+  $('#btnStart').disabled = false;
+  $('#btnStop').disabled = true;
+  $('#capDot').className = 'dot done';
+  const frames = pktBody.querySelectorAll('tr').length;
+  $('#capText').textContent = `Capture ${stoppedEarly?'stopped':'complete'} — ${frames} frames`;
+  if(state.dupEvents>0){
+    $('#alertCount').textContent = state.dupEvents;
+    $('#alertBar').classList.add('show');
+  }
+  markTask('capture', true);
+  renderHosts();
+  updateScore();
+}
+
+function addPacketRow(p, n){
+  if(p.dupOf){ state.dupEvents++; }
+  $('#pktCount').textContent = pktBody.querySelectorAll('tr').length + 1;
+  const tr = document.createElement('tr');
+  tr.className = (p.type==='arp' ? 'proto-arp ' : '') + (p.dupOf ? 'dup' : '');
+  const warnIcon = p.dupOf
+    ? `<svg class="warn-i" viewBox="0 0 16 16" aria-hidden="true"><path fill="#f0a830" d="M8 1l7 13H1z"/><rect x="7.2" y="6" width="1.6" height="4.2" fill="#1a1305"/><rect x="7.2" y="11" width="1.6" height="1.6" fill="#1a1305"/></svg>` : '';
+  tr.innerHTML = `
+    <td class="colno">${n}</td>
+    <td>${p.t.toFixed(6)}</td>
+    <td>${p.src.ip}</td>
+    <td>${p.dst.ip}</td>
+    <td>${p.proto}</td>
+    <td>${p.len}</td>
+    <td>${warnIcon}${escapeHtml(p.info)}</td>`;
+  tr.dataset.idx = String(n-1);
+  tr.tabIndex = 0;
+  tr.setAttribute('role','button');
+  tr.addEventListener('click', ()=>selectPacket(p, tr, n));
+  tr.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectPacket(p, tr, n);} });
+  pktBody.appendChild(tr);
+  // store ref so flag-highlight can find attacker rows later
+  if(p.smac===ATTACKER_MAC) tr.dataset.atk = "1";
+}
+
+/* ------------------------ packet detail rendering ------------------------ */
+function selectPacket(p, tr, n){
+  $$('#pktBody tr.sel').forEach(r=>r.classList.remove('sel'));
+  tr.classList.add('sel');
+  state.selectedPkt = n;
+  $('#detailTree').innerHTML = buildDetail(p, n);
+  $('#hexView').textContent = buildHex(p);
+  if(p.type==='arp'){ markTask('inspect', true); updateScore(); }
+}
+
+function buildDetail(p, n){
+  const frame = `
+    <details open><summary>Frame ${n}: ${p.len} bytes captured on ens33</summary>
+      <div class="leaf">Arrival time offset: <b>${p.t.toFixed(6)} s</b></div>
+      <div class="leaf">Protocols in frame: <b>eth:ethertype:${p.type==='arp'?'arp':'ip:'+p.proto.toLowerCase()}</b></div>
+    </details>`;
+  const eth = `
+    <details open><summary>Ethernet II, Src: ${p.src.mac}, Dst: ${p.dst.mac}</summary>
+      <div class="leaf">Destination: <b>${p.dst.mac}</b></div>
+      <div class="leaf${p.smac===ATTACKER_MAC?' hot':''}">Source: <b>${p.src.mac}</b></div>
+      <div class="leaf">Type: <b>${p.type==='arp'?'ARP (0x0806)':'IPv4 (0x0800)'}</b></div>
+    </details>`;
+  if(p.type!=='arp'){
+    return frame + eth + `<details open><summary>${p.proto}</summary><div class="leaf">${escapeHtml(p.info)}</div></details>`;
+  }
+  const expert = p.dupOf ? `
+    <div class="expert"><b>[Expert Info (Warning/Sequence): Duplicate IP address detected]</b><br>
+      ${p.dupOf} is claimed by <b>${p.smac}</b> — previously seen at <b>${p.dupReal}</b>.<br>
+      A single MAC answering for an address it does not own is the signature of ARP cache poisoning.</div>` : '';
+  const arp = `
+    <details open><summary>Address Resolution Protocol (${p.op===1?'request':'reply'}${p.gratuitous?'/gratuitous':''})</summary>
+      <div class="leaf">Hardware type: <b>Ethernet (1)</b></div>
+      <div class="leaf">Protocol type: <b>IPv4 (0x0800)</b></div>
+      <div class="leaf">Opcode: <b>${p.op===1?'request (1)':'reply (2)'}</b></div>
+      <div class="leaf${p.smac===ATTACKER_MAC?' hot':''}">Sender MAC address: <b>${p.smac}</b></div>
+      <div class="leaf${p.dupOf?' hot':''}">Sender IP address: <b>${p.sip}</b></div>
+      <div class="leaf">Target MAC address: <b>${p.tmac}</b></div>
+      <div class="leaf">Target IP address: <b>${p.tip}</b></div>
+      ${expert}
+    </details>`;
+  return frame + eth + arp;
+}
+
+function buildHex(p){
+  // deterministic, plausible-looking dump derived from the frame fields
+  const macBytes = m => m.split(':').map(h=>h).join(' ');
+  const seed = (p.src.mac + p.dst.mac + p.info).split('').reduce((a,c)=>(a*31 + c.charCodeAt(0))>>>0, 7);
+  const rnd = (i)=>(((seed>>(i%16)) ^ (i*2654435761)) & 0xff).toString(16).padStart(2,'0');
+  const line0 = `0000  ${macBytes(p.dst.mac)} ${macBytes(p.src.mac)}  ${p.type==='arp'?'08 06':'08 00'}`;
+  const line1 = `0010  ` + Array.from({length:14},(_,i)=>rnd(i)).join(' ');
+  const line2 = `0020  ` + Array.from({length:14},(_,i)=>rnd(i+14)).join(' ');
+  return [line0, line1, line2].join('\n');
+}
+
+/* ============================ HOST FLAGGING ============================== */
+function renderHosts(){
+  const wrap = $('#hostList');
+  wrap.innerHTML = '';
+  // hosts seen during capture, in a neutral order (do NOT reveal the attacker)
+  const order = ['gateway','fileSrv','rogue','adminWs','pos'];
+  order.forEach(k=>{
+    const h = HOSTS[k];
+    const b = document.createElement('button');
+    b.className = 'host';
+    b.setAttribute('role','radio');
+    b.setAttribute('aria-checked','false');
+    b.dataset.ip = h.ip;
+    b.innerHTML = `<span class="ip">${h.ip}</span><span class="mac">${h.mac}</span>`;
+    b.addEventListener('click', ()=>flagHost(h, b));
+    wrap.appendChild(b);
+  });
+}
+
+function flagHost(h, btn){
+  $$('#hostList .host').forEach(x=>{ x.classList.remove('sel'); x.setAttribute('aria-checked','false'); });
+  btn.classList.add('sel'); btn.setAttribute('aria-checked','true');
+  state.flaggedIp = h.ip;
+  const fb = $('#flagFeedback');
+  if(h.ip === KEY.flagHostIp){
+    state.flagCorrect = true;
+    fb.className = 'flag-feedback ok';
+    fb.textContent = `Correct — ${h.ip} (${h.mac}) is answering for the gateway, the file server, and the workstation. One MAC, many IPs: that's the poisoner.`;
+    highlightAttacker();
+    markTask('flag', true);
+  } else {
+    state.flagCorrect = false;
+    fb.className = 'flag-feedback no';
+    fb.textContent = `Not this one — ${h.ip} maps to a single MAC for its own address only. Look for the MAC that appears as the sender for more than one IP.`;
+    markTask('flag', false);
+  }
+  updateScore();
+}
+
+function highlightAttacker(){
+  $$('#pktBody tr[data-atk="1"]').forEach(tr=>{
+    const cells = tr.querySelectorAll('td');
+    // wrap the source MAC mention is in detail; here flag the row info subtly
+    tr.style.boxShadow = 'inset 3px 0 0 var(--amber)';
+  });
+}
+
+/* ============================== QUESTIONS ================================ */
+function renderQuestions(){
+  const wrap = $('#qWrap');
+  wrap.innerHTML = '';
+  QUESTIONS.forEach((q,qi)=>{
+    const div = document.createElement('div');
+    div.className = 'q';
+    const opts = q.opts.map(o=>`
+      <label class="opt" data-q="${q.id}" data-v="${o.v}">
+        <input type="radio" name="${q.id}" value="${o.v}">
+        <span>${o.t}</span><span class="verdict"></span>
+      </label>`).join('');
+    div.innerHTML = `<div class="prompt"><span class="qn">Q${qi+1}</span>${q.prompt}</div><div class="opts">${opts}</div>`;
+    wrap.appendChild(div);
+  });
+  wrap.addEventListener('change', e=>{
+    if(e.target.matches('input[type=radio]')){
+      state.answers[e.target.name] = e.target.value;
+      if(state.checked) gradeQuestions(); // live re-grade after first check
+      updateScore();
+    }
+  });
+}
+
+function gradeQuestions(){
+  state.checked = true;
+  QUESTIONS.forEach(q=>{
+    const chosen = state.answers[q.id];
+    $$(`.opt[data-q="${q.id}"]`).forEach(lab=>{
+      lab.classList.remove('correct','wrong');
+      lab.querySelector('.verdict').textContent = '';
+      if(lab.dataset.v === chosen){
+        const right = chosen === KEY.questions[q.id];
+        lab.classList.add(right ? 'correct' : 'wrong');
+        lab.querySelector('.verdict').textContent = right ? '✓ correct' : '✗ try again';
+      }
+    });
+  });
+  updateScore();
+}
+
+/* ============================== SCORING ================================== */
+function taskState(){
+  return [
+    {id:"capture", label:"Captured ~5 s on ens33", passed: state.captured},
+    {id:"inspect", label:"Inspected an ARP reply",  passed: state.inspected},
+    {id:"flag",    label:"Flagged the poisoning host", passed: state.flagCorrect}
+  ];
+}
+function questionState(){
+  return QUESTIONS.map(q=>({
+    id:q.id, prompt:q.prompt,
+    answer: state.answers[q.id] || "",
+    correct: state.answers[q.id] === KEY.questions[q.id]
+  }));
+}
+function markTask(id, passed){
+  if(id==='inspect') state.inspected = passed;
+  const li = document.querySelector(`#taskList li[data-task="${id}"]`);
+  if(li) li.classList.toggle('passed', !!passed);
+}
+function updateScore(){
+  const tasks = taskState();
+  const qs = questionState();
+  const earned = tasks.filter(t=>t.passed).length + qs.filter(q=>q.correct).length;
+  const total = tasks.length + qs.length;
+  $('#scoreNow').textContent = earned;
+  $('#scoreMax').textContent = total;
+  // reflect task passes on the checklist (capture/flag handled at their events)
+  document.querySelector('#taskList li[data-task="capture"]').classList.toggle('passed', state.captured);
+  document.querySelector('#taskList li[data-task="inspect"]').classList.toggle('passed', state.inspected);
+  return {earned, total, tasks, qs};
+}
+
+/* ====================== SCREENSHOT (dependency-free) ===================== */
+/* Primary: serialize the lab DOM into an SVG <foreignObject> and paint it to a
+   canvas. Fallback: draw a clean evidence card. Either way returns a PNG URL. */
+async function captureLab(){
+  const node = document.getElementById('labArea');
+  try{
+    return await domToPng(node);
+  }catch(err){
+    console.warn('DOM capture failed, using evidence-card fallback:', err);
+    return evidenceCard();
+  }
+}
+
+async function domToPng(node){
+  const rect = node.getBoundingClientRect();
+  const w = Math.max(320, Math.ceil(rect.width));
+  const h = Math.max(240, Math.ceil(rect.height));
+  const clone = node.cloneNode(true);
+  inlineComputedStyles(node, clone);
+  clone.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+  const html = new XMLSerializer().serializeToString(clone);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
+    `<foreignObject x="0" y="0" width="${w}" height="${h}">${html}</foreignObject></svg>`;
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  const img = new Image();
+  img.decoding = 'sync';
+  await new Promise((res,rej)=>{
+    img.onload = res;
+    img.onerror = ()=>rej(new Error('svg image load'));
+    img.src = url;
+    setTimeout(()=>rej(new Error('svg load timeout')), 4000);
+  });
+  const scale = Math.min(2, 1500 / w);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(w*scale);
+  canvas.height = Math.round(h*scale);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0e1119';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.scale(scale,scale);
+  ctx.drawImage(img,0,0);
+  const out = canvas.toDataURL('image/png');
+  if(!out || out.length < 2000) throw new Error('empty render');
+  return out;
+}
+
+function inlineComputedStyles(src, dst){
+  const cs = getComputedStyle(src);
+  let s = '';
+  for(let i=0;i<cs.length;i++){ const p = cs[i]; s += p + ':' + cs.getPropertyValue(p) + ';'; }
+  dst.setAttribute('style', s);
+  dst.removeAttribute('class');
+  const sc = src.children, dc = dst.children;
+  for(let i=0;i<sc.length;i++){ if(dc[i]) inlineComputedStyles(sc[i], dc[i]); }
+}
+
+function evidenceCard(){
+  const sc = updateScore();
+  const W=900, line=24;
+  const canvas = document.createElement('canvas');
+  canvas.width=W; canvas.height=560;
+  const c = canvas.getContext('2d');
+  c.fillStyle='#0e1119'; c.fillRect(0,0,W,canvas.height);
+  c.fillStyle='#3fb6a8'; c.font='700 22px system-ui'; c.fillText('Security+ Lab — '+CONFIG.title, 40, 50);
+  c.fillStyle='#9aa3ba'; c.font='13px ui-monospace, monospace';
+  c.fillText('assignmentId: '+CONFIG.assignmentId+'   objectives: '+CONFIG.objectives.join(', '), 40, 78);
+  c.fillText('hacker: '+($('#hacker').value||'(unnamed)')+'   captured at '+new Date().toISOString(), 40, 100);
+  let y=150;
+  c.fillStyle='#e9edf6'; c.font='600 15px system-ui'; c.fillText('Tasks', 40, y); y+=8;
+  c.font='13px ui-monospace, monospace';
+  sc.tasks.forEach(t=>{ y+=line; c.fillStyle=t.passed?'#46c98b':'#ff6b6b'; c.fillText((t.passed?'PASS  ':'----  ')+t.label, 56, y); });
+  y+=line+10;
+  c.fillStyle='#e9edf6'; c.font='600 15px system-ui'; c.fillText('Questions', 40, y);
+  c.font='13px ui-monospace, monospace';
+  sc.qs.forEach((q,i)=>{ y+=line; c.fillStyle=q.correct?'#46c98b':'#ff6b6b'; c.fillText((q.correct?'OK  ':'X   ')+'Q'+(i+1)+'  answer="'+q.answer+'"', 56, y); });
+  y+=line+14;
+  c.fillStyle='#f0a830'; c.font='700 18px ui-monospace, monospace';
+  c.fillText('Score '+sc.earned+' / '+sc.total, 40, y);
+  return canvas.toDataURL('image/png');
+}
+
+/* ============================== SUBMIT =================================== */
+async function submit(){
+  const status = $('#status');
+  const hacker = $('#hacker').value.trim();
+  if(!hacker){ status.className='status err'; status.textContent='Enter a hacker name (a pseudonym) before submitting.'; $('#hacker').focus(); return; }
+  if(hacker.length>40){ status.className='status err'; status.textContent='Hacker name must be 40 characters or fewer.'; return; }
+
+  const sc = updateScore();
+  $('#btnSubmit').disabled = true;
+  status.className='status busy'; status.textContent='Capturing screenshot of your lab…';
+
+  let shot='';
+  try{ shot = await captureLab(); }catch(e){ shot=''; }
+  if(shot && shot.length > CONFIG.maxPng){ shot = evidenceCard(); }
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: hacker,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: sc.tasks.map(t=>({id:t.id, label:t.label, passed:t.passed})),
+    questions: sc.qs.map(q=>({id:q.id, prompt:q.prompt, answer:q.answer, correct:q.correct})),
+    score: { earned: sc.earned, total: sc.total },
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(!/^https?:\/\//.test(CONFIG.APPS_SCRIPT_URL)){
+    status.className='status err';
+    status.textContent='This lab has no submission URL configured yet. Ask your instructor to set APPS_SCRIPT_URL.';
+    $('#btnSubmit').disabled = false;
+    return;
+  }
+
+  status.className='status busy'; status.textContent='Submitting to your instructor…';
+  try{
+    // Simple request: no custom headers, text/plain body — avoids CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      status.className='status ok';
+      status.innerHTML = `Submitted — score ${sc.earned}/${sc.total}. ` +
+        (out.docUrl ? `<a href="${out.docUrl}" target="_blank" rel="noopener">View your submission record</a>.` : 'Your instructor has the record.');
+    }else{
+      status.className='status err';
+      status.textContent = 'Submission rejected: ' + (out && out.error ? out.error : 'unknown error') + '. Check with your instructor.';
+      $('#btnSubmit').disabled = false;
+    }
+  }catch(err){
+    // Locked-down context fallback: fire-and-forget, can't read docUrl.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) });
+      status.className='status ok';
+      status.textContent = `Sent (score ${sc.earned}/${sc.total}). The response couldn't be read in this browser — confirm receipt with your instructor.`;
+    }catch(e2){
+      status.className='status err';
+      status.textContent = 'Could not reach the submission service. Check your connection and try again, or contact your instructor.';
+      $('#btnSubmit').disabled = false;
+    }
+  }
+}
+
+/* =============================== RESET ================================== */
+function resetLab(){
+  clearTimers();
+  Object.assign(state,{captured:false,capturing:false,inspected:false,flaggedIp:null,flagCorrect:false,answers:{},checked:false,selectedPkt:null,dupEvents:0});
+  pktBody.innerHTML = '<tr><td colspan="7" style="color:var(--ink-faint);text-align:center;padding:26px">Start a capture to collect frames on <b style="color:var(--lav)">ens33</b>.</td></tr>';
+  $('#pktCount').textContent = '0';
+  $('#detailTree').innerHTML = '<div class="empty">No packet selected. Click a row above to expand its protocol layers.</div>';
+  $('#hexView').innerHTML = '<span class="empty">No bytes to show.</span>';
+  $('#alertBar').classList.remove('show');
+  $('#capDot').className='dot'; $('#capText').textContent='Idle — no packets captured';
+  $('#btnStart').disabled=false; $('#btnStop').disabled=true;
+  $('#flagFeedback').textContent=''; $('#flagFeedback').className='flag-feedback';
+  $('#hostList').innerHTML=''; $('#hacker').value='';
+  $('#status').textContent=''; $('#status').className='status'; $('#btnSubmit').disabled=false;
+  $$('#taskList li').forEach(li=>li.classList.remove('passed'));
+  renderQuestions();
+  updateScore();
+}
+
+/* =============================== HELPERS ================================ */
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+/* =============================== WIRING ================================= */
+$('#btnStart').addEventListener('click', startCapture);
+$('#btnStop').addEventListener('click', stopCapture);
+$('#btnCheck').addEventListener('click', gradeQuestions);
+$('#btnSubmit').addEventListener('click', submit);
+$('#btnReset').addEventListener('click', resetLab);
+
+renderQuestions();
+updateScore();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-wips-controller.html",title:"Lab \u2014 Configure Wireless Intrusion Prevention (Halonet WC-7)"}, NEXT={href:"splus-onpath-dns-spoof.html",title:"On-Path DNS Spoofing \u2014 Security+ Lab"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.5 Detecting Network Attacks";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

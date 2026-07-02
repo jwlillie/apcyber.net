@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Protect Bid Files with EFS</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-efs-folder-encryption",
+  "title": "Lab — Protect Bid Files with EFS",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 5,
+    "unitTitle": "Securing Applications and Data",
+    "topics": [
+      "5.3 Protecting Stored Data with Cryptography"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "1.4",
+      "2.5"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  CompTIA Security+ (SY0-701) Simulation Lab
+  Title:        Protect Bid Files with EFS on a Shared Workstation
+  assignmentId: splus-efs-folder-encryption
+  Objectives:   SY0-701 1.4 (cryptographic solutions / file-level encryption,
+                1.4.2.1.3), 2.5 (mitigation techniques)
+  ----------------------------------------------------------------------------
+  CLEAN-ROOM ORIGINAL WORK. Built from the public SY0-701 objective and the
+  documented behavior of Windows EFS. Scenario, persona, drive letters, folder
+  and file names, version numbers, and all question/answer wording are original
+  and are NOT copied from any third-party lab.
+
+  Copyright (c) 2026 [INSTRUCTOR / AUTHOR NAME].
+  Licensed for use within the author's Security+ course library. All rights
+  reserved. Not a reproduction of any vendor's lab content.
+  ============================================================================
+-->
+<style>
+  /* Variables live on #capture so they travel with the cloned node during
+     screenshot serialization (see captureLabArea). */
+  #capture{
+    --bg:#f3f3f3; --surface:#ffffff; --surface-2:#fafafa;
+    --line:#e3e3e3; --line-strong:#cfcfcf;
+    --ink:#1b1b1b; --muted:#5f6368; --muted-2:#767676;
+    --accent:#0067c0; --accent-ink:#ffffff; --accent-soft:#eaf3fb;
+    --enc:#0a7d0a;            /* EFS-encrypted name color cue */
+    --ok:#0a7d0a; --warn:#9a6700; --pending:#8a8a8a;
+    --radius:8px; --radius-sm:5px;
+    --shadow:0 8px 28px rgba(0,0,0,.18);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #dbe7f4 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #e6eef6 0%, transparent 55%),
+      #dde6ee;
+    color:#1b1b1b;
+    font:14px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:22px 16px 40px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---------- top brief ---------- */
+  .brief{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:12px;padding:16px 18px;margin-bottom:16px;
+    box-shadow:0 1px 0 rgba(0,0,0,.03);
+  }
+  .brief h1{font-size:18px;margin:0 0 4px;letter-spacing:-.2px}
+  .obj{display:inline-flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+  .tag{font-size:11px;font-weight:600;color:#0067c0;background:#eaf3fb;
+    border:1px solid #cfe3f5;border-radius:999px;padding:2px 9px}
+  .brief p{margin:6px 0;color:#333}
+  .brief .you{color:#5f6368;font-size:12.5px}
+
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  /* ---------- explorer window ---------- */
+  #capture{display:contents}
+  .win{
+    background:var(--bg);border:1px solid var(--line-strong);
+    border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);
+  }
+  .titlebar{
+    height:38px;background:linear-gradient(#fbfbfb,#f3f3f3);
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px;padding:0 10px;
+  }
+  .titlebar .dot{width:11px;height:11px;border-radius:50%}
+  .titlebar .t{font-size:12.5px;color:#444;margin-left:4px;font-weight:600}
+  .titlebar .controls{margin-left:auto;display:flex;gap:14px;color:#7a7a7a}
+  .titlebar .controls span{font-size:13px}
+
+  .toolbar{
+    display:flex;align-items:center;gap:6px;padding:8px 10px;
+    background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap;
+  }
+  .tbtn{
+    appearance:none;border:1px solid transparent;background:transparent;
+    color:var(--ink);font:inherit;font-size:13px;padding:6px 11px;
+    border-radius:var(--radius-sm);cursor:pointer;display:inline-flex;gap:7px;align-items:center;
+  }
+  .tbtn:hover{background:#f0f0f0}
+  .tbtn:disabled{color:#b5b5b5;cursor:not-allowed}
+  .tbtn:focus-visible,.row:focus-visible,.menu button:focus-visible,
+  .dlg button:focus-visible,.q button:focus-visible,input:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+  .crumb{
+    margin-left:6px;font-size:12.5px;color:#3a3a3a;background:#f6f6f6;
+    border:1px solid var(--line);border-radius:6px;padding:5px 10px;flex:1;min-width:140px;
+  }
+
+  .body{display:grid;grid-template-columns:188px 1fr;min-height:300px}
+  @media (max-width:560px){.body{grid-template-columns:1fr}.nav{display:none}}
+  .nav{
+    background:var(--surface-2);border-right:1px solid var(--line);padding:8px 6px;font-size:13px;
+  }
+  .nav .navitem{padding:6px 8px;border-radius:6px;color:#333;cursor:default;display:flex;gap:8px;align-items:center}
+  .nav .navitem.indent{padding-left:22px}
+  .nav .navitem.sel{background:var(--accent-soft);color:#0b4f8a;font-weight:600}
+  .nav .glyph{width:16px;text-align:center;color:#c9a227}
+
+  .files{padding:6px 0;background:var(--surface)}
+  .files .head{
+    display:grid;grid-template-columns:1fr 120px 96px;gap:8px;
+    padding:6px 14px;color:var(--muted-2);font-size:11.5px;border-bottom:1px solid var(--line);
+  }
+  .row{
+    display:grid;grid-template-columns:1fr 120px 96px;gap:8px;align-items:center;
+    padding:8px 14px;cursor:default;border:1px solid transparent;
+  }
+  .row:hover{background:#f5f8fb}
+  .row[aria-selected="true"]{background:var(--accent-soft);border-color:#cfe3f5}
+  .row .name{display:flex;align-items:center;gap:9px;min-width:0}
+  .row .ic{font-size:15px;width:18px;text-align:center}
+  .row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row.enc .nm{color:var(--enc)}           /* green = EFS encrypted */
+  .row .lockbadge{font-size:10px;color:var(--enc)}
+  .row .meta{font-size:12px;color:var(--muted)}
+  .empty{padding:26px 16px;color:#9a9a9a;text-align:center;font-size:13px}
+
+  /* ---------- context menu ---------- */
+  .menu{
+    position:fixed;z-index:60;background:var(--surface);border:1px solid var(--line-strong);
+    border-radius:8px;box-shadow:var(--shadow);padding:5px;min-width:190px;
+  }
+  .menu button{
+    display:flex;width:100%;gap:10px;align-items:center;text-align:left;
+    border:0;background:transparent;font:inherit;font-size:13px;color:var(--ink);
+    padding:8px 10px;border-radius:6px;cursor:pointer;
+  }
+  .menu button:hover{background:#f0f0f0}
+  .menu button[disabled]{color:#b5b5b5;cursor:not-allowed}
+  .menu .sep{height:1px;background:var(--line);margin:4px 6px}
+
+  /* ---------- dialogs ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(20,28,38,.32);z-index:70;
+    display:flex;align-items:center;justify-content:center;padding:18px}
+  .scrim[hidden]{display:none}
+  .dlg{
+    background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;
+    box-shadow:var(--shadow);width:min(440px,96vw);overflow:hidden;
+  }
+  .dlg.wide{width:min(520px,96vw)}
+  .dlg h2{font-size:14px;margin:0;padding:13px 16px;border-bottom:1px solid var(--line);
+    background:var(--surface-2);display:flex;align-items:center;gap:9px}
+  .dlg .content{padding:16px}
+  .dlg .content p{margin:0 0 12px;color:#333}
+  .dlg .field{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .dlg .field:last-child{border-bottom:0}
+  .dlg label.chk{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13.5px}
+  .dlg input[type=checkbox],.dlg input[type=radio]{margin-top:2px;width:16px;height:16px;accent-color:var(--accent)}
+  .dlg .hint{color:var(--muted);font-size:12px}
+  .dlg .actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:var(--surface-2)}
+  .btn{appearance:none;border:1px solid var(--line-strong);background:#fff;color:var(--ink);
+    font:inherit;font-size:13px;padding:8px 16px;border-radius:6px;cursor:pointer;min-width:84px}
+  .btn:hover{background:#f6f6f6}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.primary:hover{background:#0a74d1}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .userlist{border:1px solid var(--line);border-radius:6px;max-height:150px;overflow:auto;margin:0 0 8px}
+  .userlist .u{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px}
+  .userlist .u:last-child{border-bottom:0}
+  .userlist .u .who{font-weight:600}
+  .userlist .u .thumb{font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
+  .pick .u{cursor:pointer}
+  .pick .u[aria-selected="true"]{background:var(--accent-soft)}
+
+  /* ---------- side panel: tasks + questions ---------- */
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .panel h3{font-size:13px;margin:0;padding:12px 14px;background:var(--surface-2);
+    border-bottom:1px solid var(--line);letter-spacing:.2px;text-transform:uppercase;color:#555}
+  .panel .pbody{padding:12px 14px}
+  .check{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+  .check:last-child{border-bottom:0}
+  .check .box{flex:0 0 18px;height:18px;border-radius:5px;border:1.5px solid var(--line-strong);
+    margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+  .check.done .box{background:var(--ok);border-color:var(--ok)}
+  .check .lab{font-size:13px}
+  .check .lab .sub{display:block;color:var(--muted);font-size:11.5px;margin-top:1px}
+
+  .q{padding:11px 0;border-bottom:1px solid var(--line)}
+  .q:last-child{border-bottom:0}
+  .q .prompt{font-size:13px;margin:0 0 8px}
+  .q .opts{display:grid;gap:6px}
+  .q .opts button{
+    text-align:left;border:1px solid var(--line);background:#fff;font:inherit;font-size:12.5px;
+    padding:7px 10px;border-radius:6px;cursor:pointer;color:var(--ink)
+  }
+  .q .opts button:hover{background:#f6f9fc}
+  .q .opts button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+  .q.correct .opts button[aria-pressed="true"]{border-color:var(--ok);background:#eaf7ea}
+  .q.wrong   .opts button[aria-pressed="true"]{border-color:#c23b3b;background:#fdeced}
+  .q .verdict{font-size:11.5px;margin-top:6px;color:var(--muted)}
+  .q.correct .verdict{color:var(--ok)} .q.wrong .verdict{color:#c23b3b}
+
+  /* ---------- submission bar (outside capture) ---------- */
+  .submit{
+    margin-top:16px;background:var(--surface);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap
+  }
+  .submit .f{display:flex;flex-direction:column;gap:4px;min-width:220px;flex:1}
+  .submit label{font-size:12px;color:#555;font-weight:600}
+  .submit input{font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:7px}
+  .submit .grow{flex:1}
+  .status{flex-basis:100%;font-size:13px;min-height:18px}
+  .status.ok{color:var(--ok)} .status.err{color:#c23b3b} .status.work{color:var(--muted)}
+  .status a{color:var(--accent)}
+  .scorepill{font-size:12px;color:#555;background:#f1f1f1;border:1px solid var(--line);
+    border-radius:999px;padding:5px 12px;font-weight:600}
+
+  .foot{margin-top:14px;color:#5b6b7a;font-size:11.5px;text-align:center}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <!-- ===== Brief ===== -->
+  <section class="brief" aria-labelledby="briefh">
+    <h1 id="briefh">Protect bid files with EFS on a shared workstation</h1>
+    <div class="obj" aria-label="Mapped objectives">
+      <span class="tag">SY0-701 · 1.4 Cryptographic solutions</span>
+      <span class="tag">1.4.2.1.3 File-level encryption</span>
+      <span class="tag">2.5 Mitigation techniques</span>
+    </div>
+    <p><strong>Scenario.</strong> Cedar &amp; Vale, a small design studio, keeps active proposals on a
+      shared workstation (<em>STUDIO-03</em>) that several drafters log into. You are
+      <strong>Riley Nakamura</strong>, the office tech. Sensitive bid material sits on drive
+      <strong>E:</strong>. You need to encrypt the folder so other local users can't open the files,
+      then give one teammate, <strong>Dana Okafor</strong>, access to a single spreadsheet.</p>
+    <p class="you"><strong>Your tasks:</strong> (1) Encrypt <code>E:\BidPackets</code> and everything inside it.
+      (2) Grant Dana Okafor access to <code>E:\BidPackets\vendor-rates-2026.xlsx</code> by adding her
+      encryption certificate. Then answer the four review questions and submit.</p>
+  </section>
+
+  <div class="grid">
+    <!-- ===== Simulated File Explorer (captured) ===== -->
+    <div id="capture">
+      <div class="win" role="application" aria-label="File Explorer simulation">
+        <div class="titlebar">
+          <span class="dot" style="background:#ff5f57"></span>
+          <span class="dot" style="background:#febc2e"></span>
+          <span class="dot" style="background:#28c840"></span>
+          <span class="t">File Explorer — STUDIO-03</span>
+          <span class="controls"><span>—</span><span>▢</span><span>✕</span></span>
+        </div>
+
+        <div class="toolbar">
+          <button class="tbtn" id="btnBack" title="Back">‹ Back</button>
+          <button class="tbtn" id="btnProps" disabled>🛈 Properties</button>
+          <span class="crumb" id="crumb">This PC › Local Disk (E:)</span>
+          <button class="tbtn" id="btnReset" title="Reset lab">↺ Reset</button>
+        </div>
+
+        <div class="body">
+          <nav class="nav" aria-label="Folders">
+            <div class="navitem"><span class="glyph">💻</span> This PC</div>
+            <div class="navitem indent sel" id="navE"><span class="glyph">🖴</span> Local Disk (E:)</div>
+            <div class="navitem indent" id="navBid" style="padding-left:36px"><span class="glyph">📁</span> BidPackets</div>
+          </nav>
+
+          <div class="files">
+            <div class="head"><span>Name</span><span>Type</span><span>Status</span></div>
+            <div id="fileList" role="listbox" aria-label="Items" tabindex="0"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- task + question panel sits inside capture so proof shows completion -->
+      <div style="height:16px"></div>
+    </div>
+
+    <!-- ===== Side panel ===== -->
+    <aside>
+      <div class="panel" style="margin-bottom:16px">
+        <h3>Task checklist</h3>
+        <div class="pbody" id="taskList"></div>
+      </div>
+      <div class="panel">
+        <h3>Review questions</h3>
+        <div class="pbody" id="questionList"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===== Submission bar (NOT captured) ===== -->
+  <div class="submit">
+    <div class="f grow">
+      <label for="hacker">Hacker name (pseudonym — no real names)</label>
+      <input id="hacker" type="text" maxlength="40" placeholder="e.g. ciphersmith" autocomplete="off">
+    </div>
+    <span class="scorepill" id="scorePill">0 / 6</span>
+    <button class="btn primary" id="btnSubmit" disabled>Submit completed lab</button>
+    <div class="status work" id="status" role="status" aria-live="polite">Enter a hacker name to enable submission.</div>
+  </div>
+
+  <p class="foot">© 2026 [Author]. Original Security+ simulation. EFS color cue, chrome, and copy are self-drawn — no vendor content reproduced.</p>
+</div>
+
+<!-- ============================================================
+     SCREENSHOT CAPTURE
+     Original, dependency-free DOM→PNG via SVG <foreignObject>.
+     This captures the simulated DOM (all the lab contains). To use the
+     real html2canvas instead, paste its minified source above and replace
+     the body of captureLabArea() with:  return (await html2canvas(node)).toDataURL('image/png');
+     ============================================================ -->
+<script>
+async function captureLabArea(node){
+  const rect = node.getBoundingClientRect();
+  const w = Math.max(1, Math.ceil(rect.width));
+  const h = Math.max(1, Math.ceil(rect.height));
+  // gather all page CSS so classes + variables resolve inside the SVG
+  let css = '';
+  document.querySelectorAll('style').forEach(s => { css += s.textContent + '\n'; });
+  const clone = node.cloneNode(true);
+  clone.style.margin = '0';
+  clone.style.width = w + 'px';
+  const serialized = new XMLSerializer().serializeToString(clone);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject x="0" y="0" width="'+w+'" height="'+h+'">'+
+        '<div xmlns="http://www.w3.org/1999/xhtml"><style>'+css+'</style>'+serialized+'</div>'+
+      '</foreignObject>'+
+    '</svg>';
+  const url = URL.createObjectURL(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}));
+  try{
+    const img = new Image();
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error('render')); img.src=url; });
+    const scale = Math.min(2, window.devicePixelRatio || 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w*scale); canvas.height = Math.round(h*scale);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#dde6ee'; ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/png');
+  } finally { URL.revokeObjectURL(url); }
+}
+</script>
+
+<!-- ============================================================
+     LAB ENGINE + CONFIG + ANSWER KEY
+     ============================================================ -->
+<script>
+"use strict";
+
+/* ---------- LAB CONFIG (per §11) ---------- */
+const CONFIG = {
+  assignmentId: "splus-efs-folder-encryption",
+  title: "Protect Bid Files with EFS on a Shared Workstation",
+  objectives: ["1.4", "2.5"],
+  // Instructor fills these two from the deployed web app:
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+
+  targetFolder: "E:\\BidPackets",
+  targetFile:   "vendor-rates-2026.xlsx",
+  grantUser:    "Dana Okafor",
+
+  tasks: [
+    { id:"encrypt-folder", label:"Encrypt E:\\BidPackets and all of its contents.",
+      sub:"Folder Properties → Advanced → Encrypt contents, then apply to subfolders and files." },
+    { id:"grant-access",   label:"Grant Dana Okafor access to vendor-rates-2026.xlsx.",
+      sub:"File Properties → Advanced → Details → Add Dana's certificate." }
+  ],
+
+  questions: [
+    { id:"q1",
+      prompt:"Which Windows feature encrypts individual files and folders on an NTFS volume, keyed to each user's certificate?",
+      options:[
+        {k:"a", t:"BitLocker"},
+        {k:"b", t:"EFS (Encrypting File System)"},
+        {k:"c", t:"NTFS share permissions"},
+        {k:"d", t:"Credential Guard"}],
+      answer:"b",
+      why:"EFS encrypts per file/folder using the user's certificate; BitLocker is full-volume." },
+    { id:"q2",
+      prompt:"In classic File Explorer color coding, how are EFS-encrypted file names shown?",
+      options:[
+        {k:"a", t:"In green text"},
+        {k:"b", t:"In bold red text"},
+        {k:"c", t:"In blue text"},
+        {k:"d", t:"With strikethrough"}],
+      answer:"a",
+      why:"Encrypted item names are colored green; compressed items use blue." },
+    { id:"q3",
+      prompt:"EFS requires the volume to be formatted with which file system?",
+      options:[
+        {k:"a", t:"FAT32"},
+        {k:"b", t:"exFAT"},
+        {k:"c", t:"NTFS"},
+        {k:"d", t:"ReFS"}],
+      answer:"c",
+      why:"EFS is an NTFS feature and is unavailable on FAT/exFAT volumes." },
+    { id:"q4",
+      prompt:"To let a second user open an EFS-encrypted file, what do you add for them in the file's encryption details?",
+      options:[
+        {k:"a", t:"Their account password"},
+        {k:"b", t:"Their encryption certificate (public key)"},
+        {k:"c", t:"A shared recovery PIN"},
+        {k:"d", t:"A mapped network drive"}],
+      answer:"b",
+      why:"Their certificate's public key is added so the file's key can be unlocked for them." }
+  ]
+};
+
+/* ---------- simulated filesystem state ---------- */
+const initialState = () => ({
+  path: "E:\\",
+  folderEncrypted: false,
+  appliedToContents: false,
+  fileAccess: { "vendor-rates-2026.xlsx": ["Riley Nakamura (You)"] },
+  selected: null,            // selected item id in current view
+  answers: {}                // qid -> chosen key
+});
+let S = initialState();
+
+const FOLDERS = {
+  "E:\\": [
+    { id:"BidPackets", name:"BidPackets", type:"File folder", kind:"folder" }
+  ],
+  "E:\\BidPackets": [
+    { id:"vendor-rates-2026.xlsx", name:"vendor-rates-2026.xlsx", type:"Excel Worksheet", kind:"file", ic:"📗" },
+    { id:"site-survey-notes.docx", name:"site-survey-notes.docx", type:"Word Document",    kind:"file", ic:"📘" },
+    { id:"bid-cover-letter.pdf",   name:"bid-cover-letter.pdf",   type:"PDF Document",     kind:"file", ic:"📕" },
+    { id:"Renderings",             name:"Renderings",             type:"File folder",      kind:"folder" }
+  ]
+};
+
+const CERTS = [
+  { user:"Riley Nakamura (You)", thumb:"7F:2A:91:C4:18:6E" },
+  { user:"Dana Okafor",          thumb:"B3:0C:54:AA:7D:E1" },
+  { user:"Mateo Cruz",           thumb:"15:9D:42:60:CB:88" }
+];
+
+/* ---------- helpers ---------- */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const isEncrypted = id => {
+  if(id==="BidPackets") return S.folderEncrypted;
+  // contents are encrypted only when folder encryption was applied to contents
+  if(FOLDERS["E:\\BidPackets"].some(i=>i.id===id)) return S.folderEncrypted && S.appliedToContents;
+  return false;
+};
+
+/* ---------- render explorer ---------- */
+function render(){
+  $("#crumb").textContent = S.path==="E:\\"
+    ? "This PC › Local Disk (E:)"
+    : "This PC › Local Disk (E:) › BidPackets";
+  $("#btnBack").disabled = S.path==="E:\\";
+  $("#navE").classList.toggle("sel", S.path==="E:\\");
+  $("#navBid").classList.toggle("sel", S.path==="E:\\BidPackets");
+
+  const list = $("#fileList"); list.innerHTML = "";
+  const items = FOLDERS[S.path] || [];
+  if(!items.length){ list.innerHTML = '<div class="empty">This folder is empty.</div>'; }
+  items.forEach(it=>{
+    const enc = isEncrypted(it.id);
+    const row = document.createElement("div");
+    row.className = "row" + (enc?" enc":"");
+    row.setAttribute("role","option");
+    row.setAttribute("aria-selected", String(S.selected===it.id));
+    row.tabIndex = 0;
+    row.dataset.id = it.id;
+    row.innerHTML =
+      '<span class="name"><span class="ic">'+(it.kind==="folder"?"📁":(it.ic||"📄"))+'</span>'+
+        '<span class="nm">'+it.name+'</span>'+
+        (enc?'<span class="lockbadge" title="EFS encrypted">🔒</span>':'')+
+      '</span>'+
+      '<span class="meta">'+it.type+'</span>'+
+      '<span class="meta">'+(enc?'Encrypted':'—')+'</span>';
+    const sel = ()=>{ S.selected=it.id; $("#btnProps").disabled=false; render(); };
+    row.addEventListener("click", sel);
+    row.addEventListener("keydown", e=>{
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); sel(); }
+    });
+    row.addEventListener("dblclick", ()=>{ if(it.kind==="folder" && it.id==="BidPackets"){ go("E:\\BidPackets"); } });
+    row.addEventListener("contextmenu", e=>{ e.preventDefault(); sel(); openMenu(e.clientX,e.clientY,it); });
+    list.appendChild(row);
+  });
+  refreshTasks();
+}
+function go(path){ S.path=path; S.selected=null; $("#btnProps").disabled=true; closeMenu(); render(); }
+
+/* ---------- context menu ---------- */
+let menuEl=null;
+function openMenu(x,y,it){
+  closeMenu();
+  menuEl=document.createElement("div");
+  menuEl.className="menu"; menuEl.setAttribute("role","menu");
+  const b=(txt,fn,dis)=>{const el=document.createElement("button");el.textContent=txt;el.setAttribute("role","menuitem");
+    if(dis)el.disabled=true; else el.onclick=()=>{closeMenu();fn();}; return el;};
+  if(it.id==="BidPackets") menuEl.appendChild(b("Open", ()=>go("E:\\BidPackets")));
+  const sep=document.createElement("div");sep.className="sep";menuEl.appendChild(sep);
+  menuEl.appendChild(b("Properties", ()=>openProps(it)));
+  document.body.appendChild(menuEl);
+  const r=menuEl.getBoundingClientRect();
+  menuEl.style.left=Math.min(x,innerWidth-r.width-8)+"px";
+  menuEl.style.top=Math.min(y,innerHeight-r.height-8)+"px";
+  menuEl.querySelector("button:not([disabled])")?.focus();
+}
+function closeMenu(){ if(menuEl){menuEl.remove();menuEl=null;} }
+document.addEventListener("click",e=>{ if(menuEl && !menuEl.contains(e.target)) closeMenu(); });
+
+/* ---------- dialogs ---------- */
+const scrim=document.createElement("div");
+scrim.className="scrim";scrim.hidden=true;document.body.appendChild(scrim);
+scrim.addEventListener("click",e=>{ if(e.target===scrim) closeDialog(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeMenu(); if(!scrim.hidden) closeDialog(); }});
+function openDialog(node){ scrim.innerHTML=""; scrim.appendChild(node); scrim.hidden=false;
+  node.querySelector("h2")?.setAttribute("tabindex","-1");
+  (node.querySelector(".primary")||node.querySelector("button"))?.focus(); }
+function closeDialog(){ scrim.hidden=true; scrim.innerHTML=""; }
+
+function dlg(title, innerHTML, wide){
+  const d=document.createElement("div");
+  d.className="dlg"+(wide?" wide":"");
+  d.setAttribute("role","dialog"); d.setAttribute("aria-modal","true"); d.setAttribute("aria-label",title);
+  d.innerHTML='<h2>🛈 '+title+'</h2>'+innerHTML;
+  return d;
+}
+
+/* Properties → General tab with Advanced... button */
+function openProps(it){
+  const enc=isEncrypted(it.id);
+  const d=dlg(it.name+" Properties",
+    '<div class="content">'+
+      '<div class="field"><div><strong>'+it.name+'</strong><div class="hint">'+
+        (it.kind==="folder"?"File folder":it.type)+' · '+S.path+it.name+'</div></div></div>'+
+      '<div class="field"><div>Attributes<div class="hint">'+
+        (enc?'<span style="color:var(--enc)">Encrypted (EFS)</span>':'Not encrypted')+'</div></div></div>'+
+    '</div>'+
+    '<div class="actions">'+
+      '<button class="btn" data-adv>Advanced…</button>'+
+      '<button class="btn primary" data-close>OK</button>'+
+    '</div>');
+  d.querySelector("[data-close]").onclick=closeDialog;
+  d.querySelector("[data-adv]").onclick=()=> it.kind==="folder" ? openAdvFolder(it) : openAdvFile(it);
+  openDialog(d);
+}
+
+/* Advanced Attributes (folder) */
+function openAdvFolder(it){
+  const checked = S.folderEncrypted ? "checked":"";
+  const d=dlg("Advanced Attributes",
+    '<div class="content">'+
+      '<p class="hint">Choose the settings you want for this folder.</p>'+
+      '<label class="chk"><input type="checkbox" id="encChk" '+checked+'>'+
+        '<span><strong>Encrypt contents to secure data</strong>'+
+        '<span class="hint" style="display:block">Encrypts the folder using EFS. Other local users cannot open the files.</span></span></label>'+
+    '</div>'+
+    '<div class="actions">'+
+      '<button class="btn" data-cancel>Cancel</button>'+
+      '<button class="btn primary" data-ok>OK</button>'+
+    '</div>');
+  d.querySelector("[data-cancel]").onclick=()=>openProps(it);
+  d.querySelector("[data-ok]").onclick=()=>{
+    const wantEnc=d.querySelector("#encChk").checked;
+    if(wantEnc && !S.folderEncrypted){ S.folderEncrypted=true; openConfirmApply(it); }
+    else { closeDialog(); render(); }
+  };
+  openDialog(d);
+}
+
+/* Confirm Attribute Changes (apply to contents) */
+function openConfirmApply(it){
+  const d=dlg("Confirm Attribute Changes",
+    '<div class="content">'+
+      '<p>You have chosen to encrypt this folder. Apply this change to:</p>'+
+      '<label class="chk" style="padding:6px 0"><input type="radio" name="apply" value="folder">'+
+        '<span>This folder only</span></label>'+
+      '<label class="chk" style="padding:6px 0"><input type="radio" name="apply" value="all" checked>'+
+        '<span>This folder, subfolders and files</span></label>'+
+    '</div>'+
+    '<div class="actions"><button class="btn primary" data-ok>OK</button></div>');
+  d.querySelector("[data-ok]").onclick=()=>{
+    S.appliedToContents = d.querySelector('input[name=apply]:checked').value==="all";
+    closeDialog();
+    if(S.path==="E:\\") go("E:\\BidPackets"); else render();
+    flashStatus("Folder encrypted with EFS.","work");
+  };
+  openDialog(d);
+}
+
+/* Advanced Attributes (file) → Details */
+function openAdvFile(it){
+  const enc=isEncrypted(it.id);
+  const d=dlg("Advanced Attributes",
+    '<div class="content">'+
+      '<label class="chk"><input type="checkbox" '+(enc?"checked":"")+' disabled>'+
+        '<span><strong>Encrypt contents to secure data</strong>'+
+        '<span class="hint" style="display:block">'+
+          (enc?'This file is encrypted because its folder is encrypted.'
+              :'Encrypt the folder first to encrypt its files.')+'</span></span></label>'+
+    '</div>'+
+    '<div class="actions">'+
+      '<button class="btn" data-back>Back</button>'+
+      '<button class="btn" data-details '+(enc?'':'disabled')+'>Details…</button>'+
+      '<button class="btn primary" data-close>OK</button>'+
+    '</div>');
+  d.querySelector("[data-back]").onclick=()=>openProps(it);
+  d.querySelector("[data-close]").onclick=closeDialog;
+  const det=d.querySelector("[data-details]");
+  if(det && enc) det.onclick=()=>openUserAccess(it);
+  openDialog(d);
+}
+
+/* User Access (Details) dialog */
+function openUserAccess(it){
+  const users = S.fileAccess[it.id] || [];
+  const rows = users.map(u=>{
+    const c=CERTS.find(c=>c.user===u);
+    return '<div class="u"><span>👤</span><span class="who">'+u+'</span>'+
+      '<span class="thumb" style="margin-left:auto">'+(c?c.thumb:'—')+'</span></div>';
+  }).join("");
+  const d=dlg("User Access to "+it.name, true && '',true);
+  d.querySelector("h2").innerHTML='🛈 User Access to '+it.name;
+  d.insertAdjacentHTML("beforeend",
+    '<div class="content">'+
+      '<p class="hint">Users who can transparently access this encrypted file:</p>'+
+      '<div class="userlist">'+rows+'</div>'+
+    '</div>'+
+    '<div class="actions">'+
+      '<button class="btn" data-back>Back</button>'+
+      '<button class="btn" data-add>Add…</button>'+
+      '<button class="btn primary" data-close>OK</button>'+
+    '</div>');
+  d.querySelector("[data-back]").onclick=()=>openAdvFile(it);
+  d.querySelector("[data-close]").onclick=()=>{ closeDialog(); render(); };
+  d.querySelector("[data-add]").onclick=()=>openCertPicker(it);
+  openDialog(d);
+}
+
+/* Certificate picker */
+function openCertPicker(it){
+  const have=new Set(S.fileAccess[it.id]||[]);
+  const avail=CERTS.filter(c=>!have.has(c.user));
+  let pick=null;
+  const rows=avail.map(c=>
+    '<div class="u" role="option" tabindex="0" data-user="'+c.user+'">'+
+      '<span>📜</span><span class="who">'+c.user+'</span>'+
+      '<span class="thumb" style="margin-left:auto">'+c.thumb+'</span></div>').join("")
+    || '<div class="empty">All known certificates already have access.</div>';
+  const d=dlg("Select User Certificate",
+    '<div class="content"><p class="hint">Choose a certificate to grant access:</p>'+
+      '<div class="userlist pick">'+rows+'</div></div>'+
+    '<div class="actions">'+
+      '<button class="btn" data-cancel>Cancel</button>'+
+      '<button class="btn primary" data-ok disabled>OK</button>'+
+    '</div>', true);
+  const ok=d.querySelector("[data-ok]");
+  d.querySelectorAll(".pick .u[role=option]").forEach(u=>{
+    const choose=()=>{ pick=u.dataset.user;
+      d.querySelectorAll(".pick .u").forEach(x=>x.setAttribute("aria-selected","false"));
+      u.setAttribute("aria-selected","true"); ok.disabled=false; };
+    u.onclick=choose;
+    u.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();choose();} };
+  });
+  d.querySelector("[data-cancel]").onclick=()=>openUserAccess(it);
+  ok.onclick=()=>{
+    if(!pick) return;
+    (S.fileAccess[it.id]=S.fileAccess[it.id]||[]).push(pick);
+    if(pick===CONFIG.grantUser) flashStatus("Added "+pick+" to "+it.name+".","work");
+    openUserAccess(it);
+  };
+  openDialog(d);
+}
+
+/* ---------- toolbar wiring ---------- */
+$("#btnBack").onclick=()=>{ if(S.path==="E:\\BidPackets") go("E:\\"); };
+$("#btnProps").onclick=()=>{ if(!S.selected) return;
+  const it=(FOLDERS[S.path]||[]).find(i=>i.id===S.selected); if(it) openProps(it); };
+$("#navBid").onclick=()=>go("E:\\BidPackets");
+$("#navE").onclick=()=>go("E:\\");
+$("#btnReset").onclick=()=>{ S=initialState(); closeDialog(); closeMenu();
+  $("#hacker").value=""; buildQuestions(); render(); evalAll(); flashStatus("Lab reset.","work"); };
+
+/* ---------- tasks ---------- */
+function taskPassed(id){
+  if(id==="encrypt-folder") return S.folderEncrypted && S.appliedToContents;
+  if(id==="grant-access")   return (S.fileAccess[CONFIG.targetFile]||[]).includes(CONFIG.grantUser);
+  return false;
+}
+function buildTasks(){
+  $("#taskList").innerHTML = CONFIG.tasks.map(t=>
+    '<div class="check" data-task="'+t.id+'">'+
+      '<span class="box">✓</span>'+
+      '<span class="lab">'+t.label+'<span class="sub">'+t.sub+'</span></span>'+
+    '</div>').join("");
+}
+function refreshTasks(){
+  CONFIG.tasks.forEach(t=>{
+    const el=$('[data-task="'+t.id+'"]'); if(el) el.classList.toggle("done", taskPassed(t.id));
+  });
+  evalScore();
+}
+
+/* ---------- questions ---------- */
+function buildQuestions(){
+  S.answers={};
+  $("#questionList").innerHTML = CONFIG.questions.map(q=>
+    '<div class="q" data-q="'+q.id+'">'+
+      '<p class="prompt">'+q.prompt+'</p>'+
+      '<div class="opts">'+ q.options.map(o=>
+        '<button type="button" aria-pressed="false" data-k="'+o.k+'">'+o.t+'</button>').join("") +'</div>'+
+      '<div class="verdict" aria-live="polite"></div>'+
+    '</div>').join("");
+  $$('#questionList .q').forEach(qEl=>{
+    const qid=qEl.dataset.q;
+    qEl.querySelectorAll(".opts button").forEach(btn=>{
+      btn.onclick=()=>{
+        S.answers[qid]=btn.dataset.k;
+        qEl.querySelectorAll(".opts button").forEach(b=>b.setAttribute("aria-pressed","false"));
+        btn.setAttribute("aria-pressed","true");
+        gradeQuestion(qid); evalScore();
+      };
+    });
+  });
+}
+function gradeQuestion(qid){
+  const q=CONFIG.questions.find(x=>x.id===qid);
+  const qEl=$('[data-q="'+qid+'"]'); if(!qEl) return;
+  const chosen=S.answers[qid]; if(!chosen) return;
+  const correct = chosen===q.answer;
+  qEl.classList.toggle("correct",correct);
+  qEl.classList.toggle("wrong",!correct);
+  qEl.querySelector(".verdict").textContent = correct ? "Correct." : "Not quite — "+q.why;
+}
+
+/* ---------- scoring ---------- */
+function results(){
+  const tasks=CONFIG.tasks.map(t=>({id:t.id,label:t.label,passed:taskPassed(t.id)}));
+  const questions=CONFIG.questions.map(q=>({
+    id:q.id, prompt:q.prompt,
+    answer:(S.answers[q.id]? (q.options.find(o=>o.k===S.answers[q.id])||{}).t : null),
+    correct: S.answers[q.id]===q.answer
+  }));
+  const earned = tasks.filter(t=>t.passed).length + questions.filter(q=>q.correct).length;
+  const total  = tasks.length + questions.length;
+  return {tasks,questions,earned,total};
+}
+function evalScore(){
+  const r=results();
+  $("#scorePill").textContent = r.earned+" / "+r.total;
+  updateSubmitState();
+}
+function evalAll(){ CONFIG.questions.forEach(q=>gradeQuestion(q.id)); refreshTasks(); }
+
+/* ---------- submission ---------- */
+function flashStatus(msg,cls){ const s=$("#status"); s.className="status "+(cls||"work"); s.textContent=msg; }
+function updateSubmitState(){
+  $("#btnSubmit").disabled = $("#hacker").value.trim().length===0;
+}
+$("#hacker").addEventListener("input", ()=>{
+  updateSubmitState();
+  if($("#hacker").value.trim()) flashStatus("Ready to submit when you are.","work");
+  else flashStatus("Enter a hacker name to enable submission.","work");
+});
+
+$("#btnSubmit").addEventListener("click", async ()=>{
+  const name=$("#hacker").value.trim();
+  if(!name) return;
+  const r=results();
+  if(r.earned<r.total){
+    const ok=confirm("You have "+r.earned+" of "+r.total+" complete. Submit anyway?");
+    if(!ok) return;
+  }
+  $("#btnSubmit").disabled=true;
+  flashStatus("Capturing screenshot…","work");
+  let screenshot="";
+  try{ screenshot=await captureLabArea($("#capture")); }
+  catch(err){ screenshot=""; /* proceed without image */ }
+
+  const payload={
+    assignmentId: CONFIG.assignmentId,
+    hackerName: name.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: r.tasks,
+    questions: r.questions,
+    score: { earned:r.earned, total:r.total },
+    screenshot: screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  flashStatus("Submitting to instructor…","work");
+  try{
+    // Simple request: no custom headers, text/plain body → no CORS preflight.
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+    const out=await res.json();
+    if(out && out.success){
+      const link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your record</a>' : '';
+      $("#status").className="status ok";
+      $("#status").innerHTML="Submitted as "+name+" — "+r.earned+"/"+r.total+"."+link;
+    } else {
+      throw new Error((out && out.error) || "Server rejected the submission.");
+    }
+  }catch(err){
+    // Fallback: fire-and-forget (can't read docUrl in locked-down contexts).
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      $("#status").className="status ok";
+      $("#status").textContent="Submitted (offline mode). Confirm receipt with your instructor — no link is available in this browser.";
+    }catch(e2){
+      $("#status").className="status err";
+      $("#status").textContent="Submission failed: "+(err.message||"network error")+". Check the lab's APPS_SCRIPT_URL or try again.";
+    }
+  }finally{
+    $("#btnSubmit").disabled=false;
+  }
+});
+
+/* ---------- init ---------- */
+buildTasks();
+buildQuestions();
+render();
+evalScore();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-stego-recipient-marker.html",title:"Lab \u2014 Hide a Recipient Marker with OpenStego (Steganography)"}, NEXT={href:"splus-bitlocker-tpm.html",title:"Lab: Encrypt the System Volume with BitLocker and a TPM"}, CRUMB="All Labs \u203a Unit 5 \u2014 Securing Applications and Data \u203a 5.3 Protecting Stored Data with Cryptography";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

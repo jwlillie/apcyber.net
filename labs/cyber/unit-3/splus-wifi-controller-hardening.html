@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex">
+<title>Harden a Wireless Network — Lab Simulation</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-wifi-controller-hardening",
+  "title": "Harden a Wireless Network — Lab Simulation",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 3,
+    "unitTitle": "Securing Networks",
+    "topics": [
+      "3.2 Protecting Networks: Managerial Controls and Wireless Security"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "2.2",
+      "2.5",
+      "4.1"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  Security+ (SY0-701) Lab Simulation — "Harden a Wireless Network"
+  assignmentId: splus-wifi-controller-hardening
+  Objectives: 2.2.8.1, 2.2.10, 2.5.11.6, 4.1.5
+
+  Copyright (c) 2026 [Author / Instructor Name]. All rights reserved.
+  Original clean-room work built from the public CompTIA SY0-701 objectives.
+  Licensed for use within the author's Security+ course. No third-party lab
+  text, names, values, paths, ordering, or screenshots were copied; all
+  scenario, UI, names, addresses, and question wording are original.
+-->
+<style>
+  :root{
+    /* Palette — "operations console at dusk": deep indigo shell, signal teal,
+       amber for caution, a single magenta accent for the live state. */
+    --shell:#11131f;
+    --panel:#1a1d2e;
+    --panel-2:#22263b;
+    --ink:#e8ebf5;
+    --ink-dim:#a3a9c4;
+    --line:#323855;
+    --teal:#39d2c0;
+    --teal-deep:#1f9a8f;
+    --amber:#f2b34a;
+    --magenta:#ff5d8f;
+    --green:#5fe08a;
+    --red:#ff6b6b;
+    --focus:#8ab4ff;
+    --radius:10px;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:
+      radial-gradient(1200px 600px at 80% -10%, #1c2138 0%, transparent 60%),
+      var(--shell);
+    color:var(--ink);font-family:var(--sans);line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 18px 64px}
+
+  /* ---- header / brief ---- */
+  header.brief{
+    border:1px solid var(--line);border-radius:var(--radius);
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    padding:20px 22px;margin-bottom:22px;
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--teal);margin:0 0 6px;
+  }
+  header.brief h1{margin:0 0 10px;font-size:26px;letter-spacing:-.01em}
+  .obj-tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
+  .obj-tags span{
+    font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px;
+  }
+  .scenario{color:var(--ink-dim);max-width:75ch;margin:0}
+  .scenario strong{color:var(--ink)}
+
+  .layout{display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start}
+  @media (max-width:900px){.layout{grid-template-columns:1fr}}
+
+  /* ---- the simulated console ---- */
+  .console{
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    background:var(--panel);min-height:520px;display:flex;flex-direction:column;
+  }
+  .titlebar{
+    display:flex;align-items:center;gap:10px;background:var(--panel-2);
+    padding:9px 14px;border-bottom:1px solid var(--line);
+  }
+  .dot{width:11px;height:11px;border-radius:50%;background:var(--line)}
+  .dot.live{background:var(--magenta);box-shadow:0 0 0 0 var(--magenta);
+    animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,93,143,.5)}
+    70%{box-shadow:0 0 0 7px rgba(255,93,143,0)}100%{box-shadow:0 0 0 0 rgba(255,93,143,0)}}
+  .url{
+    font-family:var(--mono);font-size:13px;color:var(--ink-dim);
+    background:var(--shell);border:1px solid var(--line);border-radius:6px;
+    padding:4px 10px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .device-name{font-family:var(--mono);font-size:12px;color:var(--teal)}
+
+  /* login gate */
+  .gate{padding:40px 28px;max-width:380px;margin:0 auto;text-align:left;flex:1;
+    display:flex;flex-direction:column;justify-content:center}
+  .gate h2{margin:0 0 4px;font-size:20px}
+  .gate p{margin:0 0 22px;color:var(--ink-dim);font-size:14px}
+
+  label{display:block;font-size:13px;color:var(--ink-dim);margin:0 0 5px;font-weight:600}
+  input[type=text],input[type=password]{
+    width:100%;background:var(--shell);border:1px solid var(--line);
+    color:var(--ink);border-radius:7px;padding:10px 12px;font-size:14px;
+    font-family:var(--sans);
+  }
+  input::placeholder{color:#5d6486}
+  .field{margin-bottom:14px}
+
+  button{
+    font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;
+    border-radius:7px;border:1px solid transparent;padding:10px 16px;
+    background:var(--teal-deep);color:#04201d;transition:filter .15s,transform .05s;
+  }
+  button:hover{filter:brightness(1.08)}
+  button:active{transform:translateY(1px)}
+  button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  button.ghost:hover{background:var(--panel-2)}
+  button.sm{padding:7px 12px;font-size:13px}
+  button:focus-visible,a:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:2px solid var(--focus);outline-offset:2px;
+  }
+
+  /* nav tabs inside console */
+  .nav{display:flex;gap:2px;background:var(--panel-2);padding:6px 8px 0;
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .nav button{
+    background:transparent;color:var(--ink-dim);border:none;border-radius:7px 7px 0 0;
+    padding:9px 14px;font-weight:600;position:relative;
+  }
+  .nav button[aria-selected=true]{color:var(--ink);background:var(--panel)}
+  .nav button[aria-selected=true]::after{
+    content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--teal)}
+  .nav .done{color:var(--green)}
+
+  .pane{padding:22px 22px 26px;flex:1}
+  .pane h3{margin:0 0 4px;font-size:17px}
+  .pane .hint{margin:0 0 18px;color:var(--ink-dim);font-size:13px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .row .field{flex:1;min-width:160px;margin-bottom:0}
+
+  .card{border:1px solid var(--line);border-radius:9px;background:var(--panel-2);
+    padding:16px;margin-bottom:16px}
+  .card h4{margin:0 0 12px;font-size:14px;letter-spacing:.02em;color:var(--teal)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--ink-dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  td.mono,.mono{font-family:var(--mono)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;
+    border-radius:999px;border:1px solid var(--line)}
+  .pill.allow{color:var(--green);border-color:var(--teal-deep)}
+  .pill.block{color:var(--red);border-color:#5b2b34}
+  .empty{color:var(--ink-dim);font-style:italic;padding:14px 4px;font-size:13px}
+
+  .toggle-list{list-style:none;margin:0;padding:0}
+  .toggle-list li{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 0;border-bottom:1px solid var(--line)}
+  .toggle-list li:last-child{border-bottom:none}
+  .sw{appearance:none;width:42px;height:24px;border-radius:999px;background:var(--line);
+    position:relative;cursor:pointer;transition:background .15s;flex:none}
+  .sw:checked{background:var(--teal-deep)}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;
+    border-radius:50%;background:#fff;transition:left .15s}
+  .sw:checked::after{left:20px}
+
+  .notice{font-size:13px;padding:9px 12px;border-radius:7px;margin-top:10px;display:none}
+  .notice.show{display:block}
+  .notice.ok{background:rgba(95,224,138,.1);color:var(--green);border:1px solid var(--teal-deep)}
+  .notice.err{background:rgba(255,107,107,.1);color:var(--red);border:1px solid #5b2b34}
+
+  /* ---- side panel: tasks + questions + submit ---- */
+  aside{position:sticky;top:18px;display:flex;flex-direction:column;gap:18px}
+  .panel{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
+  .panel > h3{margin:0;padding:14px 16px;font-size:14px;letter-spacing:.04em;
+    background:var(--panel-2);border-bottom:1px solid var(--line)}
+  .panel .body{padding:14px 16px}
+
+  .checklist{list-style:none;margin:0;padding:0}
+  .checklist li{display:flex;gap:10px;padding:9px 0;align-items:flex-start;font-size:13.5px;
+    border-bottom:1px solid var(--line)}
+  .checklist li:last-child{border-bottom:none}
+  .box{flex:none;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);
+    margin-top:1px;display:grid;place-items:center;font-size:12px;color:#04201d}
+  .checklist li.pass .box{background:var(--green);border-color:var(--green)}
+  .checklist li.pass{color:var(--ink)}
+  .checklist li:not(.pass){color:var(--ink-dim)}
+
+  .qblock{margin-bottom:16px}
+  .qblock:last-child{margin-bottom:0}
+  .qblock p.q{margin:0 0 8px;font-size:13.5px}
+  .qblock .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-dim);
+    cursor:pointer;padding:6px 8px;border:1px solid var(--line);border-radius:7px}
+  .opt:hover{background:var(--panel-2)}
+  .opt input{margin-top:2px;accent-color:var(--teal)}
+  .qmark{font-family:var(--mono);font-size:12px;margin-left:6px}
+  .qmark.ok{color:var(--green)}
+  .qmark.no{color:var(--red)}
+
+  .submit-bar .body{display:flex;flex-direction:column;gap:12px}
+  .scoreline{font-family:var(--mono);font-size:13px;color:var(--ink-dim)}
+  .scoreline b{color:var(--ink)}
+  #status{font-size:13px;min-height:18px}
+  #status.ok{color:var(--green)}
+  #status.err{color:var(--red)}
+  #status.work{color:var(--amber)}
+  #status a{color:var(--teal)}
+
+  footer.fine{margin-top:30px;color:#6b7194;font-size:11.5px;line-height:1.6;
+    border-top:1px solid var(--line);padding-top:14px}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="brief">
+    <p class="eyebrow">Security+ Lab · Wireless Defenses</p>
+    <h1>Harden a Wireless Network</h1>
+    <div class="obj-tags" aria-label="Exam objectives covered">
+      <span>SY0-701 · 2.2.8.1</span>
+      <span>2.2.10</span>
+      <span>2.5.11.6</span>
+      <span>4.1.5</span>
+    </div>
+    <p class="scenario">
+      You're a contract security consultant brought in by <strong>Marsh &amp; Halloran,
+      a 24-person design studio</strong>. Their wireless is running on factory defaults and
+      anyone in the building's shared lobby can associate with it. The office manager,
+      <strong>Priya Anand</strong>, has given you console access to the new
+      <strong>AeroLink AL-340 wireless controller</strong> and wants three things locked down
+      today: the default administrator account, who is allowed to connect, and a standing rule
+      to keep recreational devices off the corporate radio. Work through the console on the
+      left, then answer the review questions and submit your completed lab.
+    </p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ============ SIMULATED CONSOLE ============ -->
+    <section class="console" id="capture-area" aria-label="AeroLink wireless controller console">
+      <div class="titlebar">
+        <span class="dot live" title="controller online"></span>
+        <span class="dot"></span><span class="dot"></span>
+        <span class="url" id="addrBar">https://10.42.7.5/manage</span>
+        <span class="device-name">AeroLink AL-340</span>
+      </div>
+
+      <!-- login gate -->
+      <div class="gate" id="gate">
+        <h2>Controller sign-in</h2>
+        <p>Default credentials are printed on the unit. Sign in to begin hardening.</p>
+        <div class="field">
+          <label for="loginUser">Administrator name</label>
+          <input type="text" id="loginUser" autocomplete="off" placeholder="enter username" />
+        </div>
+        <div class="field">
+          <label for="loginPass">Password</label>
+          <input type="password" id="loginPass" autocomplete="off" placeholder="enter password" />
+        </div>
+        <button id="loginBtn">Sign in</button>
+        <div class="notice err" id="loginErr" role="alert"></div>
+        <p style="margin-top:18px;font-size:12px;color:#5d6486">
+          Sticker on the AL-340: user <span class="mono">admin</span> · pass
+          <span class="mono">aerolink</span>
+        </p>
+      </div>
+
+      <!-- main app (hidden until login) -->
+      <div id="app" hidden>
+        <div class="nav" role="tablist" aria-label="Controller sections">
+          <button role="tab" id="tab-admin" aria-selected="true" data-pane="admin">Administration</button>
+          <button role="tab" id="tab-access" aria-selected="false" data-pane="access">Access Control</button>
+          <button role="tab" id="tab-policy" aria-selected="false" data-pane="policy">Device Policies</button>
+        </div>
+
+        <!-- PANE: Administration -->
+        <div class="pane" id="pane-admin" role="tabpanel" aria-labelledby="tab-admin">
+          <h3>Administrator account</h3>
+          <p class="hint">Replace the factory account. Passwords must be 10+ characters with upper, lower, a number, and a symbol.</p>
+          <div class="card">
+            <h4>Credentials</h4>
+            <div class="field">
+              <label for="adminUser">New administrator name</label>
+              <input type="text" id="adminUser" autocomplete="off" placeholder="e.g. a custom admin name" />
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="adminPass">New password</label>
+                <input type="password" id="adminPass" autocomplete="off" placeholder="strong password" />
+              </div>
+              <div class="field">
+                <label for="adminPass2">Confirm password</label>
+                <input type="password" id="adminPass2" autocomplete="off" placeholder="re-enter" />
+              </div>
+            </div>
+            <div style="margin-top:14px"><button id="saveAdmin">Save credentials</button></div>
+            <div class="notice" id="adminNotice" role="status"></div>
+          </div>
+        </div>
+
+        <!-- PANE: Access Control -->
+        <div class="pane" id="pane-access" role="tabpanel" aria-labelledby="tab-access" hidden>
+          <h3>Layer 2 access control (MAC filtering)</h3>
+          <p class="hint">Create an allow list, then add the four approved hardware addresses. Only listed devices will be permitted to associate.</p>
+          <div class="card">
+            <h4>Access list</h4>
+            <div class="row">
+              <div class="field">
+                <label for="listName">List name</label>
+                <input type="text" id="listName" autocomplete="off" placeholder="name this allow list" />
+              </div>
+              <div class="field" style="flex:none">
+                <label for="listMode">Mode</label>
+                <select id="listMode" style="width:140px;background:var(--shell);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:10px 12px;font-size:14px">
+                  <option value="">— choose —</option>
+                  <option value="allow">Allow listed</option>
+                  <option value="block">Block listed</option>
+                </select>
+              </div>
+              <button class="sm" id="createList">Create list</button>
+            </div>
+            <div class="notice" id="listNotice" role="status"></div>
+          </div>
+
+          <div class="card" id="macCard" hidden>
+            <h4 id="macCardTitle">Allowed devices</h4>
+            <div class="row" style="margin-bottom:12px">
+              <div class="field">
+                <label for="macInput">Add MAC address</label>
+                <input type="text" id="macInput" autocomplete="off" placeholder="AA:BB:CC:DD:EE:FF" class="mono" />
+              </div>
+              <button class="sm" id="addMac">Add device</button>
+            </div>
+            <table>
+              <thead><tr><th>Hardware address</th><th></th></tr></thead>
+              <tbody id="macTable"><tr><td colspan="2" class="empty">No devices added yet.</td></tr></tbody>
+            </table>
+            <div class="notice" id="macNotice" role="alert"></div>
+          </div>
+        </div>
+
+        <!-- PANE: Device Policies -->
+        <div class="pane" id="pane-policy" role="tabpanel" aria-labelledby="tab-policy" hidden>
+          <h3>Device access policy</h3>
+          <p class="hint">Build a named policy that keeps a category of devices off the wireless. Name it, choose the category to deny, then enable it.</p>
+          <div class="card">
+            <h4>New policy</h4>
+            <div class="field">
+              <label for="policyName">Policy name</label>
+              <input type="text" id="policyName" autocomplete="off" placeholder="name this policy" />
+            </div>
+            <div class="field">
+              <label for="policyCat">Device category to deny</label>
+              <select id="policyCat" style="width:100%;background:var(--shell);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:10px 12px;font-size:14px">
+                <option value="">— choose a category —</option>
+                <option value="printers">Printers</option>
+                <option value="voip">VoIP phones</option>
+                <option value="gaming">Gaming consoles</option>
+                <option value="cameras">IP cameras</option>
+                <option value="laptops">Laptops</option>
+              </select>
+            </div>
+            <ul class="toggle-list" style="margin:6px 0 4px">
+              <li>
+                <span>Enforce this policy</span>
+                <input type="checkbox" class="sw" id="policyEnabled" aria-label="Enforce this policy" />
+              </li>
+            </ul>
+            <div style="margin-top:12px"><button id="savePolicy">Save policy</button></div>
+            <div class="notice" id="policyNotice" role="status"></div>
+          </div>
+          <div class="card">
+            <h4>Active policies</h4>
+            <table>
+              <thead><tr><th>Name</th><th>Denies</th><th>State</th></tr></thead>
+              <tbody id="policyTable"><tr><td colspan="3" class="empty">No policies defined.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SIDE PANEL ============ -->
+    <aside>
+      <div class="panel">
+        <h3>Lab tasks</h3>
+        <div class="body">
+          <ul class="checklist" id="checklist">
+            <li data-task="login"><span class="box">✓</span><span>Sign in to the controller</span></li>
+            <li data-task="creds"><span class="box">✓</span><span>Replace the default administrator name and password</span></li>
+            <li data-task="list"><span class="box">✓</span><span>Create a MAC allow list</span></li>
+            <li data-task="macs"><span class="box">✓</span><span>Add the four approved devices to the list</span></li>
+            <li data-task="policy"><span class="box">✓</span><span>Enforce a policy blocking gaming consoles</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Review questions</h3>
+        <div class="body" id="questions"><!-- injected --></div>
+      </div>
+
+      <div class="panel submit-bar">
+        <h3>Submit completed lab</h3>
+        <div class="body">
+          <div class="field" style="margin:0">
+            <label for="hackerName">Hacker name (pseudonym — no real names)</label>
+            <input type="text" id="hackerName" autocomplete="off" placeholder="e.g. nightjar" maxlength="40" />
+          </div>
+          <div class="scoreline">Progress: <b id="scoreEarned">0</b> / <b id="scoreTotal">8</b></div>
+          <button id="submitBtn">Submit completed lab</button>
+          <button class="ghost sm" id="resetBtn">Reset lab</button>
+          <div id="status" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="fine">
+    © 2026 [Author / Instructor Name]. Original clean-room lab built from public CompTIA
+    SY0-701 objectives 2.2.8.1, 2.2.10, 2.5.11.6, and 4.1.5. Scenario, interface, device
+    addresses, and question wording are original to this course. The on-device screenshot
+    captures only this simulated console. Client-side scoring is self-reported and may be
+    re-validated server-side; submit a pseudonymous hacker name only.
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   Lightweight, dependency-free PNG capture of the lab area.
+   (Stands in for an inlined html2canvas: no network, no CDN,
+   no external runtime. Renders the console's visible text/state
+   to a canvas and returns a PNG data URL for the submission.)
+   ============================================================ */
+function captureLabPng(rootSelector){
+  const root = document.querySelector(rootSelector);
+  const W = 900, lineH = 22, pad = 28;
+  // Gather a readable transcript of the simulated console state.
+  const lines = [];
+  lines.push(['§', 'AeroLink AL-340 — Lab capture']);
+  lines.push(['', new Date().toLocaleString()]);
+  lines.push(['', '']);
+  const st = window.__LAB_STATE__ || {};
+  lines.push(['•', 'Signed in: ' + (st.loggedIn ? 'yes' : 'no')]);
+  lines.push(['•', 'Admin name set to: ' + (st.adminUser || '(unchanged)')]);
+  lines.push(['•', 'Admin password changed: ' + (st.passChanged ? 'yes' : 'no')]);
+  lines.push(['•', 'Access list: ' + (st.listName ? (st.listName + ' [' + st.listMode + ']') : '(none)')]);
+  lines.push(['•', 'Devices on list: ' + (st.macs && st.macs.length ? st.macs.join(', ') : '(none)')]);
+  if (st.policies && st.policies.length){
+    st.policies.forEach(p=>lines.push(['•','Policy: '+p.name+' — denies '+p.cat+' — '+(p.enabled?'enforced':'disabled')]));
+  } else {
+    lines.push(['•','Policies: (none)']);
+  }
+  lines.push(['', '']);
+  lines.push(['§', 'Tasks']);
+  document.querySelectorAll('#checklist li').forEach(li=>{
+    lines.push(['', (li.classList.contains('pass')?'[x] ':'[ ] ') + li.querySelector('span:last-child').textContent]);
+  });
+
+  const H = pad*2 + lineH*(lines.length+1);
+  const c = document.createElement('canvas');
+  const scale = 2; c.width = W*scale; c.height = H*scale;
+  const ctx = c.getContext('2d'); ctx.scale(scale,scale);
+  ctx.fillStyle = '#11131f'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#39d2c0';
+  ctx.fillRect(0,0,6,H);
+  let y = pad+6;
+  lines.forEach(([mark,text])=>{
+    if(mark==='§'){ctx.font='600 17px ui-monospace,Menlo,monospace';ctx.fillStyle='#39d2c0';}
+    else if(mark==='•'){ctx.font='14px ui-monospace,Menlo,monospace';ctx.fillStyle='#e8ebf5';}
+    else {ctx.font='14px ui-monospace,Menlo,monospace';ctx.fillStyle='#a3a9c4';}
+    ctx.fillText((mark==='•'?'• ':'')+text, pad, y);
+    y += lineH;
+  });
+  return c.toDataURL('image/png');
+}
+
+/* ============================================================
+   LAB CONFIG + ANSWER KEY
+   ============================================================ */
+const CONFIG = {
+  assignmentId: 'splus-wifi-controller-hardening',
+  title: 'Harden a Wireless Network',
+  objectives: ["2.2", "2.5", "4.1"],
+  // Paste the deployed Apps Script /exec URL here (same across the library):
+  APPS_SCRIPT_URL: 'PASTE_SHARED_/exec_URL_HERE',
+  submissionToken: 'PASTE_PER_COHORT_TOKEN_HERE'
+};
+
+// Original answer key (your own values — not from any vendor lab):
+const KEY = {
+  loginUser: 'admin',
+  loginPass: 'aerolink',
+  // The new admin name is free-choice but must differ from the default & be non-trivial.
+  forbiddenAdminNames: ['admin','administrator','root'],
+  // Password policy: >=10 chars, upper, lower, digit, symbol.
+  listName: 'Trusted Hardware',     // expected (case-insensitive) allow-list name
+  listMode: 'allow',
+  approvedMacs: [
+    '0A:1B:2C:3D:4E:5F',
+    '0A:1B:2C:91:82:73',
+    '6E:5D:4C:3B:2A:19',
+    '6E:5D:4C:88:77:66'
+  ],
+  policyName: 'No Consoles',        // expected (case-insensitive) policy name
+  policyDenyCat: 'gaming'
+};
+
+const QUESTIONS = [
+  {
+    id:'q1',
+    prompt:'Why is changing the AL-340\u2019s factory administrator account the first hardening step?',
+    options:[
+      {k:'a',t:'Default credentials are publicly documented, so an attacker can log in without guessing.'},
+      {k:'b',t:'It increases the controller\u2019s wireless range.'},
+      {k:'c',t:'It encrypts traffic between clients and the access point.'}
+    ],
+    answer:'a'
+  },
+  {
+    id:'q2',
+    prompt:'A MAC allow list raises the bar but is not a strong control on its own. Why?',
+    options:[
+      {k:'a',t:'MAC addresses are encrypted and cannot be read off the air.'},
+      {k:'b',t:'MAC addresses are sent in the clear and can be observed and spoofed.'},
+      {k:'c',t:'Allow lists disable WPA, weakening the network.'}
+    ],
+    answer:'b'
+  },
+  {
+    id:'q3',
+    prompt:'The gaming-console policy is an example of which idea?',
+    options:[
+      {k:'a',t:'Reducing attack surface by denying device classes that have no business need.'},
+      {k:'b',t:'Load balancing across multiple radios.'},
+      {k:'c',t:'Increasing transmit power for better coverage.'}
+    ],
+    answer:'a'
+  }
+];
+
+/* ============================================================
+   ENGINE
+   ============================================================ */
+const S = window.__LAB_STATE__ = {
+  loggedIn:false, adminUser:'', passChanged:false,
+  listName:'', listMode:'', macs:[], policies:[],
+  answers:{}
+};
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+function normMac(v){
+  const hex = (v||'').replace(/[^0-9a-fA-F]/g,'').toUpperCase();
+  if(hex.length!==12) return null;
+  return hex.match(/.{2}/g).join(':');
+}
+function strongPass(p){
+  return p.length>=10 && /[a-z]/.test(p) && /[A-Z]/.test(p) && /\d/.test(p) && /[^A-Za-z0-9]/.test(p);
+}
+
+/* ---- login ---- */
+$('#loginBtn').addEventListener('click', ()=>{
+  const u = $('#loginUser').value.trim();
+  const p = $('#loginPass').value;
+  const err = $('#loginErr');
+  if(u===KEY.loginUser && p===KEY.loginPass){
+    S.loggedIn = true;
+    $('#gate').hidden = true;
+    $('#app').hidden = false;
+    err.classList.remove('show');
+    refresh();
+    $('#adminUser').focus();
+  } else {
+    err.textContent = 'Sign-in failed. Use the default credentials printed on the unit.';
+    err.classList.add('show');
+  }
+});
+
+/* ---- tab switching ---- */
+$$('.nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    $$('.nav button').forEach(b=>b.setAttribute('aria-selected', b===btn ? 'true':'false'));
+    $$('.pane').forEach(p=>p.hidden = true);
+    $('#pane-'+btn.dataset.pane).hidden = false;
+  });
+});
+
+/* ---- admin credentials ---- */
+$('#saveAdmin').addEventListener('click', ()=>{
+  const u = $('#adminUser').value.trim();
+  const p = $('#adminPass').value;
+  const p2 = $('#adminPass2').value;
+  const n = $('#adminNotice');
+  n.className = 'notice show err';
+  if(KEY.forbiddenAdminNames.includes(u.toLowerCase()) || u===''){
+    n.textContent = 'Choose a new administrator name that isn\u2019t a default like "admin" or "root".'; refresh(); return;
+  }
+  if(p!==p2){ n.textContent = 'The two passwords don\u2019t match.'; return; }
+  if(!strongPass(p)){
+    n.textContent = 'Password needs 10+ characters with upper, lower, a number, and a symbol.'; return;
+  }
+  S.adminUser = u; S.passChanged = true;
+  n.className = 'notice show ok';
+  n.textContent = 'Administrator account updated. The default account is now disabled.';
+  refresh();
+});
+
+/* ---- access list ---- */
+$('#createList').addEventListener('click', ()=>{
+  const name = $('#listName').value.trim();
+  const mode = $('#listMode').value;
+  const n = $('#listNotice');
+  if(!name){ n.className='notice show err'; n.textContent='Give the list a name.'; return; }
+  if(!mode){ n.className='notice show err'; n.textContent='Choose whether the list allows or blocks the devices on it.'; return; }
+  S.listName = name; S.listMode = mode;
+  $('#macCard').hidden = false;
+  $('#macCardTitle').textContent = (mode==='allow'?'Allowed devices — ':'Blocked devices — ') + name;
+  n.className='notice show ok';
+  n.textContent = 'List "'+name+'" created in '+(mode==='allow'?'allow':'block')+' mode.';
+  refresh();
+});
+
+$('#addMac').addEventListener('click', ()=>{
+  const raw = $('#macInput').value;
+  const n = $('#macNotice');
+  const mac = normMac(raw);
+  if(!mac){ n.className='notice show err'; n.textContent='That isn\u2019t a valid MAC address. Use 12 hex digits, e.g. 0A:1B:2C:3D:4E:5F.'; return; }
+  if(S.macs.includes(mac)){ n.className='notice show err'; n.textContent='That device is already on the list.'; return; }
+  S.macs.push(mac);
+  $('#macInput').value='';
+  n.className='notice'; n.textContent='';
+  drawMacs(); refresh();
+});
+
+function drawMacs(){
+  const tb = $('#macTable');
+  if(!S.macs.length){ tb.innerHTML = '<tr><td colspan="2" class="empty">No devices added yet.</td></tr>'; return; }
+  tb.innerHTML = S.macs.map((m,i)=>(
+    '<tr><td class="mono">'+m+'</td><td style="text-align:right">'+
+    '<button class="ghost sm" data-rm="'+i+'">Remove</button></td></tr>'
+  )).join('');
+  tb.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{
+    S.macs.splice(+b.dataset.rm,1); drawMacs(); refresh();
+  }));
+}
+
+/* ---- device policy ---- */
+$('#savePolicy').addEventListener('click', ()=>{
+  const name = $('#policyName').value.trim();
+  const cat = $('#policyCat').value;
+  const enabled = $('#policyEnabled').checked;
+  const n = $('#policyNotice');
+  if(!name){ n.className='notice show err'; n.textContent='Name the policy so it can be referenced later.'; return; }
+  if(!cat){ n.className='notice show err'; n.textContent='Choose which device category this policy denies.'; return; }
+  // upsert by name
+  const existing = S.policies.find(p=>p.name.toLowerCase()===name.toLowerCase());
+  if(existing){ existing.cat=cat; existing.enabled=enabled; }
+  else S.policies.push({name, cat, enabled});
+  n.className='notice show ok';
+  n.textContent='Policy "'+name+'" saved'+(enabled?' and enforced.':' (not yet enforced).');
+  drawPolicies(); refresh();
+});
+
+function drawPolicies(){
+  const tb = $('#policyTable');
+  if(!S.policies.length){ tb.innerHTML='<tr><td colspan="3" class="empty">No policies defined.</td></tr>'; return; }
+  const labels={printers:'Printers',voip:'VoIP phones',gaming:'Gaming consoles',cameras:'IP cameras',laptops:'Laptops'};
+  tb.innerHTML = S.policies.map(p=>(
+    '<tr><td>'+p.name+'</td><td>'+(labels[p.cat]||p.cat)+'</td><td>'+
+    (p.enabled?'<span class="pill allow">enforced</span>':'<span class="pill block">off</span>')+'</td></tr>'
+  )).join('');
+}
+
+/* ---- questions ---- */
+function renderQuestions(){
+  $('#questions').innerHTML = QUESTIONS.map(q=>(
+    '<div class="qblock"><p class="q">'+q.prompt+'<span class="qmark" id="mark-'+q.id+'"></span></p>'+
+    '<div class="opts">'+ q.options.map(o=>(
+      '<label class="opt"><input type="radio" name="'+q.id+'" value="'+o.k+'"> <span>'+o.t+'</span></label>'
+    )).join('') + '</div></div>'
+  )).join('');
+  $$('#questions input[type=radio]').forEach(r=>r.addEventListener('change',()=>{
+    S.answers[r.name]=r.value;
+    const q = QUESTIONS.find(x=>x.id===r.name);
+    const mk = $('#mark-'+r.name);
+    if(r.value===q.answer){ mk.textContent='✓ correct'; mk.className='qmark ok'; }
+    else { mk.textContent='✗ try again'; mk.className='qmark no'; }
+    refresh();
+  }));
+}
+
+/* ---- scoring / task state ---- */
+function taskState(){
+  const credsOk = S.passChanged && S.adminUser && !KEY.forbiddenAdminNames.includes(S.adminUser.toLowerCase());
+  const listOk = !!S.listName && S.listMode==='allow';
+  const macsOk = KEY.approvedMacs.every(m=>S.macs.includes(m)) && S.macs.length===KEY.approvedMacs.length;
+  const policyOk = S.policies.some(p=>p.cat===KEY.policyDenyCat && p.enabled);
+  return {
+    login:S.loggedIn, creds:credsOk, list:listOk, macs:macsOk, policy:policyOk
+  };
+}
+function questionResults(){
+  return QUESTIONS.map(q=>({id:q.id, prompt:q.prompt, answer:S.answers[q.id]||'', correct:S.answers[q.id]===q.answer}));
+}
+function refresh(){
+  const t = taskState();
+  $$('#checklist li').forEach(li=>{
+    li.classList.toggle('pass', !!t[li.dataset.task]);
+  });
+  $$('.nav button').forEach(b=>{
+    const map={admin:'creds',access:'macs',policy:'policy'};
+    b.classList.toggle('done', !!t[map[b.dataset.pane]]);
+  });
+  const taskPts = Object.values(t).filter(Boolean).length; // out of 5
+  const qPts = questionResults().filter(r=>r.correct).length; // out of 3
+  $('#scoreEarned').textContent = taskPts + qPts;
+  $('#scoreTotal').textContent = 5 + QUESTIONS.length;
+}
+
+/* ---- submission ---- */
+async function submit(){
+  const status = $('#status');
+  const name = $('#hackerName').value.trim();
+  if(!name){ status.className='err'; status.textContent='Enter a hacker name before submitting.'; $('#hackerName').focus(); return; }
+
+  const t = taskState();
+  const tasks = [
+    {id:'login', label:'Signed in to the controller', passed:t.login},
+    {id:'creds', label:'Replaced default administrator credentials', passed:t.creds},
+    {id:'list',  label:'Created a MAC allow list', passed:t.list},
+    {id:'macs',  label:'Added the four approved devices', passed:t.macs},
+    {id:'policy',label:'Enforced gaming-console block policy', passed:t.policy}
+  ];
+  const questions = questionResults();
+  const earned = tasks.filter(x=>x.passed).length + questions.filter(x=>x.correct).length;
+  const total = tasks.length + questions.length;
+
+  let screenshot = '';
+  try { screenshot = captureLabPng('#capture-area'); } catch(e){ screenshot=''; }
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    hackerName: name.slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks, questions,
+    score: { earned, total },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.startsWith('PASTE_')){
+    status.className='err';
+    status.textContent='Submission endpoint not configured. Ask your instructor to set APPS_SCRIPT_URL.';
+    return;
+  }
+
+  status.className='work'; status.textContent='Submitting…';
+  try{
+    // Simple request: no custom headers, default text/plain body — avoids CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      status.className='ok';
+      status.innerHTML = 'Submitted — scored '+earned+'/'+total+'. '+
+        (out.docUrl ? '<a href="'+out.docUrl+'" target="_blank" rel="noopener">View your record</a>' : 'Saved to instructor Drive.');
+    } else {
+      status.className='err';
+      status.textContent = 'The server rejected the submission'+(out && out.error?': '+out.error:'.')+' Check with your instructor.';
+    }
+  } catch(err){
+    // Fall back to fire-and-forget if the response can't be read in a locked-down context.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) });
+      status.className='ok';
+      status.textContent = 'Submitted '+earned+'/'+total+'. (Couldn\u2019t read the confirmation — please verify with your instructor.)';
+    } catch(e2){
+      status.className='err';
+      status.textContent = 'Couldn\u2019t reach the submission server. Check your connection and try again.';
+    }
+  }
+}
+$('#submitBtn').addEventListener('click', submit);
+
+/* ---- reset ---- */
+$('#resetBtn').addEventListener('click', ()=>{
+  Object.assign(S,{loggedIn:false,adminUser:'',passChanged:false,listName:'',listMode:'',macs:[],policies:[],answers:{}});
+  ['loginUser','loginPass','adminUser','adminPass','adminPass2','listName','macInput','policyName','hackerName'].forEach(id=>{const el=$('#'+id); if(el) el.value='';});
+  $('#listMode').value=''; $('#policyCat').value=''; $('#policyEnabled').checked=false;
+  $('#macCard').hidden = true;
+  $('#app').hidden = true; $('#gate').hidden = false;
+  $$('.notice').forEach(n=>{n.className='notice';n.textContent='';});
+  $('#status').className=''; $('#status').textContent='';
+  drawMacs(); drawPolicies(); renderQuestions(); refresh();
+  $('#loginUser').focus();
+});
+
+/* ---- allow Enter-to-submit on login ---- */
+['loginUser','loginPass'].forEach(id=>$('#'+id).addEventListener('keydown',e=>{if(e.key==='Enter')$('#loginBtn').click();}));
+
+/* init */
+renderQuestions();
+drawMacs();
+drawPolicies();
+refresh();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-appliance-access.html",title:"Lab \u2014 Secure Management Access on a Network Firewall Appliance"}, NEXT={href:"splus-switch-hardening.html",title:"Lab \u2014 Harden a Factory-Default Access Switch"}, CRUMB="All Labs \u203a Unit 3 \u2014 Securing Networks \u203a 3.2 Protecting Networks: Managerial Controls and Wireless Security";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

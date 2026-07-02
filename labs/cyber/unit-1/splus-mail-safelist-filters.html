@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<!--
+  =====================================================================
+  Larkspur Mail — Safety Center  |  Security+ Lab Simulation
+  Assignment: splus-mail-safelist-filters
+  SY0-701 objectives: 4.5 (modify enterprise capabilities — email
+  security / gateway), 2.4 (indicators of malicious activity),
+  5.6 (security awareness — phishing).
+
+  Clean-room original work. Scenario, personas, company, domains,
+  filenames, control labels, question wording, and UI are all original
+  expression authored for this library. Not derived from, and not a
+  reskin of, any vendor's lab.
+
+  Copyright (c) 2026 [Author Name]. All rights reserved.
+  Licensed for use within the author's Security+ lab library.
+  "Larkspur Mail", "Cedarline Mutual", and all personas herein are
+  fictional and used for instructional simulation only.
+
+  NOTE ON SCREENSHOT CAPTURE:
+  The master build spec calls for an inlined html2canvas. This build
+  environment had no network access to retrieve that library, so the
+  file ships a small self-written, dependency-free DOM->PNG routine
+  (SVG foreignObject + inlined computed styles) that captures the
+  simulated DOM only. To use the real html2canvas instead, paste its
+  minified source into the marked block below and set
+  USE_HTML2CANVAS = true.
+  =====================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Larkspur Mail — Safety Center | Security+ Lab</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-mail-safelist-filters",
+  "title": "Larkspur Mail — Safety Center | Security+ Lab",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 1,
+    "unitTitle": "Introduction to Security",
+    "topics": [
+      "1.2 Suspicious Website Logins"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.5",
+      "2.4",
+      "5.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<style>
+  :root{
+    /* trust-console palette — deliberately not cream/terracotta defaults */
+    --ink:        #10161d;   /* near-black panel ground */
+    --ink-2:      #18212b;   /* raised surface */
+    --ink-3:      #212d3a;   /* control surface */
+    --line:       #2c3a48;   /* hairline */
+    --line-soft:  #233140;
+    --paper:      #eef3f6;   /* light reading area */
+    --paper-2:    #ffffff;
+    --text:       #dce6ee;   /* on dark */
+    --text-dim:   #8ea2b3;
+    --text-ink:   #1d2a35;   /* on light */
+    --text-ink-dim:#5a6c79;
+    --teal:       #2fb6a8;   /* trust / verified / safe accent */
+    --teal-deep:  #1f8d83;
+    --amber:      #e0962f;   /* blocked / held / caution */
+    --amber-deep: #b9761c;
+    --rose:       #d9596b;   /* error / wrong */
+    --radius:     14px;
+    --radius-sm:  9px;
+    --shadow:     0 10px 34px rgba(0,0,0,.34);
+    --focus:      0 0 0 3px rgba(47,182,168,.55);
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--sans);
+    color:var(--text);
+    background:
+      radial-gradient(1100px 600px at 80% -10%, rgba(47,182,168,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(224,150,47,.07), transparent 55%),
+      var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:1180px; margin:0 auto; padding:26px 20px 120px; }
+
+  /* ---- header ---- */
+  header.lab-head{ margin-bottom:22px; }
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--teal); margin:0 0 8px;
+  }
+  h1.lab-title{
+    font-size:clamp(26px,4vw,40px); line-height:1.05; margin:0 0 6px;
+    font-weight:780; letter-spacing:-.02em;
+  }
+  .obj-tags{ display:flex; flex-wrap:wrap; gap:7px; margin:12px 0 16px; }
+  .tag{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.04em;
+    color:var(--text-dim); border:1px solid var(--line);
+    border-radius:999px; padding:4px 10px; background:var(--ink-2);
+  }
+  .tag b{ color:var(--teal); font-weight:600; }
+  .brief{
+    background:var(--ink-2); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px 18px; max-width:880px;
+  }
+  .brief p{ margin:0 0 8px; color:var(--text); }
+  .brief p:last-child{ margin-bottom:0; }
+  .brief .from{ color:var(--text-dim); font-size:14px; }
+  .brief .from b{ color:var(--text); font-weight:600; }
+
+  /* ---- layout ---- */
+  .grid{ display:grid; grid-template-columns: 1.35fr 1fr; gap:20px; margin-top:22px; align-items:start; }
+  @media (max-width:880px){ .grid{ grid-template-columns:1fr; } }
+
+  /* ---- simulated app ---- */
+  .app{
+    background:var(--ink-2); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;
+  }
+  .app-top{
+    display:flex; align-items:center; gap:11px;
+    padding:13px 16px; background:var(--ink-3); border-bottom:1px solid var(--line);
+  }
+  .glyph{ width:26px; height:26px; flex:0 0 auto; }
+  .app-name{ font-weight:680; letter-spacing:-.01em; }
+  .app-name span{ color:var(--text-dim); font-weight:500; }
+  .app-acct{
+    margin-left:auto; font-size:12.5px; color:var(--text-dim);
+    font-family:var(--mono);
+  }
+  .app-body{ padding:18px 16px 20px; }
+  .section-h{
+    display:flex; align-items:baseline; gap:9px; margin:6px 2px 12px;
+  }
+  .section-h .n{
+    font-family:var(--mono); font-size:12px; color:var(--teal);
+    border:1px solid var(--teal-deep); border-radius:6px; padding:1px 7px;
+  }
+  .section-h h2{ font-size:15px; margin:0; font-weight:680; letter-spacing:.01em; }
+  .section-h .sub{ font-size:12.5px; color:var(--text-dim); margin-left:auto; }
+  .panel{
+    background:var(--ink); border:1px solid var(--line-soft);
+    border-radius:var(--radius-sm); padding:14px; margin-bottom:16px;
+  }
+
+  /* radio group (protection level) */
+  fieldset.levels{ border:0; margin:0; padding:0; }
+  fieldset.levels legend{ padding:0; }
+  .level{
+    display:flex; gap:12px; align-items:flex-start;
+    padding:11px 12px; border:1px solid var(--line-soft); border-radius:10px;
+    margin-bottom:8px; cursor:pointer; background:var(--ink-2);
+    transition:border-color .15s, background .15s;
+  }
+  .level:last-child{ margin-bottom:0; }
+  .level:hover{ border-color:var(--line); }
+  .level:focus-within{ box-shadow:var(--focus); border-color:var(--teal); }
+  .level input{ margin:3px 0 0; accent-color:var(--teal); width:17px; height:17px; }
+  .level .lv-t{ font-weight:600; font-size:14px; }
+  .level .lv-d{ font-size:12.5px; color:var(--text-dim); margin-top:2px; }
+  .level[data-checked="true"]{ border-color:var(--teal); background:rgba(47,182,168,.07); }
+
+  /* toggle rows */
+  .toggle-row{
+    display:flex; align-items:center; gap:13px;
+    padding:12px 13px; border:1px solid var(--line-soft); border-radius:10px;
+    background:var(--ink-2); margin-bottom:8px;
+  }
+  .toggle-row:last-child{ margin-bottom:0; }
+  .toggle-row .copy{ flex:1 1 auto; min-width:0; }
+  .toggle-row .t-t{ font-weight:600; font-size:14px; }
+  .toggle-row .t-d{ font-size:12.5px; color:var(--text-dim); margin-top:2px; }
+  .switch{
+    flex:0 0 auto; width:46px; height:26px; border-radius:999px;
+    background:var(--ink-3); border:1px solid var(--line);
+    position:relative; cursor:pointer; transition:background .18s, border-color .18s;
+  }
+  .switch::after{
+    content:""; position:absolute; top:2px; left:2px;
+    width:20px; height:20px; border-radius:50%; background:var(--text-dim);
+    transition:transform .18s, background .18s;
+  }
+  .switch[aria-checked="true"]{ background:var(--teal-deep); border-color:var(--teal); }
+  .switch[aria-checked="true"]::after{ transform:translateX(20px); background:#fff; }
+  .switch:focus-visible{ box-shadow:var(--focus); outline:none; }
+
+  /* safe senders list */
+  .senders{ background:var(--paper); border-radius:var(--radius-sm); padding:12px; }
+  .senders .sh{
+    display:flex; align-items:center; gap:8px; color:var(--text-ink);
+    font-weight:680; font-size:13px; margin-bottom:9px;
+  }
+  .senders .sh .dot{ width:8px;height:8px;border-radius:50%;background:var(--teal); }
+  .sender{
+    display:flex; align-items:center; gap:9px; padding:7px 9px;
+    background:var(--paper-2); border:1px solid #d9e2e8; border-radius:8px;
+    margin-bottom:6px; color:var(--text-ink); font-size:13px;
+  }
+  .sender:last-child{ margin-bottom:0; }
+  .sender .verified{
+    margin-left:auto; font-family:var(--mono); font-size:10.5px;
+    color:var(--teal-deep); border:1px solid var(--teal); border-radius:5px;
+    padding:1px 6px; letter-spacing:.03em;
+  }
+  .sender .addr{ font-family:var(--mono); font-size:12px; color:var(--text-ink-dim); }
+  .add-row{ display:flex; gap:8px; margin-top:9px; }
+  .add-row input{
+    flex:1 1 auto; min-width:0; padding:8px 10px; border-radius:8px;
+    border:1px solid #cdd8df; background:#fff; color:var(--text-ink); font-size:13px;
+    font-family:var(--mono);
+  }
+  .add-row input:focus-visible{ outline:none; box-shadow:var(--focus); border-color:var(--teal); }
+  .btn-sm{
+    flex:0 0 auto; padding:8px 12px; border-radius:8px; border:1px solid var(--teal);
+    background:var(--teal); color:#06231f; font-weight:680; font-size:13px; cursor:pointer;
+  }
+  .btn-sm:hover{ background:var(--teal-deep); }
+  .btn-sm:focus-visible{ outline:none; box-shadow:var(--focus); }
+
+  /* ---- lab panel (right) ---- */
+  .side{ display:flex; flex-direction:column; gap:18px; }
+  .card{
+    background:var(--ink-2); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px; box-shadow:var(--shadow);
+  }
+  .card h3{ font-size:13px; text-transform:uppercase; letter-spacing:.12em;
+    color:var(--text-dim); margin:0 0 12px; font-weight:680; }
+
+  .check{
+    display:flex; gap:11px; align-items:flex-start; padding:9px 0;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .check:last-child{ border-bottom:0; }
+  .box{
+    flex:0 0 auto; width:22px; height:22px; border-radius:6px;
+    border:2px solid var(--line); display:grid; place-items:center;
+    transition:background .18s, border-color .18s; margin-top:1px;
+  }
+  .box svg{ width:13px; height:13px; opacity:0; transition:opacity .18s; }
+  .check[data-done="true"] .box{ background:var(--teal); border-color:var(--teal); }
+  .check[data-done="true"] .box svg{ opacity:1; }
+  .check .ct{ font-size:13.5px; }
+  .check[data-done="true"] .ct{ color:var(--text); }
+  .check:not([data-done="true"]) .ct{ color:var(--text-dim); }
+
+  .q{ padding:12px 0; border-bottom:1px solid var(--line-soft); }
+  .q:last-child{ border-bottom:0; }
+  .q .qp{ font-size:13.5px; font-weight:600; margin-bottom:9px; }
+  .q .qp .qn{ font-family:var(--mono); color:var(--teal); margin-right:6px; }
+  .opt{
+    display:flex; gap:9px; align-items:flex-start; padding:8px 10px;
+    border:1px solid var(--line-soft); border-radius:8px; margin-bottom:6px;
+    cursor:pointer; background:var(--ink); font-size:13px; transition:border-color .15s;
+  }
+  .opt:last-child{ margin-bottom:0; }
+  .opt:hover{ border-color:var(--line); }
+  .opt:focus-within{ box-shadow:var(--focus); border-color:var(--teal); }
+  .opt input{ margin-top:2px; accent-color:var(--teal); }
+  .q[data-graded="true"] .opt[data-correct="true"]{ border-color:var(--teal); background:rgba(47,182,168,.08); }
+  .q[data-graded="true"] .opt[data-chosen="true"][data-correct="false"]{ border-color:var(--rose); background:rgba(217,89,107,.08); }
+  .q .qfb{ font-size:12.5px; margin-top:7px; display:none; }
+  .q[data-graded="true"] .qfb{ display:block; }
+  .q[data-graded="true"][data-right="true"] .qfb{ color:var(--teal); }
+  .q[data-graded="true"][data-right="false"] .qfb{ color:var(--amber); }
+
+  .score-big{ font-size:30px; font-weight:780; letter-spacing:-.02em; }
+  .score-big span{ color:var(--text-dim); font-size:16px; font-weight:600; }
+  .progress{
+    height:8px; border-radius:999px; background:var(--ink); overflow:hidden;
+    border:1px solid var(--line-soft); margin-top:10px;
+  }
+  .progress > i{ display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--teal-deep),var(--teal)); transition:width .3s; }
+
+  /* ---- submission bar ---- */
+  .subbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    background:rgba(16,22,29,.92); backdrop-filter:blur(8px);
+    border-top:1px solid var(--line);
+  }
+  .subbar-in{
+    max-width:1180px; margin:0 auto; padding:12px 20px;
+    display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  }
+  .name-field{ display:flex; flex-direction:column; gap:3px; }
+  .name-field label{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-dim); }
+  .name-field input{
+    padding:9px 12px; border-radius:9px; border:1px solid var(--line);
+    background:var(--ink-2); color:var(--text); font-size:14px; min-width:210px;
+    font-family:var(--mono);
+  }
+  .name-field input:focus-visible{ outline:none; box-shadow:var(--focus); border-color:var(--teal); }
+  .btn{
+    padding:11px 18px; border-radius:10px; border:1px solid var(--teal);
+    background:var(--teal); color:#06231f; font-weight:720; font-size:14px; cursor:pointer;
+  }
+  .btn:hover:not(:disabled){ background:var(--teal-deep); }
+  .btn:focus-visible{ outline:none; box-shadow:var(--focus); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn.ghost{ background:transparent; color:var(--text-dim); border-color:var(--line); font-weight:600; }
+  .btn.ghost:hover{ color:var(--text); border-color:var(--text-dim); background:transparent; }
+  .status{ font-size:13px; color:var(--text-dim); margin-left:auto; max-width:420px; }
+  .status.ok{ color:var(--teal); }
+  .status.err{ color:var(--rose); }
+  .status.work{ color:var(--amber); }
+  .status a{ color:var(--teal); }
+
+  .vh{ position:absolute; width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap; }
+  .foot{ margin-top:26px; font-size:11.5px; color:var(--text-dim); max-width:880px; }
+  .foot code{ font-family:var(--mono); color:var(--text); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="lab-head">
+    <p class="eyebrow">Security+ SY0-701 · Hands-on Lab</p>
+    <h1 class="lab-title">Lock down a mailbox with safe-sender filtering</h1>
+    <div class="obj-tags">
+      <span class="tag">Objective <b>4.5</b> · email security &amp; gateway</span>
+      <span class="tag">Objective <b>2.4</b> · malicious activity</span>
+      <span class="tag">Objective <b>5.6</b> · phishing awareness</span>
+    </div>
+    <div class="brief">
+      <p>You are the security analyst at <b>Cedarline Mutual</b>, a regional insurer.
+        The operations lead, <b>Priya Raman</b>, keeps getting buried in spam and
+        the occasional booby-trapped attachment. She has already built a trusted
+        contact list and now wants her mailbox locked to it.</p>
+      <p>In the <b>Larkspur Mail Safety Center</b> on the left, configure her account so that:</p>
+      <p>• only people on her <b>Safe Senders</b> list reach the inbox,
+        • blocked junk is <b>reported to the mail provider</b>, and
+        • <b>attachments are accepted only</b> from Safe Senders.</p>
+      <p class="from">Then answer the three review questions, enter a hacker name, and submit.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============ SIMULATED APP ============ -->
+    <section class="app" id="sim" aria-label="Larkspur Mail Safety Center (simulated)">
+      <div class="app-top">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2.5" y="5" width="19" height="14" rx="2.5" stroke="#2fb6a8" stroke-width="1.6"/>
+          <path d="M3.5 6.5 12 13l8.5-6.5" stroke="#2fb6a8" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M16 14.5l2 2 3.5-3.8" stroke="#e0962f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="app-name">Larkspur Mail <span>· Safety Center</span></div>
+        <div class="app-acct">p.raman@cedarline-mutual.com</div>
+      </div>
+
+      <div class="app-body">
+
+        <!-- 1. Inbox protection level -->
+        <div class="section-h">
+          <span class="n">1</span>
+          <h2>Inbox protection</h2>
+          <span class="sub">who is allowed to reach the inbox</span>
+        </div>
+        <div class="panel">
+          <fieldset class="levels" id="levels">
+            <legend class="vh">Inbox protection level</legend>
+
+            <label class="level" data-value="off">
+              <input type="radio" name="level" value="off">
+              <span>
+                <span class="lv-t">No filtering</span>
+                <span class="lv-d">Every message is delivered. Nothing is held or blocked.</span>
+              </span>
+            </label>
+
+            <label class="level" data-value="standard">
+              <input type="radio" name="level" value="standard">
+              <span>
+                <span class="lv-t">Standard</span>
+                <span class="lv-d">Larkspur's spam scoring decides what lands. Unknown senders may still get through.</span>
+              </span>
+            </label>
+
+            <label class="level" data-value="safelist">
+              <input type="radio" name="level" value="safelist">
+              <span>
+                <span class="lv-t">Safe Senders only</span>
+                <span class="lv-d">Only addresses and domains on the Safe Senders list reach the inbox. Everything else is held as junk.</span>
+              </span>
+            </label>
+
+            <label class="level" data-value="lockdown">
+              <input type="radio" name="level" value="lockdown">
+              <span>
+                <span class="lv-t">Block everything</span>
+                <span class="lv-d">All incoming mail is rejected, including trusted contacts.</span>
+              </span>
+            </label>
+          </fieldset>
+        </div>
+
+        <!-- 2. Junk handling -->
+        <div class="section-h">
+          <span class="n">2</span>
+          <h2>Junk handling</h2>
+          <span class="sub">what happens to blocked mail</span>
+        </div>
+        <div class="panel">
+          <div class="toggle-row">
+            <div class="copy">
+              <div class="t-t">Report blocked messages to the provider</div>
+              <div class="t-d">Send a copy of junk to Larkspur's abuse team to improve filtering for the whole tenant.</div>
+            </div>
+            <button class="switch" id="sw-report" role="switch" aria-checked="false" aria-label="Report blocked messages to the provider"></button>
+          </div>
+          <div class="toggle-row">
+            <div class="copy">
+              <div class="t-t">Only accept attachments from Safe Senders</div>
+              <div class="t-d">Strip or hold attachments unless the sender is on the Safe Senders list.</div>
+            </div>
+            <button class="switch" id="sw-attach" role="switch" aria-checked="false" aria-label="Only accept attachments from Safe Senders"></button>
+          </div>
+        </div>
+
+        <!-- 3. Safe senders -->
+        <div class="section-h">
+          <span class="n">3</span>
+          <h2>Safe Senders</h2>
+          <span class="sub">Priya's trusted contacts</span>
+        </div>
+        <div class="panel">
+          <div class="senders">
+            <div class="sh"><span class="dot"></span> Trusted addresses &amp; domains</div>
+            <div id="sender-list">
+              <div class="sender"><span class="addr">claims-desk.cedarline-mutual.com</span><span class="verified">DOMAIN</span></div>
+              <div class="sender"><span class="addr">m.holloway@northwind-actuarial.com</span><span class="verified">VERIFIED</span></div>
+              <div class="sender"><span class="addr">statements@gulfport-reinsure.net</span><span class="verified">VERIFIED</span></div>
+            </div>
+            <div class="add-row">
+              <input id="add-input" type="text" inputmode="email"
+                     placeholder="add a trusted address or domain" aria-label="Add a trusted address or domain">
+              <button class="btn-sm" id="add-btn" type="button">Add</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ LAB PANEL ============ -->
+    <aside class="side">
+
+      <div class="card">
+        <h3>Task checklist</h3>
+        <div id="tasks">
+          <div class="check" data-task="t-allowlist" data-done="false">
+            <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke="#06231f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="ct">Set inbox protection to <b>Safe Senders only</b>.</span>
+          </div>
+          <div class="check" data-task="t-report" data-done="false">
+            <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke="#06231f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="ct">Turn on <b>reporting blocked mail</b> to the provider.</span>
+          </div>
+          <div class="check" data-task="t-attach" data-done="false">
+            <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke="#06231f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="ct">Restrict <b>attachments to Safe Senders</b> only.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Review questions</h3>
+        <div id="questions"><!-- injected --></div>
+      </div>
+
+      <div class="card">
+        <h3>Progress</h3>
+        <div class="score-big"><span id="score-earned">0</span><span> / <span id="score-total">6</span></span></div>
+        <div class="progress"><i id="prog"></i></div>
+      </div>
+
+    </aside>
+  </div>
+
+  <p class="foot">
+    Pseudonymous submission only — do <b>not</b> enter your real name. On submit, this lab captures an
+    image of the simulated console, scores your tasks and answers, and files it to your instructor's
+    drive. Client-side scoring is self-reported; the screenshot and the server's timestamp are supporting
+    evidence. Assignment id <code>splus-mail-safelist-filters</code>.
+  </p>
+</div>
+
+<!-- ============ SUBMISSION BAR ============ -->
+<div class="subbar">
+  <div class="subbar-in">
+    <div class="name-field">
+      <label for="hacker">Hacker name</label>
+      <input id="hacker" type="text" autocomplete="off" placeholder="e.g. cipher-otter" maxlength="40">
+    </div>
+    <button class="btn" id="submit-btn" disabled>Submit completed lab</button>
+    <button class="btn ghost" id="reset-btn" type="button">Reset lab</button>
+    <div class="status" id="status" role="status" aria-live="polite">Enter a hacker name to enable submit.</div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     SCRIPT BLOCK 1 — screenshot capture (dependency-free).
+     Replace this block with minified html2canvas and set
+     USE_HTML2CANVAS = true (in block 2) to use the real library.
+     =================================================================== -->
+<script>
+/* Self-contained DOM -> PNG. Captures the given node by inlining computed
+   styles into a clone and rendering it through an SVG <foreignObject>.
+   No external resources, no network. Works because the simulated DOM uses
+   only inline SVG + CSS (nothing that would taint the canvas). */
+window.__captureNode = function(node){
+  return new Promise(function(resolve, reject){
+    try{
+      var rect = node.getBoundingClientRect();
+      var w = Math.max(1, Math.ceil(rect.width));
+      var h = Math.max(1, Math.ceil(rect.height));
+      var clone = node.cloneNode(true);
+
+      // copy computed styles from live tree onto the clone, in parallel
+      (function inline(src, dst){
+        var cs = window.getComputedStyle(src);
+        var out = '';
+        for (var i=0; i<cs.length; i++){
+          var p = cs[i];
+          out += p + ':' + cs.getPropertyValue(p) + ';';
+        }
+        dst.setAttribute('style', out);
+        var sc = src.children, dc = dst.children;
+        for (var j=0; j<sc.length; j++){ if (dc[j]) inline(sc[j], dc[j]); }
+      })(node, clone);
+
+      clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      var serialized = new XMLSerializer().serializeToString(clone);
+
+      var svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
+          '<foreignObject x="0" y="0" width="100%" height="100%">' +
+            serialized +
+          '</foreignObject>' +
+        '</svg>';
+
+      var img = new Image();
+      var url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      img.onload = function(){
+        try{
+          var scale = Math.min(2, window.devicePixelRatio || 1);
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.round(w * scale);
+          canvas.height = Math.round(h * scale);
+          var ctx = canvas.getContext('2d');
+          ctx.scale(scale, scale);
+          ctx.fillStyle = '#10161d';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        }catch(e){ reject(e); }
+      };
+      img.onerror = function(){ reject(new Error('snapshot render failed')); };
+      img.src = url;
+    }catch(e){ reject(e); }
+  });
+};
+</script>
+
+<!-- ===================================================================
+     SCRIPT BLOCK 2 — engine + CONFIG + ANSWER KEY + submission
+     =================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- LAB CONFIG ---------------- */
+  const CONFIG = {
+    assignmentId: "splus-mail-safelist-filters",
+    title: "Lock down a mailbox with safe-sender filtering",
+    objectives: ["4.5", "2.4", "5.6"],
+    // Paste the deployed Apps Script Web App /exec URL here (shared across the library):
+    APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+    // Per-cohort secret; must match the SUBMISSION_TOKEN script property:
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+  };
+  var USE_HTML2CANVAS = false; // set true only if you inlined real html2canvas in block 1
+
+  /* ---------------- ANSWER KEY ---------------- */
+  // Tasks: pass conditions evaluated against live sim state.
+  var TASKS = [
+    { id:"t-allowlist", pass:function(s){ return s.level === "safelist"; } },
+    { id:"t-report",    pass:function(s){ return s.report === true; } },
+    { id:"t-attach",    pass:function(s){ return s.attach === true; } }
+  ];
+
+  var QUESTIONS = [
+    {
+      id:"q1",
+      prompt:"Restricting the inbox to Safe Senders is a strict allow-list. What is the main operational tradeoff?",
+      options:[
+        { k:"a", t:"It encrypts every incoming message in transit." },
+        { k:"b", t:"New legitimate senders are held or blocked until added, so the list needs upkeep." },
+        { k:"c", t:"It disables all attachments permanently." },
+        { k:"d", t:"It slows how fast the mail server delivers messages." }
+      ],
+      answer:"b",
+      whyRight:"An allow-list trades convenience for control — anyone not yet listed is treated as junk.",
+      whyWrong:"An allow-list controls who gets in; it doesn't encrypt mail or change delivery speed. The cost is maintaining the list."
+    },
+    {
+      id:"q2",
+      prompt:"Why report blocked junk to the mail provider instead of only deleting it?",
+      options:[
+        { k:"a", t:"It removes the sender from the internet." },
+        { k:"b", t:"It feeds the provider's detection so similar messages are caught for everyone." },
+        { k:"c", t:"It forwards the message to law enforcement automatically." },
+        { k:"d", t:"It adds the sender to your Safe Senders list." }
+      ],
+      answer:"b",
+      whyRight:"Reported samples train the gateway's filters, improving detection across the whole tenant.",
+      whyWrong:"Reporting feeds the provider's filtering. It doesn't contact law enforcement, allow-list the sender, or erase anyone from the internet."
+    },
+    {
+      id:"q3",
+      prompt:"Allowing attachments only from Safe Senders most directly reduces which threat?",
+      options:[
+        { k:"a", t:"Brute-force password guessing." },
+        { k:"b", t:"File-based malware delivered through email." },
+        { k:"c", t:"DNS cache poisoning." },
+        { k:"d", t:"Physical tailgating into the building." }
+      ],
+      answer:"b",
+      whyRight:"Malicious attachments are a file-based delivery vector; limiting them to trusted senders shrinks that surface.",
+      whyWrong:"Attachment filtering targets the file-based email delivery vector — not password attacks, DNS, or physical entry."
+    }
+  ];
+
+  var PASS_THRESHOLD = "All three tasks complete and all three questions correct.";
+
+  /* ---------------- live sim state ---------------- */
+  var state = { level:null, report:false, attach:false, addedSenders:[] };
+
+  /* ---------------- element refs ---------------- */
+  var $ = function(s, r){ return (r||document).querySelector(s); };
+  var $all = function(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+  var elTasks   = $("#tasks");
+  var elQs      = $("#questions");
+  var elEarned  = $("#score-earned");
+  var elTotal   = $("#score-total");
+  var elProg    = $("#prog");
+  var elHacker  = $("#hacker");
+  var elSubmit  = $("#submit-btn");
+  var elReset   = $("#reset-btn");
+  var elStatus  = $("#status");
+
+  var TOTAL = TASKS.length + QUESTIONS.length;
+  elTotal.textContent = TOTAL;
+
+  /* ---------------- render questions ---------------- */
+  QUESTIONS.forEach(function(q, qi){
+    var wrap = document.createElement("div");
+    wrap.className = "q";
+    wrap.setAttribute("data-q", q.id);
+    wrap.setAttribute("data-graded", "false");
+    var html = '<div class="qp"><span class="qn">Q'+(qi+1)+'</span>'+escapeHtml(q.prompt)+'</div>';
+    q.options.forEach(function(o){
+      html +=
+        '<label class="opt" data-opt="'+o.k+'" data-correct="'+(o.k===q.answer)+'">'+
+          '<input type="radio" name="'+q.id+'" value="'+o.k+'">'+
+          '<span>'+escapeHtml(o.t)+'</span>'+
+        '</label>';
+    });
+    html += '<div class="qfb"></div>';
+    wrap.innerHTML = html;
+    elQs.appendChild(wrap);
+
+    $all('input[type=radio]', wrap).forEach(function(inp){
+      inp.addEventListener("change", function(){
+        // mark chosen + grade this question immediately (formative feedback)
+        $all('.opt', wrap).forEach(function(opt){
+          opt.setAttribute("data-chosen", opt.getAttribute("data-opt") === inp.value);
+        });
+        var right = inp.value === q.answer;
+        wrap.setAttribute("data-graded", "true");
+        wrap.setAttribute("data-right", String(right));
+        $('.qfb', wrap).textContent = right ? ("Correct — " + q.whyRight) : ("Not quite — " + q.whyWrong);
+        update();
+      });
+    });
+  });
+
+  /* ---------------- sim wiring ---------------- */
+  // protection level radios
+  $all('input[name="level"]').forEach(function(r){
+    r.addEventListener("change", function(){
+      state.level = r.value;
+      $all('.level').forEach(function(l){
+        l.setAttribute("data-checked", String(l.getAttribute("data-value") === state.level));
+      });
+      update();
+    });
+  });
+
+  // toggles
+  wireSwitch("#sw-report", function(v){ state.report = v; });
+  wireSwitch("#sw-attach", function(v){ state.attach = v; });
+
+  function wireSwitch(sel, set){
+    var el = $(sel);
+    function toggle(){
+      var v = el.getAttribute("aria-checked") !== "true";
+      el.setAttribute("aria-checked", String(v));
+      set(v);
+      update();
+    }
+    el.addEventListener("click", toggle);
+    el.addEventListener("keydown", function(e){
+      if (e.key === " " || e.key === "Enter"){ e.preventDefault(); toggle(); }
+    });
+  }
+
+  // add safe sender (interaction flavor; not graded but reflected in screenshot)
+  var addInput = $("#add-input"), addBtn = $("#add-btn"), senderList = $("#sender-list");
+  function addSender(){
+    var v = (addInput.value || "").trim();
+    if (!v){ addInput.focus(); return; }
+    var row = document.createElement("div");
+    row.className = "sender";
+    row.innerHTML = '<span class="addr"></span><span class="verified">ADDED</span>';
+    row.querySelector(".addr").textContent = v.slice(0, 60);
+    senderList.appendChild(row);
+    state.addedSenders.push(v.slice(0, 60));
+    addInput.value = "";
+    addInput.focus();
+  }
+  addBtn.addEventListener("click", addSender);
+  addInput.addEventListener("keydown", function(e){ if (e.key === "Enter"){ e.preventDefault(); addSender(); } });
+
+  /* ---------------- scoring / progress ---------------- */
+  function taskResults(){
+    return TASKS.map(function(t){ return { id:t.id, passed: !!t.pass(state) }; });
+  }
+  function questionResults(){
+    return QUESTIONS.map(function(q){
+      var sel = document.querySelector('input[name="'+q.id+'"]:checked');
+      var chosen = sel ? sel.value : null;
+      return { id:q.id, prompt:q.prompt, answer:chosen, correct: chosen === q.answer };
+    });
+  }
+  function update(){
+    var tr = taskResults();
+    tr.forEach(function(r){
+      var node = elTasks.querySelector('[data-task="'+r.id+'"]');
+      if (node) node.setAttribute("data-done", String(r.passed));
+    });
+    var qr = questionResults();
+    var earned = tr.filter(function(r){return r.passed;}).length +
+                 qr.filter(function(r){return r.correct;}).length;
+    elEarned.textContent = earned;
+    elProg.style.width = Math.round((earned/TOTAL)*100) + "%";
+
+    elSubmit.disabled = (elHacker.value.trim().length === 0);
+    if (elHacker.value.trim().length === 0){
+      setStatus("Enter a hacker name to enable submit.", "");
+    } else if (elStatus.dataset.locked !== "1"){
+      setStatus(earned === TOTAL ? "All checks pass — ready to submit."
+                                 : (earned + " of " + TOTAL + " complete. You can submit now or keep going."), "");
+    }
+    return { earned:earned, tasks:tr, questions:qr };
+  }
+
+  /* ---------------- submission ---------------- */
+  elHacker.addEventListener("input", update);
+
+  elReset.addEventListener("click", function(){
+    state = { level:null, report:false, attach:false, addedSenders:[] };
+    $all('input[name="level"]').forEach(function(r){ r.checked = false; });
+    $all('.level').forEach(function(l){ l.setAttribute("data-checked","false"); });
+    $("#sw-report").setAttribute("aria-checked","false");
+    $("#sw-attach").setAttribute("aria-checked","false");
+    $all('.q').forEach(function(w){
+      w.setAttribute("data-graded","false"); w.removeAttribute("data-right");
+      $all('input[type=radio]', w).forEach(function(i){ i.checked=false; });
+      $all('.opt', w).forEach(function(o){ o.removeAttribute("data-chosen"); });
+    });
+    // remove user-added senders
+    $all('.sender .verified').forEach(function(v){
+      if (v.textContent === "ADDED" && v.parentNode) v.parentNode.remove();
+    });
+    elStatus.dataset.locked = "";
+    update();
+    elHacker.focus();
+  });
+
+  elSubmit.addEventListener("click", function(){
+    var res = update();
+    var name = elHacker.value.trim();
+    if (!name) return;
+
+    elSubmit.disabled = true;
+    elStatus.dataset.locked = "1";
+    setStatus("Capturing the console…", "work");
+
+    capture($("#sim")).then(function(png){
+      setStatus("Filing your submission…", "work");
+      var payload = {
+        assignmentId: CONFIG.assignmentId,
+        hackerName: name.slice(0, 40),
+        clientTimestamp: new Date().toISOString(),
+        objectives: CONFIG.objectives,
+        tasks: res.tasks.map(function(t){
+          return { id:t.id, label:labelForTask(t.id), passed:t.passed };
+        }),
+        questions: res.questions.map(function(q){
+          return { id:q.id, prompt:q.prompt, answer:q.answer, correct:q.correct };
+        }),
+        score: { earned: res.earned, total: TOTAL },
+        screenshot: png,
+        submissionToken: CONFIG.submissionToken
+      };
+      return post(payload);
+    }).then(function(out){
+      elStatus.dataset.locked = "1";
+      if (out && out.success && out.docUrl){
+        setStatus('Submitted. Your record: ' +
+          '<a href="'+out.docUrl+'" target="_blank" rel="noopener">open the document</a>.', "ok");
+      } else if (out && out.success){
+        setStatus("Submitted successfully.", "ok");
+      } else {
+        setStatus("Submitted, but the server reply was unexpected. Confirm with your instructor.", "work");
+      }
+    }).catch(function(err){
+      elStatus.dataset.locked = "1";
+      setStatus("Couldn't submit: " + (err && err.message ? err.message : "network error") +
+                ". Check your connection and try again, or contact your instructor.", "err");
+      elSubmit.disabled = false;
+    });
+  });
+
+  function capture(node){
+    if (USE_HTML2CANVAS && typeof window.html2canvas === "function"){
+      return window.html2canvas(node, { backgroundColor:"#10161d", scale:2 })
+        .then(function(c){ return c.toDataURL("image/png"); });
+    }
+    return window.__captureNode(node);
+  }
+
+  // Simple-request POST: no custom headers (default text/plain) so no CORS preflight.
+  function post(payload){
+    return fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }).then(function(res){
+      return res.json();
+    }).catch(function(){
+      // Fallback: fire-and-forget if the response can't be read in a locked-down context.
+      return fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(payload)
+      }).then(function(){
+        return { success:true, docUrl:null, note:"no-cors fallback — response not readable" };
+      });
+    });
+  }
+
+  /* ---------------- helpers ---------------- */
+  function labelForTask(id){
+    if (id === "t-allowlist") return "Inbox protection set to Safe Senders only";
+    if (id === "t-report")    return "Reporting blocked mail to the provider enabled";
+    if (id === "t-attach")    return "Attachments restricted to Safe Senders";
+    return id;
+  }
+  function setStatus(html, cls){
+    elStatus.className = "status" + (cls ? " " + cls : "");
+    elStatus.innerHTML = html;
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[c];
+    });
+  }
+
+  update();
+})();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-identify-social-engineering.html",title:"Mail Triage Lab \u2014 Identify Social Engineering | Security+ SY0-701"}, NEXT=null, CRUMB="All Labs \u203a Unit 1 \u2014 Introduction to Security \u203a 1.2 Suspicious Website Logins";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Manage Domain User Accounts (LARK-DC01)</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-ad-account-lifecycle",
+  "title": "Lab — Manage Domain User Accounts (LARK-DC01)",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  ============================================================================
+  Security+ (SY0-701) Simulation Lab — "Manage Domain User Accounts"
+  Objective coverage: 4.6.1 Provisioning/de-provisioning user accounts;
+                      4.6.8 Access controls (workstation/logon restriction)
+  Module reference:   Active Directory Overview (Manage user accounts)
+
+  Clean-room original work. Scenario, personas, server/domain/OU names,
+  password values, workstation name, task list and question wording are all
+  original expression authored for this library. The procedures taught
+  (unlock/reset/force-change, disable a leaver, enable a returner, rename a
+  user including UPN and pre-Windows 2000 logon, restrict an OU's users to a
+  single workstation) are factual Windows administration steps and are not
+  owned by any vendor.
+
+  "Active Directory Users and Computers" and "Windows" are Microsoft product
+  names used descriptively; this lab is not affiliated with or endorsed by
+  Microsoft or by any courseware vendor.
+
+  © 2026 [Author / Instructor name]. Licensed for classroom use within the
+  author's Security+ lab library. No redistribution of the source without
+  this notice.
+  ============================================================================
+-->
+<style id="labcss">
+:root{
+  --chrome:#f3f3f3; --chrome-2:#eaeaea; --pane:#ffffff;
+  --line:#d6d6d6; --line-2:#c4c4c4; --ink:#1b1b1b; --muted:#5d5d5d;
+  --accent:#0a5fb4; --accent-soft:#cfe6fb; --accent-line:#9ccaf0;
+  --title-a:#1f3a5f; --title-b:#2c5183;
+  --ok:#137333; --ok-soft:#e6f4ea; --warn:#8a6d00; --bad:#b3261e; --bad-soft:#fce8e6;
+  --shadow:0 8px 28px rgba(20,33,55,.22);
+  --ui:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:var(--ui); color:var(--ink); background:#dfe5ee;
+  font-size:14px; line-height:1.4;
+  padding:18px; display:flex; flex-direction:column; gap:16px; align-items:center;
+}
+a{color:var(--accent)}
+.wrap{width:100%; max-width:1180px; display:flex; flex-direction:column; gap:16px}
+
+/* ---- Lab brief / task panel ---- */
+.brief{background:var(--pane); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.brief header{padding:16px 18px 12px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#f7f9fc)}
+.brief h1{margin:0 0 4px; font-size:18px; letter-spacing:.2px}
+.brief .obj{font-size:12px; color:var(--muted)}
+.brief .obj b{color:var(--accent)}
+.brief .body{padding:14px 18px 18px; display:grid; grid-template-columns:1.15fr .85fr; gap:22px}
+@media (max-width:820px){.brief .body{grid-template-columns:1fr}}
+.scenario p{margin:0 0 10px}
+.scenario .ticket{border-left:3px solid var(--accent-line); padding:2px 0 2px 12px; margin:0 0 10px; color:#2b2b2b}
+.scenario .ticket b{color:var(--ink)}
+kbd.val{font-family:var(--mono); background:#eef2f7; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:1px 6px; font-size:12px}
+.panel-title{font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:0 0 8px}
+ol.tasks{list-style:none; margin:0; padding:0; counter-reset:t}
+ol.tasks li{counter-increment:t; position:relative; padding:8px 8px 8px 40px; border:1px solid var(--line); border-radius:8px; margin-bottom:7px; background:#fbfcfe; transition:background .15s,border-color .15s}
+ol.tasks li::before{content:counter(t); position:absolute; left:9px; top:8px; width:22px; height:22px; border-radius:50%; background:#e7ebf1; color:var(--muted); font-size:12px; font-weight:600; display:grid; place-items:center; border:1px solid var(--line)}
+ol.tasks li.done{background:var(--ok-soft); border-color:#bfe3c9}
+ol.tasks li.done::before{content:"✓"; background:var(--ok); color:#fff; border-color:var(--ok)}
+ol.tasks li .lab{font-weight:600}
+ol.tasks li .hint{display:block; color:var(--muted); font-size:12.5px; margin-top:1px}
+
+/* ---- Console window ---- */
+.console{background:var(--chrome); border:1px solid var(--line-2); border-radius:9px; overflow:hidden; box-shadow:0 2px 0 rgba(0,0,0,.03)}
+.titlebar{background:linear-gradient(180deg,var(--title-b),var(--title-a)); color:#fff; display:flex; align-items:center; gap:9px; padding:7px 10px; font-size:13px}
+.titlebar .ico{width:16px;height:16px;flex:none}
+.titlebar .t{flex:1; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.titlebar .winbtns{display:flex; gap:6px}
+.titlebar .winbtns i{width:13px;height:13px;border-radius:3px;background:rgba(255,255,255,.45);display:block}
+.menubar{display:flex; gap:2px; padding:3px 8px; background:var(--chrome-2); border-bottom:1px solid var(--line); font-size:13px; color:#333}
+.menubar span{padding:2px 8px; border-radius:4px}
+.toolbar{display:flex; align-items:center; gap:4px; padding:5px 8px; background:var(--chrome); border-bottom:1px solid var(--line)}
+.toolbar button.tb{width:30px;height:28px;border:1px solid transparent;background:transparent;border-radius:5px;display:grid;place-items:center;cursor:default;color:#3a3a3a}
+.toolbar .sep{width:1px;height:20px;background:var(--line);margin:0 3px}
+.toolbar .path{margin-left:6px;font-size:12px;color:var(--muted)}
+
+.workarea{display:grid; grid-template-columns:248px 1fr; min-height:430px}
+@media (max-width:700px){.workarea{grid-template-columns:1fr; min-height:0}}
+
+/* tree */
+.tree{background:var(--pane); border-right:1px solid var(--line); padding:8px 4px; overflow:auto}
+.tree .rootlbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:2px 8px 6px}
+.tnode{display:flex; align-items:center; gap:6px; padding:4px 8px; border-radius:5px; cursor:default; white-space:nowrap; font-size:13.5px}
+.tnode .tw{width:12px; text-align:center; color:#8a8a8a; font-size:10px}
+.tnode .ti{width:16px;height:16px;flex:none}
+.tnode.dom{font-weight:600}
+.tnode.ou{margin-left:14px}
+.tnode[aria-selected="true"]{background:var(--accent-soft); outline:1px solid var(--accent-line)}
+.tnode:hover{background:#eef4fb}
+
+/* list */
+.list{background:var(--pane); display:flex; flex-direction:column; min-width:0}
+.list .cols{display:grid; grid-template-columns:1.6fr 1fr 1.5fr; background:var(--chrome-2); border-bottom:1px solid var(--line); font-size:12px; color:#444}
+.list .cols div{padding:6px 10px; border-right:1px solid var(--line)}
+.rows{overflow:auto; flex:1}
+.row{display:grid; grid-template-columns:1.6fr 1fr 1.5fr; border-bottom:1px solid #eee; font-size:13.5px; cursor:default}
+.row>div{padding:6px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:8px}
+.row[aria-selected="true"]{background:var(--accent-soft)}
+.row:hover{background:#eef4fb}
+.row[aria-selected="true"]:hover{background:#c4e0fa}
+.row .uico{position:relative; width:18px;height:18px;flex:none}
+.row .badge{position:absolute; right:-3px; bottom:-3px; width:11px; height:11px; border-radius:50%; display:grid; place-items:center; font-size:8px; color:#fff; border:1.5px solid #fff}
+.row .badge.dis{background:#5d5d5d}
+.row .badge.lock{background:var(--warn)}
+.row .meta{color:var(--muted); font-size:11.5px}
+.emptyhint{padding:18px; color:var(--muted); font-size:13px}
+.statusbar{display:flex; justify-content:space-between; align-items:center; padding:4px 10px; background:var(--chrome-2); border-top:1px solid var(--line); font-size:12px; color:var(--muted)}
+
+/* context menu */
+.ctxmenu{position:fixed; z-index:60; min-width:208px; background:#fbfbfb; border:1px solid var(--line-2); border-radius:7px; box-shadow:var(--shadow); padding:5px; font-size:13.5px}
+.ctxmenu button{display:flex; width:100%; align-items:center; gap:9px; padding:6px 10px; border:0; background:transparent; border-radius:5px; text-align:left; cursor:default; color:var(--ink); font:inherit}
+.ctxmenu button:hover,.ctxmenu button:focus-visible{background:var(--accent-soft); outline:none}
+.ctxmenu button[disabled]{color:#aaa}
+.ctxmenu .div{height:1px; background:var(--line); margin:5px 6px}
+.ctxmenu .k{width:18px; text-align:center; color:#6b6b6b}
+
+/* dialogs */
+.scrim{position:fixed; inset:0; background:rgba(20,28,40,.34); z-index:80; display:grid; place-items:center; padding:16px}
+.dialog{background:#fbfbfb; border:1px solid var(--line-2); border-radius:9px; box-shadow:var(--shadow); width:min(460px,96vw); overflow:hidden}
+.dialog.wide{width:min(560px,96vw)}
+.dialog .dtitle{background:linear-gradient(180deg,var(--title-b),var(--title-a)); color:#fff; padding:8px 12px; font-size:13px; display:flex; align-items:center; gap:8px}
+.dialog .dtitle .x{margin-left:auto; width:22px;height:22px;border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:5px;cursor:default;font-size:13px}
+.tabs{display:flex; gap:3px; padding:8px 10px 0; background:var(--chrome); border-bottom:1px solid var(--line)}
+.tabs button{border:1px solid var(--line); border-bottom:0; background:#ececec; padding:5px 14px; border-radius:7px 7px 0 0; cursor:default; font:inherit; color:#333}
+.tabs button[aria-selected="true"]{background:var(--pane); font-weight:600}
+.dbody{padding:14px 16px; background:var(--pane); max-height:62vh; overflow:auto}
+.field{display:grid; grid-template-columns:140px 1fr; align-items:center; gap:10px; margin-bottom:10px}
+@media (max-width:520px){.field{grid-template-columns:1fr}}
+.field label{color:#333}
+.field input[type=text],.field input[type=password]{width:100%; padding:6px 8px; border:1px solid var(--line-2); border-radius:5px; font:inherit; font-family:var(--mono); font-size:13px}
+.upnrow{display:flex; align-items:center; gap:6px}
+.upnrow .at{color:var(--muted); font-family:var(--mono)}
+.checks{margin:6px 0 2px; display:flex; flex-direction:column; gap:8px}
+.checks label{display:flex; align-items:flex-start; gap:8px; color:#2c2c2c}
+.checks input{margin-top:3px}
+.lockwarn{background:var(--bad-soft); border:1px solid #f3c0bc; color:#8a241d; padding:8px 10px; border-radius:6px; font-size:12.5px; margin-bottom:12px; display:flex; gap:8px; align-items:flex-start}
+.workstations{border:1px solid var(--line); border-radius:6px; padding:10px}
+.workstations .wsadd{display:flex; gap:6px; margin:8px 0}
+.workstations input{flex:1; padding:6px 8px; border:1px solid var(--line-2); border-radius:5px; font-family:var(--mono); font-size:13px}
+.workstations ul{list-style:none; margin:6px 0 0; padding:0; border:1px solid var(--line); border-radius:5px; min-height:64px; max-height:120px; overflow:auto; background:#fff}
+.workstations li{display:flex; justify-content:space-between; align-items:center; padding:5px 9px; border-bottom:1px solid #eee; font-family:var(--mono); font-size:13px}
+.workstations li:last-child{border-bottom:0}
+.workstations .none{color:var(--muted); padding:8px 9px; font-family:var(--ui); font-size:12.5px}
+.derr{color:var(--bad); font-size:12.5px; margin:2px 0 8px; min-height:0}
+.dfoot{display:flex; justify-content:flex-end; gap:9px; padding:11px 16px; background:var(--chrome); border-top:1px solid var(--line)}
+button.btn{font:inherit; padding:6px 16px; border-radius:6px; border:1px solid var(--line-2); background:#fff; cursor:default}
+button.btn:hover{background:#f1f1f1}
+button.btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+button.btn.primary:hover{background:#0b6fce}
+button.btn.sm{padding:4px 10px}
+
+/* questions */
+.quiz{background:var(--pane); border:1px solid var(--line); border-radius:10px; padding:16px 18px}
+.qitem{border-top:1px solid var(--line); padding:12px 0}
+.qitem:first-of-type{border-top:0}
+.qitem .qp{font-weight:600; margin:0 0 8px}
+.qitem .qp .num{color:var(--accent); margin-right:6px}
+.opts{display:flex; flex-direction:column; gap:6px}
+.opts label{display:flex; align-items:center; gap:9px; padding:7px 10px; border:1px solid var(--line); border-radius:7px; cursor:pointer}
+.opts label:hover{background:#f3f7fc}
+.opts label.correct{background:var(--ok-soft); border-color:#bfe3c9}
+.opts label.wrong{background:var(--bad-soft); border-color:#f1c4c0}
+.qjudge{font-size:12.5px; margin-top:7px; color:var(--muted)}
+.qjudge.ok{color:var(--ok)} .qjudge.no{color:var(--bad)}
+
+/* submit bar */
+.submit{background:var(--pane); border:1px solid var(--line); border-radius:10px; padding:16px 18px; display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end}
+.submit .grow{flex:1; min-width:200px}
+.submit label.lbl{display:block; font-size:12px; color:var(--muted); margin-bottom:4px}
+.submit input#hacker{width:100%; padding:9px 11px; border:1px solid var(--line-2); border-radius:7px; font:inherit}
+.scorechip{font-size:13px; padding:8px 12px; border-radius:8px; background:#eef2f7; border:1px solid var(--line); white-space:nowrap}
+.scorechip b{color:var(--accent)}
+button#submitBtn{font:inherit; font-weight:600; padding:11px 22px; border:0; border-radius:9px; background:var(--accent); color:#fff; cursor:pointer}
+button#submitBtn:hover{background:#0b6fce}
+button#submitBtn:disabled{background:#9bb6d2; cursor:not-allowed}
+button#resetBtn{font:inherit; padding:11px 16px; border:1px solid var(--line-2); border-radius:9px; background:#fff; cursor:pointer}
+.substatus{flex-basis:100%; font-size:13px; padding:10px 12px; border-radius:8px; display:none}
+.substatus.show{display:block}
+.substatus.info{background:#eef4fb; border:1px solid var(--accent-line); color:#1c4a7a}
+.substatus.ok{background:var(--ok-soft); border:1px solid #bfe3c9; color:#155724}
+.substatus.err{background:var(--bad-soft); border:1px solid #f1c4c0; color:#8a241d}
+.substatus a{font-weight:600}
+
+.footnote{font-size:11.5px; color:#7a8290; text-align:center; line-height:1.6}
+
+:focus-visible{outline:2px solid var(--accent); outline-offset:1px; border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <!-- ============ LAB BRIEF + TASK CHECKLIST ============ -->
+  <section class="brief" aria-labelledby="labh">
+    <header>
+      <h1 id="labh">Lab — Manage Domain User Accounts</h1>
+      <div class="obj">Security+ SY0-701 objectives: <b>4.6.1</b> Provisioning / de-provisioning user accounts · <b>4.6.8</b> Access controls (logon restriction)</div>
+    </header>
+    <div class="body">
+      <div class="scenario">
+        <p class="panel-title">Scenario</p>
+        <p>You are the identity administrator at <b>Larkfield Freight Co.</b> The domain <kbd class="val">larkfield.local</kbd> runs on the domain controller <kbd class="val">LARK-DC01</kbd>. Each department is an organizational unit (OU); user accounts live in their department's OU. A handful of personnel changes landed in your queue this morning. Work through them in <b>Active Directory Users and Computers</b> below, then answer the review questions and submit.</p>
+        <p class="ticket"><b>Finance · Priya Nadkarni</b> — too many failed sign-ins; her account is locked. Unlock it, reset the password to <kbd class="val">Cedar!Ridge2026</kbd>, and require a password change at next sign-in.</p>
+        <p class="ticket"><b>Finance · Devon Pike</b> — left the company. Block sign-in without deleting the account.</p>
+        <p class="ticket"><b>Logistics-Eng · Talia Ostrowski</b> — back from sabbatical; her account was disabled while she was away. Restore sign-in.</p>
+        <p class="ticket"><b>Logistics-Eng · Hana Kim</b> — legally changed her surname to <b>Vega</b>. Update the account name, last name, and display name to <b>Hana Vega</b>, and change the user logon name and the pre-Windows 2000 logon name to <kbd class="val">hvega</kbd>.</p>
+        <p class="ticket"><b>Dispatch OU</b> — for everyone in the <b>Dispatch</b> OU (not the <b>DispatchLeads</b> OU), restrict sign-in so they can only log on to the workstation <kbd class="val">DSP-WS04</kbd>.</p>
+      </div>
+      <div class="tasklist">
+        <p class="panel-title">Task checklist <span id="taskcount" style="color:var(--accent);font-weight:600"></span></p>
+        <ol class="tasks" id="tasks"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SIMULATED CONSOLE ============ -->
+  <section class="console" id="lab-capture" aria-label="Active Directory Users and Computers console">
+    <div class="titlebar">
+      <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="2" width="14" height="12" rx="1.5" fill="#cfe2f6"/><rect x="1" y="2" width="14" height="3.2" rx="1.5" fill="#7fb1e6"/><circle cx="3.2" cy="3.6" r=".7" fill="#fff"/></svg>
+      <span class="t">Active Directory Users and Computers&nbsp;—&nbsp;LARK-DC01.larkfield.local</span>
+      <span class="winbtns" aria-hidden="true"><i></i><i></i><i></i></span>
+    </div>
+    <div class="menubar" aria-hidden="true"><span>File</span><span>Action</span><span>View</span><span>Help</span></div>
+    <div class="toolbar">
+      <button class="tb" tabindex="-1" aria-hidden="true" title="Back"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M10 3 5 8l5 5" fill="none" stroke="#555" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="tb" tabindex="-1" aria-hidden="true" title="Forward"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" fill="none" stroke="#aaa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <span class="sep"></span>
+      <button class="tb" tabindex="-1" aria-hidden="true" title="Refresh"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M12 5a5 5 0 1 0 1 4" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round"/><path d="M12 2.5V5.5H9" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <span class="path" id="crumb">larkfield.local</span>
+    </div>
+
+    <div class="workarea">
+      <!-- tree -->
+      <div class="tree" role="tree" aria-label="Domain tree" id="tree">
+        <div class="rootlbl">Console root</div>
+        <div class="tnode dom" role="treeitem" aria-expanded="true" aria-selected="false" data-ou="__domain__" tabindex="0">
+          <span class="tw">▾</span>
+          <svg class="ti" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="#dfeafc" stroke="#7fb1e6"/><path d="M2 8h12M8 2c2.4 2 2.4 10 0 12M8 2c-2.4 2-2.4 10 0 12" fill="none" stroke="#7fb1e6" stroke-width=".8"/></svg>
+          <span>larkfield.local</span>
+        </div>
+        <div id="oulist"></div>
+      </div>
+
+      <!-- list -->
+      <div class="list">
+        <div class="cols" role="row"><div role="columnheader">Name</div><div role="columnheader">Type</div><div role="columnheader">Description</div></div>
+        <div class="rows" id="rows" role="grid" aria-label="Objects in selected container" tabindex="0"></div>
+        <div class="statusbar"><span id="statusleft">Select an organizational unit</span><span id="statusright"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REVIEW QUESTIONS ============ -->
+  <section class="quiz" aria-labelledby="quizh">
+    <p class="panel-title" id="quizh">Review questions</p>
+    <div id="quiz"></div>
+  </section>
+
+  <!-- ============ SUBMIT ============ -->
+  <section class="submit" aria-labelledby="subh">
+    <div class="grow">
+      <span id="subh" class="sr">Submit completed lab</span>
+      <label class="lbl" for="hacker">Hacker name (pseudonym — do not use your real name)</label>
+      <input id="hacker" type="text" autocomplete="off" maxlength="40" placeholder="e.g. nightshade-07" aria-describedby="pii">
+      <span id="pii" class="sr">Use a pseudonym. No real names are stored by this lab.</span>
+    </div>
+    <div class="scorechip" id="scorechip">Score <b id="scoreNow">0 / 14</b></div>
+    <button id="resetBtn" type="button">Reset lab</button>
+    <button id="submitBtn" type="button">Submit completed lab</button>
+    <div class="substatus" id="substatus" role="status" aria-live="polite"></div>
+  </section>
+
+  <p class="footnote">
+    Self-contained practice lab · scoring is self-reported and inspectable in dev tools (formative use).<br>
+    © 2026 [Author]. Clean-room original. Microsoft product names used descriptively; not affiliated with Microsoft or any courseware vendor.
+  </p>
+</div>
+
+<!-- live regions / mount points -->
+<div id="ctxmount"></div>
+<div id="dlgmount"></div>
+
+<script>
+/* =====================================================================
+   CONFIG + ANSWER KEY  (per §11 of the build prompt)
+   ===================================================================== */
+const CONFIG = {
+  assignmentId: "splus-ad-account-lifecycle",
+  title: "Manage Domain User Accounts",
+  objectives: ["4.6"],
+  // Apps Script Web App /exec URL — same across the library. Set during setup.
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "REPLACE_WITH_PER_COHORT_TOKEN",
+  domainSuffix: "larkfield.local",
+  answer: {
+    resetPassword: "Cedar!Ridge2026",
+    renameFull:    "Hana Vega",
+    renameLast:    "Vega",
+    renameDisplay: "Hana Vega",
+    renameLogon:   "hvega",          // UPN local part + pre-Windows 2000
+    restrictWks:   "DSP-WS04"
+  }
+};
+
+/* =====================================================================
+   IN-MEMORY DIRECTORY STATE  (no localStorage/sessionStorage)
+   ===================================================================== */
+const OUS = [
+  {id:"Executive",      label:"Executive"},
+  {id:"Finance",        label:"Finance"},
+  {id:"Logistics-Eng",  label:"Logistics-Eng"},
+  {id:"Dispatch",       label:"Dispatch"},
+  {id:"DispatchLeads",  label:"DispatchLeads"},
+  {id:"IT",             label:"IT"}
+];
+
+function freshUsers(){
+  // logon = UPN local part; pre2000 mirrors it unless edited.
+  return [
+    {ou:"Executive",     first:"Dana",  last:"Whitfield", display:"Dana Whitfield",  full:"Dana Whitfield",  logon:"dwhitfield", pre2000:"dwhitfield", desc:"VP, Operations",        disabled:false, locked:false, must:false, pwd:"", wks:null},
+    {ou:"Finance",       first:"Priya", last:"Nadkarni",  display:"Priya Nadkarni",  full:"Priya Nadkarni",  logon:"pnadkarni",  pre2000:"pnadkarni",  desc:"Accounts payable",      disabled:false, locked:true,  must:false, pwd:"OldPass!19", wks:null},
+    {ou:"Finance",       first:"Devon", last:"Pike",      display:"Devon Pike",      full:"Devon Pike",      logon:"dpike",      pre2000:"dpike",      desc:"Payroll analyst",       disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"Finance",       first:"Marcus",last:"Hale",      display:"Marcus Hale",     full:"Marcus Hale",     logon:"mhale",      pre2000:"mhale",      desc:"Controller",            disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"Logistics-Eng", first:"Talia", last:"Ostrowski", display:"Talia Ostrowski", full:"Talia Ostrowski", logon:"tostrowski", pre2000:"tostrowski", desc:"Routing engineer",      disabled:true,  locked:false, must:false, pwd:"x", wks:null},
+    {ou:"Logistics-Eng", first:"Hana",  last:"Kim",       display:"Hana Kim",        full:"Hana Kim",        logon:"hkim",       pre2000:"hkim",       desc:"Logistics analyst",     disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"Logistics-Eng", first:"Bryce", last:"Tanaka",    display:"Bryce Tanaka",    full:"Bryce Tanaka",    logon:"btanaka",    pre2000:"btanaka",    desc:"Fleet systems",         disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"Dispatch",      first:"Joan",  last:"Petrelli",  display:"Joan Petrelli",   full:"Joan Petrelli",   logon:"jpetrelli",  pre2000:"jpetrelli",  desc:"Dispatcher",            disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"Dispatch",      first:"Omar",  last:"Said",      display:"Omar Said",       full:"Omar Said",       logon:"osaid",      pre2000:"osaid",      desc:"Dispatcher",            disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"Dispatch",      first:"Lena",  last:"Brandt",    display:"Lena Brandt",     full:"Lena Brandt",     logon:"lbrandt",    pre2000:"lbrandt",    desc:"Dispatcher",            disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"DispatchLeads", first:"Carla", last:"Dunn",      display:"Carla Dunn",      full:"Carla Dunn",      logon:"cdunn",      pre2000:"cdunn",      desc:"Dispatch lead",         disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"DispatchLeads", first:"Reggie",last:"Bowen",     display:"Reggie Bowen",    full:"Reggie Bowen",    logon:"rbowen",     pre2000:"rbowen",     desc:"Dispatch lead",         disabled:false, locked:false, must:false, pwd:"x", wks:null},
+    {ou:"IT",            first:"Sam",   last:"Ortega",    display:"Sam Ortega",      full:"Sam Ortega",      logon:"sortega",    pre2000:"sortega",    desc:"Helpdesk",              disabled:false, locked:false, must:false, pwd:"x", wks:null}
+  ];
+}
+let users = freshUsers();
+let selectedOU = "Finance";
+let selectedRows = [];   // indices into users for the current OU view
+
+function userById(logonSeed){ return users.find(u=>u.logon===logonSeed); }
+function find(first,last){ return users.find(u=>u.first===first && u.last===last); }
+
+/* =====================================================================
+   TASK DEFINITIONS (each pass condition reads sim state)
+   ===================================================================== */
+const A = CONFIG.answer;
+const TASKS = [
+  {id:"unlock",   label:"Unlock Priya Nadkarni's account",
+    hint:"Finance · clear the lockout so she can sign in again",
+    pass:()=>{const u=find("Priya","Nadkarni"); return u && !u.locked;}},
+  {id:"resetpwd", label:"Reset Priya Nadkarni's password",
+    hint:"Set it to the value in the ticket",
+    pass:()=>{const u=find("Priya","Nadkarni"); return u && u.pwd===A.resetPassword;}},
+  {id:"mustchg",  label:"Require Priya to change her password at next sign-in",
+    hint:"Account option on reset / Account tab",
+    pass:()=>{const u=find("Priya","Nadkarni"); return u && u.must===true;}},
+  {id:"disable",  label:"Disable Devon Pike's account",
+    hint:"Finance · blocks sign-in, keeps the account",
+    pass:()=>{const u=find("Devon","Pike"); return u && u.disabled===true;}},
+  {id:"enable",   label:"Enable Talia Ostrowski's account",
+    hint:"Logistics-Eng · restore sign-in",
+    pass:()=>{const u=find("Talia","Ostrowski"); return u && u.disabled===false;}},
+  {id:"renameobj",label:"Rename Hana's account object to \u201CHana Vega\u201D",
+    hint:"Right-click \u2192 Rename",
+    pass:()=>{const u=find("Hana","Kim"); return u && u.full===A.renameFull;}},
+  {id:"lastname", label:"Change Hana's last name to \u201CVega\u201D",
+    hint:"Properties \u2192 General",
+    pass:()=>{const u=find("Hana","Kim"); return u && u.last===A.renameLast;}},
+  {id:"display",  label:"Change Hana's display name to \u201CHana Vega\u201D",
+    hint:"Properties \u2192 General",
+    pass:()=>{const u=find("Hana","Kim"); return u && u.display===A.renameDisplay;}},
+  {id:"logon",    label:"Change Hana's user logon name and pre-Windows 2000 name to \u201Chvega\u201D",
+    hint:"Properties \u2192 Account",
+    pass:()=>{const u=find("Hana","Kim"); return u && u.logon===A.renameLogon && u.pre2000===A.renameLogon;}},
+  {id:"restrict", label:"Restrict all Dispatch OU users to log on only to DSP-WS04",
+    hint:"Leave DispatchLeads untouched",
+    pass:()=>{
+      const disp=users.filter(u=>u.ou==="Dispatch");
+      const leads=users.filter(u=>u.ou==="DispatchLeads");
+      const allRestricted = disp.length>0 && disp.every(u=>Array.isArray(u.wks)&&u.wks.length===1&&u.wks[0]===A.restrictWks);
+      const leadsUntouched = leads.every(u=>u.wks===null);
+      return allRestricted && leadsUntouched;}}
+];
+
+/* =====================================================================
+   REVIEW QUESTIONS (original wording; client-checked)
+   ===================================================================== */
+const QUESTIONS = [
+  {id:"q1", prompt:"After you reset a user's password, which account option forces them to choose a new one the first time they sign in?",
+    options:["Password never expires","User must change password at next logon","User cannot change password","Store password using reversible encryption"],
+    answer:1},
+  {id:"q2", prompt:"An account is locked out after repeated failed sign-ins. Which action restores access without altering the lockout policy itself?",
+    options:["Delete and recreate the account","Disable the account","Unlock the account","Lower the account lockout threshold"],
+    answer:2},
+  {id:"q3", prompt:"An employee leaves the company. Which action blocks sign-in immediately while preserving the account's group memberships and data for later review?",
+    options:["Disable the account","Delete the account","Reset the password","Move it to a different OU"],
+    answer:0},
+  {id:"q4", prompt:"On the Account tab, the \u201CLog On To\u2026\u201D setting limits a user so they may sign in only from specific:",
+    options:["IP subnets","Times of day","Workstations","Group Policy objects"],
+    answer:2}
+];
+let quizState = QUESTIONS.map(()=>null);
+
+/* =====================================================================
+   RENDER: tree + list
+   ===================================================================== */
+const $ = s=>document.querySelector(s);
+const ouListEl = $("#oulist"), rowsEl = $("#rows");
+
+function ouIcon(){return '<svg class="ti" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.4 1.4H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" fill="#f4d58b" stroke="#d8a93f"/><rect x="2" y="6" width="12" height="6.6" rx=".6" fill="#ffe9a8" stroke="#d8a93f"/></svg>';}
+function userIcon(u){
+  let badge="";
+  if(u.disabled) badge='<span class="badge dis" title="Disabled">\u2193</span>';
+  else if(u.locked) badge='<span class="badge lock" title="Locked out">\uD83D\uDD12</span>';
+  return '<span class="uico"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><circle cx="8" cy="5.4" r="3" fill="#cfe2f6" stroke="#6fa3da"/><path d="M2.5 14c.6-3.2 3-4.6 5.5-4.6s4.9 1.4 5.5 4.6z" fill="#cfe2f6" stroke="#6fa3da"/></svg>'+badge+'</span>';
+}
+
+function renderTree(){
+  ouListEl.innerHTML = OUS.map(o=>
+    `<div class="tnode ou" role="treeitem" aria-selected="${selectedOU===o.id}" data-ou="${o.id}" tabindex="0">
+       <span class="tw"></span>${ouIcon()}<span>${o.label}</span>
+     </div>`).join("");
+  $("#crumb").textContent = "larkfield.local"+(selectedOU?(" / "+selectedOU):"");
+}
+
+function currentView(){ return users.map((u,i)=>({u,i})).filter(x=>x.u.ou===selectedOU); }
+
+function renderRows(){
+  const view = currentView();
+  if(!view.length){ rowsEl.innerHTML = '<div class="emptyhint">This container has no user objects.</div>'; }
+  else{
+    rowsEl.innerHTML = view.map(({u,i})=>{
+      const sel = selectedRows.includes(i);
+      const stateNote = u.disabled?'<span class="meta">(disabled)</span>':(u.locked?'<span class="meta">(locked out)</span>':'');
+      return `<div class="row" role="row" data-i="${i}" aria-selected="${sel}" tabindex="-1">
+        <div role="gridcell">${userIcon(u)}<span>${u.full}</span> ${stateNote}</div>
+        <div role="gridcell">User</div>
+        <div role="gridcell">${u.desc}</div>
+      </div>`;
+    }).join("");
+  }
+  $("#statusleft").textContent = view.length+" object"+(view.length===1?"":"s");
+  $("#statusright").textContent = selectedRows.length?selectedRows.length+" selected":"";
+}
+
+/* selection */
+function clearSel(){ selectedRows=[]; }
+function setSel(i,additive){
+  if(additive){ const k=selectedRows.indexOf(i); if(k>=0) selectedRows.splice(k,1); else selectedRows.push(i); }
+  else selectedRows=[i];
+}
+
+/* =====================================================================
+   CONTEXT MENU
+   ===================================================================== */
+function closeCtx(){ $("#ctxmount").innerHTML=""; }
+document.addEventListener("click",e=>{ if(!e.target.closest(".ctxmenu")) closeCtx(); });
+window.addEventListener("blur",closeCtx);
+
+function openCtx(x,y){
+  const idxs = selectedRows.slice();
+  if(!idxs.length) return;
+  const multi = idxs.length>1;
+  const u = users[idxs[0]];
+  const enableLabel = u.disabled ? "Enable Account" : "Disable Account";
+  const items = [];
+  if(!multi){
+    items.push(`<button data-act="reset"><span class="k">\uD83D\uDD11</span>Reset Password\u2026</button>`);
+    items.push(`<button data-act="toggle"><span class="k">${u.disabled?'\u25B6':'\u26D4'}</span>${enableLabel}</button>`);
+    items.push(`<div class="div"></div>`);
+    items.push(`<button data-act="rename"><span class="k">\u270E</span>Rename</button>`);
+    items.push(`<button data-act="props"><span class="k">\u2699</span>Properties</button>`);
+  }else{
+    items.push(`<button data-act="props"><span class="k">\u2699</span>Properties (${idxs.length} users)</button>`);
+  }
+  const m=document.createElement("div");
+  m.className="ctxmenu"; m.setAttribute("role","menu");
+  m.innerHTML=items.join("");
+  $("#ctxmount").appendChild(m);
+  const vw=window.innerWidth, vh=window.innerHeight, r=m.getBoundingClientRect();
+  m.style.left=Math.min(x,vw-r.width-6)+"px";
+  m.style.top =Math.min(y,vh-r.height-6)+"px";
+  m.querySelectorAll("button").forEach(b=>{
+    b.setAttribute("role","menuitem"); b.tabIndex=-1;
+    b.addEventListener("click",()=>{ const act=b.dataset.act; closeCtx(); doAction(act,idxs); });
+  });
+  const first=m.querySelector("button"); if(first) first.focus();
+  m.addEventListener("keydown",e=>{
+    const bs=[...m.querySelectorAll("button")]; const i=bs.indexOf(document.activeElement);
+    if(e.key==="Escape"){closeCtx(); focusSelectedRow();}
+    else if(e.key==="ArrowDown"){e.preventDefault(); bs[(i+1)%bs.length].focus();}
+    else if(e.key==="ArrowUp"){e.preventDefault(); bs[(i-1+bs.length)%bs.length].focus();}
+  });
+}
+
+function doAction(act,idxs){
+  if(act==="toggle"){ const u=users[idxs[0]]; u.disabled=!u.disabled; if(u.disabled) u.locked=false; refresh(); }
+  else if(act==="reset")  openReset(idxs[0]);
+  else if(act==="rename") openRename(idxs[0]);
+  else if(act==="props")  openProps(idxs);
+}
+
+/* =====================================================================
+   DIALOGS
+   ===================================================================== */
+function closeDlg(){ $("#dlgmount").innerHTML=""; document.removeEventListener("keydown",escDlg); }
+function escDlg(e){ if(e.key==="Escape") {closeDlg(); focusSelectedRow();} }
+function mountDlg(node){
+  const scrim=document.createElement("div"); scrim.className="scrim";
+  scrim.appendChild(node);
+  scrim.addEventListener("mousedown",e=>{ if(e.target===scrim){closeDlg(); focusSelectedRow();} });
+  $("#dlgmount").innerHTML=""; $("#dlgmount").appendChild(scrim);
+  document.addEventListener("keydown",escDlg);
+  // focus trap-ish: focus first field
+  const f=node.querySelector("input,button.primary,button"); if(f) f.focus();
+}
+function dlgShell(title,inner,wide){
+  const d=document.createElement("div");
+  d.className="dialog"+(wide?" wide":""); d.setAttribute("role","dialog"); d.setAttribute("aria-modal","true"); d.setAttribute("aria-label",title);
+  d.innerHTML=`<div class="dtitle">${title}<button class="x" aria-label="Close" type="button">\u2715</button></div>${inner}`;
+  d.querySelector(".x").addEventListener("click",()=>{closeDlg(); focusSelectedRow();});
+  return d;
+}
+
+/* ---- Reset Password dialog ---- */
+function openReset(i){
+  const u=users[i];
+  const inner=`
+    <div class="dbody">
+      ${u.locked?`<div class="lockwarn"><span aria-hidden="true">\uD83D\uDD12</span><div>This account is currently locked out on this domain controller.</div></div>`:""}
+      <div class="field"><label for="np">New password</label><input id="np" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="cp">Confirm password</label><input id="cp" type="password" autocomplete="new-password"></div>
+      <div class="checks">
+        <label><input type="checkbox" id="mc" checked> User must change password at next logon</label>
+        ${u.locked?`<label><input type="checkbox" id="ul"> Unlock the user's account</label>`:""}
+      </div>
+      <div class="derr" id="rerr" aria-live="polite"></div>
+    </div>
+    <div class="dfoot">
+      <button class="btn" type="button" data-x>Cancel</button>
+      <button class="btn primary" type="button" data-ok>OK</button>
+    </div>`;
+  const d=dlgShell(`Reset Password \u2014 ${u.full}`,inner);
+  d.querySelector("[data-x]").addEventListener("click",()=>{closeDlg();focusSelectedRow();});
+  d.querySelector("[data-ok]").addEventListener("click",()=>{
+    const np=d.querySelector("#np").value, cp=d.querySelector("#cp").value;
+    const err=d.querySelector("#rerr");
+    if(!np){ err.textContent="Enter a new password."; return; }
+    if(np!==cp){ err.textContent="The passwords don't match. Re-type both fields."; return; }
+    u.pwd=np;
+    u.must=d.querySelector("#mc").checked;
+    const ul=d.querySelector("#ul"); if(ul&&ul.checked) u.locked=false;
+    closeDlg(); refresh(); focusSelectedRow();
+  });
+  mountDlg(d);
+}
+
+/* ---- Rename (object name) ---- */
+function openRename(i){
+  const u=users[i];
+  const inner=`
+    <div class="dbody">
+      <div class="field"><label for="rn">Account name</label><input id="rn" type="text" value="${u.full.replace(/"/g,'&quot;')}"></div>
+      <div class="derr" id="rnerr" aria-live="polite"></div>
+      <p style="margin:4px 0 0;color:var(--muted);font-size:12.5px">Renaming the object updates its display in the directory. Last name, display name, and logon names are set on the Properties tabs.</p>
+    </div>
+    <div class="dfoot">
+      <button class="btn" type="button" data-x>Cancel</button>
+      <button class="btn primary" type="button" data-ok>OK</button>
+    </div>`;
+  const d=dlgShell(`Rename \u2014 ${u.full}`,inner);
+  d.querySelector("[data-x]").addEventListener("click",()=>{closeDlg();focusSelectedRow();});
+  d.querySelector("[data-ok]").addEventListener("click",()=>{
+    const v=d.querySelector("#rn").value.trim();
+    if(!v){ d.querySelector("#rnerr").textContent="The name can't be empty."; return; }
+    u.full=v; closeDlg(); refresh(); focusSelectedRow();
+  });
+  mountDlg(d);
+}
+
+/* ---- Properties (single or multi) ---- */
+function openProps(idxs){
+  const multi=idxs.length>1;
+  if(multi){ openMultiProps(idxs); return; }
+  const i=idxs[0], u=users[i];
+  const inner=`
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true"  data-tab="general">General</button>
+      <button role="tab" aria-selected="false" data-tab="account">Account</button>
+    </div>
+    <div class="dbody" data-pane="general">
+      <div class="field"><label for="g_first">First name</label><input id="g_first" type="text" value="${esc(u.first)}"></div>
+      <div class="field"><label for="g_last">Last name</label><input id="g_last" type="text" value="${esc(u.last)}"></div>
+      <div class="field"><label for="g_disp">Display name</label><input id="g_disp" type="text" value="${esc(u.display)}"></div>
+      <div class="field"><label for="g_desc">Description</label><input id="g_desc" type="text" value="${esc(u.desc)}"></div>
+    </div>
+    <div class="dbody" data-pane="account" hidden>
+      <div class="field"><label for="a_upn">User logon name</label>
+        <div class="upnrow"><input id="a_upn" type="text" value="${esc(u.logon)}"><span class="at">@${CONFIG.domainSuffix}</span></div></div>
+      <div class="field"><label for="a_pre">User logon name<br>(pre-Windows 2000)</label>
+        <div class="upnrow"><span class="at">LARKFIELD\\</span><input id="a_pre" type="text" value="${esc(u.pre2000)}"></div></div>
+      <div class="field"><label>Logon workstations</label><button class="btn sm" type="button" id="a_logonto">Log On To\u2026</button></div>
+      <div class="checks">
+        <label><input type="checkbox" id="a_dis" ${u.disabled?"checked":""}> Account is disabled</label>
+        <label><input type="checkbox" id="a_must" ${u.must?"checked":""}> User must change password at next logon</label>
+        ${u.locked?`<label><input type="checkbox" id="a_unlock"> Unlock account (currently locked out)</label>`:""}
+      </div>
+      <div class="derr" id="aerr" aria-live="polite"></div>
+    </div>
+    <div class="dfoot">
+      <button class="btn" type="button" data-x>Cancel</button>
+      <button class="btn primary" type="button" data-ok>OK</button>
+    </div>`;
+  const d=dlgShell(`${u.full} Properties`,inner,true);
+  // tab switching
+  const tabs=[...d.querySelectorAll('[role=tab]')];
+  tabs.forEach(t=>t.addEventListener("click",()=>{
+    tabs.forEach(x=>x.setAttribute("aria-selected",x===t));
+    d.querySelectorAll("[data-pane]").forEach(p=>p.hidden = p.dataset.pane!==t.dataset.tab);
+  }));
+  // working copy of workstation list
+  let wksDraft = (u.wks===null)? null : u.wks.slice();
+  d.querySelector("#a_logonto").addEventListener("click",()=>openLogonTo(wksDraft,(res)=>{wksDraft=res;}));
+  d.querySelector("[data-x]").addEventListener("click",()=>{closeDlg();focusSelectedRow();});
+  d.querySelector("[data-ok]").addEventListener("click",()=>{
+    u.first=val(d,"#g_first"); u.last=val(d,"#g_last"); u.display=val(d,"#g_disp"); u.desc=val(d,"#g_desc");
+    const upn=val(d,"#a_upn"), pre=val(d,"#a_pre");
+    if(!upn){ showTab(d,"account"); d.querySelector("#aerr").textContent="User logon name can't be empty."; return; }
+    u.logon=upn; u.pre2000=pre;
+    u.disabled=d.querySelector("#a_dis").checked; if(u.disabled) u.locked=false;
+    u.must=d.querySelector("#a_must").checked;
+    const ul=d.querySelector("#a_unlock"); if(ul&&ul.checked) u.locked=false;
+    u.wks = wksDraft;
+    closeDlg(); refresh(); focusSelectedRow();
+  });
+  mountDlg(d);
+}
+
+function showTab(d,name){
+  d.querySelectorAll('[role=tab]').forEach(t=>t.setAttribute("aria-selected",t.dataset.tab===name));
+  d.querySelectorAll("[data-pane]").forEach(p=>p.hidden=p.dataset.pane!==name);
+}
+
+/* ---- Multi-user Properties (Log On To only) ---- */
+function openMultiProps(idxs){
+  const names=idxs.map(i=>users[i].full).join(", ");
+  const inner=`
+    <div class="tabs" role="tablist"><button role="tab" aria-selected="true">Account</button></div>
+    <div class="dbody">
+      <p style="margin:0 0 10px;color:var(--muted);font-size:12.5px">Applies to ${idxs.length} selected users: ${esc(names)}</p>
+      <div class="field"><label>Logon workstations</label><button class="btn sm" type="button" id="m_logonto">Log On To\u2026</button></div>
+      <p id="m_state" style="margin:6px 0 0;color:var(--muted);font-size:12.5px"></p>
+    </div>
+    <div class="dfoot">
+      <button class="btn" type="button" data-x>Cancel</button>
+      <button class="btn primary" type="button" data-ok>OK</button>
+    </div>`;
+  const d=dlgShell(`Properties \u2014 ${idxs.length} users`,inner,true);
+  let wksDraft = undefined; // undefined = not touched -> leave each user's own value
+  const state=d.querySelector("#m_state");
+  d.querySelector("#m_logonto").addEventListener("click",()=>openLogonTo(null,(res)=>{
+    wksDraft=res; state.textContent = (res===null)?"Will set: All computers":"Will set: "+res.join(", ");
+  }));
+  d.querySelector("[data-x]").addEventListener("click",()=>{closeDlg();focusSelectedRow();});
+  d.querySelector("[data-ok]").addEventListener("click",()=>{
+    if(wksDraft!==undefined){ idxs.forEach(i=>users[i].wks = (wksDraft===null)?null:wksDraft.slice()); }
+    closeDlg(); refresh(); focusSelectedRow();
+  });
+  mountDlg(d);
+}
+
+/* ---- Logon Workstations sub-dialog ---- */
+function openLogonTo(current,onApply){
+  // current: null = all computers; array = restricted list
+  let mode = (current===null)?"all":"some";
+  let listArr = (current===null)? [] : current.slice();
+  const inner=`
+    <div class="dbody">
+      <p style="margin:0 0 10px">This user can log on to:</p>
+      <div class="checks" style="margin-bottom:10px">
+        <label><input type="radio" name="lmode" value="all" ${mode==="all"?"checked":""}> All computers</label>
+        <label><input type="radio" name="lmode" value="some" ${mode==="some"?"checked":""}> The following computers</label>
+      </div>
+      <div class="workstations" id="wsbox">
+        <div class="wsadd"><input id="wsname" type="text" placeholder="Computer name" autocomplete="off"><button class="btn sm" type="button" id="wsadd">Add</button></div>
+        <ul id="wslist"></ul>
+      </div>
+      <div class="derr" id="lerr" aria-live="polite"></div>
+    </div>
+    <div class="dfoot">
+      <button class="btn" type="button" data-x>Cancel</button>
+      <button class="btn primary" type="button" data-ok>OK</button>
+    </div>`;
+  const d=dlgShell("Logon Workstations",inner);
+  const box=d.querySelector("#wsbox"), listEl=d.querySelector("#wslist");
+  function syncMode(){ box.style.opacity = mode==="some"?"1":".45"; box.style.pointerEvents = mode==="some"?"auto":"none"; }
+  function drawList(){
+    listEl.innerHTML = listArr.length? listArr.map((n,k)=>
+      `<li>${esc(n)}<button class="btn sm" type="button" data-k="${k}">Remove</button></li>`).join("")
+      : `<div class="none">No computers added yet.</div>`;
+    listEl.querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click",()=>{listArr.splice(+b.dataset.k,1); drawList();}));
+  }
+  d.querySelectorAll('input[name=lmode]').forEach(r=>r.addEventListener("change",()=>{mode=r.value; syncMode();}));
+  d.querySelector("#wsadd").addEventListener("click",()=>{
+    const v=d.querySelector("#wsname").value.trim().toUpperCase();
+    if(!v) return;
+    if(!listArr.includes(v)) listArr.push(v);
+    d.querySelector("#wsname").value=""; drawList(); d.querySelector("#wsname").focus();
+  });
+  d.querySelector("#wsname").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault(); d.querySelector("#wsadd").click();} });
+  d.querySelector("[data-x]").addEventListener("click",()=>{ closeLogonTo(d); });
+  d.querySelector("[data-ok]").addEventListener("click",()=>{
+    if(mode==="some" && listArr.length===0){ d.querySelector("#lerr").textContent="Add at least one computer, or choose \u201CAll computers.\u201D"; return; }
+    onApply( mode==="all" ? null : listArr.slice() );
+    closeLogonTo(d);
+  });
+  syncMode(); drawList();
+  // nested mount: append over existing scrim
+  const scrim=document.createElement("div"); scrim.className="scrim"; scrim.style.zIndex="90";
+  scrim.appendChild(d); $("#dlgmount").appendChild(scrim);
+  d._scrim=scrim;
+  d.querySelector("#wsname").focus();
+}
+function closeLogonTo(d){ if(d._scrim) d._scrim.remove(); }
+
+/* helpers */
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function val(d,sel){return d.querySelector(sel).value.trim();}
+
+/* =====================================================================
+   EVENTS: tree + rows
+   ===================================================================== */
+$("#tree").addEventListener("click",e=>{
+  const node=e.target.closest("[data-ou]"); if(!node) return;
+  const ou=node.dataset.ou;
+  if(ou==="__domain__") return;
+  selectedOU=ou; clearSel(); refresh();
+});
+$("#tree").addEventListener("keydown",e=>{
+  const node=e.target.closest("[data-ou]"); if(!node) return;
+  if(e.key==="Enter"||e.key===" "){ e.preventDefault(); node.click(); }
+});
+
+rowsEl.addEventListener("click",e=>{
+  const row=e.target.closest(".row"); if(!row) return;
+  setSel(+row.dataset.i, e.ctrlKey||e.metaKey||e.shiftKey);
+  renderRows(); focusSelectedRow();
+});
+rowsEl.addEventListener("dblclick",e=>{
+  const row=e.target.closest(".row"); if(!row) return;
+  setSel(+row.dataset.i,false); renderRows(); openProps([+row.dataset.i]);
+});
+rowsEl.addEventListener("contextmenu",e=>{
+  const row=e.target.closest(".row"); if(!row) return;
+  e.preventDefault();
+  if(!selectedRows.includes(+row.dataset.i)) setSel(+row.dataset.i,false);
+  renderRows(); openCtx(e.clientX,e.clientY);
+});
+// keyboard: Enter=properties, ContextMenu key / Shift+F10 = menu, Space=select
+rowsEl.addEventListener("keydown",e=>{
+  const focused=document.activeElement.closest?.(".row");
+  if(e.key==="Enter" && focused){ e.preventDefault(); openProps([+focused.dataset.i]); }
+  else if((e.key==="ContextMenu")||(e.shiftKey&&e.key==="F10")){
+    if(focused){ e.preventDefault(); const r=focused.getBoundingClientRect(); openCtx(r.left+24,r.bottom-6); }
+  }
+});
+function focusSelectedRow(){
+  const i=selectedRows[selectedRows.length-1];
+  if(i==null) return;
+  const r=rowsEl.querySelector(`.row[data-i="${i}"]`); if(r){ r.tabIndex=0; r.focus(); }
+}
+
+/* =====================================================================
+   TASK / SCORE / QUIZ RENDER
+   ===================================================================== */
+function renderTasks(){
+  const el=$("#tasks");
+  el.innerHTML=TASKS.map(t=>{
+    const done=t.pass();
+    return `<li class="${done?'done':''}"><span class="lab">${t.label}</span><span class="hint">${t.hint}</span></li>`;
+  }).join("");
+  const passed=TASKS.filter(t=>t.pass()).length;
+  $("#taskcount").textContent = `${passed}/${TASKS.length}`;
+}
+function renderQuiz(){
+  const el=$("#quiz");
+  el.innerHTML=QUESTIONS.map((q,qi)=>{
+    const opts=q.options.map((o,oi)=>{
+      let cls=""; const chosen=quizState[qi];
+      if(chosen!=null){ if(oi===q.answer) cls="correct"; else if(oi===chosen) cls="wrong"; }
+      return `<label class="${cls}"><input type="radio" name="q${qi}" value="${oi}" ${chosen===oi?"checked":""}> <span>${esc(o)}</span></label>`;
+    }).join("");
+    let judge="";
+    if(quizState[qi]!=null){
+      const ok=quizState[qi]===q.answer;
+      judge=`<div class="qjudge ${ok?'ok':'no'}">${ok?'Correct.':'Not quite — the highlighted option is correct.'}</div>`;
+    }
+    return `<div class="qitem"><p class="qp"><span class="num">${qi+1}.</span>${esc(q.prompt)}</p><div class="opts">${opts}</div>${judge}</div>`;
+  }).join("");
+  el.querySelectorAll("input[type=radio]").forEach(r=>r.addEventListener("change",()=>{
+    const qi=+r.name.slice(1); quizState[qi]=+r.value; renderQuiz(); updateScore();
+  }));
+}
+function scoreNow(){
+  const tp=TASKS.filter(t=>t.pass()).length;
+  const qp=QUESTIONS.filter((q,i)=>quizState[i]===q.answer).length;
+  return {earned:tp+qp, total:TASKS.length+QUESTIONS.length, tasksPassed:tp, quizPassed:qp};
+}
+function updateScore(){ const s=scoreNow(); $("#scoreNow").textContent=`${s.earned} / ${s.total}`; }
+
+/* full refresh */
+function refresh(){ renderTree(); renderRows(); renderTasks(); updateScore(); }
+
+/* =====================================================================
+   SCREENSHOT CAPTURE (dependency-free, native)
+   Renders the simulated DOM to PNG via an SVG <foreignObject>. No external
+   library, no CDN. Works because the lab contains only inline DOM/CSS/SVG.
+   ===================================================================== */
+function inlineFormState(orig, clone){
+  const o=orig.querySelectorAll("input,textarea,select");
+  const c=clone.querySelectorAll("input,textarea,select");
+  o.forEach((el,k)=>{ const cl=c[k]; if(!cl) return;
+    if(el.type==="checkbox"||el.type==="radio"){ if(el.checked) cl.setAttribute("checked","checked"); else cl.removeAttribute("checked"); }
+    else cl.setAttribute("value", el.value); });
+}
+async function captureLabPng(){
+  const node=$("#lab-capture");
+  const rect=node.getBoundingClientRect();
+  const w=Math.ceil(rect.width), h=Math.ceil(rect.height);
+  try{
+    const clone=node.cloneNode(true);
+    inlineFormState(node,clone);
+    const css=document.getElementById("labcss").textContent;
+    // serialize clone as XML
+    const xml=new XMLSerializer().serializeToString(clone);
+    const html=`<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:#dfe5ee;padding:0;margin:0">`+
+               `<style>${css}</style>${xml}</div>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+              `<foreignObject x="0" y="0" width="${w}" height="${h}">${html}</foreignObject></svg>`;
+    const url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+    const img=new Image(); img.decoding="sync";
+    const loaded=new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error("svg-load")); });
+    img.src=url; await loaded;
+    const scale=Math.min(2,window.devicePixelRatio||1);
+    const cv=document.createElement("canvas"); cv.width=w*scale; cv.height=h*scale;
+    const ctx=cv.getContext("2d"); ctx.scale(scale,scale);
+    ctx.fillStyle="#dfe5ee"; ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img,0,0,w,h);
+    return cv.toDataURL("image/png");
+  }catch(err){
+    return fallbackPng(w);   // taint/serialize failure -> text summary PNG
+  }
+}
+function fallbackPng(w){
+  const s=scoreNow(); const lines=[
+    "Larkfield Freight Co. — Manage Domain User Accounts",
+    "Hacker name: "+($("#hacker").value||"(unset)"),
+    "Captured: "+new Date().toLocaleString(),
+    "Score: "+s.earned+" / "+s.total+"  (tasks "+s.tasksPassed+"/"+TASKS.length+", quiz "+s.quizPassed+"/"+QUESTIONS.length+")",
+    "", "Task results:"
+  ].concat(TASKS.map(t=>(t.pass()?"  [x] ":"  [ ] ")+t.label));
+  const W=Math.max(560,w), H=70+lines.length*22+20;
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  const c=cv.getContext("2d");
+  c.fillStyle="#1f3a5f"; c.fillRect(0,0,W,40);
+  c.fillStyle="#fff"; c.font="600 15px Segoe UI,Arial"; c.fillText("Lab submission — screenshot fallback",16,25);
+  c.fillStyle="#f7f9fc"; c.fillRect(0,40,W,H-40);
+  c.fillStyle="#1b1b1b"; c.font="13px Consolas,monospace";
+  lines.forEach((ln,i)=>c.fillText(ln,16,68+i*22));
+  return cv.toDataURL("image/png");
+}
+
+/* =====================================================================
+   SUBMISSION  (simple request: no custom headers -> no CORS preflight)
+   ===================================================================== */
+function setStatus(kind,html){
+  const el=$("#substatus"); el.className="substatus show "+kind; el.innerHTML=html;
+}
+async function submit(){
+  const hacker=$("#hacker").value.trim();
+  if(!hacker){ setStatus("err","Enter a hacker name before submitting."); $("#hacker").focus(); return; }
+  if(quizState.some(q=>q===null)){ setStatus("err","Answer all four review questions before submitting."); return; }
+
+  const btn=$("#submitBtn"); btn.disabled=true;
+  setStatus("info","Capturing your work and submitting\u2026");
+
+  const s=scoreNow();
+  const screenshot=await captureLabPng();
+  const payload={
+    assignmentId:   CONFIG.assignmentId,
+    hackerName:     hacker.slice(0,40),
+    clientTimestamp:new Date().toISOString(),
+    objectives:     CONFIG.objectives,
+    tasks:          TASKS.map(t=>({id:t.id,label:t.label,passed:!!t.pass()})),
+    questions:      QUESTIONS.map((q,i)=>({id:q.id,prompt:q.prompt,answer:q.options[quizState[i]],correct:quizState[i]===q.answer})),
+    score:          {earned:s.earned,total:s.total},
+    screenshot,
+    submissionToken:CONFIG.submissionToken
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("err","This lab hasn't been wired to a submission endpoint yet. Your instructor needs to set <b>APPS_SCRIPT_URL</b> (see INSTRUCTOR_SETUP.md). Nothing was sent.");
+    btn.disabled=false; return;
+  }
+
+  try{
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) }); // no headers -> text/plain, no preflight
+    const out=await res.json();
+    if(out && out.success){
+      const link=out.docUrl?` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission record</a>`:"";
+      setStatus("ok",`Submitted as <b>${esc(hacker)}</b> — score ${s.earned}/${s.total}.${link}`);
+    }else{
+      setStatus("err","The server rejected the submission"+(out&&out.error?": "+esc(out.error):".")+" Check with your instructor.");
+      btn.disabled=false;
+    }
+  }catch(err){
+    // Fallback: fire-and-forget (can't read docUrl in locked-down contexts)
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      setStatus("ok",`Submitted as <b>${esc(hacker)}</b> — score ${s.earned}/${s.total}. The confirmation link couldn't be read in this browser; confirm receipt with your instructor.`);
+    }catch(e2){
+      setStatus("err","Couldn't reach the submission endpoint. Check your connection and try again, or notify your instructor.");
+      btn.disabled=false;
+    }
+  }
+}
+
+/* =====================================================================
+   RESET / INIT
+   ===================================================================== */
+function resetLab(){
+  users=freshUsers(); selectedOU="Finance"; clearSel();
+  quizState=QUESTIONS.map(()=>null);
+  $("#hacker").value="";
+  const el=$("#substatus"); el.className="substatus";
+  $("#submitBtn").disabled=false;
+  refresh(); renderQuiz();
+}
+$("#submitBtn").addEventListener("click",submit);
+$("#resetBtn").addEventListener("click",resetLab);
+
+renderTree(); renderRows(); renderTasks(); renderQuiz(); updateScore();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-linux-deprovision-user.html",title:"Lab \u2014 Deprovision a Departed Linux User"}, NEXT={href:"splus-linux-secondary-group.html",title:"Lab: Add Users to a Secondary Group (Linux) \u2014 Security+ SY0-701"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

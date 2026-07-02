@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab: Reorganize Linux Groups — Provisioning &amp; De-provisioning</title>
+<script type="application/json" id="lab-meta">
+{
+  "assignmentId": "splus-linux-group-split",
+  "title": "Lab: Reorganize Linux Groups — Provisioning &amp; De-provisioning",
+  "version": "1.1.0",
+  "ap": {
+    "unit": 4,
+    "unitTitle": "Securing Devices",
+    "topics": [
+      "4.2 Authentication"
+    ],
+    "skills": [
+      "2.D"
+    ]
+  },
+  "splus": {
+    "objectives": [
+      "4.6"
+    ]
+  },
+  "appsScriptUrl": "PASTE_SHARED_/exec_URL_HERE",
+  "license": "© 2026 [AUTHOR / INSTITUTION]"
+}
+</script>
+<!--
+  Security+ (SY0-701) Single-File Simulation Lab
+  Assignment: splus-linux-group-split  ·  Objective 4.6 / 4.6.1
+  Clean-room original build. Scenario, personas, group names, file values,
+  task and question wording, and all UI are original expression authored for
+  this course. Not derived from, and not a reskin of, any third-party lab.
+
+  © 2026 [Course Author / Institution]. All rights reserved.
+  Licensed for use within this course only. Replace this notice with your own.
+
+  NOTE on screenshots: the build spec calls for inlined html2canvas. Because
+  this lab renders only self-drawn DOM (no cross-origin images), proof is
+  produced by a small built-in Canvas renderer instead — zero dependencies,
+  no taint, and a cleaner grading artifact. See drawProof() below.
+-->
+<style>
+  :root{
+    --ink:#0e1622;          /* deep slate workspace            */
+    --panel:#15202e;        /* raised surfaces                 */
+    --panel-2:#101a26;      /* terminal well                   */
+    --line:#22344a;         /* hairlines / borders             */
+    --text:#d8e1ec;         /* primary text                    */
+    --muted:#7e8ea3;        /* secondary text                  */
+    --metrics:#4fb0c6;      /* identity colour: first division */
+    --forecast:#d9914b;     /* identity colour: second division*/
+    --good:#5fbf8f;         /* pass                            */
+    --warn:#e2706b;         /* fail / error                    */
+    --focus:#9fd3e0;        /* focus ring                      */
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(79,176,198,.08), transparent 60%),
+      radial-gradient(700px 400px at -5% 110%, rgba(217,145,75,.07), transparent 55%),
+      var(--ink);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:24px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ---- header ---- */
+  header.lab{
+    border:1px solid var(--line);
+    border-radius:var(--r);
+    background:linear-gradient(180deg,var(--panel),#121c29);
+    padding:18px 20px;
+  }
+  .eyebrow{
+    display:inline-flex;gap:8px;align-items:center;
+    font:600 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+    color:var(--metrics);
+  }
+  .eyebrow .obj{
+    color:var(--muted);border-left:1px solid var(--line);padding-left:8px;
+  }
+  h1{
+    font-size:clamp(20px,3.2vw,28px);margin:.4em 0 .1em;font-weight:650;
+    letter-spacing:-.01em;
+  }
+  .scenario{color:var(--muted);max-width:72ch;margin:.2em 0 0}
+  .scenario b{color:var(--text);font-weight:600}
+
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-top:18px}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} body{padding:14px} }
+
+  .card{
+    border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+    overflow:hidden;
+  }
+  .card > .head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:11px 14px;border-bottom:1px solid var(--line);
+    font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);background:#101a27;
+  }
+
+  /* ---- terminal ---- */
+  .term-well{background:var(--panel-2)}
+  .term{
+    font-family:var(--mono);font-size:13.5px;
+    padding:14px;min-height:300px;max-height:48vh;overflow:auto;
+    white-space:pre-wrap;word-break:break-word;
+  }
+  .term .sys{color:var(--muted)}
+  .term .err{color:var(--warn)}
+  .term .ok{color:var(--good)}
+  .term .cmdline{color:var(--text)}
+  .term .cmdline .p{color:var(--metrics)}
+  .inputline{
+    display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);
+    padding:10px 14px;background:#0c141e;font-family:var(--mono);font-size:13.5px;
+  }
+  .inputline .p{color:var(--metrics);white-space:nowrap}
+  .inputline input{
+    flex:1;background:transparent;border:0;color:var(--text);
+    font:inherit;outline:none;caret-color:var(--metrics);
+  }
+  .inputline input::placeholder{color:#43566c}
+
+  /* ---- group board (signature element) ---- */
+  .board{padding:14px;display:grid;gap:12px}
+  .gcard{
+    border:1px solid var(--line);border-radius:8px;padding:12px;
+    background:#101b28;position:relative;
+  }
+  .gcard[data-div="metrics"]{box-shadow:inset 3px 0 0 var(--metrics)}
+  .gcard[data-div="forecast"]{box-shadow:inset 3px 0 0 var(--forecast)}
+  .gcard[data-div="origin"]{box-shadow:inset 3px 0 0 var(--muted)}
+  .gcard .gname{font:600 13px var(--mono);letter-spacing:.02em}
+  .gcard .gid{color:var(--muted);font:11px var(--mono)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;min-height:26px}
+  .chip{
+    font:12px var(--mono);padding:4px 9px;border-radius:999px;
+    border:1px solid var(--line);background:#16222f;color:var(--text);
+    transition:transform .25s ease, opacity .25s ease;
+  }
+  .chip.move{animation:pop .3s ease}
+  @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+  .empty-note{color:var(--muted);font:12px var(--mono)}
+  .board .hint{color:var(--muted);font-size:12px}
+
+  /* ---- checklist ---- */
+  ol.tasks{list-style:none;margin:0;padding:14px;display:grid;gap:9px;counter-reset:t}
+  ol.tasks li{
+    display:flex;gap:11px;align-items:flex-start;counter-increment:t;
+    padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#101b28;
+  }
+  ol.tasks li .mark{
+    flex:none;width:22px;height:22px;border-radius:6px;border:1px solid var(--line);
+    display:grid;place-items:center;font:700 12px var(--mono);color:var(--muted);
+  }
+  ol.tasks li[data-pass="true"] .mark{background:var(--good);border-color:var(--good);color:#0c1a13}
+  ol.tasks li[data-pass="true"]{border-color:rgba(95,191,143,.4)}
+  ol.tasks li .body{font-size:13.5px}
+  ol.tasks li .body code{font-family:var(--mono);color:var(--metrics);background:#0c141e;padding:1px 5px;border-radius:4px}
+
+  /* ---- questions ---- */
+  .qs{padding:14px;display:grid;gap:14px}
+  .q label{display:block;font-size:13.5px;margin-bottom:6px}
+  .q .num{font:600 11px var(--mono);color:var(--forecast);letter-spacing:.1em;margin-right:6px}
+  .q input[type=text]{
+    width:100%;background:#0c141e;border:1px solid var(--line);border-radius:7px;
+    color:var(--text);font:13.5px var(--mono);padding:9px 11px;outline:none;
+  }
+  .q .verdict{font:12px var(--mono);margin-top:5px;min-height:16px}
+  .q[data-correct="true"] input[type=text]{border-color:rgba(95,191,143,.55)}
+  .q[data-correct="true"] .verdict{color:var(--good)}
+  .q[data-correct="false"] .verdict{color:var(--warn)}
+  input:focus-visible, button:focus-visible{
+    outline:2px solid var(--focus);outline-offset:2px;border-radius:6px;
+  }
+
+  /* ---- submission bar ---- */
+  .submit{
+    margin-top:18px;border:1px solid var(--line);border-radius:var(--r);
+    background:linear-gradient(180deg,var(--panel),#121c29);padding:16px 18px;
+    display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end;
+  }
+  @media (max-width:680px){ .submit{grid-template-columns:1fr} }
+  .field label{display:block;font:600 11px var(--mono);letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .field input{
+    width:100%;background:#0c141e;border:1px solid var(--line);border-radius:8px;
+    color:var(--text);font:14px var(--sans);padding:10px 12px;outline:none;
+  }
+  button.btn{
+    font:600 14px var(--sans);padding:11px 18px;border-radius:8px;cursor:pointer;
+    border:1px solid var(--line);background:#16222f;color:var(--text);
+  }
+  button.primary{background:var(--metrics);border-color:var(--metrics);color:#06222a}
+  button.primary[disabled]{opacity:.5;cursor:not-allowed}
+  button.ghost:hover{border-color:var(--muted)}
+  .status{grid-column:1/-1;min-height:20px;font:13px var(--mono)}
+  .status.work{color:var(--metrics)}
+  .status.ok{color:var(--good)}
+  .status.err{color:var(--warn)}
+  .status a{color:var(--metrics)}
+  .scorepill{font:600 12px var(--mono);color:var(--muted)}
+  .scorepill b{color:var(--text)}
+  footer.lic{color:var(--muted);font:11px var(--mono);margin-top:16px;text-align:center}
+  @media (prefers-reduced-motion: reduce){
+    .chip.move{animation:none}
+    *{transition:none !important}
+  }
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div id="lab-alignment" role="note" aria-label="Course alignment" style="font:12px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:#0f242b;color:#cdeef0;border:1px solid #2a5a5d;border-radius:8px;padding:8px 12px;margin:8px;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center"><span id="align-ap" style="font-weight:600"></span><span id="align-splus" style="opacity:.9"></span></div>
+<div class="wrap">
+
+  <header class="lab">
+    <span class="eyebrow">Identity &amp; Access Management
+      <span class="obj">SY0-701 · 4.6 / 4.6.1</span></span>
+    <h1>Reorganize team groups on a Linux host</h1>
+    <p class="scenario">
+      <b>Meridian Freight Cooperative</b> is splitting its single dispatch team into two desks.
+      On the file server <code>core-fs01</code> every dispatcher currently sits in one
+      supplementary group, <b>dispatch</b>. Operations wants a <b>day desk</b> and a
+      <b>night desk</b>, and dispatcher <b>rkowalski</b> is moving to nights.
+      Reorganize the groups without re-creating accounts, then verify your work.
+    </p>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT: terminal -->
+    <section class="card" aria-label="Administration console">
+      <div class="head"><span>core-fs01 · console</span><span id="whoami">root</span></div>
+      <div class="term-well">
+        <div class="term" id="term" role="log" aria-live="polite" aria-label="Console output"></div>
+        <div class="inputline">
+          <span class="p" aria-hidden="true">root@core-fs01:~#</span>
+          <input id="cmd" type="text" autocomplete="off" autocapitalize="off"
+                 spellcheck="false" aria-label="Type a command and press Enter"
+                 placeholder="type a command — try: help">
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: board + tasks + questions -->
+    <div style="display:grid;gap:18px">
+
+      <section class="card" aria-label="Live group membership">
+        <div class="head"><span>Group membership</span><span class="scorepill">live view</span></div>
+        <div class="board" id="board"></div>
+      </section>
+
+      <section class="card" aria-label="Task checklist">
+        <div class="head"><span>Tasks</span><span class="scorepill" id="taskpill">0 / 4</span></div>
+        <ol class="tasks" id="tasks"></ol>
+      </section>
+
+      <section class="card" aria-label="Knowledge check">
+        <div class="head"><span>Knowledge check</span><span class="scorepill" id="qpill">0 / 3</span></div>
+        <div class="qs" id="qs"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- SUBMISSION -->
+  <section class="submit" aria-label="Submit lab">
+    <div class="field">
+      <label for="hacker">Hacker name (pseudonym — no real names)</label>
+      <input id="hacker" type="text" maxlength="40" autocomplete="off"
+             placeholder="e.g. nightowl-42">
+    </div>
+    <div style="align-self:end">
+      <button class="btn ghost" id="reset" type="button">Reset lab</button>
+    </div>
+    <div style="align-self:end">
+      <button class="btn primary" id="submit" type="button">Submit completed lab</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <footer class="lic">© 2026 [Course Author / Institution] · Original clean-room lab · SY0-701 obj. 4.6.1</footer>
+</div>
+
+<script>
+/* ============================================================================
+   LAB CONFIG  (the only block an instructor edits besides APPS_SCRIPT_URL)
+   ============================================================================ */
+const CONFIG = {
+  assignmentId: "splus-linux-group-split",
+  title: "Reorganize team groups on a Linux host",
+  objectives: ["4.6"],
+  passThreshold: "all_tasks_and_questions",
+
+  // --- deployment ---
+  APPS_SCRIPT_URL: "PASTE_SHARED_/exec_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+};
+
+/* ----- original answer values (the "right" end-state) ----- */
+const KEY = {
+  originGroup:   "dispatch",        // group that gets renamed
+  dayGroup:      "dispatch_day",    // rename target
+  nightGroup:    "dispatch_night",  // new group
+  movingUser:    "rkowalski",       // dispatcher moving to nights
+};
+
+/* ============================================================================
+   In-memory /etc/group + passwd state  (no storage APIs)
+   ============================================================================ */
+let G;            // ordered array of {name, gid, members:[]}
+let HISTORY = []; // command history
+let HISTIDX = -1;
+
+const USERS = ["root","jhalvorsen","rkowalski","amaitland","btomori","sdelacroix"];
+
+function freshState(){
+  G = [
+    {name:"root",        gid:0,    members:[]},
+    {name:"sudo",        gid:27,   members:["jhalvorsen"]},
+    {name:"users",       gid:100,  members:["jhalvorsen","rkowalski","amaitland","btomori","sdelacroix"]},
+    {name:"jhalvorsen",  gid:1001, members:[]},
+    {name:"rkowalski",   gid:1002, members:[]},
+    {name:"amaitland",   gid:1003, members:[]},
+    {name:"btomori",     gid:1004, members:[]},
+    {name:"sdelacroix",  gid:1005, members:[]},
+    {name:"dispatch",    gid:1060, members:["jhalvorsen","rkowalski","amaitland","btomori","sdelacroix"]},
+  ];
+}
+function grp(n){ return G.find(g=>g.name===n); }
+function nextGid(){ return Math.max(...G.map(g=>g.gid)) + 1; }
+
+/* ============================================================================
+   Command engine
+   ============================================================================ */
+function run(raw){
+  echoCmd(raw);
+  let line = raw.trim();
+  if(!line){ render(); return; }
+  // allow a leading sudo
+  let toks = line.split(/\s+/);
+  if(toks[0]==="sudo") toks = toks.slice(1);
+  const cmd = toks[0];
+  const a = toks.slice(1);
+
+  try{
+    switch(cmd){
+      case "help":      return out(HELP, "sys");
+      case "clear":     document.getElementById("term").innerHTML=""; return;
+      case "reset":     doReset(); return out("Lab reset to its starting state.","sys");
+      case "whoami":    return out("root");
+      case "groupadd":  return cmdGroupadd(a);
+      case "groupmod":  return cmdGroupmod(a);
+      case "groupdel":  return cmdGroupdel(a);
+      case "gpasswd":   return cmdGpasswd(a);
+      case "usermod":   return cmdUsermod(a);
+      case "adduser":   return cmdAddDel(a, true);   // Debian-style "adduser USER GROUP"
+      case "deluser":   return cmdAddDel(a, false);
+      case "groups":    return cmdGroups(a);
+      case "id":        return cmdId(a);
+      case "getent":    return cmdGetent(a);
+      case "cat":       return cmdCat(a);
+      case "ls":        return cmdLs(a);
+      default:
+        out(`${cmd}: command not found. Type `+"`help`"+` for the commands this console accepts.`,"err");
+    }
+  }catch(e){ out(String(e.message||e),"err"); }
+  finally{ render(); }
+}
+
+function cmdGroupadd(a){
+  // groupadd [-g GID] NAME
+  const name = a[a.length-1];
+  if(!name || name.startsWith("-")) return out("groupadd: missing group name. Usage: groupadd <name>","err");
+  if(grp(name)) return out(`groupadd: group '${name}' already exists`,"err");
+  G.push({name, gid: nextGid(), members:[]});
+  out(`Created group '${name}'.`,"ok");
+}
+
+function cmdGroupmod(a){
+  // groupmod -n NEWNAME GROUP   (rename in place)
+  let nflag = a.indexOf("-n"); if(nflag<0) nflag = a.indexOf("--new-name");
+  if(nflag<0) return out("groupmod: this lab only needs a rename. Usage: groupmod -n <newname> <group>","err");
+  const newName = a[nflag+1];
+  const old = a[a.length-1];
+  if(!newName || !old || newName===old && a.length<3)
+    return out("groupmod: usage: groupmod -n <newname> <group>","err");
+  const g = grp(old);
+  if(!g) return out(`groupmod: group '${old}' does not exist`,"err");
+  if(grp(newName)) return out(`groupmod: group '${newName}' already exists`,"err");
+  g.name = newName;
+  out(`Renamed group '${old}' to '${newName}' (gid ${g.gid}, members preserved).`,"ok");
+}
+
+function cmdGroupdel(a){
+  const name=a[a.length-1];
+  const g=grp(name); if(!g) return out(`groupdel: group '${name}' does not exist`,"err");
+  G = G.filter(x=>x.name!==name);
+  out(`Deleted group '${name}'.`,"ok");
+}
+
+function cmdGpasswd(a){
+  // gpasswd -a USER GROUP   /  gpasswd -d USER GROUP
+  let add = a.includes("-a")||a.includes("--add");
+  let del = a.includes("-d")||a.includes("--delete");
+  if(!add && !del) return out("gpasswd: use -a <user> <group> to add or -d <user> <group> to remove","err");
+  const rest = a.filter(t=>!t.startsWith("-"));
+  const [user,group]=rest;
+  if(!user||!group) return out("gpasswd: usage: gpasswd -a|-d <user> <group>","err");
+  const g=grp(group); if(!g) return out(`gpasswd: group '${group}' does not exist`,"err");
+  if(!USERS.includes(user)) return out(`gpasswd: user '${user}' does not exist`,"err");
+  if(add){
+    if(!g.members.includes(user)) g.members.push(user);
+    out(`Added user '${user}' to group '${group}'.`,"ok");
+  }else{
+    g.members = g.members.filter(m=>m!==user);
+    out(`Removed user '${user}' from group '${group}'.`,"ok");
+  }
+}
+
+function cmdUsermod(a){
+  // usermod -aG GROUPS USER  | usermod -a -G GROUPS USER | usermod -G GROUPS USER (replace)
+  const joined = a.join(" ");
+  const append = /(^|\s)-aG\b/.test(joined) || (a.includes("-a") && a.includes("-G"));
+  let gi = a.findIndex(t=> t==="-G" || t==="-aG" || t==="--groups");
+  let groupArg, user;
+  if(a.find(t=>t==="-aG")!==undefined){
+    gi=a.indexOf("-aG"); groupArg=a[gi+1]; user=a[a.length-1];
+  } else if(gi>=0){
+    groupArg=a[gi+1]; user=a[a.length-1];
+  } else {
+    return out("usermod: to manage groups use -aG <group> <user> (append) ","err");
+  }
+  if(!groupArg||!user||user.startsWith("-"))
+    return out("usermod: usage: usermod -aG <group>[,<group>...] <user>","err");
+  if(!USERS.includes(user)) return out(`usermod: user '${user}' does not exist`,"err");
+  const targets = groupArg.split(",").map(s=>s.trim()).filter(Boolean);
+  for(const t of targets) if(!grp(t)) return out(`usermod: group '${t}' does not exist`,"err");
+
+  if(append){
+    targets.forEach(t=>{ const g=grp(t); if(!g.members.includes(user)) g.members.push(user); });
+    out(`Added '${user}' to: ${targets.join(", ")} (existing memberships kept).`,"ok");
+  } else {
+    // -G without -a REPLACES the user's supplementary group set — faithful behaviour
+    G.forEach(g=>{ if(g.name!==user){ g.members = g.members.filter(m=>m!==user); } });
+    targets.forEach(t=>{ const g=grp(t); if(!g.members.includes(user)) g.members.push(user); });
+    out(`Set '${user}' supplementary groups to exactly: ${targets.join(", ")}.`,"ok");
+    out("Note: -G without -a replaces all supplementary groups. Use -aG to append.","sys");
+  }
+}
+
+function cmdAddDel(a, isAdd){
+  // Debian-style: adduser USER GROUP  /  deluser USER GROUP
+  const [user,group]=a;
+  if(!user||!group) return out(`${isAdd?'adduser':'deluser'}: usage: ${isAdd?'adduser':'deluser'} <user> <group>`,"err");
+  const g=grp(group); if(!g) return out(`group '${group}' does not exist`,"err");
+  if(!USERS.includes(user)) return out(`user '${user}' does not exist`,"err");
+  if(isAdd){ if(!g.members.includes(user)) g.members.push(user); out(`Added '${user}' to '${group}'.`,"ok"); }
+  else { g.members=g.members.filter(m=>m!==user); out(`Removed '${user}' from '${group}'.`,"ok"); }
+}
+
+function suppGroupsFor(user){
+  return G.filter(g=>g.name!==user && g.members.includes(user)).map(g=>g.name);
+}
+function cmdGroups(a){
+  const u=a[0]||"root";
+  if(u!=="root" && !USERS.includes(u)) return out(`groups: '${u}': no such user`,"err");
+  const primary = grp(u)? u : u; // personal group shares the name
+  const list = [primary, ...suppGroupsFor(u)];
+  out(`${u} : ${list.join(" ")}`);
+}
+function cmdId(a){
+  const u=a[0]||"root";
+  if(u!=="root" && !USERS.includes(u)) return out(`id: '${u}': no such user`,"err");
+  const pg=grp(u); const gid=pg?pg.gid:0;
+  const supp=suppGroupsFor(u).map(n=>`${grp(n).gid}(${n})`).join(",");
+  out(`uid=${gid}(${u}) gid=${gid}(${u}) groups=${gid}(${u})${supp?","+supp:""}`);
+}
+function cmdGetent(a){
+  if(a[0]!=="group") return out("getent: this lab supports: getent group [name]","err");
+  if(a[1]){ const g=grp(a[1]); return g? out(grpLine(g)) : out(""); }
+  out(G.map(grpLine).join("\n"));
+}
+function cmdCat(a){
+  if(a[0]==="/etc/group") return out(G.map(grpLine).join("\n"));
+  if(a[0]==="/etc/passwd") return out(USERS.map((u,i)=>`${u}:x:${grp(u)?grp(u).gid:0}:${grp(u)?grp(u).gid:0}::/home/${u}:/bin/bash`).join("\n"));
+  out(`cat: ${a[0]||""}: No such file (this lab exposes /etc/group and /etc/passwd)`,"err");
+}
+function cmdLs(a){
+  if(a[0]==="/etc") return out("group  passwd  shadow  hosts  fstab");
+  out("bin  etc  home  root  var");
+}
+function grpLine(g){ return `${g.name}:x:${g.gid}:${g.members.join(",")}`; }
+
+const HELP =
+`Available commands in this console:
+  groupmod -n <newname> <group>     rename a group in place (gid + members kept)
+  groupadd <name>                   create a new empty group
+  gpasswd  -a <user> <group>        add a user to a group
+  gpasswd  -d <user> <group>        remove a user from a group
+  usermod  -aG <group> <user>       append a user to a supplementary group
+  groups [user]                     show a user's groups
+  id [user]                         show uid/gid/group membership
+  getent group [name]               read group entries
+  cat /etc/group                    view the group database
+  clear | reset | help`;
+
+/* ============================================================================
+   Tasks — evaluated against current state (order-independent)
+   ============================================================================ */
+const TASKS = [
+  { id:"rename", label:()=>`Rename the <code>${KEY.originGroup}</code> group to <code>${KEY.dayGroup}</code>.`,
+    pass:()=> !grp(KEY.originGroup) && !!grp(KEY.dayGroup) },
+  { id:"create", label:()=>`Create the <code>${KEY.nightGroup}</code> group.`,
+    pass:()=> !!grp(KEY.nightGroup) },
+  { id:"remove", label:()=>`Remove <code>${KEY.movingUser}</code> from <code>${KEY.dayGroup}</code>.`,
+    pass:()=> !!grp(KEY.dayGroup) && !grp(KEY.dayGroup).members.includes(KEY.movingUser) },
+  { id:"assign", label:()=>`Add <code>${KEY.movingUser}</code> to <code>${KEY.nightGroup}</code>.`,
+    pass:()=> !!grp(KEY.nightGroup) && grp(KEY.nightGroup).members.includes(KEY.movingUser) },
+];
+
+/* ============================================================================
+   Questions — original wording; checked live
+   ============================================================================ */
+const QUESTIONS = [
+  { id:"q1", prompt:"Which local file lists each group's name, GID, and member accounts?",
+    check:v=>/^\/?etc\/group$/.test(v.trim().toLowerCase()), expect:"/etc/group" },
+  { id:"q2", prompt:"Which command renames an existing group in place instead of deleting and recreating it?",
+    check:v=>/^groupmod\b/.test(v.trim().toLowerCase()), expect:"groupmod" },
+  { id:"q3", prompt:"With usermod -G, which single option must be added so the user keeps their current group memberships?",
+    check:v=>/^-?a$|^append$/.test(v.trim().toLowerCase()), expect:"-a" },
+];
+const QSTATE = {};   // id -> {value, correct}
+
+/* ============================================================================
+   Rendering
+   ============================================================================ */
+const termEl = document.getElementById("term");
+function echoCmd(raw){
+  const d=document.createElement("div"); d.className="cmdline";
+  d.innerHTML = `<span class="p">root@core-fs01:~#</span> ${escapeHtml(raw)}`;
+  termEl.appendChild(d); termEl.scrollTop=termEl.scrollHeight;
+}
+function out(text, cls){
+  const d=document.createElement("div"); if(cls) d.className=cls;
+  d.textContent=text; termEl.appendChild(d); termEl.scrollTop=termEl.scrollHeight;
+}
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+function render(){ renderBoard(); renderTasks(); renderScore(); }
+
+function renderBoard(){
+  const board=document.getElementById("board");
+  const watch=[
+    {name:KEY.originGroup, kind:"origin"},
+    {name:KEY.dayGroup,    kind:"metrics"},
+    {name:KEY.nightGroup,  kind:"forecast"},
+  ].filter(w=>grp(w.name));
+  if(!watch.length){ board.innerHTML='<p class="empty-note">No target groups yet.</p>'; return; }
+  board.innerHTML = watch.map(w=>{
+    const g=grp(w.name);
+    const chips = g.members.length
+      ? g.members.map(m=>`<span class="chip ${m===KEY.movingUser?'move':''}">${m}</span>`).join("")
+      : '<span class="empty-note">no members</span>';
+    return `<div class="gcard" data-div="${w.kind}">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span class="gname">${g.name}</span><span class="gid">gid ${g.gid}</span></div>
+      <div class="chips" role="list" aria-label="members of ${g.name}">${chips}</div>
+    </div>`;
+  }).join("") + `<p class="hint">${KEY.movingUser} should end up only in ${KEY.nightGroup}.</p>`;
+}
+
+function renderTasks(){
+  const ol=document.getElementById("tasks");
+  let passed=0;
+  ol.innerHTML = TASKS.map(t=>{
+    const ok=t.pass(); if(ok)passed++;
+    return `<li data-pass="${ok}">
+      <span class="mark" aria-hidden="true">${ok?"✓":""}</span>
+      <span class="body">${t.label()}<span class="sr">${ok?" — complete":" — not yet complete"}</span></span>
+    </li>`;
+  }).join("");
+  document.getElementById("taskpill").textContent = `${passed} / ${TASKS.length}`;
+}
+
+function renderQuestions(){
+  const wrap=document.getElementById("qs");
+  wrap.innerHTML = QUESTIONS.map((q,i)=>`
+    <div class="q" data-id="${q.id}" ${QSTATE[q.id]?`data-correct="${QSTATE[q.id].correct}"`:""}>
+      <label for="${q.id}"><span class="num">Q${i+1}</span>${q.prompt}</label>
+      <input id="${q.id}" type="text" autocomplete="off" spellcheck="false"
+             value="${QSTATE[q.id]?escapeAttr(QSTATE[q.id].value):""}"
+             placeholder="your answer">
+      <div class="verdict">${verdictText(q.id)}</div>
+    </div>`).join("");
+  QUESTIONS.forEach(q=>{
+    const inp=document.getElementById(q.id);
+    inp.addEventListener("input", ()=>{
+      const v=inp.value;
+      QSTATE[q.id]={value:v, correct:q.check(v)};
+      document.querySelector(`.q[data-id="${q.id}"]`).setAttribute("data-correct", QSTATE[q.id].correct);
+      document.querySelector(`.q[data-id="${q.id}"] .verdict`).textContent = verdictText(q.id);
+      renderScore();
+    });
+  });
+}
+function verdictText(id){
+  const s=QSTATE[id]; if(!s||!s.value) return "";
+  return s.correct ? "Correct" : "Not quite — check your answer.";
+}
+function escapeAttr(s){return s.replace(/"/g,"&quot;");}
+
+function scoreNow(){
+  const tp=TASKS.filter(t=>t.pass()).length;
+  const qp=QUESTIONS.filter(q=>QSTATE[q.id]&&QSTATE[q.id].correct).length;
+  return {tp, qp, total:TASKS.length+QUESTIONS.length, earned:tp+qp};
+}
+function renderScore(){
+  const s=scoreNow();
+  document.getElementById("qpill").textContent=`${s.qp} / ${QUESTIONS.length}`;
+  const ready = s.tp===TASKS.length && s.qp===QUESTIONS.length;
+  document.getElementById("submit").disabled = false; // allow partial submit; grade reflects state
+  return ready;
+}
+
+/* ============================================================================
+   Proof image — dependency-free Canvas renderer (stands in for html2canvas)
+   ============================================================================ */
+function drawProof(hacker){
+  const W=760, pad=28; const lines=[];
+  const s=scoreNow();
+  const c=document.createElement("canvas");
+  // measure height first
+  const headH=120, taskH=24*TASKS.length+34, qH=24*QUESTIONS.length+34;
+  const grpLines=G.filter(g=>[KEY.originGroup,KEY.dayGroup,KEY.nightGroup].includes(g.name));
+  const stateH=22*(grpLines.length)+34;
+  const H=headH+taskH+qH+stateH+pad*2+30;
+  c.width=W; c.height=H;
+  const x=c.getContext("2d");
+  // bg
+  x.fillStyle="#0e1622"; x.fillRect(0,0,W,H);
+  x.fillStyle="#15202e"; roundRect(x,12,12,W-24,H-24,12); x.fill();
+  let y=pad+14;
+  // header
+  x.fillStyle="#4fb0c6"; x.font="600 12px ui-monospace, monospace";
+  x.fillText("SY0-701 · 4.6 / 4.6.1  ·  "+CONFIG.assignmentId, pad+8, y);
+  y+=26; x.fillStyle="#d8e1ec"; x.font="650 20px system-ui, sans-serif";
+  x.fillText("Reorganize team groups — lab proof", pad+8, y);
+  y+=24; x.fillStyle="#7e8ea3"; x.font="13px ui-monospace, monospace";
+  x.fillText(`hacker: ${hacker}`, pad+8, y);
+  x.fillText(`captured: ${new Date().toISOString()}`, pad+260, y);
+  y+=22; x.fillStyle= s.earned===s.total ? "#5fbf8f":"#d9914b";
+  x.font="600 14px ui-monospace, monospace";
+  x.fillText(`score: ${s.earned} / ${s.total}`, pad+8, y);
+  y+=24; sep(x,y,W,pad); y+=20;
+  // tasks
+  x.fillStyle="#7e8ea3"; x.font="600 12px ui-monospace, monospace"; x.fillText("TASKS", pad+8, y); y+=20;
+  TASKS.forEach(t=>{
+    const ok=t.pass();
+    x.fillStyle= ok?"#5fbf8f":"#e2706b"; x.font="13px ui-monospace, monospace";
+    x.fillText(ok?"✓":"✗", pad+8, y);
+    x.fillStyle="#d8e1ec"; x.fillText(stripTags(t.label()), pad+30, y); y+=24;
+  });
+  y+=10; sep(x,y,W,pad); y+=20;
+  // questions
+  x.fillStyle="#7e8ea3"; x.font="600 12px ui-monospace, monospace"; x.fillText("KNOWLEDGE CHECK", pad+8, y); y+=20;
+  QUESTIONS.forEach((q,i)=>{
+    const st=QSTATE[q.id]; const ok=st&&st.correct;
+    x.fillStyle= ok?"#5fbf8f":"#e2706b"; x.font="13px ui-monospace, monospace";
+    x.fillText(ok?"✓":"✗", pad+8, y);
+    x.fillStyle="#d8e1ec"; x.fillText(`Q${i+1}: ${st?st.value||"(blank)":"(blank)"}`, pad+30, y); y+=24;
+  });
+  y+=10; sep(x,y,W,pad); y+=20;
+  // final group state
+  x.fillStyle="#7e8ea3"; x.font="600 12px ui-monospace, monospace"; x.fillText("FINAL /etc/group (target groups)", pad+8, y); y+=20;
+  x.fillStyle="#9fd3e0"; x.font="12px ui-monospace, monospace";
+  grpLines.forEach(g=>{ x.fillText(grpLine(g), pad+8, y); y+=22; });
+  return c.toDataURL("image/png");
+}
+function roundRect(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();}
+function sep(x,y,W,pad){x.strokeStyle="#22344a";x.beginPath();x.moveTo(pad+8,y);x.lineTo(W-pad-8,y);x.stroke();}
+function stripTags(s){return s.replace(/<[^>]+>/g,"");}
+
+/* ============================================================================
+   Submission
+   ============================================================================ */
+async function submitLab(){
+  const status=document.getElementById("status");
+  const hacker=document.getElementById("hacker").value.trim();
+  if(!hacker){ setStatus("err","Enter a hacker name first (a pseudonym — keep real names out)."); 
+    document.getElementById("hacker").focus(); return; }
+  if(hacker.length>40){ setStatus("err","Hacker name is too long (40 characters max)."); return; }
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    setStatus("err","This lab isn't wired to a submission endpoint yet. Ask your instructor to set APPS_SCRIPT_URL.");
+    return;
+  }
+
+  const s=scoreNow();
+  const payload={
+    assignmentId: CONFIG.assignmentId,
+    hackerName: hacker,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t=>({id:t.id, label:stripTags(t.label()), passed:t.pass()})),
+    questions: QUESTIONS.map(q=>({id:q.id, prompt:q.prompt,
+        answer: QSTATE[q.id]?QSTATE[q.id].value:"", correct: !!(QSTATE[q.id]&&QSTATE[q.id].correct)})),
+    score: {earned:s.earned, total:s.total},
+    screenshot: drawProof(hacker),
+    submissionToken: CONFIG.submissionToken,
+  };
+
+  setStatus("work","Submitting your lab…");
+  document.getElementById("submit").disabled=true;
+  try{
+    // SIMPLE request: no custom headers, default text/plain body -> no CORS preflight
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST", body:JSON.stringify(payload)});
+    const outp=await res.json();
+    if(outp && outp.success){
+      const link = outp.docUrl? ` <a href="${outp.docUrl}" target="_blank" rel="noopener">View your submission</a>`:"";
+      setStatus("ok", `Submitted as “${hacker}” — score ${s.earned}/${s.total}.${link}`);
+    }else{
+      setStatus("err", (outp&&outp.error) ? `Submission rejected: ${outp.error}` : "Submission failed — the server did not confirm. Tell your instructor.");
+      document.getElementById("submit").disabled=false;
+    }
+  }catch(e){
+    // Locked-down context fallback: fire-and-forget, can't read docUrl
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST", mode:"no-cors", body:JSON.stringify(payload)});
+      setStatus("ok", `Submitted as “${hacker}” (offline-safe mode). Confirm receipt with your instructor — no link is available in this mode.`);
+    }catch(err){
+      setStatus("err","Could not reach the submission server. Check your connection, then try again.");
+      document.getElementById("submit").disabled=false;
+    }
+  }
+}
+function setStatus(cls,msg){const s=document.getElementById("status");s.className="status "+cls;s.innerHTML=msg;}
+
+/* ============================================================================
+   Wiring
+   ============================================================================ */
+function doReset(){
+  freshState(); HISTORY=[]; HISTIDX=-1;
+  Object.keys(QSTATE).forEach(k=>delete QSTATE[k]);
+  document.getElementById("term").innerHTML="";
+  out("core-fs01 console ready. Type `help` to see available commands.","sys");
+  out("Goal: split 'dispatch' into 'dispatch_day' (renamed) and 'dispatch_night' (new), and move rkowalski to nights.","sys");
+  renderQuestions(); render();
+}
+
+const cmdInput=document.getElementById("cmd");
+cmdInput.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){
+    const v=cmdInput.value;
+    if(v.trim()){ HISTORY.push(v); HISTIDX=HISTORY.length; }
+    run(v); cmdInput.value="";
+  }else if(e.key==="ArrowUp"){
+    if(HISTORY.length){ HISTIDX=Math.max(0,HISTIDX-1); cmdInput.value=HISTORY[HISTIDX]||""; e.preventDefault(); }
+  }else if(e.key==="ArrowDown"){
+    if(HISTORY.length){ HISTIDX=Math.min(HISTORY.length,HISTIDX+1); cmdInput.value=HISTORY[HISTIDX]||""; e.preventDefault(); }
+  }
+});
+document.getElementById("submit").addEventListener("click",submitLab);
+document.getElementById("reset").addEventListener("click",()=>{ doReset(); setStatus("","");});
+
+doReset();
+</script>
+<script>
+(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var b=document.createElement("div");b.setAttribute("role","note");b.style.cssText="margin:0 0 12px;padding:9px 13px;border:1px solid #2c3a5e;border-left:4px solid #22d3ee;border-radius:8px;background:#11192e;color:#9fb0d4;font:13px/1.45 system-ui,Segoe UI,Arial;";b.innerHTML="<b style=\"color:#e8eefc\">AP Cybersecurity:</b> Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ")+"<br><b style=\"color:#e8eefc\">Security+ SY0-701:</b> "+M.splus.objectives.join(", ");document.body.insertBefore(b,document.body.firstChild);}catch(e){}})();
+</script>
+<script>(function(){try{var M=JSON.parse(document.getElementById("lab-meta").textContent);var ap=document.getElementById("align-ap"),sp=document.getElementById("align-splus");if(ap)ap.textContent="AP Unit "+M.ap.unit+" \u00b7 "+M.ap.unitTitle+" \u2014 "+M.ap.topics.join("; ")+" \u00b7 Skills "+M.ap.skills.join(", ");if(sp)sp.textContent="Security+ SY0-701: "+M.splus.objectives.join(", ");}catch(e){}})();</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"splus-smartcard-logon-gpo.html",title:"Lab: Enforce Smart Card Logon via Group Policy"}, NEXT={href:"splus-linux-delete-user.html",title:"Offboarding: Remove a Departed Linux User \u2014 Security+ Lab"}, CRUMB="All Labs \u203a Unit 4 \u2014 Securing Devices \u203a 4.2 Authentication";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>
