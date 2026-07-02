@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Back Online — Restore DHCP Addressing on GREENHOUSE-07</title>
+<!--
+  =====================================================================
+  Lab: netplus-dhcp-client-fix  —  "Back Online: Restore DHCP Addressing"
+  CompTIA Network+ (objectives tagged below) + AP Networking pilot (V.1)
+  Clean-room original. No third-party lab text, hostnames, IP plans,
+  question wording, or screenshots are reused. Self-rendered UI only.
+
+  © 2026 <YOUR NAME / ORG>.  All rights reserved.
+  Licensed to your institution. Replace this notice with your own
+  copyright / license line before distribution.
+  =====================================================================
+-->
+<style>
+  :root{
+    /* "Night operations console" theme — one warm signal-green accent */
+    --bg:#0c1116; --bg-2:#11181f; --panel:#0f161d; --panel-2:#131e27;
+    --ink:#e7eef2; --ink-dim:#9bb0bd; --ink-faint:#65808f;
+    --line:#22323d; --line-2:#2c4150;
+    --ok:#46d39a; --ok-deep:#1f7a59; --bad:#ff6b6b; --bad-deep:#7a2530;
+    --warn:#ffc14d; --link:#6db8ff; --accent:#46d39a;
+    --mono:'SFMono-Regular',ui-monospace,'Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%,#13202a 0%,transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.45;
+    -webkit-font-smoothing:antialiased; padding:18px;
+  }
+  a{color:var(--link)}
+  h1,h2,h3{margin:0;font-weight:650;letter-spacing:.2px}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ---- header ---- */
+  header.lab{
+    display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;
+    border:1px solid var(--line);border-radius:var(--r);
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    padding:16px 18px;margin-bottom:14px;
+  }
+  .badge{font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--accent);
+    border:1px solid var(--ok-deep);border-radius:999px;padding:3px 10px}
+  header.lab h1{font-size:20px;margin-top:6px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+    border:1px solid var(--line-2);border-radius:6px;padding:2px 8px}
+  .ticket{
+    margin-left:auto;max-width:360px;font-size:13px;color:var(--ink-dim);
+    border-left:2px solid var(--line-2);padding:2px 0 2px 14px}
+  .ticket b{color:var(--ink)}
+
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .card{border:1px solid var(--line);border-radius:var(--r);
+    background:var(--panel);overflow:hidden}
+  .card > .hd{display:flex;align-items:center;gap:10px;
+    padding:10px 14px;border-bottom:1px solid var(--line);
+    background:var(--bg-2);font-size:13px;color:var(--ink-dim)}
+  .card > .hd .dot{width:9px;height:9px;border-radius:50%;
+    background:var(--ink-faint);box-shadow:0 0 0 0 transparent}
+  .card.live > .hd .dot{background:var(--ok);box-shadow:0 0 10px 1px var(--ok)}
+
+  /* ---- sim: tabs ---- */
+  .tabs{display:flex;gap:2px;padding:8px 8px 0;background:var(--bg-2)}
+  .tabs button{appearance:none;border:1px solid var(--line);
+    border-bottom:none;background:var(--panel);color:var(--ink-dim);
+    font-family:var(--mono);font-size:12px;padding:8px 14px;cursor:pointer;
+    border-radius:8px 8px 0 0}
+  .tabs button[aria-selected="true"]{color:var(--ink);
+    background:var(--panel-2);border-color:var(--line-2)}
+  .tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .pane{display:none;padding:14px}
+  .pane[data-active="true"]{display:block}
+
+  /* ---- console ---- */
+  .console{background:#070b0f;border:1px solid var(--line-2);border-radius:8px;
+    font-family:var(--mono);font-size:12.5px;color:#cfe7dc;height:330px;
+    display:flex;flex-direction:column}
+  .console .out{flex:1;overflow:auto;padding:12px 14px;white-space:pre-wrap}
+  .console .out .err{color:var(--bad)}
+  .console .out .good{color:var(--ok)}
+  .console .out .muted{color:var(--ink-faint)}
+  .console .inp{display:flex;align-items:center;gap:8px;
+    border-top:1px solid var(--line);padding:8px 12px}
+  .console .inp .ps{color:var(--accent)}
+  .console input{flex:1;background:transparent;border:none;color:#cfe7dc;
+    font-family:var(--mono);font-size:12.5px;outline:none}
+  .hint{margin-top:8px;font-size:11.5px;color:var(--ink-faint);font-family:var(--mono)}
+
+  /* ---- settings dialog (self-drawn, not a captured screenshot) ---- */
+  .dlg{background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;
+    max-width:430px;margin:0 auto}
+  .dlg .title{padding:10px 14px;border-bottom:1px solid var(--line);
+    font-size:13px;color:var(--ink)}
+  .dlg .body{padding:14px 16px;font-size:13px}
+  .dlg fieldset{border:1px solid var(--line);border-radius:8px;margin:0 0 12px;padding:10px 12px}
+  .dlg legend{font-size:11px;color:var(--ink-dim);padding:0 6px}
+  .opt{display:flex;align-items:center;gap:8px;margin:6px 0;cursor:pointer}
+  .opt input{accent-color:var(--accent);width:15px;height:15px}
+  .fields{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;
+    margin:8px 0 2px;padding-left:23px}
+  .fields label{font-size:12px;color:var(--ink-dim);align-self:center}
+  .fields input[type=text]{background:#0a1015;border:1px solid var(--line-2);
+    border-radius:6px;color:var(--ink);font-family:var(--mono);font-size:12px;
+    padding:6px 8px}
+  .fields input:disabled{opacity:.45}
+  .dlg .actions{display:flex;gap:8px;justify-content:flex-end;
+    padding:10px 16px;border-top:1px solid var(--line)}
+
+  /* ---- topology / link-state signature element ---- */
+  .topo{padding:6px 4px 0}
+  .topo svg{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:14px;justify-content:center;margin-top:6px;
+    font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;
+    margin-right:5px;vertical-align:-1px}
+
+  /* ---- buttons ---- */
+  button.btn{appearance:none;cursor:pointer;border-radius:8px;
+    font-family:var(--sans);font-size:13px;font-weight:600;padding:9px 14px;
+    border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink)}
+  button.btn:hover{border-color:var(--accent)}
+  button.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button.btn.primary{background:var(--ok-deep);border-color:var(--ok);color:#eafff6}
+  button.btn.ghost{background:transparent}
+  button.btn:disabled{opacity:.5;cursor:not-allowed;border-color:var(--line)}
+
+  /* ---- task checklist ---- */
+  .checklist{list-style:none;margin:0;padding:6px}
+  .checklist li{display:flex;gap:10px;align-items:flex-start;
+    padding:9px 10px;border-radius:8px;font-size:13px}
+  .checklist li + li{border-top:1px solid var(--line)}
+  .checklist .mark{width:20px;height:20px;border-radius:6px;flex:none;margin-top:1px;
+    border:1px solid var(--line-2);display:grid;place-items:center;
+    font-family:var(--mono);font-size:12px;color:var(--ink-faint)}
+  .checklist li.done .mark{background:var(--ok-deep);border-color:var(--ok);color:#eafff6}
+  .checklist li.done .lbl{color:var(--ink)}
+  .checklist .lbl{color:var(--ink-dim)}
+  .checklist .lbl small{display:block;color:var(--ink-faint);font-size:11.5px;margin-top:2px}
+
+  /* ---- questions ---- */
+  .q{padding:12px 14px;border-top:1px solid var(--line)}
+  .q .qp{font-size:13px;margin-bottom:8px}
+  .q .qp b{color:var(--accent);font-family:var(--mono);margin-right:6px}
+  .q .opts{display:flex;flex-direction:column;gap:6px}
+  .q .opts label{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;
+    color:var(--ink-dim);cursor:pointer;border:1px solid var(--line);
+    border-radius:7px;padding:7px 9px}
+  .q .opts input{accent-color:var(--accent);margin-top:2px}
+  .q.correct .opts label.sel{border-color:var(--ok);color:var(--ink)}
+  .q.wrong .opts label.sel{border-color:var(--bad)}
+  .q .qtext input{width:100%;background:#0a1015;border:1px solid var(--line-2);
+    border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:13px;padding:8px 10px}
+  .q .fb{font-size:11.5px;margin-top:7px;font-family:var(--mono)}
+  .q.correct .fb{color:var(--ok)} .q.wrong .fb{color:var(--bad)}
+
+  /* ---- submit bar ---- */
+  .submit{margin-top:14px;border:1px solid var(--line);border-radius:var(--r);
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));padding:14px 16px;
+    display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .submit label{font-size:12px;color:var(--ink-dim)}
+  .submit input[type=text]{background:#0a1015;border:1px solid var(--line-2);
+    border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:13px;
+    padding:9px 11px;min-width:180px}
+  .submit .score{font-family:var(--mono);font-size:13px;color:var(--ink-dim);margin-left:auto}
+  .submit .score b{color:var(--ink)}
+  .status{flex-basis:100%;font-size:12.5px;font-family:var(--mono);min-height:18px}
+  .status.ok{color:var(--ok)} .status.err{color:var(--bad)} .status.work{color:var(--warn)}
+
+  .foot{margin:16px 2px 2px;font-size:11px;color:var(--ink-faint)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-dhcp-client-fix", "title": "Back Online — Restore DHCP Addressing on GREENHOUSE-07", "version": "1.0.0", "objectives": ["N10-009:3.4", "N10-009:5.3", "APNET:2.6"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <!-- The capture target is #lab — screenshot evidence covers sim + answers -->
+  <div id="lab">
+
+    <header class="lab">
+      <div>
+        <span class="badge">Network+ · AP Networking · Simulation Lab</span>
+        <h1>Back Online: Restore DHCP Addressing on GREENHOUSE-07</h1>
+        <div class="tags" aria-label="Blueprint coverage">
+          <span class="tag">N10-007 · 1.4</span>
+          <span class="tag">N10-007 · 1.8</span>
+          <span class="tag">AP NET · 2.1</span>
+          <span class="tag">AP NET · 2.3</span>
+        </div>
+      </div>
+      <div class="ticket">
+        <b>Ticket #4471 — Marrowfield Gardens Co-op IT</b><br>
+        The point-of-sale workstation <b>GREENHOUSE-07</b> in the Potting Shed
+        office can't reach the inventory server or the internet. A coworker
+        "tried some settings" last week. The rest of the office is fine.
+        Find why it's offline and bring it back on the wired network.
+      </div>
+    </header>
+
+    <div class="grid">
+
+      <!-- ============ SIMULATED ENVIRONMENT ============ -->
+      <section class="card" id="simcard">
+        <div class="hd"><span class="dot" id="linkdot"></span>
+          GREENHOUSE-07 — Ethernet (vEthernet 0)
+          <span id="modepill" style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--bad)">addressing: MANUAL</span>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Workstation tools">
+          <button role="tab" id="tab-con" aria-selected="true" aria-controls="pane-con">console</button>
+          <button role="tab" id="tab-net" aria-selected="false" aria-controls="pane-net">network settings</button>
+          <button role="tab" id="tab-map" aria-selected="false" aria-controls="pane-map">link state</button>
+        </div>
+
+        <!-- console -->
+        <div class="pane" id="pane-con" data-active="true" role="tabpanel" aria-labelledby="tab-con">
+          <div class="console">
+            <div class="out" id="conOut" aria-live="polite"></div>
+            <form class="inp" id="conForm">
+              <span class="ps">C:\\Users\\posuser&gt;</span>
+              <input id="conInput" autocomplete="off" spellcheck="false"
+                aria-label="Command line input" placeholder="type a command — try: help" />
+            </form>
+          </div>
+          <div class="hint">Try: <code>ipconfig</code> · <code>ipconfig /all</code> ·
+            <code>ipconfig /release</code> · <code>ipconfig /renew</code> ·
+            <code>ping 10.20.40.1</code> · <code>cls</code></div>
+        </div>
+
+        <!-- network settings dialog -->
+        <div class="pane" id="pane-net" role="tabpanel" aria-labelledby="tab-net" data-active="false">
+          <div class="dlg" role="group" aria-label="Internet Protocol Version 4 properties">
+            <div class="title">Internet Protocol Version 4 (TCP/IPv4) — Properties</div>
+            <div class="body">
+              <fieldset>
+                <legend>IP address</legend>
+                <label class="opt"><input type="radio" name="ipmode" id="ip-auto" value="auto">
+                  Obtain an IP address automatically</label>
+                <label class="opt"><input type="radio" name="ipmode" id="ip-man" value="manual" checked>
+                  Use the following IP address</label>
+                <div class="fields">
+                  <label for="f-ip">IP address</label><input type="text" id="f-ip" value="10.20.55.8">
+                  <label for="f-mask">Subnet mask</label><input type="text" id="f-mask" value="255.255.255.0">
+                  <label for="f-gw">Default gateway</label><input type="text" id="f-gw" value="10.20.55.1">
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>DNS</legend>
+                <label class="opt"><input type="radio" name="dnsmode" id="dns-auto" value="auto">
+                  Obtain DNS server address automatically</label>
+                <label class="opt"><input type="radio" name="dnsmode" id="dns-man" value="manual" checked>
+                  Use the following DNS server addresses</label>
+                <div class="fields">
+                  <label for="f-dns1">Preferred DNS</label><input type="text" id="f-dns1" value="10.20.55.1">
+                  <label for="f-dns2">Alternate DNS</label><input type="text" id="f-dns2" value="">
+                </div>
+              </fieldset>
+            </div>
+            <div class="actions">
+              <button class="btn ghost" id="netRevert" type="button">Cancel</button>
+              <button class="btn primary" id="netApply" type="button">Apply</button>
+            </div>
+          </div>
+          <div class="hint">Changing the adapter to obtain an address automatically tells it to
+            use <strong>DHCP</strong>. After applying, return to the console and renew the lease.</div>
+        </div>
+
+        <!-- link-state map (signature element) -->
+        <div class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map" data-active="false">
+          <div class="topo">
+            <svg id="topoSvg" viewBox="0 0 560 150" xmlns="http://www.w3.org/2000/svg" role="img"
+                 aria-label="Link-state path from workstation to gateway and inventory server">
+              <!-- links -->
+              <line id="lk1" x1="92" y1="75" x2="220" y2="75"/>
+              <line id="lk2" x1="300" y1="75" x2="430" y2="75"/>
+              <!-- nodes (hex, not var() — SVG presentation attrs don't resolve CSS vars) -->
+              <g font-family="ui-monospace,monospace" font-size="10" fill="#9bb0bd" text-anchor="middle">
+                <rect x="24" y="48" width="68" height="54" rx="8" fill="#131e27" stroke="#2c4150"/>
+                <text x="58" y="118">GREENHOUSE-07</text>
+                <text x="58" y="79" fill="#e7eef2" font-size="11">PC</text>
+
+                <rect x="226" y="55" width="74" height="40" rx="8" fill="#131e27" stroke="#2c4150"/>
+                <text x="263" y="111">SW-POTTING-1</text>
+                <text x="263" y="79" fill="#e7eef2" font-size="11">switch</text>
+
+                <rect x="430" y="48" width="106" height="54" rx="8" fill="#131e27" stroke="#2c4150"/>
+                <text x="483" y="118">GW 10.20.40.1 · INV-SRV</text>
+                <text x="483" y="79" fill="#e7eef2" font-size="11">gateway + server</text>
+              </g>
+            </svg>
+            <div class="legend">
+              <span><i style="background:var(--bad)"></i>no path</span>
+              <span><i style="background:var(--warn)"></i>acquiring</span>
+              <span><i style="background:var(--ok)"></i>reachable</span>
+            </div>
+          </div>
+          <div class="hint" id="mapState">Path down — the workstation's address is not on the
+            10.20.40.0/24 LAN, so it can't reach the gateway.</div>
+        </div>
+      </section>
+
+      <!-- ============ TASKS + QUESTIONS ============ -->
+      <section class="card">
+        <div class="hd">Objective checklist</div>
+        <ol class="checklist" id="checklist"></ol>
+
+        <div class="hd" style="border-top:1px solid var(--line)">Knowledge check</div>
+        <div id="questions"></div>
+      </section>
+    </div>
+
+    <!-- ============ SUBMISSION BAR ============ -->
+    <div class="submit">
+      <label for="handle">Callsign</label>
+      <input type="text" id="handle" maxlength="32" placeholder="e.g. fern-fox-12"
+             aria-label="Callsign (pseudonym — no real names)">
+      <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+      <button class="btn primary" id="submitBtn" type="button" disabled>Submit completed lab</button>
+      <div class="score" id="scoreReadout">tasks 0/5 · questions 0/3</div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+
+  </div><!-- /#lab -->
+
+  <p class="foot">Pseudonymous callsigns only — never enter a real name, email, or
+    student ID. © 2026 &lt;YOUR NAME / ORG&gt;. Replace with your own copyright/license line.</p>
+</div>
+
+<!-- ============================================================= -->
+<!-- SCRIPT BLOCK 1 — screenshot capture (dependency-free)         -->
+<!--                                                               -->
+<!-- The library spec calls for INLINED html2canvas. The genuine   -->
+<!-- minified library (~150 KB) can't be reproduced faithfully     -->
+<!-- from memory, so this ships a self-contained capture that      -->
+<!-- needs no CDN and snapshots the simulated DOM via an SVG        -->
+<!-- <foreignObject>. It exposes window.html2canvas(el) so the     -->
+<!-- engine reads identically.                                     -->
+<!--                                                               -->
+<!-- FOR PIXEL-PERFECT CAPTURE: delete this block and paste the    -->
+<!-- minified html2canvas v1.4.1 source here instead — the engine  -->
+<!-- call site is unchanged.                                       -->
+<!-- ============================================================= -->
+<script>
+(function(){
+  var COPY = ['color','background-color','border','border-radius','border-color',
+    'border-width','border-style','font-family','font-size','font-weight','font-style',
+    'line-height','letter-spacing','text-align','text-transform','padding','padding-top',
+    'padding-right','padding-bottom','padding-left','margin','display','width','height',
+    'min-width','min-height','box-sizing','white-space','opacity','vertical-align',
+    'grid-template-columns','gap','align-items','justify-content','flex','overflow'];
+
+  function inlineStyles(src, dst){
+    var cs = getComputedStyle(src), decl = '';
+    for(var i=0;i<COPY.length;i++){
+      var p = COPY[i], v = cs.getPropertyValue(p);
+      if(v) decl += p+':'+v+';';
+    }
+    if(dst.nodeType===1) dst.setAttribute('style', decl + (dst.getAttribute('style')||''));
+    var sc = src.children || [], dc = dst.children || [];
+    for(var j=0;j<sc.length;j++) if(dc[j]) inlineStyles(sc[j], dc[j]);
+  }
+
+  window.html2canvas = function(node){
+    return new Promise(function(resolve){
+      try{
+        var rect = node.getBoundingClientRect();
+        var w = Math.max(1,Math.ceil(rect.width)), h = Math.max(1,Math.ceil(rect.height));
+        var clone = node.cloneNode(true);
+        inlineStyles(node, clone);
+        var wrapper = document.createElement('div');
+        wrapper.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+        wrapper.style.cssText='width:'+w+'px;background:'+getComputedStyle(document.body).backgroundColor;
+        wrapper.appendChild(clone);
+        var xml = new XMLSerializer().serializeToString(wrapper);
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'
+          + '<foreignObject x="0" y="0" width="100%" height="100%">'+xml+'</foreignObject></svg>';
+        var img = new Image();
+        img.onload = function(){
+          var c = document.createElement('canvas'); c.width=w; c.height=h;
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = getComputedStyle(document.body).backgroundColor || '#0c1116';
+          ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0); resolve(c);
+        };
+        img.onerror = function(){ resolve(fallback(w,h)); };
+        img.src = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      }catch(e){ resolve(fallback(320,80)); }
+    });
+  };
+  function fallback(w,h){
+    var c=document.createElement('canvas');c.width=w;c.height=h;
+    var x=c.getContext('2d');x.fillStyle='#0c1116';x.fillRect(0,0,w,h);
+    x.fillStyle='#46d39a';x.font='12px monospace';
+    x.fillText('lab capture (text fallback)',12,24);return c;
+  }
+})();
+</script>
+
+<!-- ============================================================= -->
+<!-- SCRIPT BLOCK 2 — engine: CONFIG, ANSWER KEY, sim, submit POST -->
+<!-- ============================================================= -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------- LAB CONFIG (per §11) ----------------- */
+  var CONFIG = {
+    assignmentId: "netplus-dhcp-client-fix",
+    objectives:   ["N10-009:3.4", "N10-009:5.3", "APNET:2.6"],
+    // Same /exec URL across the whole library:
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+
+    net: {
+      host: "GREENHOUSE-07",
+      lan:  "10.20.40.0/24",
+      goodGateway: "10.20.40.1",
+      goodDns: ["10.20.40.10","10.20.40.11"],
+      scopeStart: "10.20.40.50",
+      scopeEnd:   "10.20.40.200",
+      leaseAddr:  "10.20.40.63",     // deterministic lease this sim hands out
+      leaseMask:  "255.255.255.0",
+      leaseDays:  8,
+      domain:     "marrowfield.local",
+      mac:        "5A-2F-C4-08-1B-90",
+      // broken initial static config (wrong subnet)
+      badIp: "10.20.55.8", badMask:"255.255.255.0", badGw:"10.20.55.1", badDns:"10.20.55.1"
+    }
+  };
+
+  /* ANSWER KEY — inspectable client-side; re-validate server-side if it must
+     be trustworthy (see INSTRUCTOR_SETUP.md). */
+  var QUESTIONS = [
+    { id:"q1", type:"choice",
+      prompt:"Before any changes, how is GREENHOUSE-07's IPv4 address assigned?",
+      opts:["Dynamically, by a DHCP server","Manually (a static address)",
+            "Automatically via APIPA","By the router's loopback address"],
+      answer:1,
+      fb_ok:"Correct — the adapter is set to a fixed address, on the wrong subnet.",
+      fb_no:"Open the adapter properties: it's set to a fixed address, not DHCP." },
+    { id:"q2", type:"choice",
+      prompt:"A host showing 169.254.40.12 with no usable gateway tells you what?",
+      opts:["It holds a valid DHCP lease","It's using APIPA because DHCP assignment failed",
+            "It was given a correct static address","It only reached the loopback interface"],
+      answer:1,
+      fb_ok:"Correct — 169.254.0.0/16 is APIPA, the fallback when no DHCP reply arrives.",
+      fb_no:"169.254.0.0/16 is APIPA — the self-assigned fallback when DHCP fails." },
+    { id:"q3", type:"text",
+      prompt:"After enabling automatic addressing and renewing, what IPv4 address did GREENHOUSE-07 lease?",
+      answer:CONFIG.net.leaseAddr,
+      fb_ok:"Correct — that address is inside the DHCP scope.",
+      fb_no:"Read it from ipconfig after the renew completes — it'll be inside the scope." }
+  ];
+
+  var TASKS = [
+    { id:"diagnose",  label:"Inspect the current configuration",
+      sub:"Run ipconfig or open the adapter properties." },
+    { id:"identify",  label:"Identify how the address is assigned",
+      sub:"Answer the first knowledge-check question correctly." },
+    { id:"setdhcp",   label:"Set the adapter to obtain its address automatically",
+      sub:"Switch IP and DNS to automatic, then Apply." },
+    { id:"renew",     label:"Acquire a lease from the DHCP server",
+      sub:"Run ipconfig /renew after enabling automatic addressing." },
+    { id:"verify",    label:"Verify connectivity is restored",
+      sub:"Hold a scope address and reach the gateway." }
+  ];
+
+  /* ----------------- SIM STATE ----------------- */
+  var S;
+  function freshState(){
+    return {
+      mode: "manual",                 // 'manual' | 'dhcp'
+      dnsMode: "manual",
+      ip: CONFIG.net.badIp, mask: CONFIG.net.badMask,
+      gw: CONFIG.net.badGw, dns: CONFIG.net.badDns,
+      leased: false,                  // got a DHCP lease this session
+      inspected: false,               // ran ipconfig or opened settings
+      tasks: {}, answers:{}
+    };
+  }
+
+  /* ----------------- DOM ----------------- */
+  var $ = function(s){return document.querySelector(s);};
+  var conOut = $("#conOut"), conInput = $("#conInput");
+
+  /* tabs */
+  document.querySelectorAll('[role=tab]').forEach(function(t){
+    t.addEventListener('click', function(){ selectTab(t); });
+    t.addEventListener('keydown', function(e){
+      var tabs=[].slice.call(document.querySelectorAll('[role=tab]'));
+      var i=tabs.indexOf(t);
+      if(e.key==='ArrowRight'){selectTab(tabs[(i+1)%tabs.length]);e.preventDefault();}
+      if(e.key==='ArrowLeft'){selectTab(tabs[(i-1+tabs.length)%tabs.length]);e.preventDefault();}
+    });
+  });
+  function selectTab(t){
+    document.querySelectorAll('[role=tab]').forEach(function(x){
+      var on = x===t; x.setAttribute('aria-selected', on?'true':'false');
+      $('#'+x.getAttribute('aria-controls')).setAttribute('data-active', on?'true':'false');
+    });
+    t.focus();
+    if(t.id==='tab-net' || t.id==='tab-con'){ S.inspected = true; evaluate(); }
+  }
+
+  /* ----------------- CONSOLE ENGINE ----------------- */
+  function w(text, cls){
+    var span=document.createElement('span');
+    if(cls) span.className=cls;
+    span.textContent=text+"\n"; conOut.appendChild(span);
+    conOut.scrollTop=conOut.scrollHeight;
+  }
+  function prompt(cmd){ w("C:\\Users\\posuser>"+cmd); }
+
+  function ipconfig(all){
+    S.inspected = true;
+    w("");
+    w("Windows IP Configuration");
+    if(all){
+      w("   Host Name . . . . . . . . . . . . : "+CONFIG.net.host);
+      w("   Primary Dns Suffix  . . . . . . . : "+(S.leased?CONFIG.net.domain:""));
+    }
+    w("");
+    w("Ethernet adapter Ethernet (vEthernet 0):");
+    if(all){
+      w("   Physical Address. . . . . . . . . : "+CONFIG.net.mac);
+      w("   DHCP Enabled. . . . . . . . . . . : "+(S.mode==='dhcp'?'Yes':'No'));
+    }
+    w("   IPv4 Address. . . . . . . . . . . : "+S.ip+(S.ip&&S.ip!=="0.0.0.0"?"(Preferred)":""));
+    w("   Subnet Mask . . . . . . . . . . . : "+(S.mask||"0.0.0.0"));
+    if(all && S.mode==='dhcp' && S.leased){
+      w("   Lease Obtained. . . . . . . . . . : day 0, 09:14:07");
+      w("   DHCP Server . . . . . . . . . . . : "+CONFIG.net.goodGateway);
+    }
+    w("   Default Gateway . . . . . . . . . : "+(S.gw||""));
+    if(all){
+      var d = Array.isArray(S.dns)?S.dns:[S.dns];
+      w("   DNS Servers . . . . . . . . . . . : "+(d[0]||""));
+      for(var i=1;i<d.length;i++) if(d[i]) w("                                       "+d[i]);
+    }
+    // teaching cue for APIPA range
+    if(S.ip.indexOf("169.254.")===0)
+      w("   (169.254.x.x is APIPA — no DHCP server answered.)","muted");
+    w("");
+    evaluate();
+  }
+
+  function release(){
+    if(S.mode!=='dhcp'){
+      w("The operation failed as no adapter is in the state permissible for this operation.","err");
+      w("(This adapter is configured manually — there is no DHCP lease to release.)","muted");
+      return;
+    }
+    S.ip="0.0.0.0"; S.mask="0.0.0.0"; S.gw=""; S.leased=false;
+    w("IPv4 Address for adapter Ethernet released.","good"); evaluate();
+  }
+
+  function renew(){
+    if(S.mode!=='dhcp'){
+      w("Unable to contact your DHCP server. Request has timed out.","err");
+      w("(The adapter is set to a manual address — switch it to obtain an","muted");
+      w(" address automatically before renewing.)","muted");
+      return;
+    }
+    w("Contacting DHCP server "+CONFIG.net.goodGateway+" ... DISCOVER → OFFER → REQUEST → ACK","muted");
+    // link is up on this LAN, so a proper lease is granted
+    S.ip=CONFIG.net.leaseAddr; S.mask=CONFIG.net.leaseMask;
+    S.gw=CONFIG.net.goodGateway; S.dns=CONFIG.net.goodDns.slice(); S.leased=true;
+    w("IPv4 Address . . . . . . . . . . . : "+S.ip,"good");
+    w("Lease acquired ("+CONFIG.net.leaseDays+"-day lease) from "+CONFIG.net.goodGateway+".","good");
+    evaluate();
+  }
+
+  function ping(target){
+    var reachable = onLan(S.ip) && S.gw===CONFIG.net.goodGateway;
+    var isLanTarget = onLan(target);
+    if(reachable && isLanTarget){
+      for(var i=0;i<3;i++) w("Reply from "+target+": bytes=32 time=1ms TTL=128","good");
+      w("    Packets: Sent = 3, Received = 3, Lost = 0 (0% loss)","good");
+    } else {
+      for(var j=0;j<3;j++) w("Request timed out.","err");
+      w("    Packets: Sent = 3, Received = 0, Lost = 3 (100% loss)","err");
+      if(!onLan(S.ip)) w("(Your address "+S.ip+" is not on the "+CONFIG.net.lan+" LAN.)","muted");
+    }
+    evaluate();
+  }
+  function onLan(ip){ return typeof ip==='string' && ip.indexOf("10.20.40.")===0; }
+
+  function runCommand(raw){
+    var cmd = raw.trim().replace(/\s+/g,' ');
+    var lc = cmd.toLowerCase();
+    prompt(cmd);
+    if(lc===''){ /* nothing */ }
+    else if(lc==='help'||lc==='?'){
+      w("Supported commands:");
+      w("  ipconfig            show adapter address summary");
+      w("  ipconfig /all       show full details (MAC, DHCP, DNS)");
+      w("  ipconfig /release   release a DHCP lease");
+      w("  ipconfig /renew     request/renew a DHCP lease");
+      w("  ping <ip>           test reachability");
+      w("  cls | clear         clear the screen");
+    }
+    else if(lc==='cls'||lc==='clear'){ conOut.innerHTML=''; }
+    else if(lc==='ipconfig'){ ipconfig(false); }
+    else if(lc==='ipconfig /all'){ ipconfig(true); }
+    else if(lc==='ipconfig /release'||lc==='ipconfig/release'){ release(); }
+    else if(lc==='ipconfig /renew'||lc==='ipconfig/renew'){ renew(); }
+    else if(lc.indexOf('ping ')===0){ ping(cmd.slice(5).trim()); }
+    else if(lc==='ping'){ w("Usage: ping <ip address>","err"); }
+    else { w("'"+cmd+"' is not recognized as a command. Type 'help' for the list.","err"); }
+  }
+
+  $("#conForm").addEventListener('submit', function(e){
+    e.preventDefault(); var v=conInput.value; conInput.value=''; runCommand(v);
+  });
+
+  /* ----------------- SETTINGS DIALOG ----------------- */
+  function syncDialogToState(){
+    $("#ip-auto").checked = S.mode==='dhcp';
+    $("#ip-man").checked  = S.mode!=='dhcp';
+    $("#dns-auto").checked= S.dnsMode==='dhcp';
+    $("#dns-man").checked = S.dnsMode!=='dhcp';
+    toggleFields();
+  }
+  function toggleFields(){
+    var manIp = $("#ip-man").checked, manDns=$("#dns-man").checked;
+    ["f-ip","f-mask","f-gw"].forEach(function(id){ $("#"+id).disabled=!manIp; });
+    ["f-dns1","f-dns2"].forEach(function(id){ $("#"+id).disabled=!manDns; });
+  }
+  ["ip-auto","ip-man","dns-auto","dns-man"].forEach(function(id){
+    $("#"+id).addEventListener('change', toggleFields);
+  });
+  $("#netApply").addEventListener('click', function(){
+    var auto = $("#ip-auto").checked, dnsAuto=$("#dns-auto").checked;
+    if(auto){
+      S.mode='dhcp';
+      // moving to DHCP clears the stale manual address — lease pending until renew
+      S.ip="0.0.0.0"; S.mask="0.0.0.0"; S.gw=""; S.leased=false;
+      if(dnsAuto){ S.dnsMode='dhcp'; S.dns=[]; }
+      setStatus("Adapter set to obtain an address automatically. Now run "
+        +"ipconfig /renew in the console to pull a lease.","work");
+    } else {
+      S.mode='manual';
+      S.ip=$("#f-ip").value.trim(); S.mask=$("#f-mask").value.trim();
+      S.gw=$("#f-gw").value.trim();
+      S.dnsMode = dnsAuto?'dhcp':'manual';
+      S.dns = dnsAuto?[]:[ $("#f-dns1").value.trim(), $("#f-dns2").value.trim() ].filter(Boolean);
+      setStatus("Manual address applied.","work");
+    }
+    S.inspected=true; evaluate();
+  });
+  $("#netRevert").addEventListener('click', syncDialogToState);
+
+  /* ----------------- EVALUATION ----------------- */
+  function gradeQuestion(q){
+    var a = S.answers[q.id];
+    if(a===undefined || a===null || a==='') return false;
+    if(q.type==='choice') return Number(a)===q.answer;
+    return String(a).trim().toLowerCase()===String(q.answer).toLowerCase();
+  }
+  function evaluate(){
+    // task pass conditions over sim state
+    S.tasks.diagnose = !!S.inspected;
+    S.tasks.identify = gradeQuestion(QUESTIONS[0]);
+    S.tasks.setdhcp  = S.mode==='dhcp';
+    S.tasks.renew    = S.mode==='dhcp' && S.leased;
+    S.tasks.verify   = onLan(S.ip) && S.gw===CONFIG.net.goodGateway && S.leased;
+
+    renderChecklist(); renderQuestionStates(); paintLinkState(); updateScore();
+  }
+
+  function renderChecklist(){
+    var ol=$("#checklist"); ol.innerHTML='';
+    TASKS.forEach(function(t){
+      var done=!!S.tasks[t.id];
+      var li=document.createElement('li'); li.className=done?'done':'';
+      li.innerHTML='<span class="mark">'+(done?'✓':'')+'</span>'+
+        '<span class="lbl">'+t.label+'<small>'+t.sub+'</small></span>';
+      ol.appendChild(li);
+    });
+  }
+
+  function buildQuestions(){
+    var box=$("#questions"); box.innerHTML='';
+    QUESTIONS.forEach(function(q){
+      var d=document.createElement('div'); d.className='q'; d.id='qbox-'+q.id;
+      var html='<div class="qp"><b>'+q.id.toUpperCase()+'</b>'+escapeHtml(q.prompt)+'</div>';
+      if(q.type==='choice'){
+        html+='<div class="opts">';
+        q.opts.forEach(function(o,i){
+          html+='<label data-i="'+i+'"><input type="radio" name="'+q.id+'" value="'+i+'">'
+            +'<span>'+escapeHtml(o)+'</span></label>';
+        });
+        html+='</div>';
+      } else {
+        html+='<div class="qtext"><input type="text" name="'+q.id
+          +'" autocomplete="off" placeholder="e.g. 10.20.40.x" aria-label="'+escapeHtml(q.prompt)+'"></div>';
+      }
+      html+='<div class="fb" id="fb-'+q.id+'"></div>';
+      d.innerHTML=html; box.appendChild(d);
+    });
+    box.addEventListener('change', onAnswer);
+    box.addEventListener('input', function(e){ if(e.target.type==='text') onAnswer(e); });
+  }
+  function onAnswer(e){
+    var name=e.target.name; if(!name) return;
+    S.answers[name]= e.target.type==='radio'? e.target.value : e.target.value;
+    evaluate();
+  }
+  function renderQuestionStates(){
+    QUESTIONS.forEach(function(q){
+      var box=$("#qbox-"+q.id), fb=$("#fb-"+q.id);
+      var answered = S.answers[q.id]!==undefined && S.answers[q.id]!=='';
+      var ok=gradeQuestion(q);
+      box.classList.toggle('correct', answered&&ok);
+      box.classList.toggle('wrong', answered&&!ok);
+      // highlight chosen option
+      box.querySelectorAll('.opts label').forEach(function(l){
+        l.classList.toggle('sel', String(l.getAttribute('data-i'))===String(S.answers[q.id]));
+      });
+      fb.textContent = !answered? '' : (ok? q.fb_ok : q.fb_no);
+    });
+  }
+
+  function paintLinkState(){
+    var reach = onLan(S.ip) && S.gw===CONFIG.net.goodGateway && S.leased;
+    var acquiring = S.mode==='dhcp' && !S.leased;
+    var color = reach? '#46d39a' : acquiring? '#ffc14d' : '#ff6b6b';
+    ['lk1','lk2'].forEach(function(id){
+      var l=$("#"+id); if(l){ l.setAttribute('stroke',color);
+        l.setAttribute('stroke-width','3');
+        l.setAttribute('stroke-dasharray', acquiring?'6 5':'0'); }
+    });
+    $("#linkdot").parentElement.parentElement.classList.toggle('live', reach);
+    var pill=$("#modepill");
+    pill.textContent='addressing: '+(S.mode==='dhcp'?'DHCP':'MANUAL');
+    pill.style.color = S.mode==='dhcp' ? (reach?'var(--ok)':'var(--warn)') : 'var(--bad)';
+    $("#mapState").textContent = reach
+      ? "Path up — GREENHOUSE-07 holds "+S.ip+" and reaches the gateway "+CONFIG.net.goodGateway+"."
+      : acquiring
+        ? "Adapter is set to DHCP but has no lease yet — renew to acquire one."
+        : "Path down — the workstation's address is not on the "+CONFIG.net.lan+" LAN.";
+  }
+
+  function passCount(){ var n=0; TASKS.forEach(function(t){if(S.tasks[t.id])n++;}); return n; }
+  function correctCount(){ var n=0; QUESTIONS.forEach(function(q){if(gradeQuestion(q))n++;}); return n; }
+  function updateScore(){
+    var tp=passCount(), qc=correctCount();
+    $("#scoreReadout").innerHTML='tasks <b>'+tp+'/'+TASKS.length+
+      '</b> · questions <b>'+qc+'/'+QUESTIONS.length+'</b>';
+    var complete = tp===TASKS.length && qc===QUESTIONS.length;
+    var hasHandle = $("#handle").value.trim().length>0;
+    $("#submitBtn").disabled = !(complete && hasHandle);
+    if(complete && !hasHandle) setStatus("All done — enter a callsign to submit.","work");
+  }
+
+  /* ----------------- SUBMISSION ----------------- */
+  function setStatus(msg, cls){
+    var s=$("#status"); s.textContent=msg||''; s.className='status'+(cls?(' '+cls):'');
+  }
+  function buildPayload(shot){
+    return {
+      assignmentId: CONFIG.assignmentId,
+      handle: $("#handle").value.trim().slice(0,32),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives.slice(),
+      tasks: TASKS.map(function(t){ return {id:t.id,label:t.label,passed:!!S.tasks[t.id]}; }),
+      questions: QUESTIONS.map(function(q){
+        return { id:q.id, prompt:q.prompt,
+                 answer:String(S.answers[q.id]!==undefined?S.answers[q.id]:''),
+                 correct:gradeQuestion(q) };
+      }),
+      score: { earned: correctCount(), total: QUESTIONS.length },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  $("#submitBtn").addEventListener('click', async function(){
+    var btn=this; btn.disabled=true;
+    setStatus("Capturing lab and submitting…","work");
+    var shot="";
+    try{
+      var canvas = await window.html2canvas(document.getElementById('lab'));
+      shot = canvas? canvas.toDataURL('image/png') : "";
+    }catch(e){ shot=""; }
+
+    if(CONFIG.APPS_SCRIPT_URL.indexOf('PASTE_')===0){
+      setStatus("Not configured: set APPS_SCRIPT_URL in the lab's CONFIG. "
+        +"(Payload built OK — see console.)","err");
+      console.log("[lab] payload preview:", buildPayload(shot? shot.slice(0,40)+'…':''));
+      btn.disabled=false; return;
+    }
+    var payload = buildPayload(shot);
+    try{
+      // simple request — no custom headers, text/plain body — avoids CORS preflight
+      var res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+      var out = await res.json();
+      if(out && out.success){
+        setStatus("Submitted ✓  Your record: "+(out.docUrl||"(link returned)"),"ok");
+      } else {
+        setStatus("Submission rejected: "+((out&&out.error)||"unknown error")+
+          ". Check your callsign/token with your instructor.","err");
+        btn.disabled=false;
+      }
+    }catch(err){
+      // locked-down fallback: fire-and-forget, can't read docUrl
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
+        setStatus("Sent, but the response couldn't be read in this browser. "
+          +"Confirm receipt with your instructor.","work");
+      }catch(e2){
+        setStatus("Could not reach the submission server. Check your connection and retry.","err");
+        btn.disabled=false;
+      }
+    }
+  });
+
+  /* ----------------- RESET / INIT ----------------- */
+  function resetLab(){
+    S = freshState();
+    conOut.innerHTML='';
+    w("Marrowfield Gardens Co-op — GREENHOUSE-07 maintenance console","muted");
+    w("Type 'help' for commands. Start by checking the current configuration.","muted");
+    // reset dialog fields to broken static
+    $("#f-ip").value=CONFIG.net.badIp; $("#f-mask").value=CONFIG.net.badMask;
+    $("#f-gw").value=CONFIG.net.badGw; $("#f-dns1").value=CONFIG.net.badDns; $("#f-dns2").value='';
+    syncDialogToState();
+    // clear question inputs
+    document.querySelectorAll('#questions input').forEach(function(i){
+      if(i.type==='radio') i.checked=false; else i.value='';
+    });
+    setStatus('');
+    evaluate();
+  }
+  $("#resetBtn").addEventListener('click', resetLab);
+  $("#handle").addEventListener('input', updateScore);
+
+  buildQuestions();
+  resetLab();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-apipa-troubleshoot.html",title:"Stranded on 169.254 \u2014 APIPA Fallback Lab"}, NEXT={href:"index_netplus-dhcp-pool-exhaustion.html",title:"Lab \u2014 DHCP Pool Exhaustion at Riverbend Commons"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.6";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

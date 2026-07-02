@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AP Networking Simulation Labs — apcyber.net</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0b1628;--navy-mid:#132040;--cyan:#00d4c8;--white:#f2f5fb;--muted:#8899bb;--card-bg:#111e38;--border:rgba(0,212,200,.15);--line:rgba(255,255,255,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);line-height:1.55;padding-bottom:60px}
+.site-nav{position:sticky;top:0;z-index:100;background:rgba(11,22,40,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 clamp(1.5rem,5vw,4rem);height:64px;display:flex;align-items:center;justify-content:space-between;gap:1.5rem}
+.nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;flex-shrink:0}
+.nav-logo{width:36px;height:36px;background:var(--cyan);border-radius:8px;display:grid;place-items:center}
+.nav-logo svg{width:20px;height:20px}
+.nav-title{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--white)}
+.nav-title span{color:var(--cyan)}
+.nav-links{display:flex;align-items:center;gap:.25rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.85rem;font-weight:500;padding:.35rem .75rem;border-radius:8px;transition:color .18s,background .18s}
+.nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-links a.active{color:var(--cyan)}
+.nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:700!important}
+@media(max-width:860px){.nav-links{display:none}}
+header{max-width:1040px;margin:0 auto;padding:38px 18px 4px}
+h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,4vw,2.7rem);margin-bottom:.4rem}
+.lede{color:var(--muted);font-weight:300;max-width:640px}
+.bar{max-width:1040px;margin:16px auto 0;padding:0 18px;display:flex;gap:10px;flex-wrap:wrap}
+.bar a{display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1.1rem;border:1px solid var(--cyan);border-radius:9px;color:var(--cyan);text-decoration:none;font-weight:600;font-size:.85rem;transition:.18s}
+.bar a:hover{background:var(--cyan);color:var(--navy)}
+main{max-width:1040px;margin:0 auto;padding:0 18px}
+h2{font-family:'DM Serif Display',serif;margin:36px 0 6px;font-size:1.4rem;border-bottom:1px solid var(--border);padding-bottom:8px}
+.ct{color:var(--muted);font-weight:400;font-size:.8rem;margin-left:8px;font-family:'DM Sans',sans-serif}
+h3.topic{margin:22px 0 10px;font-size:.92rem;color:var(--cyan);font-weight:700;letter-spacing:.01em}
+h3.topic .tc{color:var(--muted);font-weight:400;font-size:.78rem;margin-left:6px}
+h3.topic.empty{color:var(--muted);border:1px dashed var(--border);border-radius:9px;padding:10px 13px;background:rgba(255,255,255,.02);font-weight:600}
+h3.topic.empty .soon{font-size:.72rem;color:#f5a623;font-weight:700;margin-left:6px;text-transform:uppercase;letter-spacing:.04em}
+.grid{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px;margin-bottom:6px}
+.grid a{display:block;padding:13px 15px;background:var(--card-bg);border:1px solid var(--border);border-radius:11px;text-decoration:none;color:inherit;transition:.15s}
+.grid a:hover{border-color:var(--cyan);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.t{display:block;font-weight:600;margin-bottom:4px;color:var(--white)}
+.m{display:block;color:var(--muted);font-size:.78rem}
+.dual{color:var(--cyan);font-weight:500;font-size:.78rem}
+footer{max-width:1040px;margin:40px auto 0;padding:18px;color:var(--muted);font-size:.78rem;border-top:1px solid var(--line)}
+</style></head><body>
+<nav class="site-nav">
+  <a href="../../index.html" class="nav-brand">
+    <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <span class="nav-title">AP <span>Cybersecurity</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="../../index.html">Home</a></li>
+    <li><a href="../../socratic-anchors.html">Socratic Guides</a></li>
+    <li><a href="../../tools.html">Student Tools</a></li>
+    <li><a href="../cyber/index.html">AP Cyber Labs</a></li>
+    <li><a href="index.html" class="active">AP Networking Labs</a></li>
+    <li><a href="../../legal.html">Legal</a></li>
+    <li><a href="../../edtech-tool.html">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+  </ul>
+</nav>
+<header><h1>AP Networking Simulation Labs</h1>
+<p class="lede">124 hands-on, browser-based simulation labs aligned to AP Networking and CompTIA Network+ N10-009. No installs, no logins — each lab runs entirely in the browser. Students submit with a Callsign (nickname), never a real name.</p></header>
+<div class="bar"><a href="../cyber/index.html">🛡 AP Cybersecurity Labs (81)</a></div>
+<main>
+<section><h2>Unit 1 — Managing My Connections <span class="ct">20 labs</span></h2>
+<h3 class="topic">Topic 1.1 <span class="tc">6 labs</span></h3><ul class="grid">
+<li><a href="unit-1/index_netplus-nic-swap.html"><span class="t">Back Online — Replacing a Failed Network Card</span><span class="m">APNET 1.1 · Net+ 1.5, 5.5</span></a></li>
+<li><a href="unit-1/index_netplus-ethernet-connect.html"><span class="t">Desk Online · Wire &amp; Verify a LAN Connection</span><span class="m">APNET 1.1 · Net+ 1.5, 5.2, 5.5</span></a></li>
+<li><a href="unit-1/index_netplus-nic-install-verify.html"><span class="t">Lab — Cormorant Cove Maker Lab: Fast NIC + Cabling + Verify</span><span class="m">APNET 1.1 · Net+ 1.5, 5.3</span></a></li>
+<li><a href="unit-1/index_netplus-wifi-triage.html"><span class="t">Wireless Triage — Marlowe &amp; Finch Atelier</span><span class="m">APNET 1.1 · Net+ 2.3, 5.5</span></a></li>
+<li><a href="unit-1/index_netplus-remote-trace.html"><span class="t">Trace From the Source — Remote Path Diagnosis</span><span class="m">APNET 1.1 · Net+ 3.5, 5.5</span></a></li>
+<li><a href="unit-1/index_netplus-wifi-radio-disabled.html"><span class="t">Signal Lost — Wireless Adapter Diagnosis</span><span class="m">APNET 1.1 · Net+ 5.1, 5.5</span></a></li>
+</ul>
+<h3 class="topic">Topic 1.2 <span class="tc">9 labs</span></h3><ul class="grid">
+<li><a href="unit-1/index_netplus-nic-ups-fieldcheck.html"><span class="t">Field Check: Adapter Install &amp; UPS Runtime — Cedarline Robotics</span><span class="m">APNET 1.2 · Net+ 1.5, 2.4</span></a></li>
+<li><a href="unit-1/index_netplus-soho-wifi-setup.html"><span class="t">Set Up the Home-Office Wi-Fi (Willowbrook Lane)</span><span class="m">APNET 1.2 · Net+ 1.6, 2.3, 4.3</span></a></li>
+<li><a href="unit-1/index_netplus-static-ip-mobile.html"><span class="t">Lab — Hand-Configuring a Tablet When DHCP Is Down</span><span class="m">APNET 1.2 · Net+ 1.7</span></a></li>
+<li><a href="unit-1/index_netplus-ip-config.html"><span class="t">Lab — Static IPv4 on a Dual-Homed Workstation · Marsh &amp; Pike</span><span class="m">APNET 1.2 · Net+ 1.7</span></a></li>
+<li><a href="unit-1/index_netplus-linux-static-ip.html"><span class="t">Static IPv4 on a Linux Workstation — Cedar Hollow Lab</span><span class="m">APNET 1.2 · Net+ 1.7</span></a></li>
+<li><a href="unit-1/index_netplus-enterprise-wlan.html"><span class="t">Bring Up an Enterprise WLAN (Corporate + Guest)</span><span class="m">APNET 1.2 · Net+ 2.3, 4.3</span></a></li>
+<li><a href="unit-1/index_netplus-wifi-harden.html"><span class="t">Harden a SOHO Wireless Gateway (Northwind NX-310)</span><span class="m">APNET 1.2 · Net+ 2.3, 4.1</span></a></li>
+<li><a href="unit-1/index_netplus-wifi-profile.html"><span class="t">Provision a Secured Wi-Fi Profile &amp; Retire a Stale One</span><span class="m">APNET 1.2 · Net+ 2.3</span></a></li>
+<li><a href="unit-1/index_netplus-wireless-rrm-tuning.html"><span class="t">Tune a Self-Optimizing Wireless Network</span><span class="m">APNET 1.2 · Net+ 2.3</span></a></li>
+</ul>
+<h3 class="topic empty">Topic 1.3 <span class="soon">coming soon · 0 labs</span></h3>
+<h3 class="topic">Topic 1.4 <span class="tc">5 labs</span></h3><ul class="grid">
+<li><a href="unit-1/index_netplus-secure-switch-access.html"><span class="t">Lab — Harden Initial Switch Management Access</span><span class="m">APNET 1.4 · Net+ 1.2, 4.3</span></a></li>
+<li><a href="unit-1/index_netplus-guest-wlan-byod.html"><span class="t">Guest WLAN for BYOD — AirLoom WLC Lab</span><span class="m">APNET 1.4 · Net+ 2.3</span></a></li>
+<li><a href="unit-1/index_netplus-vpn-client.html"><span class="t">Connect a Tablet to the Staff VPN</span><span class="m">APNET 1.4 · Net+ 3.5</span></a></li>
+<li><a href="unit-1/index_netplus-secure-admin-access.html"><span class="t">Harden the Edge Firewall Console (fw-edge-01)</span><span class="m">APNET 1.4 · Net+ 4.3</span></a></li>
+<li><a href="unit-1/index_netplus-rogue-remote-services.html"><span class="t">NetGuard Console — Hunt &amp; Disable Rogue Remote-Access Services</span><span class="m">APNET 1.4 · Net+ 4.3</span></a></li>
+</ul>
+</section>
+<section><h2>Unit 2 — Managing My Shared Connections <span class="ct">40 labs</span></h2>
+<h3 class="topic">Topic 2.1 <span class="tc">3 labs</span></h3><ul class="grid">
+<li><a href="unit-2/index_netplus-bench-bringup.html"><span class="t">Bench Bring-Up — Network+ / AP Networking Lab</span><span class="m">APNET 2.1 · Net+ 1.2, 1.6</span></a></li>
+<li><a href="unit-2/index_netplus-rogue-dhcp-hunt.html"><span class="t">PacketLens — Rogue DHCP Hunt</span><span class="m">APNET 2.1 · Net+ 1.4, 4.3, 5.5</span></a></li>
+<li><a href="unit-2/index_netplus-broadband-hookup.html"><span class="t">Lab — Provision the Maker Loft Broadband Link</span><span class="m">APNET 2.1 · Net+ 1.5, 5.2</span></a></li>
+</ul>
+<h3 class="topic">Topic 2.2 <span class="tc">6 labs</span></h3><ul class="grid">
+<li><a href="unit-2/index_netplus-l2-mac-spoof.html"><span class="t">Layer 2 Identity — Inspect &amp; Spoof a MAC Address</span><span class="m">APNET 2.2 · Net+ 1.1, 2.1, 4.2</span></a></li>
+<li><a href="unit-2/index_netplus-site-walkthrough-idf.html"><span class="t">IDF Walkthrough</span><span class="m">APNET 2.2 · Net+ 1.2, 2.4</span></a></li>
+<li><a href="unit-2/index_netplus-campus-site-links.html"><span class="t">Campus Backbone — Map How Three Buildings Connect</span><span class="m">APNET 2.2 · Net+ 1.6, 2.4, 5.3</span></a></li>
+<li><a href="unit-2/index_netplus-wireless-coverage-design.html"><span class="t">Wireless Coverage &amp; Containment — Branch Library Wi-Fi Plan</span><span class="m">APNET 2.2 · Net+ 2.3</span></a></li>
+<li><a href="unit-2/index_netplus-arp-poison-detect.html"><span class="t">PacketScope ARP Cache Poisoning: Detect It in a Capture</span><span class="m">APNET 2.2 · Net+ 4.2, 4.3, 5.5</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-snooping-dai.html"><span class="t">Harden an Access Switch: DHCP Snooping &amp; Dynamic ARP Inspection</span><span class="m">APNET 2.2 · Net+ 4.3</span></a></li>
+</ul>
+<h3 class="topic">Topic 2.3 <span class="tc">10 labs</span></h3><ul class="grid">
+<li><a href="unit-2/index_netplus-soho-topology.html"><span class="t">Wire the Studio — SOHO Network Lab</span><span class="m">APNET 2.3 · Net+ 1.2, 1.6</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-reservations.html"><span class="t">DHCP Reservations Lab — Riverside Maker Collective</span><span class="m">APNET 2.3 · Net+ 3.4</span></a></li>
+<li><a href="unit-2/index_netplus-cname-records.html"><span class="t">DNS Alias Records · Kelp Bay Field Station</span><span class="m">APNET 2.3 · Net+ 3.4</span></a></li>
+<li><a href="unit-2/index_netplus-dns-zones.html"><span class="t">Lab — Authoritative DNS: Primary &amp; Secondary Forward Zones</span><span class="m">APNET 2.3 · Net+ 3.4</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-options.html"><span class="t">Lab: Global vs. Scope DHCP Options — Cedar Ridge</span><span class="m">APNET 2.3 · Net+ 3.4</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-exclusion.html"><span class="t">Lights-Out Network — Add a DHCP Exclusion Range</span><span class="m">APNET 2.3 · Net+ 3.4</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-scope-netforge.html"><span class="t">NetForge — Stand Up a DHCP Scope (Lab)</span><span class="m">APNET 2.3 · Net+ 3.4</span></a></li>
+<li><a href="unit-2/index_netplus-dns-records.html"><span class="t">NetOps Lab — DNS Records: Forward &amp; Reverse Lookup</span><span class="m">APNET 2.3 · Net+ 3.4</span></a></li>
+<li><a href="unit-2/index_netplus-dns-resolver.html"><span class="t">Pin the Studio Resolver — Manual DNS Lab</span><span class="m">APNET 2.3 · Net+ 3.4, 5.5</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-scope-warehouse.html"><span class="t">Provision the Warehouse DHCP Pool — Network+ / AP Networking Lab</span><span class="m">APNET 2.3 · Net+ 3.4</span></a></li>
+</ul>
+<h3 class="topic">Topic 2.4 <span class="tc">10 labs</span></h3><ul class="grid">
+<li><a href="unit-2/index_netplus-rack-switch-cabling.html"><span class="t">Lab — Rack-Mount and Cable an Access Switch</span><span class="m">APNET 2.4 · Net+ 1.2, 2.4</span></a></li>
+<li><a href="unit-2/index_netplus-voip-poe-connect.html"><span class="t">Lab — VoIP Drop &amp; PoE Bring-Up (Riverside Library)</span><span class="m">APNET 2.4 · Net+ 1.4, 5.5</span></a></li>
+<li><a href="unit-2/index_netplus-poe-voip-inline.html"><span class="t">Power and Place — PoE VoIP Install · Saltmarsh Roastery</span><span class="m">APNET 2.4 · Net+ 1.4</span></a></li>
+<li><a href="unit-2/index_netplus-media-converter-fiber-link.html"><span class="t">Bring Up the Fiber Uplink — Install a Media Converter</span><span class="m">APNET 2.4 · Net+ 1.5</span></a></li>
+<li><a href="unit-2/index_netplus-fiber-crossconnect.html"><span class="t">Lab — Campus Fiber Cross-Connect</span><span class="m">APNET 2.4 · Net+ 1.5, 2.4, 5.2</span></a></li>
+<li><a href="unit-2/index_netplus-fiber-link.html"><span class="t">Lab — Fiber Uplink for a High-Throughput Storage Node</span><span class="m">APNET 2.4 · Net+ 1.5, 2.4, 5.2</span></a></li>
+<li><a href="unit-2/index_netplus-patch-panel-termination.html"><span class="t">Cross-Connect: Patch a Riser Closet — Network+ / AP Networking Lab</span><span class="m">APNET 2.4 · Net+ 2.4</span></a></li>
+<li><a href="unit-2/index_netplus-physical-power-trace.html"><span class="t">Dark Rack — Beacon Hollow Community Radio | Networking Lab</span><span class="m">APNET 2.4 · Net+ 2.4, 5.2</span></a></li>
+<li><a href="unit-2/index_netplus-structured-cabling-run.html"><span class="t">Wire Up the New Bench — Structured Cabling Run</span><span class="m">APNET 2.4 · Net+ 2.4</span></a></li>
+<li><a href="unit-2/index_netplus-poe-priority.html"><span class="t">Lab — Powering the Makerspace AP: PoE Budget &amp; Priority</span><span class="m">APNET 2.4 · Net+ 5.2</span></a></li>
+</ul>
+<h3 class="topic">Topic 2.5 <span class="tc">3 labs</span></h3><ul class="grid">
+<li><a href="unit-2/index_netplus-wireless-ips.html"><span class="t">Harden the Wireless Edge — Wireless Intrusion Prevention Lab</span><span class="m">APNET 2.5 · Net+ 2.3, 4.3</span></a></li>
+<li><a href="unit-2/index_netplus-wap-guest.html"><span class="t">Lab — Dual-SSID Wireless Access Point (Internal + Guest)</span><span class="m">APNET 2.5 · Net+ 2.3, 4.1</span></a></li>
+<li><a href="unit-2/index_netplus-wlan-controller-hardening.html"><span class="t">Harden the Marsh &amp; Co. Wireless Controller</span><span class="m">APNET 2.5 · Net+ 4.3</span></a></li>
+</ul>
+<h3 class="topic">Topic 2.6 <span class="tc">8 labs</span></h3><ul class="grid">
+<li><a href="unit-2/index_netplus-apipa-troubleshoot.html"><span class="t">Stranded on 169.254 — APIPA Fallback Lab</span><span class="m">APNET 2.6 · Net+ 1.7, 5.3</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-client-fix.html"><span class="t">Back Online — Restore DHCP Addressing on GREENHOUSE-07</span><span class="m">APNET 2.6 · Net+ 3.4, 5.3</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-pool-exhaustion.html"><span class="t">Lab — DHCP Pool Exhaustion at Riverbend Commons</span><span class="m">APNET 2.6 · Net+ 3.4, 5.3, 5.5</span></a></li>
+<li><a href="unit-2/index_netplus-dhcp-rescue.html"><span class="t">NetDesk Lab — Outage at Greenline Garden Center</span><span class="m">APNET 2.6 · Net+ 3.4, 5.3, 5.5</span></a></li>
+<li><a href="unit-2/index_netplus-radius-aaa.html"><span class="t">Centralize Remote-Access Authentication with RADIUS</span><span class="m">APNET 2.6 · Net+ 4.1</span></a></li>
+<li><a href="unit-2/index_netplus-ipconfig-gateway.html"><span class="t">Lab: No Internet on the Drafting Bay PC — IP / Gateway Troubleshooting</span><span class="m">APNET 2.6 · Net+ 5.3, 5.5</span></a></li>
+<li><a href="unit-2/index_netplus-soho-gateway-fault.html"><span class="t">Offline at the Front Desk — SOHO Gateway Fault</span><span class="m">APNET 2.6 · Net+ 5.3</span></a></li>
+<li><a href="unit-2/index_netplus-soho-ipfix.html"><span class="t">SOHO Connectivity Lab — The Loaner That Won't Reach the Internet</span><span class="m">APNET 2.6 · Net+ 5.3</span></a></li>
+</ul>
+</section>
+<section><h2>Unit 3 — Managing Many Connections <span class="ct">40 labs</span></h2>
+<h3 class="topic">Topic 3.1 <span class="tc">3 labs</span></h3><ul class="grid">
+<li><a href="unit-3/index_netplus-nic-teaming-ha.html"><span class="t">Team the Server NICs (Survive a Link Failure)</span><span class="m">APNET 3.1 · Net+ 2.2, 3.1</span></a></li>
+<li><a href="unit-3/index_netplus-outdoor-wireless-bridge.html"><span class="t">Cedar Hollow Wireless Site Planner — Outdoor Bridge Lab</span><span class="m">APNET 3.1 · Net+ 2.4</span></a></li>
+<li><a href="unit-3/index_netplus-switch-firmware.html"><span class="t">Lab: Update Switch Firmware — Northbridge NOS Device Manager</span><span class="m">APNET 3.1 · Net+ 3.1</span></a></li>
+</ul>
+<h3 class="topic">Topic 3.2 <span class="tc">3 labs</span></h3><ul class="grid">
+<li><a href="unit-3/index_netplus-edge-router-install.html"><span class="t">Lab: Rack &amp; Cable an Edge Router — Pier 7</span><span class="m">APNET 3.2 · Net+ 1.2, 1.7, 2.1</span></a></li>
+<li><a href="unit-3/index_netplus-three-tier-build.html"><span class="t">Build a Redundant Three-Tier Campus Network</span><span class="m">APNET 3.2 · Net+ 1.6, 2.2</span></a></li>
+<li><a href="unit-3/index_netplus-star-topology.html"><span class="t">Cable the Star — Network Topology Lab</span><span class="m">APNET 3.2 · Net+ 1.6</span></a></li>
+</ul>
+<h3 class="topic">Topic 3.3 <span class="tc">13 labs</span></h3><ul class="grid">
+<li><a href="unit-3/index_netplus-ios-cli-basics.html"><span class="t">Console Onramp — Navigating the Cisco IOS Command Line</span><span class="m">APNET 3.3 · Net+ 1.2</span></a></li>
+<li><a href="unit-3/index_netplus-edge-appliance-setup.html"><span class="t">Edge Appliance Bring-Up</span><span class="m">APNET 3.3 · Net+ 2.1, 4.3</span></a></li>
+<li><a href="unit-3/index_netplus-screened-subnet.html"><span class="t">Stand Up a Screened Subnet for a Public Service</span><span class="m">APNET 3.3 · Net+ 2.1, 4.1</span></a></li>
+<li><a href="unit-3/index_netplus-lacp-etherchannel.html"><span class="t">Bonding the Backbone — LACP Link Aggregation Lab</span><span class="m">APNET 3.3 · Net+ 2.2</span></a></li>
+<li><a href="unit-3/index_netplus-switch-mgmt-ip.html"><span class="t">Lab — Bring a Branch Access Switch Online</span><span class="m">APNET 3.3 · Net+ 2.2, 3.5</span></a></li>
+<li><a href="unit-3/index_netplus-link-aggregation.html"><span class="t">Lab — Bundle the Studio Uplink (Link Aggregation / LACP)</span><span class="m">APNET 3.3 · Net+ 2.2</span></a></li>
+<li><a href="unit-3/index_netplus-mgmt-svi-cli.html"><span class="t">Lab — Remote Management SVI Setup (CLI)</span><span class="m">APNET 3.3 · Net+ 2.2, 3.5</span></a></li>
+<li><a href="unit-3/index_netplus-jumbo-mtu.html"><span class="t">Lab: Enable Jumbo MTU on the Archive Distribution Switch</span><span class="m">APNET 3.3 · Net+ 2.2</span></a></li>
+<li><a href="unit-3/index_netplus-vlan-segment.html"><span class="t">Segment the Switch — VLANs at Eastgate Branch</span><span class="m">APNET 3.3 · Net+ 2.2, 5.5</span></a></li>
+<li><a href="unit-3/index_netplus-vlan-trunk.html"><span class="t">VLAN Trunk Lab — Larkspur Community Library</span><span class="m">APNET 3.3 · Net+ 2.2</span></a></li>
+<li><a href="unit-3/index_netplus-dhcp-scope-harborview.html"><span class="t">DHCP Scope Harborview Robotics</span><span class="m">APNET 3.3 · Net+ 3.4</span></a></li>
+<li><a href="unit-3/index_netplus-dhcp-scope.html"><span class="t">Hand Out the Fleet: Configure a DHCP Scope</span><span class="m">APNET 3.3 · Net+ 3.4, 5.5</span></a></li>
+<li><a href="unit-3/index_netplus-captive-portal.html"><span class="t">OpenGate Firewall — Captive Portal Lab</span><span class="m">APNET 3.3 · Net+ 4.3</span></a></li>
+</ul>
+<h3 class="topic">Topic 3.4 <span class="tc">4 labs</span></h3><ul class="grid">
+<li><a href="unit-3/index_netplus-subnet-routing.html"><span class="t">Lab: Subnets &amp; the Router Between Them — Cedar Hollow Media Lab</span><span class="m">APNET 3.4 · Net+ 1.7, 2.1</span></a></li>
+<li><a href="unit-3/index_netplus-screened-subnet-design.html"><span class="t">Design a Screened Subnet</span><span class="m">APNET 3.4 · Net+ 2.1, 4.1</span></a></li>
+<li><a href="unit-3/index_netplus-dhcp-relay-helper.html"><span class="t">Lab — Cross-Subnet Lease Recovery (DHCP Relay / IP Helper)</span><span class="m">APNET 3.4 · Net+ 3.4</span></a></li>
+<li><a href="unit-3/index_netplus-switch-hardening.html"><span class="t">Harden the Maker-Annex Switch</span><span class="m">APNET 3.4 · Net+ 4.3</span></a></li>
+</ul>
+<h3 class="topic">Topic 3.5 <span class="tc">6 labs</span></h3><ul class="grid">
+<li><a href="unit-3/index_netplus-nat-portforward.html"><span class="t">Lab — NAT Port Forwarding to a Screened Subnet (Aegis NX)</span><span class="m">APNET 3.5 · Net+ 2.1</span></a></li>
+<li><a href="unit-3/index_netplus-ips-sensor-deploy.html"><span class="t">Arm the Edge — IPS Sensor Deployment Lab</span><span class="m">APNET 3.5 · Net+ 4.3</span></a></li>
+<li><a href="unit-3/index_netplus-mac-acl-bench.html"><span class="t">Block Unmanaged Devices with a MAC ACL (CLI)</span><span class="m">APNET 3.5 · Net+ 4.3</span></a></li>
+<li><a href="unit-3/index_netplus-screened-subnet-firewall.html"><span class="t">Edge Console — Screened-Subnet Firewall Rules Lab</span><span class="m">APNET 3.5 · Net+ 4.3</span></a></li>
+<li><a href="unit-3/index_netplus-std-acl-deny-hosts.html"><span class="t">Standard ACL Deny Specific Sources, Permit the Rest</span><span class="m">APNET 3.5 · Net+ 4.3</span></a></li>
+<li><a href="unit-3/index_netplus-bandwidth-shaper.html"><span class="t">Edge Bandwidth Manager — QoS Lab</span><span class="m">APNET 3.5 · Net+ 5.4</span></a></li>
+</ul>
+<h3 class="topic">Topic 3.6 <span class="tc">11 labs</span></h3><ul class="grid">
+<li><a href="unit-3/index_netplus-conn-triage.html"><span class="t">Connectivity Triage — Network+ / AP Networking Lab</span><span class="m">APNET 3.6 · Net+ 1.2, 5.5</span></a></li>
+<li><a href="unit-3/index_netplus-dns-record-repair.html"><span class="t">Name Down — Repair a Missing DNS Host Record</span><span class="m">APNET 3.6 · Net+ 3.4, 5.3, 5.5</span></a></li>
+<li><a href="unit-3/index_netplus-troubleshoot-methodology.html"><span class="t">Lab — Troubleshooting Methodology · Marsh Hollow Pottery</span><span class="m">APNET 3.6 · Net+ 5.1</span></a></li>
+<li><a href="unit-3/index_netplus-physical-connectivity.html"><span class="t">Brightwater Clinic — Physical-Layer Fault Isolation</span><span class="m">APNET 3.6 · Net+ 5.2</span></a></li>
+<li><a href="unit-3/index_netplus-phys-link-01.html"><span class="t">Down Link · Find and Fix the Dead Drop</span><span class="m">APNET 3.6 · Net+ 5.2</span></a></li>
+<li><a href="unit-3/index_netplus-physical-conn-tshoot.html"><span class="t">Lab — Restore Physical Connectivity at the Cedar Hollow Branch</span><span class="m">APNET 3.6 · Net+ 5.2</span></a></li>
+<li><a href="unit-3/index_netplus-phys-link-down.html"><span class="t">Lab — The Drop That Went Dark: Restore a Failed Link</span><span class="m">APNET 3.6 · Net+ 5.2</span></a></li>
+<li><a href="unit-3/index_netplus-physical-link-fault.html"><span class="t">Lab: Restore the Front-Desk Link — Marigold Press</span><span class="m">APNET 3.6 · Net+ 5.2, 5.5</span></a></li>
+<li><a href="unit-3/index_netplus-disabled-port.html"><span class="t">Reviving a Silent Port — idf-aspen-sw1</span><span class="m">APNET 3.6 · Net+ 5.2, 5.3, 5.5</span></a></li>
+<li><a href="unit-3/index_netplus-switching-loop.html"><span class="t">Lab — Closet Cleanup: Stop the Broadcast Storm</span><span class="m">APNET 3.6 · Net+ 5.3, 5.5</span></a></li>
+<li><a href="unit-3/index_netplus-cli-triage.html"><span class="t">Lab: CLI Triage on the Tindel Freight Network</span><span class="m">APNET 3.6 · Net+ 5.5</span></a></li>
+</ul>
+</section>
+<section><h2>Unit 4 — Managing Our Global Connections <span class="ct">24 labs</span></h2>
+<h3 class="topic">Topic 4.1 <span class="tc">2 labs</span></h3><ul class="grid">
+<li><a href="unit-4/index_netplus-synflood-analysis.html"><span class="t">Spotting the Flood — TCP SYN Flood Capture &amp; Analysis</span><span class="m">APNET 4.1 · Net+ 4.2, 5.3</span></a></li>
+<li><a href="unit-4/index_netplus-synflood-triage.html"><span class="t">Traffic Triage: Fingerprinting a SYN-Flood DoS — PacketScope Lab</span><span class="m">APNET 4.1 · Net+ 4.2, 5.5</span></a></li>
+</ul>
+<h3 class="topic">Topic 4.2 <span class="tc">2 labs</span></h3><ul class="grid">
+<li><a href="unit-4/index_netplus-tcp-handshake.html"><span class="t">TraceScope Lab — Reading a TCP Session Setup (Three-Way Handshake)</span><span class="m">APNET 4.2 · Net+ 1.4</span></a></li>
+<li><a href="unit-4/index_netplus-ntp-timesync.html"><span class="t">Time Sync Bench — Northwind Audio Network Lab</span><span class="m">APNET 4.2 · Net+ 3.4</span></a></li>
+</ul>
+<h3 class="topic">Topic 4.3 <span class="tc">11 labs</span></h3><ul class="grid">
+<li><a href="unit-4/index_netplus-network-discovery.html"><span class="t">Authorized Network Discovery — Larkfield Community Library</span><span class="m">APNET 4.3 · Net+ 3.2, 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-port-mirror.html"><span class="t">Mirror Path — Port Mirroring / SPAN Lab</span><span class="m">APNET 4.3 · Net+ 3.2</span></a></li>
+<li><a href="unit-4/index_netplus-nslookup-mail-routing.html"><span class="t">DNS Detective — Verifying Mail Routing with nslookup</span><span class="m">APNET 4.3 · Net+ 3.4, 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-powershell-remoting.html"><span class="t">Hands Off the Keyboard — Manage a Server with PowerShell Remoting</span><span class="m">APNET 4.3 · Net+ 3.5, 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-find-rogue-port.html"><span class="t">Port Audit — Lantern &amp; Quill Network</span><span class="m">APNET 4.3 · Net+ 4.3, 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-ping-traceroute-gateway.html"><span class="t">Lab — Tracing a Broken Path: Default-Gateway Triage</span><span class="m">APNET 4.3 · Net+ 5.3, 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-linux-route-trace.html"><span class="t">Lab — Tracing the Path: Linux Route &amp; Name-Resolution Troubleshooting</span><span class="m">APNET 4.3 · Net+ 5.3, 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-packet-trace.html"><span class="t">Branch Capture — Display Filters Lab</span><span class="m">APNET 4.3 · Net+ 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-cli-connectivity.html"><span class="t">Command-Line Network Recon — Marlowe &amp; Finch Print Co.</span><span class="m">APNET 4.3 · Net+ 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-port-discovery.html"><span class="t">Lab: Host &amp; Port Discovery with a Network Scanner</span><span class="m">APNET 4.3 · Net+ 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-ipv4-tools.html"><span class="t">Saltmarsh Robotics — IPv4 Troubleshooting Tools Lab</span><span class="m">APNET 4.3 · Net+ 5.5</span></a></li>
+</ul>
+<h3 class="topic">Topic 4.4 <span class="tc">3 labs</span></h3><ul class="grid">
+<li><a href="unit-4/index_netplus-arp-analyzer.html"><span class="t">PacketScope Lab — Read the Conversation: ARP on the Wire</span><span class="m">APNET 4.4 · Net+ 1.4, 5.5</span></a></li>
+<li><a href="unit-4/index_netplus-packet-anatomy.html"><span class="t">Trace Lab — Anatomy of a Frame</span><span class="m">APNET 4.4 · Net+ 1.4</span></a></li>
+<li><a href="unit-4/index_netplus-ipv6-static-addr.html"><span class="t">Saltmarsh Labs · Bring the Tide Pool Online (IPv6 static addressing)</span><span class="m">APNET 4.4 · Net+ 1.8</span></a></li>
+</ul>
+<h3 class="topic">Topic 4.5 <span class="tc">6 labs</span></h3><ul class="grid">
+<li><a href="unit-4/index_netplus-syslog-forwarding.html"><span class="t">Centralize the Logs — Brightwater Outfitters Network Lab</span><span class="m">APNET 4.5 · Net+ 3.2</span></a></li>
+<li><a href="unit-4/index_netplus-switch-syslog.html"><span class="t">Lab — Tiered Syslog on a Distribution Switch</span><span class="m">APNET 4.5 · Net+ 3.2</span></a></li>
+<li><a href="unit-4/index_netplus-journald-logs.html"><span class="t">NOC Lab — Reading the Journal</span><span class="m">APNET 4.5 · Net+ 3.2</span></a></li>
+<li><a href="unit-4/index_netplus-onpath-logs.html"><span class="t">TraceDesk Lab — Quiet on the Wire</span><span class="m">APNET 4.5 · Net+ 3.2, 4.2</span></a></li>
+<li><a href="unit-4/index_netplus-decoy-watch.html"><span class="t">Decoy Watch — Deploy a Honeypot in the Screened Subnet</span><span class="m">APNET 4.5 · Net+ 4.1</span></a></li>
+<li><a href="unit-4/index_netplus-rogue-dhcp-defense.html"><span class="t">Rogue DHCP: Detect, Snoop &amp; Inspect — Network+ / AP Networking Lab</span><span class="m">APNET 4.5 · Net+ 4.2</span></a></li>
+</ul>
+</section>
+</main>
+<footer>Labs grouped by AP unit, then topic, then ordered by lowest Network+ objective. Topic 1.3 shows as "coming soon." &copy; 2026 [AUTHOR / INSTITUTION] · apcyber.net · Independent educational resource. Not affiliated with the College Board. AP&reg; is a registered trademark of the College Board.</footer>
+</body></html>

@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>SOHO Connectivity Lab — The Loaner That Won't Reach the Internet</title>
+<!--
+  ============================================================================
+  CEDAR HOLLOW SOHO CONNECTIVITY LAB  ·  assignmentId: netplus-soho-ipfix
+  ----------------------------------------------------------------------------
+  © 2026 [AUTHOR / ORGANIZATION]. All rights reserved.
+  Licensed for instructional use within the licensee's program.
+  Built CLEAN-ROOM from the public CompTIA Network+ N10-009 objectives and the
+  public College Board AP Networking course framework (pilot V.1). No third-party
+  lab's scenario, hostnames, IP plan, wording, ordering, or screenshots were used.
+  Blueprint tags:  N10-009: 5.1, 5.5, 5.6   ·   AP Networking: 1.1.A, 2.1.A, 2.1.B
+  ============================================================================
+-->
+<style id="lab-styles">
+  :root{
+    --bg:#0e1320;
+    --panel:#161d2e;
+    --panel-2:#1d2740;
+    --ink:#e7ecf6;
+    --ink-dim:#9aa6bf;
+    --line:#2a3550;
+    --accent:#f2a93b;        /* Cedar Hollow amber — used with restraint */
+    --accent-ink:#1b1407;
+    --ok:#48c78e;
+    --bad:#f06d6d;
+    --term-bg:#0a0f1a;
+    --term-ink:#cfe3d8;
+    --term-green:#7ee2a8;
+    --term-red:#ff8a8a;
+    --term-dim:#6b7a90;
+    --settings-bg:#f3f5fa;
+    --settings-ink:#1c2334;
+    --settings-line:#c7cfe0;
+    --radius:10px;
+    --focus:#9ecbff;
+    --mono:"Cascadia Mono","SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #1a2238 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--focus)}
+  .wrap{max-width:1160px;margin:0 auto;padding:22px 18px 56px}
+
+  /* ---- header ---- */
+  header.lab{
+    display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;
+    border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:18px;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .mark{
+    width:38px;height:38px;border-radius:9px;flex:0 0 auto;
+    background:linear-gradient(150deg,var(--accent),#c97f1d);
+    display:grid;place-items:center;color:var(--accent-ink);font-weight:800;font-size:18px;
+    box-shadow:0 2px 0 #00000040 inset;
+  }
+  h1{font-size:1.18rem;margin:0;letter-spacing:.2px}
+  .sub{color:var(--ink-dim);font-size:.84rem;margin-top:2px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:520px}
+  .tag{
+    font-family:var(--mono);font-size:.72rem;color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px;background:var(--panel);
+  }
+  .tag.n{color:#ffd79a;border-color:#5a4a25}
+  .tag.a{color:#a8d6ff;border-color:#2c4d6e}
+
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:1.35fr .9fr;gap:18px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .card > h2{
+    font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-dim);
+    margin:0;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--panel-2);
+    display:flex;align-items:center;gap:8px;
+  }
+  .card .body{padding:14px}
+
+  /* ---- device dock (host switcher) ---- */
+  .dock{display:flex;gap:8px;padding:10px;background:var(--panel-2);border-bottom:1px solid var(--line)}
+  .host-btn{
+    flex:1;display:flex;gap:10px;align-items:center;text-align:left;cursor:pointer;
+    background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;
+    padding:9px 11px;font:inherit;
+  }
+  .host-btn .dot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:0 0 auto;box-shadow:0 0 0 3px #00000033}
+  .host-btn[data-online="true"] .dot{background:var(--ok)}
+  .host-btn b{font-size:.9rem}
+  .host-btn small{display:block;color:var(--ink-dim);font-family:var(--mono);font-size:.72rem}
+  .host-btn[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px #f2a93b33}
+  .host-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+  /* ---- workstation surface ---- */
+  .ws-tabs{display:flex;gap:6px;padding:10px 12px 0}
+  .ws-tab{
+    background:transparent;border:1px solid transparent;border-bottom:none;color:var(--ink-dim);
+    padding:7px 13px;border-radius:8px 8px 0 0;cursor:pointer;font:inherit;font-size:.85rem;
+  }
+  .ws-tab[aria-selected="true"]{background:var(--panel-2);color:var(--ink);border-color:var(--line)}
+  .ws-tab:focus-visible{outline:3px solid var(--focus);outline-offset:-2px}
+  .ws-pane{padding:12px}
+  .ws-pane[hidden]{display:none}
+
+  /* ---- settings panel (light, OS-like) ---- */
+  .settings{
+    background:var(--settings-bg);color:var(--settings-ink);border-radius:8px;
+    border:1px solid var(--settings-line);overflow:hidden;
+  }
+  .settings .s-head{padding:10px 13px;border-bottom:1px solid var(--settings-line);font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:8px}
+  .settings .s-body{padding:13px}
+  .kv{display:grid;grid-template-columns:170px 1fr;gap:6px 12px;font-size:.86rem}
+  .kv dt{color:#475068}
+  .kv dd{margin:0;font-family:var(--mono);font-weight:600}
+  .kv dd.warn{color:#b8540f}
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px}
+  .pill.dhcp{background:#d8efe1;color:#176a45}
+  .pill.static{background:#fbe2c9;color:#a3540c}
+
+  fieldset.adapter{border:1px solid var(--settings-line);border-radius:8px;margin-top:14px;padding:12px}
+  fieldset.adapter legend{font-weight:600;font-size:.85rem;padding:0 6px}
+  .radio{display:flex;gap:9px;align-items:flex-start;padding:6px 2px;cursor:pointer}
+  .radio input{margin-top:3px}
+  .radio span small{display:block;color:#5a647d;font-weight:400}
+  .static-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:8px 0 4px 26px}
+  @media (max-width:560px){.static-fields{grid-template-columns:1fr}}
+  .static-fields label{font-size:.78rem;color:#475068;display:flex;flex-direction:column;gap:3px}
+  .static-fields input{font-family:var(--mono);padding:6px 8px;border:1px solid var(--settings-line);border-radius:6px;font-size:.82rem;background:#fff;color:#1c2334}
+  .static-fields input:disabled{background:#eceff6;color:#8a93a8}
+  .s-actions{display:flex;gap:10px;margin-top:12px}
+  button.apply{background:#2563eb;color:#fff;border:none;border-radius:7px;padding:8px 16px;font:inherit;font-weight:600;cursor:pointer}
+  button.apply:disabled{background:#9fb4dd;cursor:not-allowed}
+  button.apply:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .s-note{font-size:.78rem;color:#5a647d;margin-top:8px;min-height:1.1em}
+  .s-note.ok{color:#176a45}
+
+  /* ---- terminal ---- */
+  .term{
+    background:var(--term-bg);border:1px solid var(--line);border-radius:8px;
+    font-family:var(--mono);font-size:.82rem;color:var(--term-ink);
+  }
+  .term .t-head{display:flex;align-items:center;gap:8px;padding:7px 11px;border-bottom:1px solid var(--line);color:var(--term-dim)}
+  .term .t-head .lights{display:flex;gap:5px}
+  .term .t-head .lights i{width:10px;height:10px;border-radius:50%;display:block}
+  .l-r{background:#ff5f57}.l-y{background:#febc2e}.l-g{background:#28c840}
+  .t-out{padding:11px 12px;height:228px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  .t-out .green{color:var(--term-green)}
+  .t-out .red{color:var(--term-red)}
+  .t-out .dim{color:var(--term-dim)}
+  .t-line{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:8px 10px}
+  .t-line .prompt{color:var(--term-green);white-space:nowrap}
+  .t-line input{
+    flex:1;background:transparent;border:none;color:var(--term-ink);font-family:var(--mono);
+    font-size:.82rem;outline:none;
+  }
+  .t-line input:focus-visible{outline:none}
+  .term:focus-within{outline:2px solid #2a3550}
+
+  /* ---- task checklist ---- */
+  ol.tasks{list-style:none;margin:0;padding:0}
+  ol.tasks li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+  ol.tasks li:last-child{border-bottom:none}
+  .chk{
+    width:20px;height:20px;border-radius:5px;border:2px solid var(--line);flex:0 0 auto;margin-top:1px;
+    display:grid;place-items:center;font-size:13px;color:var(--bg);
+  }
+  li[data-done="true"] .chk{background:var(--ok);border-color:var(--ok)}
+  li[data-done="true"] .chk::after{content:"✓";font-weight:900}
+  .t-text b{font-size:.9rem}
+  .t-text small{display:block;color:var(--ink-dim)}
+
+  /* ---- questions ---- */
+  .q{padding:12px 0;border-bottom:1px solid var(--line)}
+  .q:last-child{border-bottom:none}
+  .q .qp{font-size:.9rem;margin-bottom:8px}
+  .q .qp .num{color:var(--accent);font-family:var(--mono);font-weight:700;margin-right:7px}
+  .q input[type="text"]{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;
+    color:var(--ink);font-family:var(--mono);padding:8px 10px;font-size:.85rem;
+  }
+  .q .opts{display:flex;flex-direction:column;gap:6px}
+  .q .opts label{display:flex;gap:9px;align-items:flex-start;font-size:.86rem;cursor:pointer;padding:4px 2px}
+  .q input:focus-visible,.q label:focus-within{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+  .q .verdict{font-size:.78rem;margin-top:6px;min-height:1.05em}
+  .q[data-correct="true"] .verdict{color:var(--ok)}
+  .q[data-correct="false"] .verdict{color:var(--bad)}
+
+  /* ---- submission bar ---- */
+  .submit-bar{
+    margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end;
+  }
+  @media (max-width:680px){.submit-bar{grid-template-columns:1fr}}
+  .field label{display:block;font-size:.78rem;color:var(--ink-dim);margin-bottom:4px}
+  .field input{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);padding:10px 12px;font:inherit;
+  }
+  .field input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .score-chip{
+    font-family:var(--mono);font-size:.82rem;color:var(--ink-dim);border:1px solid var(--line);
+    border-radius:8px;padding:10px 12px;background:var(--panel-2);white-space:nowrap;text-align:center;
+  }
+  .score-chip b{color:var(--ink)}
+  button.primary{
+    background:var(--accent);color:var(--accent-ink);border:none;border-radius:8px;
+    padding:11px 20px;font:inherit;font-weight:700;cursor:pointer;
+  }
+  button.primary:disabled{filter:grayscale(.5) brightness(.8);cursor:not-allowed}
+  button.primary:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  button.ghost{
+    background:transparent;color:var(--ink-dim);border:1px solid var(--line);border-radius:8px;
+    padding:11px 16px;font:inherit;cursor:pointer;
+  }
+  button.ghost:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .status{
+    margin-top:12px;font-size:.88rem;padding:11px 13px;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel-2);display:none;
+  }
+  .status.show{display:block}
+  .status.ok{border-color:#2c6b4d;background:#11231a;color:#bdeccf}
+  .status.err{border-color:#6b2c2c;background:#231111;color:#f0bdbd}
+  .status.work{border-color:#5a4a25;background:#231d11;color:#f0deb4}
+
+  footer.lab{margin-top:26px;color:var(--ink-dim);font-size:.74rem;text-align:center;line-height:1.7}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+  @media (prefers-reduced-motion:no-preference){
+    .host-btn,.apply,.primary{transition:box-shadow .15s ease,border-color .15s ease,background .15s ease}
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-soho-ipfix", "title": "SOHO Connectivity Lab — The Loaner That Won't Reach the Internet", "version": "1.0.0", "objectives": ["N10-009:5.3", "APNET:2.6"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">CH</div>
+      <div>
+        <h1>The Loaner That Won't Reach the Internet</h1>
+        <div class="sub">Cedar Hollow SOHO · Network connectivity troubleshooting lab</div>
+      </div>
+    </div>
+    <div class="tags" aria-label="Blueprint objectives covered">
+      <span class="tag n">N10-009 · 5.1</span>
+      <span class="tag n">N10-009 · 5.5</span>
+      <span class="tag n">N10-009 · 5.6</span>
+      <span class="tag a">AP NET · 1.1.A</span>
+      <span class="tag a">AP NET · 2.1.A</span>
+      <span class="tag a">AP NET · 2.1.B</span>
+    </div>
+  </header>
+
+  <section class="card" style="margin-bottom:18px">
+    <div class="body" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+      <div style="flex:1;min-width:260px">
+        <p style="margin:.1em 0">You help run the tiny office at the <b>Cedar Hollow Community Garden</b>. A volunteer
+        carried over a spare laptop, <code>garden-loaner</code>, from the downtown branch so people can sign up for
+        plots online. On the garden's home-office network it gets no internet at all. The office desktop,
+        <code>office-desk</code>, works fine on the same router, <code>hollow-gw</code>.</p>
+        <p style="margin:.1em 0;color:var(--ink-dim)">Work the problem with the methodology: gather information, compare
+        the broken host to the working one, form a theory, fix it, then verify. Pick a host below, read its settings, and
+        use the command line. Tasks tick off as you go.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid">
+
+    <!-- ===================== LEFT: WORKSTATION ===================== -->
+    <section class="card" aria-label="Workstation">
+      <h2>Workstation</h2>
+
+      <div class="dock" role="group" aria-label="Choose a host">
+        <button class="host-btn" id="host-loaner" data-host="loaner" data-online="false"
+                aria-pressed="true" onclick="ui.selectHost('loaner')">
+          <span class="dot" aria-hidden="true"></span>
+          <span><b>garden-loaner</b><small id="loaner-ip-label">no internet</small></span>
+        </button>
+        <button class="host-btn" id="host-desk" data-host="desk" data-online="true"
+                aria-pressed="false" onclick="ui.selectHost('desk')">
+          <span class="dot" aria-hidden="true"></span>
+          <span><b>office-desk</b><small id="desk-ip-label">online</small></span>
+        </button>
+      </div>
+
+      <div class="ws-tabs" role="tablist" aria-label="Workstation views">
+        <button class="ws-tab" role="tab" id="tab-settings" aria-controls="pane-settings"
+                aria-selected="true" onclick="ui.selectTab('settings')">Network settings</button>
+        <button class="ws-tab" role="tab" id="tab-term" aria-controls="pane-term"
+                aria-selected="false" onclick="ui.selectTab('term')">Command line</button>
+      </div>
+
+      <!-- Settings pane -->
+      <div class="ws-pane" id="pane-settings" role="tabpanel" aria-labelledby="tab-settings">
+        <div class="settings">
+          <div class="s-head">
+            <span aria-hidden="true">🖧</span>
+            <span>Ethernet adapter — <span id="set-host">garden-loaner</span></span>
+          </div>
+          <div class="s-body">
+            <dl class="kv" id="ipconfig-view"><!-- filled by JS --></dl>
+
+            <fieldset class="adapter" id="adapter-fs">
+              <legend>IPv4 address assignment</legend>
+              <label class="radio">
+                <input type="radio" name="ipmode" value="dhcp" onchange="ui.onModeChange()">
+                <span>Obtain an IP address automatically (DHCP)
+                  <small>Let the router's DHCP server hand out the address, mask, gateway, and DNS.</small>
+                </span>
+              </label>
+              <label class="radio">
+                <input type="radio" name="ipmode" value="static" onchange="ui.onModeChange()">
+                <span>Use the following IP address (manual / static)
+                  <small>You type every value yourself. Wrong values here are a classic cause of "no internet."</small>
+                </span>
+              </label>
+              <div class="static-fields">
+                <label>IP address
+                  <input type="text" id="f-ip" inputmode="decimal" autocomplete="off">
+                </label>
+                <label>Subnet mask
+                  <input type="text" id="f-mask" inputmode="decimal" autocomplete="off">
+                </label>
+                <label>Default gateway
+                  <input type="text" id="f-gw" inputmode="decimal" autocomplete="off">
+                </label>
+                <label>Preferred DNS server
+                  <input type="text" id="f-dns" inputmode="decimal" autocomplete="off">
+                </label>
+              </div>
+              <div class="s-actions">
+                <button class="apply" id="apply-btn" onclick="ui.applyAdapter()">Apply changes</button>
+              </div>
+              <div class="s-note" id="s-note" role="status" aria-live="polite"></div>
+            </fieldset>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal pane -->
+      <div class="ws-pane" id="pane-term" role="tabpanel" aria-labelledby="tab-term" hidden>
+        <div class="term">
+          <div class="t-head">
+            <span class="lights" aria-hidden="true"><i class="l-r"></i><i class="l-y"></i><i class="l-g"></i></span>
+            <span id="term-title">garden-loaner — Command Prompt</span>
+          </div>
+          <div class="t-out" id="term-out" aria-live="polite"></div>
+          <div class="t-line">
+            <span class="prompt" id="term-prompt">C:\Users\garden&gt;</span>
+            <label for="term-input" class="sr-only">Type a command</label>
+            <input id="term-input" type="text" autocomplete="off" spellcheck="false"
+                   aria-label="Command line input" onkeydown="ui.onTermKey(event)">
+          </div>
+        </div>
+        <p style="font-size:.76rem;color:var(--ink-dim);margin:8px 2px 0">
+          Try <code>help</code>. Useful here: <code>ipconfig</code>, <code>ipconfig /all</code>,
+          <code>ping 127.0.0.1</code>, <code>ping &lt;address or host&gt;</code>, <code>cls</code>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== RIGHT: TASKS + QUESTIONS ===================== -->
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <section class="card" aria-label="Lab tasks">
+        <h2>Lab tasks</h2>
+        <div class="body">
+          <ol class="tasks" id="task-list"><!-- filled by JS --></ol>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Questions">
+        <h2>Questions</h2>
+        <div class="body" id="question-list"><!-- filled by JS --></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== SUBMISSION ===================== -->
+  <div class="submit-bar">
+    <div class="field">
+      <label for="callsign">Callsign (a handle — no real names, please)</label>
+      <input id="callsign" type="text" maxlength="40" autocomplete="off" placeholder="e.g., trowel-42"
+             oninput="ui.refresh()">
+    </div>
+    <div class="score-chip" id="score-chip">Score <b>0</b> / <b id="score-total">0</b></div>
+    <div style="display:flex;gap:10px">
+      <button class="ghost" type="button" onclick="ui.reset()">Reset lab</button>
+      <button class="primary" id="submit-btn" type="button" onclick="ui.submit()">Submit completed lab</button>
+    </div>
+  </div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+
+  <footer class="lab">
+    <div>© 2026 [AUTHOR / ORGANIZATION]. Instructional use only. Built clean-room from public CompTIA N10-009 objectives and the College Board AP Networking framework (pilot V.1).</div>
+    <div>Tags — N10-009: 5.1 (methodology) · 5.5 (general networking issues) · 5.6 (appropriate tool) | AP Networking: 1.1.A · 2.1.A · 2.1.B</div>
+  </footer>
+</div>
+
+<!--
+  ============================================================================
+  SCRIPT BLOCK 1 — SCREENSHOT DEPENDENCY (per master prompt §2/§3)
+  ----------------------------------------------------------------------------
+  The master prompt asks for the FULL minified html2canvas source pasted here so
+  the file is dependency-free. That library is ~150KB of minified code that
+  cannot be reproduced accurately from memory, so this file ships with a
+  dependency-free fallback (SVG <foreignObject> serialization of the simulated
+  DOM — which is all the lab contains, so it captures fine) AND will transparently
+  use the real library if you paste it.
+
+  TO USE THE OFFICIAL LIBRARY (optional): download the minified html2canvas
+  (MIT licensed) and paste its full source between the two markers below. The
+  capture code auto-detects window.html2canvas and prefers it when present.
+
+  // >>> PASTE MINIFIED html2canvas SOURCE BELOW THIS LINE >>>
+
+  // <<< PASTE MINIFIED html2canvas SOURCE ABOVE THIS LINE <<<
+  ============================================================================
+-->
+<script>
+/* Dependency-free DOM->PNG capture. Used unless window.html2canvas is present. */
+window.captureNode = async function(node){
+  if (typeof window.html2canvas === "function"){
+    try{
+      const c = await window.html2canvas(node, {backgroundColor:getComputedStyle(document.body).backgroundColor, scale:1});
+      return c.toDataURL("image/png");
+    }catch(e){ /* fall through to built-in */ }
+  }
+  const rect = node.getBoundingClientRect();
+  const w = Math.max(1, Math.ceil(rect.width));
+  const h = Math.max(1, Math.ceil(rect.height));
+  // :root custom properties don't cascade onto our div inside <foreignObject>,
+  // so remap the :root rule onto the capture wrapper class.
+  const css = document.getElementById("lab-styles").textContent.replace(/:root\b/g, ".cap-root");
+
+  // Clone and bake current form values into attributes so they serialize.
+  const clone = node.cloneNode(true);
+  const liveFields = node.querySelectorAll("input,textarea");
+  const cloneFields = clone.querySelectorAll("input,textarea");
+  liveFields.forEach((el,i)=>{
+    const c = cloneFields[i]; if(!c) return;
+    if (el.type === "radio" || el.type === "checkbox"){
+      if (el.checked) c.setAttribute("checked","checked"); else c.removeAttribute("checked");
+    } else {
+      c.setAttribute("value", el.value || "");
+    }
+  });
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject x="0" y="0" width="100%" height="100%">'+
+        '<div xmlns="http://www.w3.org/1999/xhtml" class="cap-root" style="width:'+w+'px">'+
+          '<style>'+css+'</style>'+ xml +
+        '</div>'+
+      '</foreignObject>'+
+    '</svg>';
+
+  const blob = new Blob([svg], {type:"image/svg+xml;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  try{
+    const img = new Image();
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error("render")); img.src=url; });
+    const scale = Math.min(2, window.devicePixelRatio || 1);
+    const canvas = document.createElement("canvas");
+    canvas.width = w*scale; canvas.height = h*scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale,scale);
+    ctx.fillStyle = getComputedStyle(document.body).backgroundColor || "#0e1320";
+    ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img,0,0);
+    return canvas.toDataURL("image/png");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+</script>
+
+<!--
+  ============================================================================
+  SCRIPT BLOCK 2 — LAB ENGINE + CONFIG + ANSWER KEY  (per master prompt §2)
+  Per-lab edits live in CONFIG / KEY / NETWORK below. Everything else is generic.
+  ============================================================================
+-->
+<script>
+"use strict";
+
+/* ---------- LAB CONFIG (the only block you edit to clone this lab) ---------- */
+const CONFIG = {
+  assignmentId: "netplus-soho-ipfix",
+  title: "The Loaner That Won't Reach the Internet",
+  objectives: ["N10-009:5.3", "APNET:2.6"],
+  // Deploy the shared Apps Script web app once for the library, paste its /exec URL here:
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  maxHandle: 40,
+  maxPngBytes: 1500000
+};
+
+/* ---------- NETWORK MODEL (original values; the "facts" of this lab) ---------- */
+const NET = {
+  soho: { net:"10.50.10", mask:"255.255.255.0", gw:"10.50.10.1", dns:"10.50.10.1" },
+  // Stale config the loaner carried over from the downtown branch (wrong subnet here):
+  stale:{ ip:"192.168.30.45", mask:"255.255.255.0", gw:"192.168.30.1", dns:"192.168.30.1" },
+  loanerDhcp:{ ip:"10.50.10.45", mask:"255.255.255.0", gw:"10.50.10.1", dns:"10.50.10.1" },
+  deskCfg:{ ip:"10.50.10.20", mask:"255.255.255.0", gw:"10.50.10.1", dns:"10.50.10.1" },
+  // Live hosts on the SOHO wire that answer pings:
+  liveSoho:["10.50.10.1","10.50.10.20","10.50.10.45"],
+  internet:["8.8.8.8","9.9.9.9","1.1.1.1"],
+  names:{ "hollow-gw":"10.50.10.1", "office-desk":"10.50.10.20", "garden-loaner":null /* resolved at runtime */ }
+};
+
+/* ---------- runtime state ---------- */
+const state = {
+  host: "loaner",
+  tab: "settings",
+  loaner: { mode:"static", ip:NET.stale.ip, mask:NET.stale.mask, gw:NET.stale.gw, dns:NET.stale.dns },
+  desk:   { mode:"dhcp",   ip:NET.deskCfg.ip, mask:NET.deskCfg.mask, gw:NET.deskCfg.gw, dns:NET.deskCfg.dns },
+  flags: { viewedLoaner:false, pingLoanerPre:false, viewedDesk:false, deskNet:false, fixed:false, verified:false },
+  termHistory: { loaner:[], desk:[] },
+  answers: {}
+};
+
+/* ---------- TASKS (auto-checked over sim state) ---------- */
+const TASKS = [
+  { id:"gather-loaner", label:"Gather info on garden-loaner",
+    hint:"Open its Network settings or run ipconfig.", test:()=>state.flags.viewedLoaner },
+  { id:"symptom-loaner", label:"Reproduce the symptom on garden-loaner",
+    hint:"From garden-loaner, ping the gateway or 8.8.8.8 and watch it fail.", test:()=>state.flags.pingLoanerPre },
+  { id:"baseline-desk", label:"Check the working baseline on office-desk",
+    hint:"Switch to office-desk and read its IP configuration.", test:()=>state.flags.viewedDesk },
+  { id:"internet-desk", label:"Confirm office-desk reaches the internet",
+    hint:"From office-desk, ping 8.8.8.8 and get replies.", test:()=>state.flags.deskNet },
+  { id:"apply-fix", label:"Fix garden-loaner's IP assignment",
+    hint:"Set its adapter to obtain an address automatically (DHCP) and Apply.", test:()=>state.flags.fixed },
+  { id:"verify", label:"Verify full functionality on garden-loaner",
+    hint:"After the fix, ping the gateway or 8.8.8.8 from garden-loaner and get replies.", test:()=>state.flags.verified }
+];
+
+/* ---------- QUESTIONS + ANSWER KEY (client-side; see §7 of the build prompt) ---------- */
+const QUESTIONS = [
+  { id:"q1", type:"text",
+    prompt:"Before any changes, what IPv4 address is assigned to garden-loaner?",
+    check:v=>norm(v)==="192.168.30.45", answer:"192.168.30.45" },
+  { id:"q2", type:"choice",
+    prompt:"Is garden-loaner getting its address from DHCP, or is it set manually?",
+    options:["Automatically, from DHCP","Manually (static)","From the office-desk computer","From the DNS server"],
+    correct:1, answer:"Manually (static)" },
+  { id:"q3", type:"text",
+    prompt:"What default gateway is configured on the working office-desk?",
+    check:v=>norm(v)==="10.50.10.1", answer:"10.50.10.1" },
+  { id:"q4", type:"choice",
+    prompt:"Why can't garden-loaner reach the internet in its original state?",
+    options:[
+      "The router (hollow-gw) is powered off",
+      "Its static IP settings put it on a different subnet than the gateway, so it has no usable route off-link",
+      "The DNS server is down",
+      "Its network cable is unplugged"
+    ], correct:1, answer:"Wrong subnet — no usable route to the gateway" },
+  { id:"q5", type:"choice",
+    prompt:"Switching the adapter to obtain an address automatically maps to which troubleshooting step?",
+    options:["Identify the problem","Establish a theory of probable cause","Implement the solution","Document findings"],
+    correct:2, answer:"Implement the solution" },
+  { id:"q6", type:"text",
+    prompt:"After the fix, the new address should fall in which network? (enter the first three octets, e.g. 10.50.10)",
+    check:v=>norm(v).replace(/\.+$/,"")==="10.50.10", answer:"10.50.10" }
+];
+
+/* =========================================================================
+   ENGINE
+   ========================================================================= */
+function norm(s){ return String(s==null?"":s).trim().toLowerCase().replace(/\s+/g,""); }
+function cfgOf(host){ return state[host]; }
+function esc(s){ return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function sameSubnet24(a,b){ // assumes /24 in this lab's model
+  const pa=a.split("."), pb=b.split(".");
+  return pa.length===4 && pb.length===4 && pa[0]===pb[0]&&pa[1]===pb[1]&&pa[2]===pb[2];
+}
+
+/* Is `target` reachable from a host whose current config is cfg? */
+function reachable(cfg, target){
+  if (target==="127.0.0.1") return true;
+  if (target===cfg.ip) return true;
+  const onSoho = sameSubnet24(cfg.ip, NET.soho.net+".0") && cfg.gw===NET.soho.gw;
+  if (!onSoho) return false;                       // misconfigured host: nothing off its own box
+  if (NET.internet.includes(target)) return true;  // internet up via the real gateway
+  if (sameSubnet24(target, NET.soho.net+".0")) return NET.liveSoho.includes(target);
+  return false;
+}
+
+/* Resolve a name or pass through an address; returns {ip, resolvable} */
+function resolveTarget(host, raw){
+  const t = raw.trim();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(t)) return { ip:t, name:null, resolvable:true };
+  const map = Object.assign({}, NET.names, { "garden-loaner": cfgOf("loaner").ip });
+  const key = t.toLowerCase();
+  if (key in map && map[key]) return { ip:map[key], name:t, resolvable:true };
+  return { ip:null, name:t, resolvable:false };
+}
+
+const ui = {
+  /* ----- host + tab switching ----- */
+  selectHost(host){
+    state.host = host;
+    document.querySelectorAll(".host-btn").forEach(b=>b.setAttribute("aria-pressed", b.dataset.host===host));
+    this.renderSettings();
+    this.renderTerminal();
+    document.getElementById("set-host").textContent = host==="loaner"?"garden-loaner":"office-desk";
+    document.getElementById("term-title").textContent = (host==="loaner"?"garden-loaner":"office-desk")+" — Command Prompt";
+    document.getElementById("term-prompt").textContent = host==="loaner"?"C:\\Users\\garden>":"C:\\Users\\office>";
+    if (host==="desk") state.flags.viewedDesk = true; // opening the desk's surface counts as gathering baseline
+    this.refresh();
+  },
+  selectTab(tab){
+    state.tab = tab;
+    document.getElementById("tab-settings").setAttribute("aria-selected", tab==="settings");
+    document.getElementById("tab-term").setAttribute("aria-selected", tab==="term");
+    document.getElementById("pane-settings").hidden = tab!=="settings";
+    document.getElementById("pane-term").hidden = tab!=="term";
+    if (tab==="settings"){
+      if (state.host==="loaner") state.flags.viewedLoaner = true;
+      if (state.host==="desk")   state.flags.viewedDesk = true;
+      this.refresh();
+    } else {
+      setTimeout(()=>document.getElementById("term-input").focus(), 0);
+    }
+  },
+
+  /* ----- settings rendering ----- */
+  renderSettings(){
+    const host = state.host, cfg = cfgOf(host);
+    const onSoho = sameSubnet24(cfg.ip, NET.soho.net+".0") && cfg.gw===NET.soho.gw;
+    const dl = document.getElementById("ipconfig-view");
+    const pill = cfg.mode==="dhcp"
+      ? '<span class="pill dhcp">DHCP</span>'
+      : '<span class="pill static">Static</span>';
+    const gwClass = onSoho ? "" : ' class="warn"';
+    dl.innerHTML =
+      '<dt>Assignment</dt><dd>'+pill+'</dd>'+
+      '<dt>IPv4 address</dt><dd'+(onSoho?'':' class="warn"')+'>'+esc(cfg.ip)+'</dd>'+
+      '<dt>Subnet mask</dt><dd>'+esc(cfg.mask)+'</dd>'+
+      '<dt>Default gateway</dt><dd'+gwClass+'>'+esc(cfg.gw)+'</dd>'+
+      '<dt>Preferred DNS</dt><dd>'+esc(cfg.dns)+'</dd>'+
+      '<dt>Reaches internet</dt><dd'+(onSoho?'':' class="warn"')+'>'+(onSoho?"Yes":"No")+'</dd>';
+
+    // adapter form reflects current host
+    const fs = document.getElementById("adapter-fs");
+    const isLoaner = host==="loaner";
+    fs.querySelectorAll('input[name="ipmode"]').forEach(r=>{
+      r.checked = (r.value===cfg.mode);
+      r.disabled = !isLoaner;   // office-desk is left as-is in this lab
+    });
+    this.syncStaticFields(cfg);
+    document.getElementById("apply-btn").disabled = !isLoaner;
+    const note = document.getElementById("s-note");
+    note.className = "s-note";
+    note.textContent = isLoaner ? "" : "office-desk is the healthy baseline — leave it as it is and compare.";
+  },
+  syncStaticFields(cfg){
+    const dhcp = (document.querySelector('input[name="ipmode"]:checked')||{}).value === "dhcp"
+              || cfg.mode==="dhcp";
+    const f = {ip:"f-ip",mask:"f-mask",gw:"f-gw",dns:"f-dns"};
+    const src = dhcp ? NET.soho /* greyed preview */ : cfg;
+    document.getElementById("f-ip").value   = dhcp ? "(assigned by DHCP)" : cfg.ip;
+    document.getElementById("f-mask").value = dhcp ? "(assigned by DHCP)" : cfg.mask;
+    document.getElementById("f-gw").value   = dhcp ? "(assigned by DHCP)" : cfg.gw;
+    document.getElementById("f-dns").value  = dhcp ? "(assigned by DHCP)" : cfg.dns;
+    ["f-ip","f-mask","f-gw","f-dns"].forEach(id=>document.getElementById(id).disabled = dhcp || state.host!=="loaner");
+  },
+  onModeChange(){
+    const mode = document.querySelector('input[name="ipmode"]:checked').value;
+    const cfg = cfgOf(state.host);
+    this.syncStaticFields(Object.assign({}, cfg, {mode}));
+  },
+  applyAdapter(){
+    if (state.host!=="loaner") return;
+    const mode = document.querySelector('input[name="ipmode"]:checked').value;
+    const note = document.getElementById("s-note");
+    if (mode==="dhcp"){
+      state.loaner = { mode:"dhcp", ip:NET.loanerDhcp.ip, mask:NET.loanerDhcp.mask, gw:NET.loanerDhcp.gw, dns:NET.loanerDhcp.dns };
+      state.flags.fixed = true;
+      note.className = "s-note ok";
+      note.textContent = "DHCP lease obtained: "+NET.loanerDhcp.ip+" / "+NET.loanerDhcp.mask+", gateway "+NET.loanerDhcp.gw+". Now verify on the command line.";
+    } else {
+      const ip=val("f-ip"), mask=val("f-mask"), gw=val("f-gw"), dns=val("f-dns");
+      if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) || !/^\d{1,3}(\.\d{1,3}){3}$/.test(gw)){
+        note.className="s-note"; note.style.color="#b8540f";
+        note.textContent="That doesn't look like a valid IPv4 address. Use dotted-decimal, e.g. 10.50.10.45.";
+        return;
+      }
+      state.loaner = { mode:"static", ip, mask, gw, dns };
+      const onSoho = sameSubnet24(ip, NET.soho.net+".0") && gw===NET.soho.gw;
+      state.flags.fixed = onSoho;
+      note.className = onSoho ? "s-note ok" : "s-note";
+      note.textContent = onSoho
+        ? "Static config applied and it's on the garden subnet. Verify on the command line."
+        : "Applied — but "+ip+" with gateway "+gw+" still isn't on the 10.50.10.0/24 garden network, so it still can't reach the gateway.";
+    }
+    this.renderSettings();
+    this.refresh();
+  },
+
+  /* ----- terminal ----- */
+  renderTerminal(){
+    const out = document.getElementById("term-out");
+    out.innerHTML = (state.termHistory[state.host]||[]).join("");
+    out.scrollTop = out.scrollHeight;
+  },
+  print(host, html){
+    state.termHistory[host].push(html);
+    if (host===state.host){
+      const out = document.getElementById("term-out");
+      out.innerHTML = state.termHistory[host].join("");
+      out.scrollTop = out.scrollHeight;
+    }
+  },
+  onTermKey(e){
+    if (e.key!=="Enter") return;
+    const inp = document.getElementById("term-input");
+    const raw = inp.value;
+    inp.value = "";
+    this.runCommand(raw);
+  },
+  runCommand(raw){
+    const host = state.host, cfg = cfgOf(host);
+    const prompt = host==="loaner"?"C:\\Users\\garden&gt;":"C:\\Users\\office&gt;";
+    const cmd = raw.trim();
+    this.print(host, '<div class="dim">'+prompt+' '+esc(cmd)+'</div>');
+    if (cmd==="") return;
+
+    const parts = cmd.split(/\s+/);
+    const head = parts[0].toLowerCase();
+
+    if (head==="cls"||head==="clear"){ state.termHistory[host]=[]; this.renderTerminal(); return; }
+    if (head==="help"){
+      this.print(host,
+        "Supported commands in this lab:\n"+
+        "  ipconfig            Show this adapter's IPv4 configuration\n"+
+        "  ipconfig /all       Show full details (DNS, physical address)\n"+
+        "  ipconfig /release   Release a DHCP lease\n"+
+        "  ipconfig /renew     Renew / request a DHCP lease\n"+
+        "  ping <addr|host>    Send 4 echo requests\n"+
+        "  cls                 Clear the screen\n");
+      return;
+    }
+    if (head==="ipconfig"){ this.cmdIpconfig(host, cfg, parts[1]||""); return; }
+    if (head==="ping"){ this.cmdPing(host, cfg, parts.slice(1).join(" ")); return; }
+
+    // realistic shell error
+    this.print(host, '<span class="red">\''+esc(parts[0])+'\' is not recognized as a command.</span>\n'+
+                     '<span class="dim">Type help to see what this terminal supports.</span>\n');
+  },
+  cmdIpconfig(host, cfg, flag){
+    const name = host==="loaner"?"garden-loaner":"office-desk";
+    const all = flag.toLowerCase()==="/all";
+    if (flag==="/release"){
+      if (cfg.mode!=="dhcp"){ this.print(host,'<span class="red">No operation can be performed while the adapter is set to a static address.</span>\n'); }
+      else { this.print(host,"Releasing IPv4 address...\n   IPv4 Address. . . . . . . . . . . : 0.0.0.0\n"); }
+      return;
+    }
+    if (flag==="/renew"){
+      if (cfg.mode!=="dhcp"){ this.print(host,'<span class="red">The adapter is set to a static address; there is no DHCP lease to renew.</span>\n<span class="dim">Switch the adapter to obtain an address automatically first.</span>\n'); }
+      else { this.print(host,"Requesting a DHCP lease...\n   IPv4 Address. . . . . . . . . . . : "+cfg.ip+"\n"); }
+      return;
+    }
+    let txt = "\nWindows IP Configuration\n\n";
+    txt += "Ethernet adapter Wired ("+name+"):\n";
+    txt += "   Connection-specific DNS Suffix  . : "+(host==="desk"?"cedarhollow.lan":"")+"\n";
+    if (all) txt += "   Physical Address. . . . . . . . . : "+(host==="loaner"?"5C-AA-1B-30-7E-4F":"5C-AA-1B-10-22-08")+"\n";
+    txt += "   DHCP Enabled. . . . . . . . . . . : "+(cfg.mode==="dhcp"?"Yes":"No")+"\n";
+    txt += "   IPv4 Address. . . . . . . . . . . : "+cfg.ip+"\n";
+    txt += "   Subnet Mask . . . . . . . . . . . : "+cfg.mask+"\n";
+    txt += "   Default Gateway . . . . . . . . . : "+cfg.gw+"\n";
+    if (all) txt += "   DNS Servers . . . . . . . . . . . : "+cfg.dns+"\n";
+    this.print(host, esc(txt)+"\n");
+    if (host==="loaner") state.flags.viewedLoaner = true;
+    if (host==="desk")   state.flags.viewedDesk = true;
+    this.refresh();
+  },
+  cmdPing(host, cfg, arg){
+    if (!arg){ this.print(host,'<span class="red">Usage: ping &lt;address or host name&gt;</span>\n'); return; }
+    const r = resolveTarget(host, arg);
+    if (!r.resolvable){
+      this.print(host, "Ping request could not find host "+esc(r.name)+". "+
+                       '<span class="red">Please check the name and try again.</span>\n');
+      this.markPing(host, false, true);
+      return;
+    }
+    const ip = r.ip;
+    const ok = reachable(cfg, ip);
+    const label = r.name ? esc(r.name)+" ["+ip+"]" : ip;
+    let body = "\nPinging "+label+" with 32 bytes of data:\n";
+    if (ok){
+      for (let i=0;i<4;i++) body += '<span class="green">Reply from '+ip+': bytes=32 time'+(ip==="127.0.0.1"?"<1ms":(i?"=2ms":"=3ms"))+' TTL='+(NET.internet.includes(ip)?"56":"128")+'</span>\n';
+      body += "\nPing statistics for "+ip+":\n    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)\n";
+    } else {
+      // misconfigured host -> no route off its own subnet; reply comes from the host itself
+      for (let i=0;i<4;i++) body += '<span class="red">Reply from '+cfg.ip+': Destination host unreachable.</span>\n';
+      body += "\nPing statistics for "+ip+":\n    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss)\n";
+    }
+    this.print(host, body+"\n");
+    this.markPing(host, ok, false, ip);
+  },
+  markPing(host, ok, nameFail, ip){
+    if (host==="loaner"){
+      const offBox = ip && ip!=="127.0.0.1" && ip!==cfgOf("loaner").ip;
+      if (!state.flags.fixed && (offBox || nameFail)) state.flags.pingLoanerPre = true; // failed reach off-box = symptom seen
+      else if (state.flags.fixed && ok && (NET.internet.includes(ip) || ip===NET.soho.gw)) state.flags.verified = true;
+    }
+    if (host==="desk" && ok && NET.internet.includes(ip)) state.flags.deskNet = true;
+    this.refresh();
+  },
+
+  /* ----- tasks + questions rendering ----- */
+  buildTasks(){
+    const ol = document.getElementById("task-list");
+    ol.innerHTML = TASKS.map(t=>(
+      '<li data-id="'+t.id+'" data-done="false">'+
+        '<span class="chk" aria-hidden="true"></span>'+
+        '<span class="t-text"><b>'+esc(t.label)+'</b><small>'+esc(t.hint)+'</small></span>'+
+      '</li>'
+    )).join("");
+  },
+  buildQuestions(){
+    const box = document.getElementById("question-list");
+    box.innerHTML = QUESTIONS.map((q,i)=>{
+      const num = '<span class="num">Q'+(i+1)+'</span>';
+      let input;
+      if (q.type==="text"){
+        input = '<input type="text" data-q="'+q.id+'" autocomplete="off" oninput="ui.refresh()" aria-label="Answer for question '+(i+1)+'">';
+      } else {
+        input = '<div class="opts" role="radiogroup" aria-label="Question '+(i+1)+'">'+
+          q.options.map((o,oi)=>(
+            '<label><input type="radio" name="'+q.id+'" value="'+oi+'" onchange="ui.refresh()"> <span>'+esc(o)+'</span></label>'
+          )).join("")+'</div>';
+      }
+      return '<div class="q" data-id="'+q.id+'" data-correct="">'+
+               '<div class="qp">'+num+esc(q.prompt)+'</div>'+ input +
+               '<div class="verdict" aria-live="polite"></div>'+
+             '</div>';
+    }).join("");
+  },
+  questionCorrect(q){
+    if (q.type==="text"){
+      const el = document.querySelector('input[data-q="'+q.id+'"]');
+      const v = el ? el.value : "";
+      if (!v.trim()) return null;
+      return q.check(v);
+    } else {
+      const sel = document.querySelector('input[name="'+q.id+'"]:checked');
+      if (!sel) return null;
+      return Number(sel.value)===q.correct;
+    }
+  },
+
+  /* ----- recompute everything ----- */
+  refresh(){
+    // tasks
+    let taskPass = 0;
+    TASKS.forEach(t=>{
+      const done = !!t.test();
+      if (done) taskPass++;
+      const li = document.querySelector('li[data-id="'+t.id+'"]');
+      if (li) li.setAttribute("data-done", done);
+    });
+    // host dock + labels reflect live config
+    const lc = cfgOf("loaner"), dc = cfgOf("desk");
+    const lOnline = sameSubnet24(lc.ip, NET.soho.net+".0") && lc.gw===NET.soho.gw;
+    document.getElementById("host-loaner").setAttribute("data-online", lOnline);
+    document.getElementById("loaner-ip-label").textContent = lc.ip + (lOnline?"":" · no internet");
+    document.getElementById("desk-ip-label").textContent = dc.ip;
+
+    // questions
+    let qCorrect = 0;
+    QUESTIONS.forEach(q=>{
+      const res = this.questionCorrect(q);
+      const el = document.querySelector('.q[data-id="'+q.id+'"]');
+      const verdict = el.querySelector(".verdict");
+      if (res===null){ el.setAttribute("data-correct",""); verdict.textContent=""; }
+      else if (res){ el.setAttribute("data-correct","true"); verdict.textContent="Correct."; qCorrect++; }
+      else { el.setAttribute("data-correct","false"); verdict.textContent="Not quite — re-check the evidence and try again."; }
+    });
+
+    const earned = taskPass + qCorrect;
+    const total = TASKS.length + QUESTIONS.length;
+    document.getElementById("score-chip").innerHTML = "Score <b>"+earned+"</b> / <b id=\"score-total\">"+total+"</b>";
+
+    const ready = (taskPass===TASKS.length) && (qCorrect===QUESTIONS.length)
+                && document.getElementById("callsign").value.trim().length>0;
+    document.getElementById("submit-btn").disabled = !ready;
+    state._score = {earned, total};
+    return {earned,total,taskPass,qCorrect};
+  },
+
+  /* ----- reset ----- */
+  reset(){
+    state.host="loaner"; state.tab="settings";
+    state.loaner={ mode:"static", ip:NET.stale.ip, mask:NET.stale.mask, gw:NET.stale.gw, dns:NET.stale.dns };
+    state.desk={ mode:"dhcp", ip:NET.deskCfg.ip, mask:NET.deskCfg.mask, gw:NET.deskCfg.gw, dns:NET.deskCfg.dns };
+    state.flags={ viewedLoaner:false, pingLoanerPre:false, viewedDesk:false, deskNet:false, fixed:false, verified:false };
+    state.termHistory={loaner:[],desk:[]};
+    document.querySelectorAll('#question-list input[type="text"]').forEach(i=>i.value="");
+    document.querySelectorAll('#question-list input[type="radio"]').forEach(i=>i.checked=false);
+    document.getElementById("callsign").value="";
+    const st=document.getElementById("status"); st.className="status"; st.textContent="";
+    this.selectHost("loaner"); this.selectTab("settings");
+    document.getElementById("s-note").textContent="";
+    this.refresh();
+  },
+
+  /* ----- submit ----- */
+  async submit(){
+    const btn = document.getElementById("submit-btn");
+    const st = document.getElementById("status");
+    const handle = document.getElementById("callsign").value.trim().slice(0, CONFIG.maxHandle);
+    if (!handle){ this.flash("err","Enter a callsign first (a handle — please don't use your real name)."); return; }
+
+    const res = this.refresh();
+    btn.disabled = true;
+    this.flash("work","Capturing your work and preparing the submission…");
+
+    let screenshot = "";
+    try{
+      screenshot = await window.captureNode(document.querySelector(".grid"));
+      if (screenshot.length > CONFIG.maxPngBytes*1.4){ // rough base64 guard
+        screenshot = screenshot.slice(0, 0); // drop oversized image rather than fail the submit
+      }
+    }catch(e){ screenshot = ""; }
+
+    const payload = {
+      assignmentId: CONFIG.assignmentId,
+      handle: handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(t=>({ id:t.id, label:t.label, passed: !!t.test() })),
+      questions: QUESTIONS.map(q=>{
+        const correct = this.questionCorrect(q);
+        let given;
+        if (q.type==="text"){ const el=document.querySelector('input[data-q="'+q.id+'"]'); given = el?el.value.trim():""; }
+        else { const sel=document.querySelector('input[name="'+q.id+'"]:checked'); given = sel? q.options[Number(sel.value)] : ""; }
+        return { id:q.id, prompt:q.prompt, answer:given, correct: correct===true };
+      }),
+      score: { earned: res.earned, total: res.total },
+      screenshot: screenshot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    // Preview mode if the backend hasn't been configured yet.
+    if (CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0){
+      console.log("[preview] payload that WOULD be sent:", payload);
+      this.flash("ok","Preview mode — backend not configured. Your lab is complete ("+res.earned+"/"+res.total+
+        "). Ask your instructor for the submission link, or set APPS_SCRIPT_URL in this file to go live. "+
+        "The full payload was logged to the browser console.");
+      btn.disabled = false;
+      return;
+    }
+
+    try{
+      // SIMPLE request only: no custom headers, default text/plain body => no CORS preflight (§4/§9).
+      const r = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const out = await r.json();
+      if (out && out.success){
+        this.flash("ok","Submitted as “"+esc(handle)+"”. Score "+res.earned+"/"+res.total+". "+
+          (out.docUrl ? 'Your record: <a href="'+out.docUrl+'" target="_blank" rel="noopener">open the Doc</a>.' : "Saved."));
+      } else {
+        this.flash("err","The server rejected the submission"+(out&&out.error?': '+esc(out.error):'')+". Tell your instructor.");
+        btn.disabled = false;
+      }
+    }catch(e){
+      // Fallback: fire-and-forget (can't read docUrl) for locked-down contexts (§4).
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        this.flash("ok","Submission sent. The response couldn't be read in this browser, so confirm with your instructor that it arrived.");
+      }catch(e2){
+        this.flash("err","Couldn't reach the submission server. Check your connection and try again, or tell your instructor.");
+        btn.disabled = false;
+      }
+    }
+  },
+  flash(kind, html){
+    const st = document.getElementById("status");
+    st.className = "status show "+kind;
+    st.innerHTML = html;
+  }
+};
+
+function val(id){ return (document.getElementById(id).value||"").trim(); }
+
+/* ---------- boot ---------- */
+(function init(){
+  ui.buildTasks();
+  ui.buildQuestions();
+  ui.selectHost("loaner");
+  ui.selectTab("settings");
+  ui.renderSettings();
+  ui.renderTerminal();
+  ui.refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-soho-gateway-fault.html",title:"Offline at the Front Desk \u2014 SOHO Gateway Fault"}, NEXT=null, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.6";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

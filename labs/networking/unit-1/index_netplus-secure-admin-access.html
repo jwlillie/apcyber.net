@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Harden the Edge Firewall Console (fw-edge-01)</title>
+<!--
+  ============================================================================
+  Network+ / AP Networking Simulation Lab — "Harden the Edge Firewall Console"
+  assignmentId: netplus-secure-admin-access
+  Blueprint tags: N10-009:4.3 (implement network device hardening)
+                  APNET:1.4   (Locking It Down: Securing My Device)
+  ----------------------------------------------------------------------------
+  Clean-room original. Scenario, persona, company, hostnames, IP plan, account
+  names, values, task wording, questions, and all UI markup are original and
+  were authored from the public CompTIA Network+ objectives and the public
+  College Board AP Networking course framework. No third-party lab's expression
+  (scenario, characters, hostnames, addressing, values, phrasing, ordering, or
+  screenshots) is reproduced. The appliance UI is self-drawn, not captured.
+
+  © 2026 <REPLACE: Author / Organization>. All rights reserved.
+  Lab code released under the MIT License by the author — fill in the notice
+  above before distributing this library.
+
+  NOTE ON SCREENSHOT CAPTURE: This file does NOT bundle html2canvas. It uses an
+  original, dependency-free DOM->PNG routine (SVG <foreignObject> -> <canvas>).
+  To use real html2canvas instead, set CAPTURE_ENGINE = 'html2canvas' below and
+  paste the minified library into the marked capture script block.
+  ============================================================================
+-->
+<style id="lab-style">
+  :root{
+    --bg:#0e151d; --panel:#16202b; --panel2:#1b2734; --line:#2a3a49;
+    --ink:#dbe6f0; --muted:#8ba0b3; --faint:#5d7185;
+    --accent:#ffb24c;      /* signal amber: action needed */
+    --ok:#54d6a0; --bad:#ff6b6b; --link:#6cb6ff;
+    --chrome:#0a1017; --field:#0f1925;
+    --radius:8px;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Roboto Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  body{padding:18px;max-width:1180px;margin:0 auto}
+  a{color:var(--link)}
+  h1,h2,h3{font-weight:650;letter-spacing:.2px;margin:0}
+  .lede{color:var(--muted);max-width:70ch}
+  code,kbd,.mono{font-family:var(--mono)}
+  kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:.85em}
+
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-top:16px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  /* ---- simulated browser + appliance ---- */
+  .browser{background:var(--chrome);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .chrome-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0c131b;border-bottom:1px solid var(--line)}
+  .dots{display:flex;gap:5px}
+  .dots i{width:10px;height:10px;border-radius:50%;display:inline-block;background:#37485a}
+  .urlbox{flex:1;display:flex;align-items:center;gap:7px;background:var(--field);border:1px solid var(--line);border-radius:20px;padding:5px 12px;font-family:var(--mono);font-size:.85rem;color:var(--ink)}
+  .urlbox .scheme{color:var(--muted)}
+  .urlbox .lock{color:var(--ok);display:none}
+  .urlbox.secure .lock{display:inline}
+  .urlbox.secure .scheme{color:var(--ok)}
+
+  .appliance{min-height:430px;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border-bottom:1px solid var(--line);padding:9px 12px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:650}
+  .brand .badge{font-family:var(--mono);font-size:.72rem;background:#0c2a1f;color:var(--ok);border:1px solid #1d5a44;border-radius:4px;padding:1px 6px}
+  .whoami{font-family:var(--mono);font-size:.82rem;color:var(--muted)}
+  .whoami b{color:var(--ink)}
+
+  .console{display:grid;grid-template-columns:172px 1fr;flex:1;min-height:0}
+  @media (max-width:520px){.console{grid-template-columns:1fr}}
+  nav.side{background:#101a24;border-right:1px solid var(--line);padding:8px}
+  @media (max-width:520px){nav.side{border-right:none;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px}}
+  nav.side .group{font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);padding:8px 8px 4px}
+  nav.side button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--muted);padding:8px 10px;border-radius:6px;font:inherit;cursor:pointer}
+  nav.side button:hover{background:var(--panel);color:var(--ink)}
+  nav.side button[aria-current="page"]{background:var(--panel2);color:var(--ink);box-shadow:inset 2px 0 0 var(--accent)}
+
+  .page{padding:16px;overflow:auto}
+  .page h2{font-size:1.05rem;margin-bottom:3px}
+  .page .hint{color:var(--muted);font-size:.88rem;margin:2px 0 14px}
+
+  .field{margin:0 0 12px}
+  .field label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:4px}
+  .field input[type=text],.field input[type=password],.field input[type=number],.field select{
+    width:100%;max-width:340px;background:var(--field);border:1px solid var(--line);color:var(--ink);
+    border-radius:6px;padding:9px 10px;font-family:var(--mono);font-size:.9rem}
+  .field .suffix{color:var(--faint);font-family:var(--mono);font-size:.85rem;margin-left:6px}
+  .row{display:flex;gap:18px;flex-wrap:wrap}
+  fieldset{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:0 0 12px}
+  legend{padding:0 6px;color:var(--muted);font-size:.82rem}
+  .radio{display:flex;align-items:center;gap:8px;margin:5px 0;font-family:var(--mono);font-size:.9rem}
+
+  .btn{background:var(--accent);color:#1a1205;border:none;border-radius:6px;padding:9px 15px;font:inherit;font-weight:650;cursor:pointer}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn:focus-visible,nav.side button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible,.q label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+  .inline-msg{font-family:var(--mono);font-size:.82rem;margin-top:6px;min-height:1.1em}
+  .inline-msg.err{color:var(--bad)} .inline-msg.good{color:var(--ok)}
+
+  .userrow{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:6px;padding:9px 11px;margin-bottom:8px;background:var(--panel)}
+  .userrow .u{font-family:var(--mono);font-size:.88rem}
+  .userrow .g{font-size:.74rem;color:var(--muted)}
+  .pill{font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);border-radius:20px;padding:2px 9px;color:var(--muted)}
+  .pill.admins{color:var(--accent);border-color:#5a4520}
+  .pill.changed{color:var(--ok);border-color:#1d5a44}
+
+  /* ---- login ---- */
+  .login{display:flex;align-items:center;justify-content:center;flex:1;padding:26px}
+  .login .card{width:min(340px,100%);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .login h3{margin-bottom:2px}
+  .login p{color:var(--muted);font-size:.84rem;margin:2px 0 14px}
+
+  /* ---- right column ---- */
+  .side-stack{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+  .card h3{font-size:.95rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .tag{font-family:var(--mono);font-size:.7rem;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+
+  ol.tasks{list-style:none;margin:0;padding:0;counter-reset:t}
+  ol.tasks li{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  ol.tasks li:last-child{border-bottom:none}
+  .check{flex:0 0 20px;width:20px;height:20px;border:2px solid var(--line);border-radius:5px;margin-top:1px;display:grid;place-items:center;font-size:.8rem;color:transparent;transition:all .15s ease}
+  li.passed .check{background:var(--ok);border-color:var(--ok);color:#06160f}
+  li .t-label{font-size:.88rem}
+  li.passed .t-label{color:var(--ink)} li .t-label{color:var(--muted)}
+  .t-sub{display:block;color:var(--faint);font-size:.78rem;margin-top:2px}
+
+  .q{margin-bottom:12px}
+  .q legend{color:var(--ink);font-size:.86rem}
+  .q label{display:flex;gap:8px;align-items:flex-start;padding:6px 6px;border-radius:6px;font-size:.85rem;cursor:pointer}
+  .q label:hover{background:var(--panel2)}
+  .q .verdict{font-family:var(--mono);font-size:.78rem;margin-top:4px;min-height:1em}
+  .q.correct .verdict{color:var(--ok)} .q.wrong .verdict{color:var(--bad)}
+
+  .submitbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+  .submitbar .field{margin:0;flex:1;min-width:160px}
+  #status{font-family:var(--mono);font-size:.82rem;margin-top:10px;min-height:1.2em;color:var(--muted)}
+  #status.ok{color:var(--ok)} #status.err{color:var(--bad)}
+  .scoreline{font-family:var(--mono);font-size:.85rem;color:var(--muted);margin-top:4px}
+  .scoreline b{color:var(--ink)}
+
+  .footnote{color:var(--faint);font-size:.76rem;margin-top:18px;max-width:80ch}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-secure-admin-access", "title": "Harden the Edge Firewall Console (fw-edge-01)", "version": "1.0.0", "objectives": ["N10-009:4.3", "APNET:1.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<header>
+  <h1>Lab — Harden the Edge Firewall Console</h1>
+  <p class="lede">You're the new IT apprentice at <b>Brightwell Pottery Studio</b>. A departing contractor left the
+  edge firewall <code>fw-edge-01</code> on factory defaults. The studio manager, <b>Devi Okonkwo</b>, wants the web
+  management console locked down before the online order portal goes live next week. Sign in, then work the lockdown
+  checklist on the right.</p>
+</header>
+
+<div class="grid">
+
+  <!-- ===================== LEFT: simulated appliance ===================== -->
+  <section aria-label="Simulated firewall web console" id="lab-capture">
+    <div class="browser">
+      <div class="chrome-bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="urlbox" id="urlbox">
+          <span class="scheme" id="urlScheme">http://</span><span>172.22.0.1</span>
+          <span class="lock" aria-hidden="true">&#128274;</span>
+        </span>
+      </div>
+
+      <div class="appliance">
+        <div class="topbar">
+          <span class="brand">SentryGate <span class="badge mono">fw-edge-01</span></span>
+          <span class="whoami" id="whoami" hidden>Signed in as <b id="whoUser">admin</b> · <a href="#" id="logout">Sign out</a></span>
+        </div>
+
+        <!-- LOGIN -->
+        <div class="login" id="loginView">
+          <div class="card" role="form" aria-label="Console sign in">
+            <h3>Sign in to SentryGate</h3>
+            <p>Web management console · case-sensitive</p>
+            <div class="field">
+              <label for="liUser">Username</label>
+              <input type="text" id="liUser" autocomplete="off" spellcheck="false" />
+            </div>
+            <div class="field">
+              <label for="liPass">Password</label>
+              <input type="password" id="liPass" autocomplete="off" />
+            </div>
+            <button class="btn" id="loginBtn">Sign in</button>
+            <div class="inline-msg err" id="loginMsg" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <!-- CONSOLE -->
+        <div class="console" id="consoleView" hidden>
+          <nav class="side" aria-label="Console navigation">
+            <div class="group">System</div>
+            <button data-page="users" aria-current="page">User Manager</button>
+            <button data-page="access">Admin Access</button>
+            <div class="group">Status</div>
+            <button data-page="status">Lockdown Status</button>
+          </nav>
+
+          <!-- USERS PAGE -->
+          <div class="page" id="page-users" role="region" aria-label="User Manager">
+            <h2>System &rsaquo; User Manager</h2>
+            <p class="hint">Replace the shared factory login with your own credentials, then add a named administrator.</p>
+
+            <h3 style="font-size:.9rem;color:var(--muted);margin-bottom:6px">Accounts</h3>
+            <div id="userList"></div>
+
+            <fieldset style="margin-top:14px">
+              <legend>Change built-in <code>admin</code> password</legend>
+              <div class="field"><label for="apNew">New password</label><input type="password" id="apNew" autocomplete="off"></div>
+              <div class="field"><label for="apConf">Confirm new password</label><input type="password" id="apConf" autocomplete="off"></div>
+              <button class="btn" id="apSave">Update password</button>
+              <div class="inline-msg" id="apMsg" role="status" aria-live="polite"></div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Add administrator account</legend>
+              <div class="field"><label for="nuUser">Username</label><input type="text" id="nuUser" spellcheck="false" autocomplete="off"></div>
+              <div class="field"><label for="nuFull">Full name</label><input type="text" id="nuFull" autocomplete="off"></div>
+              <div class="field"><label for="nuGroup">Group membership</label>
+                <select id="nuGroup">
+                  <option value=>— select group —</option>
+                  <option value="readonly">readonly</option>
+                  <option value="operators">operators</option>
+                  <option value="admins">admins</option>
+                </select>
+              </div>
+              <div class="field"><label for="nuPass">Password</label><input type="password" id="nuPass" autocomplete="off"></div>
+              <div class="field"><label for="nuConf">Confirm password</label><input type="password" id="nuConf" autocomplete="off"></div>
+              <button class="btn" id="nuAdd">Create account</button>
+              <div class="inline-msg" id="nuMsg" role="status" aria-live="polite"></div>
+            </fieldset>
+          </div>
+
+          <!-- ADMIN ACCESS PAGE -->
+          <div class="page" id="page-access" role="region" aria-label="Admin Access" hidden>
+            <h2>System &rsaquo; Admin Access</h2>
+            <p class="hint">Encrypt the management session, limit where it can be reached, and time out idle sessions.</p>
+
+            <fieldset>
+              <legend>webConfigurator protocol</legend>
+              <div class="radio"><input type="radio" name="proto" id="protoHttp" value="http" checked><label for="protoHttp">HTTP (cleartext, port 80)</label></div>
+              <div class="radio"><input type="radio" name="proto" id="protoHttps" value="https"><label for="protoHttps">HTTPS (TLS, port 443)</label></div>
+            </fieldset>
+
+            <div class="field">
+              <label for="aclNet">Allowed management network (CIDR)</label>
+              <input type="text" id="aclNet" placeholder="e.g. 0.0.0.0/0 (any)" spellcheck="false" autocomplete="off">
+              <div class="hint" style="margin:6px 0 0">The studio's admin workstations live on the management subnet <code>10.40.0.0/24</code>.</div>
+            </div>
+
+            <div class="field">
+              <label for="toMin">Idle session timeout</label>
+              <input type="number" id="toMin" min="0" max="240" step="1" style="max-width:120px"><span class="suffix">minutes</span>
+            </div>
+
+            <button class="btn" id="accSave">Apply access settings</button>
+            <div class="inline-msg" id="accMsg" role="status" aria-live="polite"></div>
+          </div>
+
+          <!-- STATUS PAGE -->
+          <div class="page" id="page-status" role="region" aria-label="Lockdown Status" hidden>
+            <h2>Status &rsaquo; Lockdown</h2>
+            <p class="hint">Live read of the appliance's current hardening posture.</p>
+            <pre class="mono" id="statusDump" style="background:var(--field);border:1px solid var(--line);border-radius:6px;padding:12px;font-size:.82rem;overflow:auto;white-space:pre-wrap"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RIGHT: tasks / questions / submit ===================== -->
+  <aside class="side-stack" aria-label="Lab tasks and submission">
+
+    <div class="card">
+      <h3>Lockdown checklist <span class="tag">N10-009:4.3</span> <span class="tag">APNET:1.4</span></h3>
+      <ol class="tasks" id="taskList"></ol>
+      <p class="scoreline" id="taskScore"></p>
+    </div>
+
+    <div class="card">
+      <h3>Knowledge check</h3>
+      <div id="questionList"></div>
+    </div>
+
+    <div class="card">
+      <h3>Submit completed lab</h3>
+      <div class="submitbar">
+        <div class="field">
+          <label for="callsign">Callsign (no real names)</label>
+          <input type="text" id="callsign" maxlength="32" placeholder="e.g. clay-router-7" spellcheck="false" autocomplete="off">
+        </div>
+        <button class="btn" id="submitBtn" disabled>Submit lab</button>
+      </div>
+      <div class="scoreline" id="readiness"></div>
+      <div id="status" role="status" aria-live="polite"></div>
+      <p style="margin:10px 0 0"><button class="btn ghost" id="resetBtn" type="button">Reset lab</button></p>
+    </div>
+
+  </aside>
+</div>
+
+<p class="footnote">
+  Pseudonymous callsigns only — never enter a real name, email, or student ID. The score and checklist are computed in
+  your browser for formative practice and can be inspected in developer tools; an instructor can re-validate server-side
+  for graded work. &nbsp;© 2026 &lt;REPLACE: Author / Organization&gt;. Clean-room original; appliance UI self-drawn.
+</p>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 1 — screenshot capture
+     Original dependency-free DOM->PNG (SVG foreignObject -> canvas).
+     To use real html2canvas instead: set CAPTURE_ENGINE='html2canvas', paste
+     the minified library directly below this comment, and it will be used.
+     ========================================================================= -->
+<script>
+  const CAPTURE_ENGINE = 'native'; // 'native' (built-in) | 'html2canvas' (paste lib below)
+  /* >>> PASTE MINIFIED html2canvas HERE if CAPTURE_ENGINE === 'html2canvas' <<< */
+
+  async function captureLabArea(node){
+    if (CAPTURE_ENGINE === 'html2canvas' && typeof window.html2canvas === 'function'){
+      const c = await window.html2canvas(node, {backgroundColor:getComputedStyle(document.body).backgroundColor});
+      return c.toDataURL('image/png');
+    }
+    // ---- native capture ----
+    const rect = node.getBoundingClientRect();
+    const w = Math.max(1, Math.ceil(rect.width)), h = Math.max(1, Math.ceil(rect.height));
+    const clone = node.cloneNode(true);
+    // mirror live form state into attributes so typed values appear in the image
+    const srcF = node.querySelectorAll('input,select,textarea');
+    const dstF = clone.querySelectorAll('input,select,textarea');
+    srcF.forEach((el,i)=>{
+      const d = dstF[i]; if(!d) return;
+      if (el.type === 'checkbox' || el.type === 'radio'){ if(el.checked) d.setAttribute('checked',''); else d.removeAttribute('checked'); }
+      else if (el.tagName === 'SELECT'){ [...d.options].forEach(o=>o.removeAttribute('selected')); const idx=el.selectedIndex; if(idx>=0&&d.options[idx]) d.options[idx].setAttribute('selected',''); }
+      else if (el.type === 'password'){ d.setAttribute('value','*'.repeat(el.value.length)); } // don't bake secrets into the PNG
+      else { d.setAttribute('value', el.value); }
+    });
+    const css = document.getElementById('lab-style').textContent;
+    const xhtml = new XMLSerializer().serializeToString(clone);
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject x="0" y="0" width="100%" height="100%">'+
+      '<div xmlns="http://www.w3.org/1999/xhtml"><style>'+css+'</style>'+xhtml+'</div>'+
+      '</foreignObject></svg>';
+    const url = URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+    try{
+      const img = new Image();
+      await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej(new Error('capture render failed'));img.src=url;});
+      const scale = Math.min(1, 900/w);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(w*scale); canvas.height = Math.round(h*scale);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = getComputedStyle(document.body).backgroundColor || '#0e151d';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      return canvas.toDataURL('image/png');
+    } finally { URL.revokeObjectURL(url); }
+  }
+</script>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG + ANSWER KEY, checks, submit
+     ========================================================================= -->
+<script>
+/* ----------------------- PER-LAB CONFIG (edit me) ----------------------- */
+const CONFIG = {
+  assignmentId: 'netplus-secure-admin-access',
+  objectives: ['N10-009:4.3','APNET:1.4'],   // re-map N10-007 -> N10-009:<obj> in labs.json once the 009 PDF is loaded
+  APPS_SCRIPT_URL: 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE',
+  submissionToken: 'REPLACE_PER_COHORT_TOKEN',
+  // answer key (original values; inspectable by design — see footnote)
+  defaultLogin: { user:'admin', pass:'changeme' },
+  requiredUser: { username:'tcaldwell', fullName:'Theo Caldwell', group:'admins' },
+  mgmtCidr: '10.40.0.0/24',
+  timeoutMinutes: 15,
+};
+
+/* ------------------------- simulated appliance state ------------------------- */
+const state = {
+  loggedIn:false,
+  adminPwChanged:false,
+  newUser:null,                 // {username,fullName,group}
+  proto:'http',
+  aclNet:'',
+  timeout:null,
+};
+
+/* --------------------------- password policy --------------------------- */
+function pwPolicy(pw){
+  const checks = {
+    length: pw.length >= 12,
+    upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw),
+    digit: /[0-9]/.test(pw),
+    symbol: /[^A-Za-z0-9]/.test(pw),
+  };
+  const ok = Object.values(checks).every(Boolean);
+  let why = '';
+  if(!checks.length) why='must be at least 12 characters';
+  else if(!checks.upper) why='add an uppercase letter';
+  else if(!checks.lower) why='add a lowercase letter';
+  else if(!checks.digit) why='add a number';
+  else if(!checks.symbol) why='add a special character';
+  return { ok, why };
+}
+function isValidCidr24(v){
+  const m = (v||'').trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/);
+  if(!m) return false;
+  const oct = m.slice(1,5).map(Number);
+  if(oct.some(o=>o>255)) return false;
+  return (v.trim() === CONFIG.mgmtCidr);
+}
+
+/* ----------------------------- TASK DEFINITIONS ----------------------------- */
+const TASKS = [
+  { id:'login',        label:'Sign in with the factory default credentials',
+    sub:'Username and password are case-sensitive', test:()=>state.loggedIn },
+  { id:'chg-admin-pw', label:'Change the built-in admin password',
+    sub:'≥12 chars with upper, lower, digit, and symbol — not the default', test:()=>state.adminPwChanged },
+  { id:'add-admin',    label:'Create administrator '+CONFIG.requiredUser.username+' in the admins group',
+    sub:'Full name "'+CONFIG.requiredUser.fullName+'", strong password', test:()=>!!state.newUser },
+  { id:'force-https',  label:'Switch the web console to HTTPS',
+    sub:'Disable cleartext HTTP management', test:()=>state.proto==='https' },
+  { id:'mgmt-acl',     label:'Restrict management access to '+CONFIG.mgmtCidr,
+    sub:'Limit where the console can be reached', test:()=>isValidCidr24(state.aclNet) },
+  { id:'timeout',      label:'Set the idle session timeout to '+CONFIG.timeoutMinutes+' minutes',
+    sub:'Time out abandoned admin sessions', test:()=>state.timeout===CONFIG.timeoutMinutes }];
+
+/* --------------------------- QUESTION DEFINITIONS --------------------------- */
+const QUESTIONS = [
+  { id:'q1', prompt:'Why change the built-in admin password before exposing the console?',
+    options:[
+      'Default credentials are publicly documented and are the first thing attackers try.',
+      'A changed password makes the appliance run faster.',
+      'It is required to enable the firewall rules engine.',
+      'Cleartext HTTP only works once the password is changed.'],
+    correct:0 },
+  { id:'q2', prompt:'Which password meets a policy of ≥12 chars with all four character sets?',
+    options:[ 'clayoven', 'ClayOven2026', 'cl@y', 'Cl@yOven-2026!' ],
+    correct:3 },
+  { id:'q3', prompt:'What does moving the console from HTTP to HTTPS protect against?',
+    options:[
+      'Power loss during a configuration change.',
+      'Credentials and config being sent over the wire in cleartext.',
+      'Two admins editing the same page at once.',
+      'The firewall forgetting its rules on reboot.'],
+    correct:1 },
+  { id:'q4', prompt:'Why give the technician a named account instead of sharing the admin login?',
+    options:[
+      'Named accounts get a larger session timeout automatically.',
+      'It lets the firewall skip the password policy.',
+      'Individual accountability — you can audit and disable one person without changing a shared password.',
+      'Shared logins cannot be placed in the admins group.'],
+    correct:2 }];
+const answers = {}; // qid -> selected index
+
+/* ------------------------------- DOM wiring ------------------------------- */
+const $ = s=>document.querySelector(s);
+const $$ = s=>[...document.querySelectorAll(s)];
+
+function renderTasks(){
+  $('#taskList').innerHTML = TASKS.map(t=>(
+    '<li id="task-'+t.id+'"><span class="check" aria-hidden="true">&#10003;</span>'+
+    '<span class="t-label" role="checkbox" aria-checked="false">'+t.label+
+    '<span class="t-sub">'+t.sub+'</span></span></li>'
+  )).join('');
+}
+function renderQuestions(){
+  $('#questionList').innerHTML = QUESTIONS.map(q=>(
+    '<fieldset class="q" id="q-'+q.id+'"><legend>'+q.prompt+'</legend>'+
+    q.options.map((o,i)=>(
+      '<label><input type="radio" name="'+q.id+'" value="'+i+'"><span>'+o+'</span></label>'
+    )).join('')+
+    '<div class="verdict" aria-live="polite"></div></fieldset>'
+  )).join('');
+  $$('#questionList input[type=radio]').forEach(r=>{
+    r.addEventListener('change',e=>{ answers[e.target.name]=Number(e.target.value); gradeQuestion(e.target.name); refresh(); });
+  });
+}
+function gradeQuestion(qid){
+  const q = QUESTIONS.find(x=>x.id===qid);
+  const fs = $('#q-'+qid); const v = fs.querySelector('.verdict');
+  if(answers[qid]===undefined){ fs.classList.remove('correct','wrong'); v.textContent=''; return; }
+  const ok = answers[qid]===q.correct;
+  fs.classList.toggle('correct',ok); fs.classList.toggle('wrong',!ok);
+  v.textContent = ok ? '✓ correct' : '✗ not quite — review and try again';
+}
+
+function renderUsers(){
+  const rows = [
+    '<div class="userrow"><span><span class="u">admin</span> <span class="g">built-in account</span></span>'+
+      (state.adminPwChanged?'<span class="pill changed">password changed</span>':'<span class="pill">default password</span>')+'</div>'
+  ];
+  if(state.newUser){
+    rows.push('<div class="userrow"><span><span class="u">'+state.newUser.username+'</span> <span class="g">'+state.newUser.fullName+'</span></span>'+
+      '<span class="pill '+(state.newUser.group==='admins'?'admins':'')+'">'+state.newUser.group+'</span></div>');
+  }
+  $('#userList').innerHTML = rows.join('');
+}
+function renderStatus(){
+  const lines = [
+    'appliance        : fw-edge-01 (SentryGate)',
+    'mgmt url         : '+(state.proto)+'://172.22.0.1',
+    'admin password   : '+(state.adminPwChanged?'changed':'FACTORY DEFAULT (insecure)'),
+    'named admins     : '+(state.newUser?state.newUser.username+' ['+state.newUser.group+']':'none'),
+    'web protocol     : '+state.proto.toUpperCase()+(state.proto==='https'?'  (encrypted)':'  (CLEARTEXT — insecure)'),
+    'mgmt access acl  : '+(state.aclNet||'0.0.0.0/0 (any — unrestricted)'),
+    'idle timeout     : '+(state.timeout===null?'not set':state.timeout+' min')];
+  const dump = $('#statusDump'); if(dump) dump.textContent = lines.join('\n');
+}
+
+/* --------------------------- task / score refresh --------------------------- */
+function passedTasks(){ return TASKS.filter(t=>t.test()); }
+function questionScore(){ return QUESTIONS.filter(q=>answers[q.id]===q.correct).length; }
+function allAnswered(){ return QUESTIONS.every(q=>answers[q.id]!==undefined); }
+
+function refresh(){
+  TASKS.forEach(t=>{
+    const li = $('#task-'+t.id); const ok = t.test();
+    li.classList.toggle('passed',ok);
+    li.querySelector('.t-label').setAttribute('aria-checked', ok?'true':'false');
+  });
+  renderUsers(); renderStatus();
+  const tp = passedTasks().length;
+  $('#taskScore').innerHTML = 'Tasks hardened: <b>'+tp+' / '+TASKS.length+'</b>';
+
+  const tasksDone = tp===TASKS.length;
+  const ready = tasksDone && allAnswered();
+  $('#submitBtn').disabled = !ready;
+  const qs = questionScore();
+  $('#readiness').innerHTML = ready
+    ? 'Ready to submit — score so far <b>'+(tp+qs)+' / '+(TASKS.length+QUESTIONS.length)+'</b>'
+    : (tasksDone ? 'All tasks done — answer all '+QUESTIONS.length+' questions to submit.'
+                 : (TASKS.length-tp)+' task(s) remaining.');
+}
+
+/* ------------------------------- interactions ------------------------------- */
+// login
+$('#loginBtn').addEventListener('click',()=>{
+  const u=$('#liUser').value, p=$('#liPass').value;
+  const msg=$('#loginMsg');
+  if(u===CONFIG.defaultLogin.user && p===CONFIG.defaultLogin.pass){
+    state.loggedIn=true; msg.textContent='';
+    $('#loginView').hidden=true; $('#consoleView').hidden=false; $('#whoami').hidden=false;
+    refresh();
+  } else {
+    msg.textContent='Authentication failed — username and password are case-sensitive. Try the documented factory login (admin / changeme).';
+  }
+});
+$('#logout').addEventListener('click',e=>{e.preventDefault(); state.loggedIn=false; $('#consoleView').hidden=true; $('#whoami').hidden=true; $('#loginView').hidden=false; refresh();});
+
+// nav
+$$('nav.side button').forEach(b=>b.addEventListener('click',()=>{
+  $$('nav.side button').forEach(x=>x.removeAttribute('aria-current'));
+  b.setAttribute('aria-current','page');
+  ['users','access','status'].forEach(p=>$('#page-'+p).hidden = (p!==b.dataset.page));
+}));
+
+// change admin password
+$('#apSave').addEventListener('click',()=>{
+  const pw=$('#apNew').value, c=$('#apConf').value, msg=$('#apMsg');
+  msg.className='inline-msg';
+  if(pw===CONFIG.defaultLogin.pass){ msg.classList.add('err'); msg.textContent='Choose something other than the factory default.'; return; }
+  const pol=pwPolicy(pw);
+  if(!pol.ok){ msg.classList.add('err'); msg.textContent='Weak password — '+pol.why+'.'; return; }
+  if(pw!==c){ msg.classList.add('err'); msg.textContent='The two passwords do not match.'; return; }
+  state.adminPwChanged=true; msg.classList.add('good'); msg.textContent='admin password updated.';
+  $('#apNew').value=''; $('#apConf').value=''; refresh();
+});
+
+// add user
+$('#nuAdd').addEventListener('click',()=>{
+  const u=$('#nuUser').value.trim(), f=$('#nuFull').value.trim(), g=$('#nuGroup').value,
+        pw=$('#nuPass').value, c=$('#nuConf').value, msg=$('#nuMsg');
+  msg.className='inline-msg';
+  if(!u){ msg.classList.add('err'); msg.textContent='Enter a username.'; return; }
+  if(u.toLowerCase()!==CONFIG.requiredUser.username){ msg.classList.add('err'); msg.textContent='This task expects the username '+CONFIG.requiredUser.username+'.'; return; }
+  if(f.toLowerCase()!==CONFIG.requiredUser.fullName.toLowerCase()){ msg.classList.add('err'); msg.textContent='Full name should be "'+CONFIG.requiredUser.fullName+'".'; return; }
+  if(!g){ msg.classList.add('err'); msg.textContent='Select a group for this account.'; return; }
+  const pol=pwPolicy(pw);
+  if(!pol.ok){ msg.classList.add('err'); msg.textContent='Weak password — '+pol.why+'.'; return; }
+  if(pw!==c){ msg.classList.add('err'); msg.textContent='The two passwords do not match.'; return; }
+  state.newUser={username:u.toLowerCase(),fullName:f,group:g};
+  msg.classList.add('good'); msg.textContent='Account '+u.toLowerCase()+' created in group '+g+'.';
+  if(g!=='admins'){ msg.classList.remove('good'); msg.classList.add('err'); msg.textContent='Account created, but it needs the admins group to manage the firewall.'; }
+  $('#nuPass').value=''; $('#nuConf').value=''; refresh();
+});
+
+// admin access
+$('#accSave').addEventListener('click',()=>{
+  const proto = $('input[name=proto]:checked').value;
+  const acl = $('#aclNet').value.trim();
+  const to = $('#toMin').value===''?null:Number($('#toMin').value);
+  const msg=$('#accMsg'); msg.className='inline-msg';
+  state.proto=proto; state.aclNet=acl; state.timeout=(to===null||isNaN(to))?null:to;
+  // reflect HTTPS in the browser chrome
+  const box=$('#urlbox'); box.classList.toggle('secure', proto==='https'); $('#urlScheme').textContent = proto+'://';
+  let notes=[];
+  if(proto!=='https') notes.push('console is still on cleartext HTTP');
+  if(!isValidCidr24(acl)) notes.push('management ACL is not set to '+CONFIG.mgmtCidr);
+  if(state.timeout!==CONFIG.timeoutMinutes) notes.push('idle timeout is not '+CONFIG.timeoutMinutes+' min');
+  if(notes.length){ msg.classList.add('err'); msg.textContent='Saved. Still to do: '+notes.join('; ')+'.'; }
+  else { msg.classList.add('good'); msg.textContent='Access settings applied and hardened.'; }
+  refresh();
+});
+
+/* ------------------------------- submission ------------------------------- */
+$('#submitBtn').addEventListener('click', submitLab);
+async function submitLab(){
+  const status=$('#status'); status.className=''; status.textContent='Capturing and submitting…';
+  const btn=$('#submitBtn'); btn.disabled=true;
+
+  const handle=$('#callsign').value.trim();
+  if(!handle){ status.className='err'; status.textContent='Enter a callsign first (no real names).'; btn.disabled=false; return; }
+
+  const tasks = TASKS.map(t=>({id:t.id,label:t.label,passed:t.test()}));
+  const questions = QUESTIONS.map(q=>({
+    id:q.id, prompt:q.prompt,
+    answer:(answers[q.id]!==undefined)?q.options[answers[q.id]]:null,
+    correct:answers[q.id]===q.correct
+  }));
+  const earned = tasks.filter(t=>t.passed).length + questions.filter(q=>q.correct).length;
+  const total = tasks.length + questions.length;
+
+  let screenshot='';
+  try{ screenshot = await captureLabArea($('#lab-capture')); }
+  catch(e){ screenshot=''; /* capture is supporting evidence only */ }
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    handle: handle.slice(0,32),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks, questions,
+    score: { earned, total },
+    screenshot,
+    submissionToken: CONFIG.submissionToken,
+  };
+
+  if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.startsWith('PASTE')){
+    status.className='err';
+    status.textContent='No Apps Script URL configured. Paste your /exec URL into CONFIG.APPS_SCRIPT_URL.';
+    btn.disabled=false; return;
+  }
+
+  try{
+    // SIMPLE request: no custom headers, text/plain body — avoids CORS preflight
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      status.className='ok';
+      status.innerHTML='Submitted — score '+earned+' / '+total+'. '+(out.docUrl?'<a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your lab record</a>':'Your instructor has the record.');
+    } else {
+      status.className='err'; status.textContent='Server rejected the submission: '+((out&&out.error)||'unknown error')+'.';
+      btn.disabled=false;
+    }
+  } catch(err){
+    // Fallback: fire-and-forget (cannot read docUrl). Confirm with instructor.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) });
+      status.className='ok';
+      status.textContent='Submitted in fallback mode (score '+earned+' / '+total+'). The link could not be read here — confirm receipt with your instructor.';
+    } catch(e2){
+      status.className='err'; status.textContent='Submission failed: '+err.message+'. Check your connection and the Apps Script URL.';
+      btn.disabled=false;
+    }
+  }
+}
+
+/* --------------------------------- reset --------------------------------- */
+$('#resetBtn').addEventListener('click',()=>{
+  Object.assign(state,{loggedIn:false,adminPwChanged:false,newUser:null,proto:'http',aclNet:'',timeout:null});
+  for(const k in answers) delete answers[k];
+  ['liUser','liPass','apNew','apConf','nuUser','nuFull','nuPass','nuConf','aclNet','toMin','callsign'].forEach(id=>{const e=$('#'+id); if(e)e.value='';});
+  $('#nuGroup').value=''; $('#protoHttp').checked=true; $('#urlbox').classList.remove('secure'); $('#urlScheme').textContent='http://';
+  $$('.inline-msg').forEach(m=>{m.textContent='';m.className='inline-msg';});
+  $('#consoleView').hidden=true; $('#whoami').hidden=true; $('#loginView').hidden=false;
+  $('#status').textContent=''; $('#status').className='';
+  renderQuestions(); renderTasks(); refresh();
+});
+
+/* --------------------------------- init --------------------------------- */
+renderTasks(); renderQuestions(); renderUsers(); refresh();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-vpn-client.html",title:"Connect a Tablet to the Staff VPN"}, NEXT={href:"index_netplus-rogue-remote-services.html",title:"NetGuard Console \u2014 Hunt & Disable Rogue Remote-Access Services"}, CRUMB="All Labs \u203a Unit 1 \u2014 Managing My Connections \u203a Topic 1.4";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

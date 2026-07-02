@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<!--
+  =============================================================================
+  Network+ / AP Networking Lab Library
+  Lab: Centralize Remote-Access Authentication with RADIUS (clean-room)
+  assignmentId: netplus-radius-aaa
+  Blueprints : N10-009:4.1 (basic network security concepts / AAA: RADIUS)
+               APNET:3.3   (Making It Work: Connecting, Configuring, Verifying Access)
+               APNET:2.6   (Applying Defense: Securing My Network)  [secondary]
+
+  © 2026 <YOUR NAME / ORG>. All rights reserved.
+  Licensed for use within the Network+ / AP Networking Lab Library.
+  Original work. Built clean-room from the public N10-009 objectives and the
+  public AP Networking (pilot) framework. No third-party lab wording, scenario,
+  hostnames, IP plans, secrets, ordering, or screenshots were copied.
+  =============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Centralize Remote-Access Authentication with RADIUS</title>
+<style>
+  :root{
+    --bg:#0e141b; --panel:#161f2b; --panel-2:#1d2836; --edge:#2c3a4d;
+    --ink:#e8eef6; --muted:#9fb0c3; --accent:#39c0ff; --accent-2:#7ee787;
+    --warn:#ffb454; --bad:#ff6b6b; --ok:#36d399; --focus:#ffd166;
+    --radius:10px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.45}
+  a{color:var(--accent)}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 120px}
+  header.hd{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--edge);padding-bottom:12px;margin-bottom:14px}
+  header.hd h1{font-size:1.18rem;margin:0}
+  .tags{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .tags b{color:var(--accent-2);font-weight:600}
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:16px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);padding:14px}
+  .card h2{font-size:.95rem;margin:0 0 10px;letter-spacing:.02em}
+  .scenario{background:var(--panel-2);border-left:3px solid var(--accent);padding:10px 12px;border-radius:6px;font-size:.9rem;color:var(--muted)}
+  .scenario b{color:var(--ink)}
+
+  /* Console / tabbed sim */
+  .console{margin-top:14px}
+  .tabbar{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--edge);margin-bottom:12px}
+  .tab{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);font:inherit;font-size:.85rem;padding:8px 10px;cursor:pointer;border-radius:6px 6px 0 0}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);background:var(--panel-2)}
+  .tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .panel-body{min-height:240px}
+  fieldset{border:1px solid var(--edge);border-radius:8px;margin:0 0 12px;padding:12px}
+  legend{padding:0 6px;color:var(--accent);font-size:.82rem}
+  label.f{display:block;font-size:.8rem;color:var(--muted);margin:8px 0 3px}
+  input[type=text],input[type=password],select{width:100%;background:#0c121a;border:1px solid var(--edge);color:var(--ink);border-radius:6px;padding:8px 9px;font:inherit;font-size:.88rem}
+  input:focus,select:focus,button:focus-visible,[role="checkbox"]:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>div{flex:1 1 160px}
+  .btn{appearance:none;border:1px solid var(--edge);background:var(--panel-2);color:var(--ink);font:inherit;font-size:.85rem;padding:8px 12px;border-radius:7px;cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#04222e;border-color:var(--accent);font-weight:600}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:5px 9px;font-size:.78rem}
+  .toggle{display:flex;align-items:center;gap:10px;padding:8px 0}
+  .switch{position:relative;width:44px;height:24px;background:#33414f;border-radius:99px;cursor:pointer;border:1px solid var(--edge);flex:0 0 auto}
+  .switch[aria-checked="true"]{background:var(--ok)}
+  .switch::after{content:;position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+  .switch[aria-checked="true"]::after{left:23px}
+  @media (prefers-reduced-motion:reduce){.switch::after{transition:none}}
+  table.tbl{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:6px}
+  table.tbl th,table.tbl td{border:1px solid var(--edge);padding:6px 8px;text-align:left}
+  table.tbl th{color:var(--muted);font-weight:600;background:var(--panel-2)}
+  .chkrow{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.85rem}
+  [role="checkbox"]{width:18px;height:18px;border:1px solid var(--edge);border-radius:4px;background:#0c121a;cursor:pointer;display:inline-grid;place-items:center;flex:0 0 auto}
+  [role="checkbox"][aria-checked="true"]{background:var(--accent);border-color:var(--accent)}
+  [role="checkbox"][aria-checked="true"]::after{content:"✓";color:#04222e;font-size:.8rem;font-weight:700}
+  .ras-card{border:1px solid var(--edge);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--panel-2)}
+  .ras-card h3{margin:0 0 6px;font-size:.86rem;font-family:var(--mono);color:var(--accent-2)}
+
+  /* verify console */
+  .vterm{background:#070b10;border:1px solid var(--edge);border-radius:8px;padding:10px;font-family:var(--mono);font-size:.78rem;white-space:pre-wrap;min-height:90px;color:#cfe;margin-top:8px}
+  .vterm .ok{color:var(--ok)} .vterm .bad{color:var(--bad)} .vterm .warn{color:var(--warn)} .vterm .dim{color:var(--muted)}
+
+  /* task / question panel */
+  .check{display:flex;gap:8px;align-items:flex-start;font-size:.85rem;padding:6px 0;border-bottom:1px dashed var(--edge)}
+  .check:last-child{border-bottom:0}
+  .dot{flex:0 0 auto;width:16px;height:16px;border-radius:50%;border:1px solid var(--edge);margin-top:2px}
+  .dot.pass{background:var(--ok);border-color:var(--ok)}
+  .q{margin:0 0 14px;padding-bottom:10px;border-bottom:1px dashed var(--edge)}
+  .q p.prompt{margin:0 0 6px;font-size:.85rem}
+  .q .opt{display:flex;gap:7px;align-items:flex-start;font-size:.82rem;padding:3px 0;cursor:pointer}
+  .q .opt input{margin-top:3px}
+  .score{font-family:var(--mono);font-size:.85rem;color:var(--muted)}
+  .score b{color:var(--accent-2)}
+
+  /* submission bar */
+  .subbar{position:fixed;left:0;right:0;bottom:0;background:rgba(13,19,27,.96);border-top:1px solid var(--edge);backdrop-filter:blur(6px);padding:10px 16px;z-index:50}
+  .subbar .inner{max-width:1080px;margin:0 auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .subbar label{font-size:.78rem;color:var(--muted)}
+  .subbar input{width:200px}
+  .status{font-size:.8rem;font-family:var(--mono)}
+  .status.ok{color:var(--ok)} .status.bad{color:var(--bad)} .status.work{color:var(--warn)}
+  .foot{font-size:.7rem;color:var(--muted);margin-top:18px;text-align:center}
+  .hidden{display:none}
+  .pill{display:inline-block;font-size:.7rem;font-family:var(--mono);padding:1px 7px;border:1px solid var(--edge);border-radius:99px;color:var(--muted)}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-radius-aaa", "title": "Centralize Remote-Access Authentication with RADIUS", "version": "1.0.0", "objectives": ["N10-009:4.1", "APNET:2.6", "APNET:3.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap">
+  <header class="hd">
+    <div>
+      <h1>Centralize Remote-Access Authentication with RADIUS</h1>
+      <div class="tags">assignmentId <b>netplus-radius-aaa</b> · <b>N10-009:4.1</b> · <b>APNET:3.3</b> · <b>APNET:2.6</b></div>
+    </div>
+    <span class="pill" id="autosave">in-memory state · no PII collected</span>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: simulation -->
+    <main>
+      <section class="card">
+        <h2>Scenario</h2>
+        <div class="scenario">
+          <b>Cedar Ridge Outfitters</b> runs a small HQ in Denver and a warehouse in Boise.
+          Both sites now have their own remote-access server, and each one keeps a separate local
+          account list — so a field technician's password has to be reset in two places, and there is
+          no single record of who logged in where. You're the network engineer. Stand up
+          <b>AUTH-HUB-01</b> as a central <b>RADIUS</b> server so both remote-access servers authenticate
+          field techs against one directory and report accounting to one place.
+        </div>
+      </section>
+
+      <section class="card console" aria-label="AAA configuration console">
+        <div class="tabbar" role="tablist" aria-label="Configuration sections">
+          <button class="tab" role="tab" id="t-role"   aria-selected="true"  aria-controls="p-role">1 · Service Role</button>
+          <button class="tab" role="tab" id="t-clients" aria-selected="false" aria-controls="p-clients">2 · RADIUS Clients</button>
+          <button class="tab" role="tab" id="t-policy"  aria-selected="false" aria-controls="p-policy">3 · Network Policy</button>
+          <button class="tab" role="tab" id="t-ras"     aria-selected="false" aria-controls="p-ras">4 · Remote-Access Servers</button>
+          <button class="tab" role="tab" id="t-verify"  aria-selected="false" aria-controls="p-verify">5 · Verify</button>
+        </div>
+        <div class="panel-body">
+
+          <!-- 1: Service role -->
+          <div id="p-role" role="tabpanel" aria-labelledby="t-role">
+            <fieldset>
+              <legend>AUTH-HUB-01 — server roles</legend>
+              <p class="score">Turn on only what this server actually needs. AUTH-HUB-01 should answer
+              authentication requests <i>from</i> the remote-access servers — it is not itself a remote-access
+              endpoint for clients.</p>
+              <div class="toggle">
+                <span class="switch" id="sw-radius" role="checkbox" aria-checked="false" tabindex="0" aria-label="RADIUS Authentication Service"></span>
+                <div><b>RADIUS Authentication Service</b><br><span class="score">Accepts auth/accounting from registered RADIUS clients.</span></div>
+              </div>
+              <div class="toggle">
+                <span class="switch" id="sw-responder" role="checkbox" aria-checked="false" tabindex="0" aria-label="Remote Access Responder service"></span>
+                <div><b>Remote Access Responder</b><br><span class="score">Terminates VPN/dial sessions directly from end clients.</span></div>
+              </div>
+            </fieldset>
+          </div>
+
+          <!-- 2: RADIUS clients -->
+          <div id="p-clients" role="tabpanel" aria-labelledby="t-clients" class="hidden">
+            <fieldset>
+              <legend>Register a RADIUS client</legend>
+              <div class="row">
+                <div><label class="f" for="c-name">Friendly name</label><input id="c-name" type="text" autocomplete="off" placeholder="RAS-DEN-EDGE"></div>
+                <div><label class="f" for="c-ip">Client IP address</label><input id="c-ip" type="text" autocomplete="off" placeholder="10.55.10.8"></div>
+              </div>
+              <div class="row">
+                <div><label class="f" for="c-secret">Shared secret</label><input id="c-secret" type="password" autocomplete="off" placeholder="shared secret"></div>
+                <div><label class="f" for="c-vendor">Vendor</label>
+                  <select id="c-vendor"><option>RADIUS Standard</option><option>Vendor-Specific</option></select>
+                </div>
+              </div>
+              <div style="margin-top:8px"><button class="btn primary sm" id="c-add">Add client</button></div>
+              <table class="tbl" id="c-table">
+                <thead><tr><th>Friendly name</th><th>IP</th><th>Vendor</th><th>Secret</th><th></th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <p class="score" style="margin-top:8px">Register both remote-access servers as clients. The secret you set
+              here must match exactly on each server in section 4.</p>
+            </fieldset>
+          </div>
+
+          <!-- 3: Network policy -->
+          <div id="p-policy" role="tabpanel" aria-labelledby="t-policy" class="hidden">
+            <fieldset>
+              <legend>Network policy</legend>
+              <label class="f" for="pol-name">Policy name</label>
+              <input id="pol-name" type="text" autocomplete="off" placeholder="FieldTech-Remote-Access">
+              <div class="row">
+                <div>
+                  <label class="f" for="pol-nas">Network access server type</label>
+                  <select id="pol-nas">
+                    <option value=>— select —</option>
+                    <option>Unspecified</option>
+                    <option>Remote Access Server</option>
+                    <option>Wireless Access Point</option>
+                    <option>Ethernet Switch (802.1X)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="f" for="pol-group">Condition — user group</label>
+                  <select id="pol-group">
+                    <option value=>— select —</option>
+                    <option>Field-Techs</option>
+                    <option>Warehouse-Staff</option>
+                    <option>Domain Users</option>
+                  </select>
+                </div>
+              </div>
+              <label class="f">Access permission</label>
+              <div class="row" role="radiogroup" aria-label="Access permission">
+                <label class="opt"><input type="radio" name="access" value="grant"> Grant access if the condition matches</label>
+                <label class="opt"><input type="radio" name="access" value="deny"> Deny access</label>
+              </div>
+              <label class="f">Allowed authentication methods (check all that apply)</label>
+              <div id="auth-methods">
+                <label class="opt"><input type="checkbox" value="EAP-TLS"> EAP-TLS (certificate / smart card)</label>
+                <label class="opt"><input type="checkbox" value="MS-CHAPv2"> MS-CHAPv2</label>
+                <label class="opt"><input type="checkbox" value="CHAP"> CHAP</label>
+                <label class="opt"><input type="checkbox" value="PAP"> PAP</label>
+              </div>
+              <p class="score" style="margin-top:6px">Field techs carry smartcards. Allow certificate-based auth and
+              switch off the weaker methods so a downgrade can't slip through.</p>
+            </fieldset>
+          </div>
+
+          <!-- 4: remote-access servers -->
+          <div id="p-ras" role="tabpanel" aria-labelledby="t-ras" class="hidden">
+            <div id="ras-list"></div>
+            <p class="score">On each remote-access server, point authentication <i>and</i> accounting at AUTH-HUB-01,
+            using the same shared secret you set in section 2.</p>
+          </div>
+
+          <!-- 5: verify -->
+          <div id="p-verify" role="tabpanel" aria-labelledby="t-verify" class="hidden">
+            <fieldset>
+              <legend>Verification console</legend>
+              <p class="score">Runs a simulated check across your config and prints what a real AAA stack would report.</p>
+              <button class="btn sm" id="v-run">&gt; aaa verify --all</button>
+              <div class="vterm" id="vterm" aria-live="polite">Idle. Run a verification to see results.</div>
+            </fieldset>
+          </div>
+
+        </div>
+        <div style="margin-top:6px"><button class="btn ghost sm" id="reset">Reset lab</button></div>
+      </section>
+    </main>
+
+    <!-- RIGHT: tasks + questions -->
+    <aside>
+      <section class="card" id="capture-extra">
+        <h2>Task checklist</h2>
+        <div id="task-list"></div>
+        <p class="score" style="margin-top:8px">Tasks: <b id="task-count">0 / 0</b></p>
+      </section>
+      <section class="card" style="margin-top:14px">
+        <h2>Knowledge check</h2>
+        <div id="q-list"></div>
+        <p class="score">Questions: <b id="q-count">0 / 0</b></p>
+      </section>
+    </aside>
+  </div>
+
+  <p class="foot">© 2026 &lt;Your Name / Org&gt;. Original clean-room lab for the Network+ / AP Networking Lab Library.
+  No real names collected; use a pseudonymous callsign.</p>
+</div>
+
+<!-- submission bar -->
+<div class="subbar">
+  <div class="inner">
+    <label for="handle">Callsign</label>
+    <input id="handle" type="text" maxlength="32" autocomplete="off" placeholder="e.g. ridge-router-7" aria-label="Callsign (pseudonym, no real name)">
+    <button class="btn primary" id="submit">Submit completed lab</button>
+    <span class="status" id="status" role="status" aria-live="polite">Not submitted.</span>
+  </div>
+</div>
+
+<!-- ============================ SCRIPT BLOCK 1 ============================ -->
+<!--
+  INLINE html2canvas GOES HERE.
+
+  Per the library spec the screenshot library must be inlined so the file is
+  dependency-free. The full minified source of html2canvas (v1.4.1, MIT) is
+  ~150 KB and is NOT reproduced here, because pasting a large third-party
+  library from memory would corrupt it. Drop it in with one step:
+
+    1. Get html2canvas.min.js from the official release
+       (github.com/niklasvh/html2canvas, MIT license).
+    2. Paste its entire minified contents between the markers below.
+
+  Until then the lab still works: captureScreenshot() falls back to a built-in
+  canvas that renders the callsign, task results, and score as the evidence PNG.
+-->
+<script id="html2canvas-inline">
+/* >>>>>>>>>>>>>>>> PASTE html2canvas v1.4.1 MINIFIED SOURCE HERE <<<<<<<<<<<<<<<< */
+/* (leave empty to use the built-in fallback capture)                            */
+</script>
+
+<!-- ============================ SCRIPT BLOCK 2 ============================ -->
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== PER-LAB CONFIG ===================== */
+  var CONFIG = {
+    assignmentId: "netplus-radius-aaa",
+    objectives: ["N10-009:4.1", "APNET:3.3", "APNET:2.6"],
+    // Deploy your shared Apps Script web app and paste its /exec URL here:
+    APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+    // Per-cohort secret; must match a Script Property on the server. Rotate per cohort.
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    maxPngBytes: 1500000
+  };
+
+  /* ===================== ANSWER KEY (clean-room, original values) ===================== */
+  var KEY = {
+    secret: "Rk9$mPel7w!",
+    authServer: "AUTH-HUB-01",
+    group: "Field-Techs",
+    nasType: "Remote Access Server",
+    access: "grant",
+    authMethods: ["EAP-TLS"],            // EAP-TLS only; weaker methods OFF
+    clients: [
+      { name: "RAS-DEN-EDGE", ip: "10.55.10.8" },
+      { name: "RAS-BOI-EDGE", ip: "10.55.30.8" }
+    ]
+  };
+
+  /* ===================== SIM STATE ===================== */
+  var state = {
+    radiusService: false,
+    remoteResponder: false,
+    clients: [],                          // {name, ip, vendor, secret}
+    policy: { name:nas:group:access:methods:{} },
+    ras: {
+      "RAS-DEN-EDGE": { authProvider:radiusServer:secret:accounting:},
+      "RAS-BOI-EDGE": { authProvider:radiusServer:secret:accounting:}
+    }
+  };
+
+  /* ===================== QUESTIONS (original wording) ===================== */
+  var QUESTIONS = [
+    { id:"q1", answer:"b",
+      prompt:"RADIUS carries authentication and accounting over which transport and ports?",
+      opts:[ ["a","TCP 49 for everything"],
+             ["b","UDP 1812 (authentication) and UDP 1813 (accounting)"],
+             ["c","TCP 443 (auth) and TCP 80 (accounting)"],
+             ["d","UDP 53 (auth) and UDP 67 (accounting)"] ] },
+    { id:"q2", answer:"c",
+      prompt:"In AAA, the third \u201cA\u201d that RADIUS supplies \u2014 logging session start/stop, bytes, and duration \u2014 is:",
+      opts:[ ["a","Authorization"],["b","Auditing"],["c","Accounting"],["d","Attestation"] ] },
+    { id:"q3", answer:"b",
+      prompt:"The shared secret set identically on AUTH-HUB-01 and on each remote-access server is used to:",
+      opts:[ ["a","Encrypt all of the user\u2019s web traffic end to end"],
+             ["b","Authenticate the client to the server and protect the password attribute \u2014 a mismatch makes requests fail"],
+             ["c","Replace the user\u2019s own password at login"],
+             ["d","Hand out IP addresses to remote clients"] ] },
+    { id:"q4", answer:"b",
+      prompt:"Pick one accurate difference between RADIUS and TACACS+:",
+      opts:[ ["a","RADIUS uses TCP 49; TACACS+ uses UDP"],
+             ["b","TACACS+ encrypts the whole packet body and separates AAA; RADIUS (UDP) mainly protects the password"],
+             ["c","RADIUS is Cisco-proprietary; TACACS+ is the open standard"],
+             ["d","They are identical and interchangeable"] ] },
+    { id:"q5", answer:"b",
+      prompt:"Why require certificate-based EAP-TLS for field-tech remote access instead of PAP?",
+      opts:[ ["a","PAP is faster and more secure"],
+             ["b","EAP-TLS does mutual certificate authentication; PAP sends credentials with no real protection"],
+             ["c","EAP-TLS needs no certificates at all"],
+             ["d","PAP supports smart cards and EAP-TLS does not"] ] }
+  ];
+  var qAnswers = {};
+
+  /* ===================== TASK EVALUATION ===================== */
+  function evalTasks(){
+    // 1: role
+    var roleOk = state.radiusService === true && state.remoteResponder === false;
+    // 2: both clients present, correct IP + matching secret + standard vendor
+    function clientOk(spec){
+      var c = state.clients.find(function(x){ return x.name.trim().toUpperCase()===spec.name.toUpperCase(); });
+      return !!c && c.ip.trim()===spec.ip && c.secret===KEY.secret && /standard/i.test(c.vendor);
+    }
+    var clientsOk = KEY.clients.every(clientOk);
+    // 3: policy
+    var m = state.policy.methods;
+    var methodsOk = m["EAP-TLS"]===true && !m["MS-CHAPv2"] && !m["CHAP"] && !m["PAP"];
+    var policyOk = state.policy.name.trim().length>0 &&
+                   state.policy.nas===KEY.nasType &&
+                   state.policy.group===KEY.group &&
+                   state.policy.access===KEY.access &&
+                   methodsOk;
+    // 4: each RAS points auth+acct at the hub with matching secret
+    function rasOk(name){
+      var r = state.ras[name];
+      return r.authProvider==="RADIUS" && r.radiusServer.trim().toUpperCase()===KEY.authServer &&
+             r.secret===KEY.secret && r.accounting==="RADIUS";
+    }
+    var rasAllOk = rasOk("RAS-DEN-EDGE") && rasOk("RAS-BOI-EDGE");
+
+    return [
+      { id:"role",    label:"AUTH-HUB-01 runs the RADIUS service only (responder left off)", passed:roleOk },
+      { id:"clients", label:"Both remote-access servers registered as RADIUS clients with matching secret", passed:clientsOk },
+      { id:"policy",  label:"FieldTech network policy: Field-Techs \u2192 grant, NAS=Remote Access Server, EAP-TLS only", passed:policyOk },
+      { id:"ras",     label:"Both RAS use RADIUS for authentication and accounting against AUTH-HUB-01", passed:rasAllOk }
+    ];
+  }
+
+  /* ===================== RENDER: tasks & questions ===================== */
+  var elTaskList=document.getElementById("task-list");
+  var elTaskCount=document.getElementById("task-count");
+  function renderTasks(){
+    var t=evalTasks(), pass=0;
+    elTaskList.innerHTML=;
+    t.forEach(function(x){
+      if(x.passed) pass++;
+      var d=document.createElement("div"); d.className="check";
+      d.innerHTML='<span class="dot'+(x.passed?' pass':'')+'" aria-hidden="true"></span><span>'+x.label+'</span>';
+      elTaskList.appendChild(d);
+    });
+    elTaskCount.textContent=pass+" / "+t.length;
+    return {pass:pass,total:t.length,detail:t};
+  }
+
+  var elQList=document.getElementById("q-list");
+  var elQCount=document.getElementById("q-count");
+  function renderQuestions(){
+    elQList.innerHTML=;
+    QUESTIONS.forEach(function(q){
+      var box=document.createElement("div"); box.className="q";
+      var p=document.createElement("p"); p.className="prompt"; p.textContent=q.prompt; box.appendChild(p);
+      q.opts.forEach(function(o){
+        var lab=document.createElement("label"); lab.className="opt";
+        var inp=document.createElement("input"); inp.type="radio"; inp.name=q.id; inp.value=o[0];
+        if(qAnswers[q.id]===o[0]) inp.checked=true;
+        inp.addEventListener("change",function(){ qAnswers[q.id]=o[0]; updateQCount(); });
+        var span=document.createElement("span"); span.textContent=o[1];
+        lab.appendChild(inp); lab.appendChild(span); box.appendChild(lab);
+      });
+      elQList.appendChild(box);
+    });
+    updateQCount();
+  }
+  function evalQuestions(){
+    return QUESTIONS.map(function(q){
+      return { id:q.id, prompt:q.prompt, answer:(qAnswers[q.id]||), correct:qAnswers[q.id]===q.answer };
+    });
+  }
+  function updateQCount(){
+    var c=evalQuestions().filter(function(x){return x.correct;}).length;
+    elQCount.textContent=c+" / "+QUESTIONS.length;
+  }
+
+  /* ===================== RENDER: RAS cards ===================== */
+  function renderRas(){
+    var host=document.getElementById("ras-list"); host.innerHTML=;
+    [["RAS-DEN-EDGE","Denver HQ"],["RAS-BOI-EDGE","Boise warehouse"]].forEach(function(pair){
+      var name=pair[0], r=state.ras[name];
+      var card=document.createElement("div"); card.className="ras-card";
+      card.innerHTML='<h3>'+name+' <span class="score">('+pair[1]+')</span></h3>';
+      var grid=document.createElement("div"); grid.className="row";
+
+      grid.appendChild(field("Authentication provider", select(["Local","RADIUS"], r.authProvider, function(v){ r.authProvider=v; sync(); })));
+      grid.appendChild(field("RADIUS server name", text(r.radiusServer, "AUTH-HUB-01", function(v){ r.radiusServer=v; sync(); })));
+      grid.appendChild(field("Shared secret", pass(r.secret, function(v){ r.secret=v; sync(); })));
+      grid.appendChild(field("Accounting provider", select(["Local","RADIUS"], r.accounting, function(v){ r.accounting=v; sync(); })));
+      card.appendChild(grid); host.appendChild(card);
+    });
+  }
+  function field(label,node){ var d=document.createElement("div"); var l=document.createElement("label"); l.className="f"; l.textContent=label; d.appendChild(l); d.appendChild(node); return d; }
+  function text(val,ph,on){ var i=document.createElement("input"); i.type="text"; i.value=val; i.placeholder=ph||; i.autocomplete="off"; i.addEventListener("input",function(){on(i.value);}); return i; }
+  function pass(val,on){ var i=document.createElement("input"); i.type="password"; i.value=val; i.autocomplete="off"; i.addEventListener("input",function(){on(i.value);}); return i; }
+  function select(opts,val,on){ var s=document.createElement("select"); opts.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o||"— select —"; if(o===val)op.selected=true; s.appendChild(op); }); s.addEventListener("change",function(){on(s.value);}); return s; }
+
+  /* ===================== RENDER: clients table ===================== */
+  function renderClients(){
+    var tb=document.querySelector("#c-table tbody"); tb.innerHTML=;
+    state.clients.forEach(function(c,idx){
+      var tr=document.createElement("tr");
+      tr.innerHTML="<td>"+esc(c.name)+"</td><td>"+esc(c.ip)+"</td><td>"+esc(c.vendor)+"</td><td>"+(c.secret?"\u2022\u2022\u2022\u2022":"\u2014")+"</td>";
+      var td=document.createElement("td");
+      var b=document.createElement("button"); b.className="btn ghost sm"; b.textContent="remove";
+      b.addEventListener("click",function(){ state.clients.splice(idx,1); renderClients(); sync(); });
+      td.appendChild(b); tr.appendChild(td); tb.appendChild(tr);
+    });
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];}); }
+
+  /* ===================== VERIFY CONSOLE (realistic output) ===================== */
+  function runVerify(){
+    var out=document.getElementById("vterm"); var L=[];
+    L.push('<span class="dim">$ aaa verify --all   (host: AUTH-HUB-01)</span>');
+    L.push(state.radiusService
+      ? '<span class="ok">[ok]</span>   radius service: <b>listening</b> udp/1812, udp/1813'
+      : '<span class="bad">[fail]</span> radius service: <b>not running</b> \u2014 enable it in section 1');
+    if(state.remoteResponder)
+      L.push('<span class="warn">[warn]</span> remote-access responder is enabled but not required on a RADIUS hub');
+
+    KEY.clients.forEach(function(spec){
+      var c=state.clients.find(function(x){return x.name.trim().toUpperCase()===spec.name.toUpperCase();});
+      if(!c){ L.push('<span class="bad">[fail]</span> client <b>'+spec.name+'</b> not registered'); return; }
+      if(c.ip.trim()!==spec.ip) L.push('<span class="bad">[fail]</span> client '+spec.name+': ip '+esc(c.ip)+' expected '+spec.ip);
+      else if(c.secret!==KEY.secret) L.push('<span class="bad">[fail]</span> client '+spec.name+': shared-secret mismatch \u2014 access-request will be dropped');
+      else L.push('<span class="ok">[ok]</span>   client '+spec.name+' ('+spec.ip+') trusted');
+    });
+
+    var m=state.policy.methods, methodsOk=m["EAP-TLS"]&&!m["MS-CHAPv2"]&&!m["CHAP"]&&!m["PAP"];
+    if(!state.policy.name.trim()) L.push('<span class="bad">[fail]</span> no network policy defined');
+    else{
+      L.push((state.policy.group===KEY.group&&state.policy.access==="grant")
+        ? '<span class="ok">[ok]</span>   policy "'+esc(state.policy.name)+'": grant when group=Field-Techs'
+        : '<span class="bad">[fail]</span> policy "'+esc(state.policy.name)+'": condition/permission not set to grant Field-Techs');
+      if(state.policy.nas!==KEY.nasType) L.push('<span class="warn">[warn]</span> NAS type is "'+esc(state.policy.nas||"unset")+'", expected Remote Access Server');
+      L.push(methodsOk
+        ? '<span class="ok">[ok]</span>   auth methods: EAP-TLS only (weaker methods disabled)'
+        : '<span class="bad">[fail]</span> auth methods: enable EAP-TLS and disable PAP/CHAP/MS-CHAPv2');
+    }
+
+    Object.keys(state.ras).forEach(function(name){
+      var r=state.ras[name], ok=r.authProvider==="RADIUS"&&r.radiusServer.trim().toUpperCase()===KEY.authServer&&r.secret===KEY.secret&&r.accounting==="RADIUS";
+      if(ok) L.push('<span class="ok">[ok]</span>   '+name+' \u2192 RADIUS auth+acct via AUTH-HUB-01');
+      else if(r.authProvider==="RADIUS"&&r.secret&&r.secret!==KEY.secret)
+        L.push('<span class="bad">[fail]</span> '+name+': secret does not match AUTH-HUB-01 \u2014 logins will be rejected');
+      else L.push('<span class="bad">[fail]</span> '+name+': set auth+accounting to RADIUS pointing at AUTH-HUB-01');
+    });
+
+    var t=evalTasks(); var done=t.every(function(x){return x.passed;});
+    L.push('<span class="dim">\u2014</span>');
+    L.push(done?'<span class="ok">all checks passed.</span>':'<span class="warn">configuration incomplete \u2014 see failures above.</span>');
+    out.innerHTML=L.join("\n");
+  }
+
+  /* ===================== WIRE-UP ===================== */
+  function sync(){ renderTasks(); }
+
+  // tabs
+  var tabs=[].slice.call(document.querySelectorAll('[role="tab"]'));
+  function showTab(tab){
+    tabs.forEach(function(t){
+      var sel=t===tab; t.setAttribute("aria-selected",sel?"true":"false");
+      document.getElementById(t.getAttribute("aria-controls")).classList.toggle("hidden",!sel);
+    });
+    tab.focus();
+  }
+  tabs.forEach(function(t,i){
+    t.addEventListener("click",function(){ showTab(t); });
+    t.addEventListener("keydown",function(e){
+      if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
+        e.preventDefault();
+        var n=(i+(e.key==="ArrowRight"?1:tabs.length-1))%tabs.length; showTab(tabs[n]);
+      }
+    });
+  });
+
+  // role switches
+  function bindSwitch(el,setter){
+    function toggle(){ var v=el.getAttribute("aria-checked")!=="true"; el.setAttribute("aria-checked",v?"true":"false"); setter(v); sync(); }
+    el.addEventListener("click",toggle);
+    el.addEventListener("keydown",function(e){ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); toggle(); } });
+  }
+  bindSwitch(document.getElementById("sw-radius"),function(v){ state.radiusService=v; });
+  bindSwitch(document.getElementById("sw-responder"),function(v){ state.remoteResponder=v; });
+
+  // clients add
+  document.getElementById("c-add").addEventListener("click",function(){
+    var name=document.getElementById("c-name").value.trim();
+    var ip=document.getElementById("c-ip").value.trim();
+    var secret=document.getElementById("c-secret").value;
+    var vendor=document.getElementById("c-vendor").value;
+    if(!name||!ip){ flash("Enter a friendly name and IP for the client."); return; }
+    if(!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)){ flash("That IP isn't a valid IPv4 address (e.g. 10.55.10.8)."); return; }
+    state.clients.push({name:name,ip:ip,secret:secret,vendor:vendor});
+    document.getElementById("c-name").value=; document.getElementById("c-ip").value=; document.getElementById("c-secret").value=;
+    renderClients(); sync();
+  });
+
+  // policy bindings
+  document.getElementById("pol-name").addEventListener("input",function(e){ state.policy.name=e.target.value; sync(); });
+  document.getElementById("pol-nas").addEventListener("change",function(e){ state.policy.nas=e.target.value; sync(); });
+  document.getElementById("pol-group").addEventListener("change",function(e){ state.policy.group=e.target.value; sync(); });
+  [].slice.call(document.querySelectorAll('input[name="access"]')).forEach(function(r){
+    r.addEventListener("change",function(){ state.policy.access=r.value; sync(); });
+  });
+  [].slice.call(document.querySelectorAll('#auth-methods input')).forEach(function(c){
+    c.addEventListener("change",function(){ state.policy.methods[c.value]=c.checked; sync(); });
+  });
+
+  document.getElementById("v-run").addEventListener("click",runVerify);
+
+  // reset
+  document.getElementById("reset").addEventListener("click",function(){
+    state.radiusService=false; state.remoteResponder=false; state.clients=[];
+    state.policy={name:nas:group:access:methods:{}};
+    Object.keys(state.ras).forEach(function(k){ state.ras[k]={authProvider:radiusServer:secret:accounting:}; });
+    qAnswers={};
+    document.getElementById("sw-radius").setAttribute("aria-checked","false");
+    document.getElementById("sw-responder").setAttribute("aria-checked","false");
+    document.getElementById("pol-name").value=; document.getElementById("pol-nas").value=; document.getElementById("pol-group").value=;
+    [].slice.call(document.querySelectorAll('input[name="access"]')).forEach(function(r){r.checked=false;});
+    [].slice.call(document.querySelectorAll('#auth-methods input')).forEach(function(c){c.checked=false;});
+    document.getElementById("vterm").textContent="Idle. Run a verification to see results.";
+    renderClients(); renderRas(); renderQuestions(); sync();
+    setStatus("Lab reset.",);
+  });
+
+  function flash(msg){ setStatus(msg,"bad"); }
+
+  /* ===================== SCREENSHOT ===================== */
+  function captureScreenshot(){
+    var target=document.querySelector(".grid");
+    if(window.html2canvas){
+      return window.html2canvas(target,{backgroundColor:"#0e141b",scale:1,logging:false})
+        .then(function(cv){ return cv.toDataURL("image/png"); });
+    }
+    // fallback: render results onto a canvas so the PNG still carries evidence
+    return new Promise(function(resolve){
+      var t=evalTasks(), q=evalQuestions();
+      var W=720,H=460, cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+      var x=cv.getContext("2d");
+      x.fillStyle="#0e141b"; x.fillRect(0,0,W,H);
+      x.fillStyle="#39c0ff"; x.font="bold 18px monospace";
+      x.fillText("Cedar Ridge \u2014 RADIUS / AAA lab", 24,34);
+      x.fillStyle="#9fb0c3"; x.font="12px monospace";
+      x.fillText("assignmentId: "+CONFIG.assignmentId+"   "+CONFIG.objectives.join("  "),24,54);
+      x.fillText("callsign: "+(document.getElementById("handle").value||"(none)"),24,72);
+      x.fillText(new Date().toISOString(),24,90);
+      var y=124; x.font="13px monospace";
+      x.fillStyle="#e8eef6"; x.fillText("Tasks",24,y); y+=20;
+      t.forEach(function(it){ x.fillStyle=it.passed?"#36d399":"#ff6b6b"; x.fillText((it.passed?"[x] ":"[ ] ")+it.label.slice(0,72),24,y); y+=18; });
+      y+=10; x.fillStyle="#e8eef6"; x.fillText("Questions correct: "+q.filter(function(a){return a.correct;}).length+" / "+q.length,24,y);
+      resolve(cv.toDataURL("image/png"));
+    });
+  }
+
+  /* ===================== SUBMIT ===================== */
+  function setStatus(msg,cls){ var s=document.getElementById("status"); s.textContent=msg; s.className="status "+(cls||); }
+
+  document.getElementById("submit").addEventListener("click",function(){
+    var handle=document.getElementById("handle").value.trim();
+    if(!handle){ setStatus("Enter a callsign first (no real names).","bad"); return; }
+    if(handle.length>32){ setStatus("Callsign too long (max 32).","bad"); return; }
+
+    var tRes=renderTasks(), qRes=evalQuestions();
+    var earned=tRes.pass + qRes.filter(function(q){return q.correct;}).length;
+    var total=tRes.total + qRes.length;
+
+    setStatus("Capturing & submitting\u2026","work");
+    captureScreenshot().then(function(png){
+      if(png && png.length>CONFIG.maxPngBytes) png=png.substring(0,0); // safety; server also caps
+      var payload={
+        assignmentId: CONFIG.assignmentId,
+        handle: handle,
+        clientTimestamp: new Date().toISOString(),
+        objectives: CONFIG.objectives,
+        tasks: tRes.detail.map(function(t){ return {id:t.id,label:t.label,passed:t.passed}; }),
+        questions: qRes.map(function(q){ return {id:q.id,prompt:q.prompt,answer:q.answer,correct:q.correct}; }),
+        score: { earned: earned, total: total },
+        screenshot: png || submissionToken: CONFIG.submissionToken
+      };
+      postSubmission(payload);
+    }).catch(function(err){
+      setStatus("Screenshot failed: "+err.message+". Submitting without image\u2026","work");
+      // submit anyway, without the screenshot
+      var tRes2=renderTasks(), qRes2=evalQuestions();
+      postSubmission({
+        assignmentId:CONFIG.assignmentId, handle:handle, clientTimestamp:new Date().toISOString(),
+        objectives:CONFIG.objectives,
+        tasks:tRes2.detail.map(function(t){return{id:t.id,label:t.label,passed:t.passed};}),
+        questions:qRes2.map(function(q){return{id:q.id,prompt:q.prompt,answer:q.answer,correct:q.correct};}),
+        score:{earned:tRes2.pass+qRes2.filter(function(q){return q.correct;}).length, total:tRes2.total+qRes2.length},
+        screenshot:submissionToken:CONFIG.submissionToken
+      });
+    });
+  });
+
+  function postSubmission(payload){
+    if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      setStatus("APPS_SCRIPT_URL not configured \u2014 ask your instructor.","bad"); return;
+    }
+    // Simple request: NO custom headers, default text/plain body \u2192 no CORS preflight.
+    fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) })
+      .then(function(res){ return res.json(); })
+      .then(function(out){
+        if(out && out.success){
+          var link = out.docUrl ? ' \u2014 ' : ;
+          setStatus("Submitted \u2713  score "+payload.score.earned+"/"+payload.score.total+(out.docUrl?:),"ok");
+          if(out.docUrl){
+            var s=document.getElementById("status");
+            var a=document.createElement("a"); a.href=out.docUrl; a.target="_blank"; a.rel="noopener"; a.textContent="open report";
+            s.appendChild(document.createTextNode(" \u2014 ")); s.appendChild(a);
+          }
+        } else {
+          setStatus("Server rejected submission"+(out&&out.error?(": "+out.error):)+".","bad");
+        }
+      })
+      .catch(function(){
+        // Locked-down fallback: fire-and-forget, can't read docUrl.
+        fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) })
+          .then(function(){ setStatus("Submitted (no confirmation available) \u2014 confirm with your instructor.","work"); })
+          .catch(function(e){ setStatus("Submission failed: "+e.message,"bad"); });
+      });
+  }
+
+  /* ===================== INIT ===================== */
+  renderClients(); renderRas(); renderQuestions(); sync();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-dhcp-rescue.html",title:"NetDesk Lab \u2014 Outage at Greenline Garden Center"}, NEXT={href:"index_netplus-ipconfig-gateway.html",title:"Lab: No Internet on the Drafting Bay PC \u2014 IP / Gateway Troubleshooting"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.6";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

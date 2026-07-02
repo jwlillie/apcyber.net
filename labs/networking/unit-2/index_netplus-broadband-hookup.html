@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Provision the Maker Loft Broadband Link</title>
+<!--
+  ============================================================================
+  Network+ / AP Networking Lab Library
+  Lab: netplus-broadband-hookup  ("Provision the Maker Loft Broadband Link")
+
+  CLEAN-ROOM ORIGINAL. Built from the public N10-009 transmission-media
+  objective and the AP Networking framework (Topic 2.3.B). It teaches the same
+  factual procedure as common cable-modem hookup labs — choose the correct WAN
+  media, connect a broadband gateway, power it, attach a LAN client, verify the
+  link — using entirely original scenario, device names, port model, cable tray,
+  task/question wording, and self-drawn SVG. No third-party lab wording, values,
+  hostnames, ordering, or screenshots are reused.
+
+  © 2026 <AUTHOR NAME>. Licensed for use within this author's AP Networking /
+  CompTIA Network+ Lab Library. Replace this notice with your name/license.
+
+  Blueprint tags:
+    Primary  : N10-009 1.5 (Compare and contrast transmission media and
+               transceivers)  ·  AP Networking 2.3.B (Determine appropriate data
+               transmission media to meet specified user needs)
+    Secondary: N10-009 2.1 (install/configure devices) · AP Networking 2.2.D
+               (SOHO components: modem/router + ISP external connection)
+    N10-007 equivalent (legacy): 2.1 cabling solution / 2.5 WAN service types.
+
+  NOTE for the build team: the CompTIA objectives PDF in the project is N10-007
+  (retired). Swap in the official N10-009 objectives so the 1.5 / 2.1 tags above
+  can be verified rather than asserted.
+  ============================================================================
+-->
+<style>
+  :root{
+    --ink:#0e1622; --panel:#152234; --panel-2:#1b2c42; --line:#27405f;
+    --text:#dfe9f4; --muted:#8aa1bd; --faint:#5d7593;
+    --cyan:#3fd6c8;          /* link up */
+    --amber:#f2a93b;         /* power */
+    --bad:#ff6b6b;           /* error / fail */
+    --good:#52e08a;          /* pass */
+    --pick:#7cc4ff;          /* selected cable */
+    --radius:14px;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 80% -10%, #16314a 0%, transparent 60%),
+      var(--ink);
+    color:var(--text); font-family:var(--sans); line-height:1.5;
+    padding:24px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px;margin:0 auto}
+  header.lab{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;margin-bottom:18px;
+  }
+  .eyebrow{
+    font:600 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;
+    color:var(--cyan);margin:0 0 6px;
+  }
+  h1{font-size:clamp(20px,3.4vw,28px);margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
+  .sub{color:var(--muted);max-width:62ch;margin:0}
+  .tagchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .chip{
+    font:600 10.5px/1 var(--mono);letter-spacing:.04em;color:var(--faint);
+    border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#0d1828;
+  }
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;
+  }
+  .card h2{font-size:13px;margin:0 0 12px;font-weight:700;letter-spacing:.02em;
+    text-transform:uppercase;color:var(--muted);font-family:var(--mono)}
+
+  /* ---------- topology canvas ---------- */
+  .canvas-card{padding:10px}
+  svg.topo{width:100%;height:auto;display:block;border-radius:10px;background:
+    linear-gradient(180deg,#0c1726,#0a131f);}
+  .dev-label{font:600 12px var(--mono);fill:var(--text)}
+  .dev-sub{font:500 10px var(--mono);fill:var(--faint)}
+  .port{cursor:pointer}
+  .port circle{transition:r .12s ease, fill .12s ease}
+  .port:focus-visible{outline:none}
+  .port:focus-visible circle.ring{stroke:var(--pick);stroke-width:3}
+  .port-cap{font:500 9.5px var(--mono);fill:var(--muted)}
+
+  /* cable tray */
+  .tray{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .cable{
+    appearance:none;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--text);border-radius:10px;padding:9px 11px;font:600 12px var(--sans);
+    display:flex;align-items:center;gap:8px;transition:border-color .12s,background .12s;
+  }
+  .cable .swatch{width:22px;height:6px;border-radius:3px;display:inline-block}
+  .cable .meta{font:500 10px var(--mono);color:var(--faint)}
+  .cable[aria-pressed="true"]{border-color:var(--pick);background:#10283f;box-shadow:0 0 0 1px var(--pick) inset}
+  .cable:focus-visible{outline:2px solid var(--pick);outline-offset:2px}
+  .tray-hint{color:var(--muted);font-size:12.5px;margin:6px 2px 0}
+
+  .feedback{
+    margin-top:10px;min-height:20px;font:500 12.5px var(--mono);
+    padding:9px 11px;border-radius:9px;border:1px solid transparent;
+  }
+  .feedback.err{color:var(--bad);border-color:#5a2730;background:#21141a}
+  .feedback.ok{color:var(--good);border-color:#27512f;background:#11221a}
+  .feedback.info{color:var(--muted);border-color:var(--line);background:#0d1828}
+
+  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button.btn{
+    appearance:none;cursor:pointer;border-radius:10px;font:600 13px var(--sans);
+    padding:10px 14px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  }
+  button.btn:focus-visible{outline:2px solid var(--pick);outline-offset:2px}
+  button.btn.ghost{background:transparent}
+  button.btn.cyan{background:var(--cyan);color:#062420;border-color:var(--cyan)}
+  button.btn:hover{border-color:var(--pick)}
+
+  /* ---------- task / question panel ---------- */
+  ol.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .task{display:flex;gap:10px;align-items:flex-start;
+    padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+  .task .mark{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:2px solid var(--faint);
+    margin-top:1px;display:grid;place-items:center;font:700 11px var(--mono);color:transparent}
+  .task[data-pass="true"] .mark{border-color:var(--good);background:var(--good);color:#062414}
+  .task .body{font-size:12.8px}
+  .task .body b{font-weight:600}
+
+  .q{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+  .q legend{font:600 12.8px var(--sans);padding:0;margin-bottom:7px}
+  .opt{display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border-radius:9px;cursor:pointer}
+  .opt:hover{background:#0f2236}
+  .opt input{margin-top:2px;accent-color:var(--cyan)}
+  .opt span{font-size:12.6px}
+  fieldset{border:0;margin:0;padding:0}
+  .qstate{font:600 11px var(--mono);margin-top:4px;min-height:14px}
+  .qstate.good{color:var(--good)} .qstate.bad{color:var(--bad)}
+
+  .scorebar{display:flex;align-items:center;justify-content:space-between;
+    margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .score{font:700 14px var(--mono)}
+  .score small{color:var(--muted);font-weight:500}
+
+  /* ---------- submission ---------- */
+  .submit-card{margin-top:18px}
+  .field{display:flex;flex-direction:column;gap:6px;max-width:340px}
+  .field label{font:600 12px var(--sans)}
+  .field .help{color:var(--muted);font-size:11.5px}
+  input.handle{
+    background:#0c1828;border:1px solid var(--line);border-radius:10px;color:var(--text);
+    font:600 14px var(--mono);padding:11px 12px;letter-spacing:.02em;
+  }
+  input.handle:focus-visible{outline:2px solid var(--pick);outline-offset:1px}
+  .submit-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+  #subStatus{font:500 12.5px var(--mono);min-height:18px}
+  #subStatus.good{color:var(--good)} #subStatus.bad{color:var(--bad)} #subStatus.busy{color:var(--amber)}
+  #subStatus a{color:var(--cyan)}
+  footer.lic{margin-top:22px;color:var(--faint);font:500 11px var(--mono);line-height:1.6}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-broadband-hookup", "title": "Lab — Provision the Maker Loft Broadband Link", "version": "1.0.0", "objectives": ["N10-009:1.5", "N10-009:5.2", "APNET:2.1"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab">
+    <div>
+      <p class="eyebrow">Field Provisioning · Physical Layer</p>
+      <h1>Provision the Maker Loft Broadband Link</h1>
+      <p class="sub">Tidewater Maker Loft just had broadband installed. The ISP left a
+        coax service line terminated at a wall demarcation jack and a pre-activated
+        gateway in the box. You're the on-call field tech — cable it correctly, power it,
+        attach the front-desk PC, and confirm the loft is online.</p>
+      <div class="tagchips">
+        <span class="chip">N10-009 · 1.5</span>
+        <span class="chip">AP NET · 2.3.B</span>
+        <span class="chip">assignmentId: netplus-broadband-hookup</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ====================== SIMULATION ====================== -->
+    <section class="card canvas-card" aria-label="Cabling workspace">
+      <svg class="topo" viewBox="0 0 800 470" role="group"
+           aria-label="Topology canvas: ISP demarcation jack, broadband gateway, front-desk PC, and power outlet with connection ports.">
+        <!-- connection layer (lines drawn here, under devices) -->
+        <g id="links"></g>
+
+        <!-- ISP demarc jack -->
+        <g>
+          <rect x="36" y="92" width="120" height="86" rx="10" fill="#10202f" stroke="#27405f"/>
+          <text class="dev-label" x="52" y="120">Demarc</text>
+          <text class="dev-sub" x="52" y="136">wall jack · WAN</text>
+          <text class="dev-sub" x="52" y="150">ISP: Beacon Cable</text>
+        </g>
+        <text class="port-cap" x="150" y="142" text-anchor="end">COAX (F-type)</text>
+        <g class="port" id="p_demarc" tabindex="0" role="button"
+           aria-label="Demarcation jack coax port. Accepts coaxial media.">
+          <circle class="ring" cx="156" cy="135" r="11" fill="none" stroke="#3a587a" stroke-width="2"/>
+          <circle cx="156" cy="135" r="6" fill="#2c4a6b"/>
+        </g>
+
+        <!-- Gateway -->
+        <g>
+          <rect x="300" y="78" width="200" height="150" rx="14" fill="#13243a" stroke="#2c4a6b"/>
+          <text class="dev-label" x="320" y="106">Northwind GW-410</text>
+          <text class="dev-sub" x="320" y="122">broadband gateway</text>
+          <!-- status LED -->
+          <circle id="gwLed" cx="478" cy="98" r="6" fill="#3a2a14" stroke="#5d4a22"/>
+          <text class="dev-sub" id="gwLedTxt" x="320" y="206">status: offline</text>
+        </g>
+        <!-- gateway WAN (left) -->
+        <text class="port-cap" x="296" y="146" text-anchor="end">WAN</text>
+        <g class="port" id="p_gw_wan" tabindex="0" role="button"
+           aria-label="Gateway WAN port. Accepts coaxial media.">
+          <circle class="ring" cx="300" cy="140" r="11" fill="none" stroke="#3a587a" stroke-width="2"/>
+          <circle cx="300" cy="140" r="6" fill="#2c4a6b"/>
+        </g>
+        <!-- gateway LAN (right) -->
+        <text class="port-cap" x="504" y="158" text-anchor="start">LAN</text>
+        <g class="port" id="p_gw_lan" tabindex="0" role="button"
+           aria-label="Gateway LAN port. Accepts Ethernet media.">
+          <circle class="ring" cx="500" cy="152" r="11" fill="none" stroke="#3a587a" stroke-width="2"/>
+          <circle cx="500" cy="152" r="6" fill="#2c4a6b"/>
+        </g>
+        <!-- gateway power (bottom) -->
+        <text class="port-cap" x="400" y="250" text-anchor="middle">PWR (12V DC)</text>
+        <g class="port" id="p_gw_pwr" tabindex="0" role="button"
+           aria-label="Gateway power jack. Accepts the AC-to-DC power adapter.">
+          <circle class="ring" cx="400" cy="228" r="11" fill="none" stroke="#3a587a" stroke-width="2"/>
+          <circle cx="400" cy="228" r="6" fill="#2c4a6b"/>
+        </g>
+
+        <!-- Front desk PC -->
+        <g>
+          <rect x="636" y="92" width="128" height="92" rx="10" fill="#10202f" stroke="#27405f"/>
+          <text class="dev-label" x="652" y="120">LOFT-FRONT01</text>
+          <text class="dev-sub" x="652" y="136">front-desk PC</text>
+          <text class="dev-sub" id="pcNet" x="652" y="156">net: no link</text>
+        </g>
+        <text class="port-cap" x="650" y="180" text-anchor="end">NIC</text>
+        <g class="port" id="p_pc_nic" tabindex="0" role="button"
+           aria-label="Front-desk PC network port. Accepts Ethernet media.">
+          <circle class="ring" cx="636" cy="174" r="11" fill="none" stroke="#3a587a" stroke-width="2"/>
+          <circle cx="636" cy="174" r="6" fill="#2c4a6b"/>
+        </g>
+
+        <!-- Power outlet -->
+        <g>
+          <rect x="338" y="362" width="124" height="64" rx="10" fill="#10202f" stroke="#27405f"/>
+          <text class="dev-label" x="354" y="390">Wall outlet</text>
+          <text class="dev-sub" x="354" y="406">120V AC + adapter</text>
+        </g>
+        <text class="port-cap" x="400" y="352" text-anchor="middle">AC&rarr;DC</text>
+        <g class="port" id="p_outlet" tabindex="0" role="button"
+           aria-label="Wall power outlet with AC-to-DC adapter. Provides device power.">
+          <circle class="ring" cx="400" cy="358" r="11" fill="none" stroke="#3a587a" stroke-width="2"/>
+          <circle cx="400" cy="358" r="6" fill="#2c4a6b"/>
+        </g>
+      </svg>
+
+      <!-- cable tray -->
+      <div class="tray" role="toolbar" aria-label="Cable and component tray. Pick one, then click two ports to connect them.">
+        <button class="cable" data-media="coax" aria-pressed="false">
+          <span class="swatch" style="background:#f2a93b"></span>
+          RG-6 coax <span class="meta">F-type</span>
+        </button>
+        <button class="cable" data-media="ethernet" aria-pressed="false">
+          <span class="swatch" style="background:#3fd6c8"></span>
+          Cat6 Ethernet <span class="meta">RJ-45</span>
+        </button>
+        <button class="cable" data-media="phone" aria-pressed="false">
+          <span class="swatch" style="background:#9aa7b8"></span>
+          Phone cord <span class="meta">RJ-11</span>
+        </button>
+        <button class="cable" data-media="fiber" aria-pressed="false">
+          <span class="swatch" style="background:#b98cff"></span>
+          Fiber patch <span class="meta">LC</span>
+        </button>
+        <button class="cable" data-media="power" aria-pressed="false">
+          <span class="swatch" style="background:#e9e2c8"></span>
+          Power adapter <span class="meta">AC&rarr;DC</span>
+        </button>
+      </div>
+      <p class="tray-hint" id="trayHint">Pick a cable, then click a source port and a destination port to run it.</p>
+
+      <div class="feedback info" id="feedback" role="status" aria-live="polite">Workspace ready. Start with the WAN side.</div>
+
+      <div class="actions">
+        <button class="btn cyan" id="btnCheck" type="button">Check connection</button>
+        <button class="btn ghost" id="btnReset" type="button">Reset cabling</button>
+      </div>
+    </section>
+
+    <!-- ====================== TASKS + QUESTIONS ====================== -->
+    <section class="card" aria-label="Lab tasks and questions">
+      <h2>Tasks</h2>
+      <ol class="tasks" id="taskList">
+        <li class="task" data-task="t_wan" data-pass="false">
+          <span class="mark" aria-hidden="true">&#10003;</span>
+          <span class="body">Run the <b>ISP demarc jack</b> to the gateway <b>WAN</b> port using the correct service media.</span>
+        </li>
+        <li class="task" data-task="t_lan" data-pass="false">
+          <span class="mark" aria-hidden="true">&#10003;</span>
+          <span class="body">Connect the gateway <b>LAN</b> port to <b>LOFT-FRONT01</b>'s NIC with twisted-pair Ethernet.</span>
+        </li>
+        <li class="task" data-task="t_pwr" data-pass="false">
+          <span class="mark" aria-hidden="true">&#10003;</span>
+          <span class="body">Power the gateway from the wall outlet using the <b>AC-to-DC adapter</b>.</span>
+        </li>
+        <li class="task" data-task="t_verify" data-pass="false">
+          <span class="mark" aria-hidden="true">&#10003;</span>
+          <span class="body">Click <b>Check connection</b> and confirm LOFT-FRONT01 reports an <b>internet link</b>.</span>
+        </li>
+      </ol>
+
+      <div class="q">
+        <fieldset data-q="q1" data-answer="a">
+          <legend>1 &middot; The service line ends at a coax jack. Which cable + connector ties the gateway's WAN port to it?</legend>
+          <label class="opt"><input type="radio" name="q1" value="a"><span>RG-6 coaxial with an F-type connector</span></label>
+          <label class="opt"><input type="radio" name="q1" value="b"><span>Cat6 twisted pair with an RJ-45 connector</span></label>
+          <label class="opt"><input type="radio" name="q1" value="c"><span>Fiber patch with an LC connector</span></label>
+          <div class="qstate" data-state></div>
+        </fieldset>
+      </div>
+
+      <div class="q">
+        <fieldset data-q="q2" data-answer="b">
+          <legend>2 &middot; What is the gateway doing with the broadband signal arriving on the coax line?</legend>
+          <label class="opt"><input type="radio" name="q2" value="a"><span>Amplifying it and passing the same analog signal straight to the PC</span></label>
+          <label class="opt"><input type="radio" name="q2" value="b"><span>Modulating/demodulating between the ISP's broadband signal and Ethernet frames</span></label>
+          <label class="opt"><input type="radio" name="q2" value="c"><span>Encrypting it before storing it on the gateway's disk</span></label>
+          <div class="qstate" data-state></div>
+        </fieldset>
+      </div>
+
+      <div class="q">
+        <fieldset data-q="q3" data-answer="c">
+          <legend>3 &middot; Why use twisted-pair Ethernet (not coax) for the short run between the gateway and the desk PC?</legend>
+          <label class="opt"><input type="radio" name="q3" value="a"><span>Coax cannot carry any digital data at all</span></label>
+          <label class="opt"><input type="radio" name="q3" value="b"><span>Ethernet is required by the ISP for the WAN drop</span></label>
+          <label class="opt"><input type="radio" name="q3" value="c"><span>The local LAN link uses RJ-45 Ethernet; coax carries the WAN service from the ISP</span></label>
+          <div class="qstate" data-state></div>
+        </fieldset>
+      </div>
+
+      <div class="scorebar">
+        <span class="score" id="score">0 / 7</span>
+        <button class="btn" id="btnGrade" type="button">Check answers</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ====================== SUBMISSION ====================== -->
+  <section class="card submit-card" aria-label="Submit lab">
+    <h2>Submit completed lab</h2>
+    <div class="field">
+      <label for="handle">Callsign</label>
+      <input class="handle" id="handle" maxlength="32" autocomplete="off" spellcheck="false"
+             placeholder="e.g. copper-fox" aria-describedby="handleHelp">
+      <span class="help" id="handleHelp">A pseudonym, not your real name. No emails, no student IDs — keep PII out of the system.</span>
+    </div>
+    <div class="submit-row">
+      <button class="btn cyan" id="btnSubmit" type="button">Submit completed lab</button>
+      <span id="subStatus" role="status" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <footer class="lic">
+    © 2026 &lt;AUTHOR NAME&gt; — AP Networking / CompTIA Network+ Lab Library. Clean-room original.
+    Screenshot capture via html2canvas (MIT, https://github.com/niklasvh/html2canvas).
+  </footer>
+</div>
+
+<!-- ============================================================
+     SCRIPT 1 — html2canvas (inline). MIT License.
+     Paste the minified html2canvas v1.4.1 source between the two
+     markers to ship full-fidelity DOM screenshots with zero CDN
+     dependency (per the library spec). Until it is pasted, the
+     engine's capture() falls back to a labeled results-card PNG so
+     submission still works end to end during testing.
+     ============================================================ -->
+<script>
+/* ===== BEGIN html2canvas (paste minified source here) ===== */
+/* (intentionally empty placeholder — see comment above) */
+/* ===== END html2canvas ===== */
+</script>
+
+<!-- ============================================================
+     SCRIPT 2 — engine, CONFIG, answer key, capture, POST
+     ============================================================ -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------- PER-LAB CONFIG (edit these only) ----------------- */
+  const CONFIG = {
+    assignmentId: "netplus-broadband-hookup",
+    title: "Provision the Maker Loft Broadband Link",
+    // Both blueprints; secondaries kept in the manifest, primaries travel in the payload.
+    objectives: ["N10-009:1.5", "N10-009:5.2", "APNET:2.1"],
+    scoreTotal: 7,
+    // Deployed Apps Script /exec URL — same across the whole library.
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    // Per-cohort secret; rotate each cohort. Must match a Script Property.
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    maxScreenshotBytes: 1_600_000
+  };
+
+  /* ----------------- required physical connections (answer key) ----------------- */
+  // Unordered port pairs + the media each requires. Ports list what they accept.
+  const PORTS = {
+    p_demarc:{accepts:["coax"],    name:"demarc jack"},
+    p_gw_wan:{accepts:["coax"],    name:"gateway WAN"},
+    p_gw_lan:{accepts:["ethernet"],name:"gateway LAN"},
+    p_gw_pwr:{accepts:["power"],   name:"gateway power"},
+    p_pc_nic:{accepts:["ethernet"],name:"PC NIC"},
+    p_outlet:{accepts:["power"],   name:"wall outlet"}
+  };
+  const REQUIRED = [
+    {a:"p_demarc", b:"p_gw_wan", media:"coax",     task:"t_wan"},
+    {a:"p_gw_lan", b:"p_pc_nic", media:"ethernet", task:"t_lan"},
+    {a:"p_gw_pwr", b:"p_outlet", media:"power",    task:"t_pwr"}
+  ];
+  const MEDIA_LABEL = {coax:"RG-6 coax",ethernet:"Cat6 Ethernet",phone:"RJ-11 phone cord",fiber:"fiber LC",power:"power adapter"};
+  const MEDIA_COLOR = {coax:"#f2a93b",ethernet:"#3fd6c8",phone:"#9aa7b8",fiber:"#b98cff",power:"#e9e2c8"};
+  const PORT_XY = {
+    p_demarc:[156,135], p_gw_wan:[300,140], p_gw_lan:[500,152],
+    p_gw_pwr:[400,228], p_pc_nic:[636,174], p_outlet:[400,358]
+  };
+
+  /* ----------------- in-memory state (no storage APIs) ----------------- */
+  const state = {
+    selectedMedia:null,
+    pendingPort:null,
+    links:[],                 // {a,b,media}
+    tasks:{t_wan:false,t_lan:false,t_pwr:false,t_verify:false},
+    questions:{q1:false,q2:false,q3:false}
+  };
+
+  const $  = (s,r=document)=>r.querySelector(s);
+  const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+  const feedback = $("#feedback");
+  function say(msg,kind){ feedback.textContent=msg; feedback.className="feedback "+(kind||"info"); }
+
+  /* ----------------- cable tray selection ----------------- */
+  $$(".cable").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const m=btn.dataset.media;
+      const already=btn.getAttribute("aria-pressed")==="true";
+      $$(".cable").forEach(b=>b.setAttribute("aria-pressed","false"));
+      if(already){ state.selectedMedia=null; clearPending(); say("Cable set down. Pick a cable to continue.","info"); return; }
+      btn.setAttribute("aria-pressed","true");
+      state.selectedMedia=m; clearPending();
+      say("Holding "+MEDIA_LABEL[m]+". Click the first port.","info");
+    });
+  });
+
+  function clearPending(){
+    if(state.pendingPort){ portRing(state.pendingPort,false); }
+    state.pendingPort=null;
+  }
+  function portRing(id,on){
+    const ring=$("#"+id+" circle.ring");
+    if(ring){ ring.setAttribute("stroke",on?"#7cc4ff":"#3a587a"); ring.setAttribute("stroke-width",on?"3":"2"); }
+  }
+
+  /* ----------------- port clicks (mouse + keyboard) ----------------- */
+  Object.keys(PORTS).forEach(id=>{
+    const g=$("#"+id);
+    g.addEventListener("click",()=>onPort(id));
+    g.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); onPort(id); } });
+  });
+
+  function onPort(id){
+    if(!state.selectedMedia){ say("Pick a cable from the tray first, then click two ports.","err"); return; }
+    if(!state.pendingPort){ state.pendingPort=id; portRing(id,true);
+      say("First end seated at "+PORTS[id].name+". Click the other port.","info"); return; }
+    if(state.pendingPort===id){ clearPending(); say("Same port — pick a different destination.","err"); return; }
+    tryConnect(state.pendingPort,id,state.selectedMedia);
+  }
+
+  function linkExists(a,b){ return state.links.some(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a)); }
+
+  function tryConnect(a,b,media){
+    clearPending();
+    if(linkExists(a,b)){ say("Those two ports are already patched together.","err"); return; }
+    const okA=PORTS[a].accepts.includes(media), okB=PORTS[b].accepts.includes(media);
+    if(!okA||!okB){
+      const bad = !okA?PORTS[a]:PORTS[b];
+      say("The "+MEDIA_LABEL[media]+" won't seat in the "+bad.name+" port. Check what that port accepts and choose the matching media.","err");
+      return;
+    }
+    // physically valid; record and draw
+    state.links.push({a,b,media});
+    drawLink(a,b,media);
+    // does it satisfy a required connection?
+    const req = REQUIRED.find(r=>((r.a===a&&r.b===b)||(r.a===b&&r.b===a)) && r.media===media);
+    if(req){ setTask(req.task,true); say("Link up: "+MEDIA_LABEL[media]+" between "+PORTS[a].name+" and "+PORTS[b].name+".","ok"); }
+    else { say("Patched, but that pairing isn't part of this install. It won't bring the loft online — review the task list.","info"); }
+  }
+
+  function drawLink(a,b,media){
+    const [x1,y1]=PORT_XY[a], [x2,y2]=PORT_XY[b];
+    const ns="http://www.w3.org/2000/svg";
+    const line=document.createElementNS(ns,"line");
+    line.setAttribute("x1",x1);line.setAttribute("y1",y1);
+    line.setAttribute("x2",x2);line.setAttribute("y2",y2);
+    line.setAttribute("stroke",MEDIA_COLOR[media]);
+    line.setAttribute("stroke-width","4");line.setAttribute("stroke-linecap","round");
+    line.setAttribute("opacity","0.92");
+    if(media==="power") line.setAttribute("stroke-dasharray","2 7");
+    $("#links").appendChild(line);
+  }
+
+  function setTask(id,val){
+    state.tasks[id]=val;
+    const li=$('.task[data-task="'+id+'"]');
+    if(li) li.setAttribute("data-pass",val?"true":"false");
+    updateScore();
+  }
+
+  /* ----------------- verify / check connection ----------------- */
+  $("#btnCheck").addEventListener("click",()=>{
+    const physOk = REQUIRED.every(r=>state.links.some(l=>((l.a===r.a&&l.b===r.b)||(l.a===r.b&&l.b===r.a))&&l.media===r.media));
+    const led=$("#gwLed"), ledTxt=$("#gwLedTxt"), pcNet=$("#pcNet");
+    if(physOk){
+      led.setAttribute("fill","#52e08a"); led.setAttribute("stroke","#2c7a4e");
+      ledTxt.textContent="status: online"; pcNet.textContent="net: internet link";
+      setTask("t_verify",true);
+      say("LOFT-FRONT01 has an internet link. Gateway online. Loft is connected.","ok");
+    }else{
+      led.setAttribute("fill","#3a2a14"); led.setAttribute("stroke","#5d4a22");
+      ledTxt.textContent="status: offline"; pcNet.textContent="net: no link";
+      setTask("t_verify",false);
+      const missing=[];
+      if(!state.tasks.t_wan)  missing.push("the WAN coax to the demarc");
+      if(!state.tasks.t_lan)  missing.push("the LAN Ethernet to the PC");
+      if(!state.tasks.t_pwr)  missing.push("power to the gateway");
+      say("No internet link yet. Still need: "+(missing.join(", ")||"a correct media on an existing run")+".","err");
+    }
+  });
+
+  /* ----------------- reset ----------------- */
+  $("#btnReset").addEventListener("click",()=>{
+    state.links=[]; clearPending(); state.selectedMedia=null;
+    $$(".cable").forEach(b=>b.setAttribute("aria-pressed","false"));
+    $("#links").innerHTML="";
+    Object.keys(state.tasks).forEach(t=>setTask(t,false));
+    $("#gwLed").setAttribute("fill","#3a2a14"); $("#gwLed").setAttribute("stroke","#5d4a22");
+    $("#gwLedTxt").textContent="status: offline"; $("#pcNet").textContent="net: no link";
+    say("Cabling cleared. Workspace ready.","info");
+  });
+
+  /* ----------------- question grading ----------------- */
+  $("#btnGrade").addEventListener("click",()=>{
+    $$("fieldset[data-q]").forEach(fs=>{
+      const q=fs.dataset.q, ans=fs.dataset.answer;
+      const chosen=fs.querySelector('input[name="'+q+'"]:checked');
+      const st=fs.querySelector("[data-state]");
+      if(!chosen){ state.questions[q]=false; st.textContent="Pick an answer."; st.className="qstate bad"; return; }
+      const right=chosen.value===ans;
+      state.questions[q]=right;
+      st.textContent=right?"Correct.":"Not quite — re-read the prompt and try again.";
+      st.className="qstate "+(right?"good":"bad");
+    });
+    updateScore();
+  });
+
+  function earned(){
+    const t=Object.values(state.tasks).filter(Boolean).length;
+    const q=Object.values(state.questions).filter(Boolean).length;
+    return t+q;
+  }
+  function updateScore(){ $("#score").textContent = earned()+" / "+CONFIG.scoreTotal; }
+
+  /* ----------------- screenshot capture ----------------- */
+  async function capture(){
+    const target=$(".wrap");
+    if(typeof window.html2canvas==="function"){
+      const canvas=await window.html2canvas(target,{backgroundColor:"#0e1622",scale:1,logging:false});
+      return canvas.toDataURL("image/png");
+    }
+    // Labeled fallback (used until real html2canvas is pasted into Script 1).
+    return fallbackCard();
+  }
+  function fallbackCard(){
+    const c=document.createElement("canvas"); c.width=560; c.height=360;
+    const x=c.getContext("2d");
+    x.fillStyle="#0e1622"; x.fillRect(0,0,560,360);
+    x.fillStyle="#3fd6c8"; x.font="600 12px monospace";
+    x.fillText("NETWORK+ / AP NETWORKING LAB — RESULTS CARD (fallback)",18,28);
+    x.fillStyle="#dfe9f4"; x.font="700 16px sans-serif";
+    x.fillText(CONFIG.title,18,54);
+    x.font="500 12px monospace"; x.fillStyle="#8aa1bd";
+    x.fillText("assignment: "+CONFIG.assignmentId,18,76);
+    x.fillText("callsign: "+(($("#handle").value||"—")),18,94);
+    let y=124; x.font="600 13px sans-serif";
+    const rows=[
+      ["WAN coax to demarc", state.tasks.t_wan],
+      ["LAN Ethernet to PC",  state.tasks.t_lan],
+      ["Gateway power",       state.tasks.t_pwr],
+      ["Internet link verified", state.tasks.t_verify],
+      ["Q1 media", state.questions.q1],
+      ["Q2 modem function", state.questions.q2],
+      ["Q3 LAN media", state.questions.q3]
+    ];
+    rows.forEach(([label,ok])=>{
+      x.fillStyle=ok?"#52e08a":"#ff6b6b"; x.fillText(ok?"PASS":"....",18,y);
+      x.fillStyle="#dfe9f4"; x.fillText(label,78,y); y+=26;
+    });
+    x.fillStyle="#5d7593"; x.font="500 11px monospace";
+    x.fillText("score "+earned()+"/"+CONFIG.scoreTotal+"  ·  paste html2canvas for full screenshot",18,344);
+    return c.toDataURL("image/png");
+  }
+
+  /* ----------------- build payload ----------------- */
+  function buildPayload(shot){
+    const taskMeta = {
+      t_wan:"Run ISP demarc to gateway WAN with correct media",
+      t_lan:"Connect gateway LAN to PC NIC with Ethernet",
+      t_pwr:"Power gateway via AC-to-DC adapter",
+      t_verify:"Verify internet link at LOFT-FRONT01"
+    };
+    const qMeta = {
+      q1:["WAN cable + connector to the coax jack","RG-6 coaxial with F-type connector"],
+      q2:["What the gateway does with the broadband signal","Modulates/demodulates to Ethernet frames"],
+      q3:["Why Ethernet for the gateway-to-PC run","Local LAN uses RJ-45 Ethernet; coax carries the WAN"]
+    };
+    return {
+      assignmentId: CONFIG.assignmentId,
+      handle: ($("#handle").value||"").trim(),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: Object.keys(state.tasks).map(id=>({id,label:taskMeta[id],passed:state.tasks[id]})),
+      questions: Object.keys(state.questions).map(id=>({id,prompt:qMeta[id][0],answer:qMeta[id][1],correct:state.questions[id]})),
+      score: {earned:earned(), total:CONFIG.scoreTotal},
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  /* ----------------- submit (direct simple-request POST) ----------------- */
+  const subStatus=$("#subStatus");
+  function setSub(msg,kind){ subStatus.className=kind||""; subStatus.innerHTML=msg; }
+
+  $("#btnSubmit").addEventListener("click",async()=>{
+    const handle=($("#handle").value||"").trim();
+    if(!handle){ setSub("Enter a callsign before submitting.","bad"); $("#handle").focus(); return; }
+    if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+      setSub("This lab isn't wired to an Apps Script yet — set APPS_SCRIPT_URL in CONFIG.","bad"); return;
+    }
+    setSub("Capturing and submitting…","busy");
+    try{
+      const shot=await capture();
+      if(shot.length>CONFIG.maxScreenshotBytes){ setSub("Screenshot too large to send. Tell your instructor.","bad"); return; }
+      const payload=buildPayload(shot);
+      // Simple request: no custom headers, default text/plain body — avoids CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+      const out=await res.json();
+      if(out && out.success){
+        setSub('Submitted. <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your lab record</a>',"good");
+      }else{
+        setSub("Server rejected the submission: "+((out&&out.error)||"unknown reason")+". Check with your instructor.","bad");
+      }
+    }catch(err){
+      // Fallback: fire-and-forget if the response can't be read in a locked-down context.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(buildPayload(await capture()))});
+        setSub("Sent, but the confirmation couldn't be read here. Confirm receipt with your instructor.","busy");
+      }catch(e2){
+        setSub("Couldn't reach the server. Check your connection and try again.","bad");
+      }
+    }
+  });
+
+  updateScore();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-rogue-dhcp-hunt.html",title:"PacketLens \u2014 Rogue DHCP Hunt"}, NEXT={href:"index_netplus-l2-mac-spoof.html",title:"Layer 2 Identity \u2014 Inspect & Spoof a MAC Address"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.1";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Harden a SOHO Wireless Gateway (Northwind NX-310)</title>
+<!--
+  ===========================================================================
+  Lab: Harden a SOHO Wireless Gateway
+  assignmentId: netplus-wifi-harden
+  Blueprints: N10-009 (2.3 wireless config/security, 4.1 basic security/hardening)
+              AP Networking V.1 (1.4.C configure wireless security features,
+                                 1.4.B.5 change default credentials,
+                                 1.2.A secure client connection)
+  Clean-room original work. Scenario, device, addressing, SSIDs, keys, task and
+  question wording are original and were authored from the public N10-009 and
+  AP Networking objectives only. No third-party lab content was copied.
+
+  © 2026 [AUTHOR / ORG] — All rights reserved. Replace this notice with your own.
+  Screenshot capture optionally uses html2canvas (MIT, © Niklas von Hertzen)
+  if its source is pasted into the marked slot below; otherwise a built-in
+  dependency-free capturer is used.
+  ===========================================================================
+-->
+<style>
+  :root{
+    --bg:#0e1726;            /* app shell */
+    --panel:#13203a;        /* console surface */
+    --panel-2:#0b1422;      /* deep surface */
+    --line:#27395c;         /* hairlines */
+    --ink:#e8eefb;          /* primary text */
+    --ink-dim:#9fb0d0;      /* secondary text */
+    --accent:#3fd0c9;       /* teal action */
+    --accent-2:#5b8cff;     /* link/info */
+    --ok:#46d39a;
+    --warn:#ffcf5c;
+    --bad:#ff6b6b;
+    --chip:#1c2c4a;
+    --radius:10px;
+    --focus:#9be7ff;
+    font-synthesis-weight:none;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #18305a33, transparent),
+      var(--bg);
+    color:var(--ink);
+    font:15px/1.5 system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;
+    padding:18px;
+  }
+  h1,h2,h3{margin:0;font-weight:650;letter-spacing:.2px}
+  a{color:var(--accent-2)}
+  .wrap{max-width:1180px;margin:0 auto}
+  .topline{
+    display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .brandline h1{font-size:18px}
+  .brandline .sub{color:var(--ink-dim);font-size:13px;margin-top:2px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .tag{
+    font:600 11px/1 ui-monospace,Menlo,Consolas,monospace;
+    color:#cfe8ff;background:var(--chip);border:1px solid var(--line);
+    padding:5px 8px;border-radius:999px;letter-spacing:.4px;
+  }
+  .btn{
+    appearance:none;cursor:pointer;font:600 13px/1 inherit;color:#04201e;
+    background:var(--accent);border:1px solid #2bb3ac;border-radius:8px;
+    padding:9px 14px;
+  }
+  .btn.secondary{background:transparent;color:var(--ink);border-color:var(--line)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
+  [tabindex]:focus-visible,.navtab:focus-visible{
+    outline:3px solid var(--focus);outline-offset:2px;border-radius:8px;
+  }
+
+  .grid{display:grid;grid-template-columns:1.55fr .95fr;gap:16px;align-items:start}
+  @media (max-width:920px){ .grid{grid-template-columns:1fr} }
+
+  /* ---- emulated console ---- */
+  .console{
+    background:linear-gradient(180deg,#14243f,#111d33);
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    box-shadow:0 14px 40px #0006;
+  }
+  .console-bar{
+    display:flex;align-items:center;gap:10px;justify-content:space-between;
+    padding:11px 14px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#1a2c4d,#152340);
+  }
+  .dev{display:flex;align-items:center;gap:10px;min-width:0}
+  .dev .led{width:9px;height:9px;border-radius:50%;background:var(--ink-dim);box-shadow:0 0 0 0 transparent}
+  .dev.on .led{background:var(--ok);box-shadow:0 0 10px #46d39a}
+  .dev b{font-size:14px}
+  .dev .ip{font:600 12px/1 ui-monospace,Menlo,Consolas,monospace;color:var(--ink-dim)}
+  .session{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink-dim)}
+  .session .who{color:#bfe9ff;font-weight:600}
+
+  .layout{display:grid;grid-template-columns:188px 1fr;min-height:430px}
+  @media (max-width:560px){ .layout{grid-template-columns:1fr} }
+  nav.side{border-right:1px solid var(--line);background:var(--panel-2);padding:8px}
+  @media (max-width:560px){ nav.side{display:flex;overflow:auto;border-right:0;border-bottom:1px solid var(--line)} }
+  .navtab{
+    display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+    background:transparent;border:0;color:var(--ink-dim);cursor:pointer;
+    padding:10px 11px;border-radius:8px;font:600 13px/1 inherit;white-space:nowrap;
+  }
+  .navtab[aria-current="true"]{background:#1d2f52;color:var(--ink)}
+  .navtab[disabled]{opacity:.4;cursor:not-allowed}
+  .navtab .dot{width:7px;height:7px;border-radius:50%;background:var(--line)}
+  .navtab .dot.done{background:var(--ok)}
+
+  .view{padding:18px 18px 20px}
+  .view h2{font-size:15px;margin-bottom:3px}
+  .view .lede{color:var(--ink-dim);font-size:13px;margin-bottom:14px;max-width:60ch}
+  .field{margin:0 0 13px}
+  .field label{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:5px;font-weight:600}
+  .field input[type=text],.field input[type=password],.field select{
+    width:100%;background:var(--panel-2);color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:14px/1.2 inherit;
+  }
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){ .row2{grid-template-columns:1fr} }
+  .check{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink);margin:4px 0}
+  .check input{margin-top:2px}
+  .hint{font-size:11.5px;color:var(--ink-dim);margin-top:5px}
+  .meter{height:6px;border-radius:999px;background:#22324f;overflow:hidden;margin-top:7px}
+  .meter > i{display:block;height:100%;width:0;background:var(--bad);transition:width .2s}
+  .pill{display:inline-block;font:600 11px/1 ui-monospace,monospace;padding:4px 7px;border-radius:6px;border:1px solid var(--line);color:var(--ink-dim)}
+  .pill.ok{color:#063;background:#bff3da;border-color:#7fe0b8}
+  .pill.bad{color:#5a0d0d;background:#ffd2d2;border-color:#f7a6a6}
+  .err{display:none;color:#ffd9d9;background:#3a1620;border:1px solid #6e2a36;border-radius:8px;padding:8px 10px;font-size:12.5px;margin-top:8px}
+  .err.show{display:block}
+  .saved{display:inline-flex;gap:7px;align-items:center;color:var(--ok);font-size:12.5px;margin-top:8px;visibility:hidden}
+  .saved.show{visibility:visible}
+
+  /* status table */
+  table.status{width:100%;border-collapse:collapse;font-size:13px}
+  table.status td{padding:7px 6px;border-bottom:1px solid var(--line)}
+  table.status td:first-child{color:var(--ink-dim);width:46%}
+  table.status .v{font:600 12.5px/1.3 ui-monospace,Menlo,Consolas,monospace}
+
+  /* client widget */
+  .client{
+    border:1px dashed var(--line);border-radius:10px;padding:14px;background:#0c1729;
+  }
+  .client h3{font-size:13px;margin-bottom:8px}
+  .signal{display:inline-flex;gap:3px;align-items:flex-end;height:16px;vertical-align:-3px;margin-left:6px}
+  .signal i{width:4px;background:var(--line);border-radius:1px}
+  .signal i:nth-child(1){height:5px}.signal i:nth-child(2){height:9px}.signal i:nth-child(3){height:13px}.signal i:nth-child(4){height:16px}
+  .signal.up i{background:var(--ok)}
+
+  /* ---- lab panel ---- */
+  .lab{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .card h2{font-size:14px;margin-bottom:4px}
+  .card .meta{color:var(--ink-dim);font-size:12px;margin-bottom:10px}
+  ol.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  ol.tasks li{display:flex;gap:10px;align-items:flex-start;font-size:13px}
+  .tbox{flex:0 0 auto;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);display:grid;place-items:center;margin-top:1px;color:#04201e;font-size:12px;background:var(--panel-2)}
+  .tbox.done{background:var(--ok);border-color:var(--ok)}
+  li.done .tlabel{color:var(--ink-dim);text-decoration:line-through;text-decoration-color:#4a5f86}
+  .opt{color:var(--accent);font:600 10px/1 ui-monospace,monospace;border:1px solid var(--line);border-radius:5px;padding:2px 5px;margin-left:6px}
+
+  .q{border-top:1px solid var(--line);padding-top:11px;margin-top:11px}
+  .q:first-of-type{border-top:0;margin-top:0;padding-top:0}
+  .q .prompt{font-size:13px;margin-bottom:7px}
+  .q label{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--ink-dim);padding:5px 6px;border-radius:7px;cursor:pointer}
+  .q label:hover{background:#101d33}
+  .q label input{margin-top:2px}
+  .q .verdict{font-size:12px;margin-top:5px;min-height:16px}
+  .q .verdict.ok{color:var(--ok)} .q .verdict.bad{color:var(--bad)}
+
+  .scorebar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .score{font:700 15px/1 ui-monospace,monospace}
+  .submitwrap .field{margin-bottom:10px}
+  .status-line{font-size:12.5px;min-height:18px;margin-top:8px}
+  .status-line.ok{color:var(--ok)} .status-line.bad{color:var(--bad)} .status-line.busy{color:var(--warn)}
+  .foot{color:var(--ink-dim);font-size:11px;margin-top:14px;line-height:1.6}
+  code{font:600 12px/1 ui-monospace,Menlo,Consolas,monospace;background:#0c1729;border:1px solid var(--line);padding:1px 5px;border-radius:5px;color:#bfe9ff}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-wifi-harden", "title": "Harden a SOHO Wireless Gateway (Northwind NX-310)", "version": "1.0.0", "objectives": ["N10-009:2.3", "N10-009:4.1", "APNET:1.2", "APNET:1.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap">
+
+  <div class="topline">
+    <div class="brandline">
+      <h1>Harden a SOHO Wireless Gateway</h1>
+      <div class="sub">Driftwood Coffee just unboxed a new gateway. Lock it down before staff and customers connect.</div>
+      <div class="tagrow" aria-label="Blueprint objectives">
+        <span class="tag">N10-009 · 2.3</span>
+        <span class="tag">N10-009 · 4.1</span>
+        <span class="tag">APNET · 1.4.C</span>
+        <span class="tag">APNET · 1.4.B.5</span>
+        <span class="tag">APNET · 1.2.A</span>
+      </div>
+    </div>
+    <button class="btn secondary" id="resetBtn" type="button">Reset lab</button>
+  </div>
+
+  <div class="grid">
+
+    <!-- ================= EMULATED CONSOLE ================= -->
+    <section class="console" aria-label="Northwind NX-310 administration console">
+      <div class="console-bar">
+        <div class="dev" id="devLed">
+          <span class="led" aria-hidden="true"></span>
+          <b>Northwind&nbsp;NX-310</b>
+          <span class="ip">10.20.30.1</span>
+        </div>
+        <div class="session" id="sessionInfo" hidden>
+          Signed in as <span class="who" id="sessionWho">—</span>
+          <button class="btn secondary" id="logoutBtn" type="button" style="padding:5px 10px">Sign out</button>
+        </div>
+      </div>
+
+      <div class="layout">
+        <nav class="side" aria-label="Console sections">
+          <button class="navtab" data-view="login" aria-current="true" type="button"><span class="dot" id="navdot-login"></span>Sign in</button>
+          <button class="navtab" data-view="status" type="button" disabled><span class="dot" id="navdot-status"></span>Status</button>
+          <button class="navtab" data-view="wireless" type="button" disabled><span class="dot" id="navdot-wireless"></span>Wireless</button>
+          <button class="navtab" data-view="security" type="button" disabled><span class="dot" id="navdot-security"></span>Security</button>
+          <button class="navtab" data-view="admin" type="button" disabled><span class="dot" id="navdot-admin"></span>Administration</button>
+          <button class="navtab" data-view="guest" type="button" disabled><span class="dot" id="navdot-guest"></span>Guest Wi-Fi</button>
+          <button class="navtab" data-view="client" type="button" disabled><span class="dot" id="navdot-client"></span>Client device</button>
+        </nav>
+
+        <div class="viewport" id="viewport">
+
+          <!-- LOGIN -->
+          <div class="view" data-pane="login">
+            <h2>Sign in to the gateway</h2>
+            <p class="lede">The NX-310 ships with a published factory login printed on its label. Sign in, then change it before you finish (Administration tab).</p>
+            <div class="field">
+              <label for="loginUser">Username</label>
+              <input type="text" id="loginUser" autocomplete="off" placeholder="username" />
+            </div>
+            <div class="field">
+              <label for="loginPass">Password</label>
+              <input type="password" id="loginPass" autocomplete="off" placeholder="password" />
+            </div>
+            <button class="btn" id="loginBtn" type="button">Sign in</button>
+            <div class="hint">Factory label — <code>admin</code> / <code>setup1234</code> · console at <code>http://10.20.30.1</code></div>
+            <div class="err" id="loginErr" role="alert"></div>
+          </div>
+
+          <!-- STATUS -->
+          <div class="view" data-pane="status" hidden>
+            <h2>Status</h2>
+            <p class="lede">Live summary of the gateway. Watch these values change as you apply settings.</p>
+            <table class="status" aria-label="Gateway status">
+              <tbody>
+                <tr><td>Primary SSID</td><td class="v" id="stSsid">—</td></tr>
+                <tr><td>Broadcast</td><td class="v" id="stBroadcast">—</td></tr>
+                <tr><td>Authentication</td><td class="v" id="stAuth">—</td></tr>
+                <tr><td>Encryption</td><td class="v" id="stEnc">—</td></tr>
+                <tr><td>WPS</td><td class="v" id="stWps">—</td></tr>
+                <tr><td>Admin account</td><td class="v" id="stAdmin">—</td></tr>
+                <tr><td>Guest network</td><td class="v" id="stGuest">—</td></tr>
+                <tr><td>Connected clients</td><td class="v" id="stClients">0</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- WIRELESS -->
+          <div class="view" data-pane="wireless" hidden>
+            <h2>Wireless — primary network</h2>
+            <p class="lede">Name the staff network and decide whether it is advertised.</p>
+            <div class="field">
+              <label for="ssid">Network name (SSID)</label>
+              <input type="text" id="ssid" autocomplete="off" placeholder="e.g. CompanyWiFi" />
+              <div class="hint">SSIDs are case-sensitive. The clients you provision must type it exactly.</div>
+            </div>
+            <div class="field">
+              <label class="check"><input type="checkbox" id="broadcast" checked /> Broadcast this SSID (visible in the device's Wi-Fi list)</label>
+            </div>
+            <button class="btn" id="saveWireless" type="button">Apply wireless settings</button>
+            <span class="saved" id="savedWireless">✓ Applied</span>
+            <div class="err" id="wirelessErr" role="alert"></div>
+          </div>
+
+          <!-- SECURITY -->
+          <div class="view" data-pane="security" hidden>
+            <h2>Wireless security</h2>
+            <p class="lede">Pick the strongest protection the gateway offers, set a strong passphrase, and close the WPS shortcut.</p>
+            <div class="row2">
+              <div class="field">
+                <label for="authMode">Authentication</label>
+                <select id="authMode">
+                  <option value="open">Open (no password)</option>
+                  <option value="wep">WEP</option>
+                  <option value="wpa">WPA (legacy)</option>
+                  <option value="wpa2">WPA2-Personal</option>
+                  <option value="wpa3">WPA3-Personal (SAE)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="encMode">Encryption</label>
+                <select id="encMode">
+                  <option value="none">None</option>
+                  <option value="tkip">TKIP</option>
+                  <option value="aes">AES / GCMP</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" id="passField">
+              <label for="passphrase">Wi-Fi passphrase</label>
+              <input type="text" id="passphrase" autocomplete="off" placeholder="set a strong passphrase" />
+              <div class="meter" aria-hidden="true"><i id="passMeter"></i></div>
+              <div class="hint" id="passHint">Use 12+ characters with upper, lower, a digit, and a symbol.</div>
+            </div>
+            <div class="field">
+              <label class="check"><input type="checkbox" id="wps" checked /> Wi-Fi Protected Setup (WPS) enabled</label>
+              <div class="hint">WPS lets devices join with a short PIN. Convenient — but the PIN is brute-forceable.</div>
+            </div>
+            <button class="btn" id="saveSecurity" type="button">Apply security settings</button>
+            <span class="saved" id="savedSecurity">✓ Applied</span>
+            <div class="err" id="securityErr" role="alert"></div>
+          </div>
+
+          <!-- ADMIN -->
+          <div class="view" data-pane="admin" hidden>
+            <h2>Administration — console login</h2>
+            <p class="lede">Replace the published factory login so no one can open this console with the label credentials.</p>
+            <div class="field">
+              <label for="newUser">New administrator username</label>
+              <input type="text" id="newUser" autocomplete="off" placeholder="new username" />
+            </div>
+            <div class="row2">
+              <div class="field">
+                <label for="newPass">New password</label>
+                <input type="text" id="newPass" autocomplete="off" placeholder="new password" />
+                <div class="meter" aria-hidden="true"><i id="adminMeter"></i></div>
+              </div>
+              <div class="field">
+                <label for="newPass2">Confirm password</label>
+                <input type="text" id="newPass2" autocomplete="off" placeholder="re-enter password" />
+              </div>
+            </div>
+            <div class="hint">Must differ from the factory login and meet the strong-password rule (12+ chars, mixed case, digit, symbol).</div>
+            <button class="btn" id="saveAdmin" type="button">Update administrator login</button>
+            <span class="saved" id="savedAdmin">✓ Updated</span>
+            <div class="err" id="adminErr" role="alert"></div>
+          </div>
+
+          <!-- GUEST -->
+          <div class="view" data-pane="guest" hidden>
+            <h2>Guest Wi-Fi</h2>
+            <p class="lede">Give customers their own network, isolated from staff devices.</p>
+            <div class="field">
+              <label class="check"><input type="checkbox" id="guestOn" /> Enable a separate guest network</label>
+            </div>
+            <div class="field">
+              <label for="guestSsid">Guest network name (SSID)</label>
+              <input type="text" id="guestSsid" autocomplete="off" placeholder="e.g. CompanyGuest" />
+            </div>
+            <div class="field">
+              <label class="check"><input type="checkbox" id="guestIso" /> Client isolation (guests can't see staff devices or each other)</label>
+            </div>
+            <button class="btn" id="saveGuest" type="button">Apply guest settings</button>
+            <span class="saved" id="savedGuest">✓ Applied</span>
+            <div class="err" id="guestErr" role="alert"></div>
+          </div>
+
+          <!-- CLIENT -->
+          <div class="view" data-pane="client" hidden>
+            <h2>Client device</h2>
+            <p class="lede">Provision the owner's laptop. Join the staff network and confirm the link is up.</p>
+            <div class="client">
+              <h3>Driftwood laptop · Wi-Fi <span class="signal" id="clientSignal"><i></i><i></i><i></i><i></i></span></h3>
+              <div class="field">
+                <label for="joinSsid">Network name</label>
+                <input type="text" id="joinSsid" autocomplete="off" placeholder="SSID to join" />
+              </div>
+              <div class="field">
+                <label for="joinPass">Passphrase</label>
+                <input type="text" id="joinPass" autocomplete="off" placeholder="network passphrase" />
+              </div>
+              <button class="btn" id="joinBtn" type="button">Connect</button>
+              <div class="err" id="clientErr" role="alert"></div>
+              <div class="saved" id="clientOk">✓ Connected — internet reachable</div>
+            </div>
+          </div>
+
+        </div><!-- /viewport -->
+      </div><!-- /layout -->
+    </section>
+
+    <!-- ================= LAB PANEL ================= -->
+    <aside class="lab" aria-label="Lab tasks and submission">
+
+      <div class="card">
+        <h2>Tasks</h2>
+        <div class="meta">Boxes tick automatically as the console reaches each state.</div>
+        <ol class="tasks" id="taskList"></ol>
+      </div>
+
+      <div class="card">
+        <h2>Check your understanding</h2>
+        <div class="meta">Pick one answer per question.</div>
+        <div id="questionList"></div>
+      </div>
+
+      <div class="card">
+        <div class="scorebar">
+          <h2 style="margin:0">Score</h2>
+          <span class="score" id="scoreText">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="card submitwrap">
+        <h2>Submit completed lab</h2>
+        <div class="meta">Use a callsign, not your real name. No emails or IDs are collected.</div>
+        <div class="field">
+          <label for="handle">Callsign</label>
+          <input type="text" id="handle" autocomplete="off" maxlength="40" placeholder="e.g. tide-runner-7" />
+        </div>
+        <button class="btn" id="submitBtn" type="button" disabled>Submit completed lab</button>
+        <div class="status-line" id="submitStatus" role="status" aria-live="polite"></div>
+      </div>
+
+      <div class="foot">
+        Formative lab — the checklist and score are computed in your browser and are self-reported.
+        The instructor's copy of the answer key is authoritative.
+        <br>© 2026 [AUTHOR / ORG]. Clean-room original work for the AP Networking / Network+ lab library.
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ============================================================
+     html2canvas inline slot (OPTIONAL)
+     Paste the minified html2canvas (MIT, © Niklas von Hertzen) source
+     between the two markers to enable pixel-fidelity screenshots.
+     The lab auto-detects window.html2canvas; if it is absent, a built-in
+     dependency-free capturer runs instead, so the file works either way.
+     ----- BEGIN html2canvas -----
+
+     ----- END html2canvas -----
+============================================================ -->
+
+<script>
+/* =====================================================================
+   ENGINE + CONFIG + ANSWER KEY  (per-lab edits live in CONFIG and KEY)
+   ===================================================================== */
+"use strict";
+
+const CONFIG = {
+  assignmentId: "netplus-wifi-harden",
+  title: "Harden a SOHO Wireless Gateway",
+  objectives: ["N10-009:2.3","N10-009:4.1","APNET:1.4","APNET:1.4","APNET:1.2"],
+  // ↓ Instructor fills these once for the whole library.
+  APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "__PER_COHORT_TOKEN__",
+  maxScreenshotBytes: 1_600_000
+};
+
+// Original answer values for THIS lab (change per lab; inspectable — formative only).
+const KEY = {
+  factoryUser: "admin",
+  factoryPass: "setup1234",
+  ssid: "DriftwoodNet",
+  auth: "wpa3",
+  enc: "aes",
+  passphrase: "Espr3sso-Tide!",
+  newAdminUser: "driftwood_admin",
+  newAdminPass: "Gr1nd&Brew#22",
+  guestSsid: "DriftwoodGuest"
+};
+
+const TASKS = [
+  { id:"signin",   label:"Sign in to the gateway console with the factory login.", optional:false },
+  { id:"ssid",     label:"Name the primary network DriftwoodNet and broadcast it.", optional:false },
+  { id:"crypto",   label:"Set authentication to WPA3-Personal with AES/GCMP encryption.", optional:false },
+  { id:"passphrase",label:"Set a strong Wi-Fi passphrase.", optional:false },
+  { id:"wps",      label:"Disable WPS.", optional:false },
+  { id:"admin",    label:"Replace the factory admin login with a new username and strong password.", optional:false },
+  { id:"guest",    label:"Stand up an isolated guest network named DriftwoodGuest.", optional:true },
+  { id:"client",   label:"Join the laptop to DriftwoodNet and confirm the link.", optional:false }
+];
+
+const QUESTIONS = [
+  { id:"q1", prompt:"The Security page lists WEP, WPA, WPA2, and WPA3. Which do you choose when all are available — and which must you never use?",
+    options:[
+      "Choose WEP; never use WPA3",
+      "Choose WPA3; never use WEP",
+      "Choose WPA; never use WPA2",
+      "Any choice is equally safe"
+    ], answer:1 },
+  { id:"q2", prompt:"Why turn WPS off on a secured network?",
+    options:[
+      "It slows the gateway down",
+      "Its short PIN can be brute-forced, bypassing your passphrase",
+      "It blocks guest devices",
+      "It disables AES encryption"
+    ], answer:1 },
+  { id:"q3", prompt:"The gateway shipped with a printed default login. Why change it before going live?",
+    options:[
+      "Defaults expire after 30 days",
+      "Published defaults are public, so anyone could open the console and reconfigure the network",
+      "It frees up memory on the gateway",
+      "It's only needed if WPS is on"
+    ], answer:1 },
+  { id:"q4", prompt:"Are Wi-Fi SSIDs and passphrases case-sensitive?",
+    options:[
+      "No, capitalization is ignored",
+      "Only the SSID is case-sensitive",
+      "Yes — both must match exactly, including capitalization",
+      "Only the passphrase is case-sensitive"
+    ], answer:2 }
+];
+
+/* ---------- in-memory state (no localStorage) ---------- */
+const initState = () => ({
+  loggedIn:false,
+  admin:{ user:KEY.factoryUser, pass:KEY.factoryPass, changedFromDefault:false },
+  wifi:{ ssid:broadcast:true, auth:"open", enc:"none", passphrase:wps:true },
+  guest:{ enabled:false, ssid:isolation:false },
+  client:{ connected:false }
+});
+let state = initState();
+let answers = {};               // qid -> selected index
+const $ = s => document.querySelector(s);
+const $all = s => Array.from(document.querySelectorAll(s));
+
+/* ---------- password strength ---------- */
+function strength(pw){
+  let sets = 0;
+  if(/[a-z]/.test(pw)) sets++;
+  if(/[A-Z]/.test(pw)) sets++;
+  if(/[0-9]/.test(pw)) sets++;
+  if(/[^A-Za-z0-9]/.test(pw)) sets++;
+  const longEnough = pw.length >= 12;
+  return { sets, longEnough, strong: sets===4 && longEnough };
+}
+function paintMeter(el, pw){
+  const s = strength(pw);
+  const pct = Math.min(100, (pw.length?20:0) + s.sets*20);
+  el.style.width = pct + "%";
+  el.style.background = s.strong ? "var(--ok)" : (s.sets>=3 ? "var(--warn)" : "var(--bad)");
+}
+
+/* ---------- navigation ---------- */
+function unlockNav(on){
+  $all('.navtab').forEach(t=>{ if(t.dataset.view!=="login") t.disabled = !on; });
+}
+function showView(name){
+  $all('.view').forEach(v=> v.hidden = v.dataset.pane !== name);
+  $all('.navtab').forEach(t=> t.setAttribute('aria-current', String(t.dataset.view===name)));
+  if(name==="status") renderStatus();
+}
+$all('.navtab').forEach(t=> t.addEventListener('click', ()=>{ if(!t.disabled) showView(t.dataset.view); }));
+
+/* ---------- login ---------- */
+$("#loginBtn").addEventListener('click', ()=>{
+  const u = $("#loginUser").value.trim();
+  const p = $("#loginPass").value;
+  const err = $("#loginErr");
+  if(u===state.admin.user && p===state.admin.pass){
+    state.loggedIn = true;
+    err.classList.remove('show');
+    $("#devLed").classList.add('on');
+    $("#sessionInfo").hidden = false;
+    $("#sessionWho").textContent = state.admin.user;
+    unlockNav(true);
+    showView("status");
+    sync();
+  } else {
+    err.textContent = "Sign-in failed: username or password is incorrect. Check the factory label values and capitalization.";
+    err.classList.add('show');
+  }
+});
+$("#logoutBtn").addEventListener('click', ()=>{
+  state.loggedIn = false;
+  $("#devLed").classList.remove('on');
+  $("#sessionInfo").hidden = true;
+  unlockNav(false);
+  showView("login");
+  $("#loginUser").value=; $("#loginPass").value=;
+});
+
+/* ---------- wireless ---------- */
+$("#saveWireless").addEventListener('click', ()=>{
+  const ssid = $("#ssid").value;
+  const err = $("#wirelessErr");
+  if(ssid.trim()===){
+    err.textContent = "Enter a network name (SSID) before applying.";
+    err.classList.add('show'); return;
+  }
+  err.classList.remove('show');
+  state.wifi.ssid = ssid;
+  state.wifi.broadcast = $("#broadcast").checked;
+  flashSaved("#savedWireless");
+  sync();
+});
+
+/* ---------- security ---------- */
+const passField = $("#passField");
+function refreshPassFieldVisibility(){
+  const open = $("#authMode").value === "open";
+  passField.style.display = open ? "none" : ;
+}
+$("#authMode").addEventListener('change', ()=>{
+  // sensible default pairing the learner can still override
+  const v = $("#authMode").value;
+  if(v==="wpa3"||v==="wpa2") $("#encMode").value="aes";
+  if(v==="wpa") $("#encMode").value="tkip";
+  if(v==="wep") $("#encMode").value="tkip";
+  if(v==="open") $("#encMode").value="none";
+  refreshPassFieldVisibility();
+});
+$("#passphrase").addEventListener('input', e=>{
+  paintMeter($("#passMeter"), e.target.value);
+  const s = strength(e.target.value);
+  $("#passHint").textContent = s.strong
+    ? "Strong passphrase."
+    : "Use 12+ characters with upper, lower, a digit, and a symbol.";
+});
+$("#saveSecurity").addEventListener('click', ()=>{
+  const auth = $("#authMode").value;
+  const enc  = $("#encMode").value;
+  const pass = $("#passphrase").value;
+  const err = $("#securityErr");
+  if(auth!=="open"){
+    if(enc==="none"){ return fail(err,"Pick an encryption cipher (AES/GCMP) for a password-protected network."); }
+    if(pass===){ return fail(err,"Set a passphrase for a password-protected network."); }
+    if(!strength(pass).strong){ return fail(err,"Passphrase is too weak: use 12+ characters with upper, lower, a digit, and a symbol."); }
+  }
+  err.classList.remove('show');
+  state.wifi.auth = auth;
+  state.wifi.enc = (auth==="open") ? "none" : enc;
+  state.wifi.passphrase = (auth==="open") ? : pass;
+  state.wifi.wps = $("#wps").checked;
+  flashSaved("#savedSecurity");
+  sync();
+});
+
+/* ---------- admin creds ---------- */
+$("#newPass").addEventListener('input', e=> paintMeter($("#adminMeter"), e.target.value));
+$("#saveAdmin").addEventListener('click', ()=>{
+  const u = $("#newUser").value.trim();
+  const p = $("#newPass").value;
+  const p2 = $("#newPass2").value;
+  const err = $("#adminErr");
+  if(u===){ return fail(err,"Enter a new administrator username."); }
+  if(u===KEY.factoryUser && p===KEY.factoryPass){ return fail(err,"That's still the factory login — change at least the username and password."); }
+  if(p!==p2){ return fail(err,"The two passwords don't match."); }
+  if(!strength(p).strong){ return fail(err,"New password is too weak: 12+ characters with upper, lower, a digit, and a symbol."); }
+  if(u===KEY.factoryUser){ return fail(err,"Choose a username other than the factory default."); }
+  err.classList.remove('show');
+  state.admin.user = u;
+  state.admin.pass = p;
+  state.admin.changedFromDefault = true;
+  $("#sessionWho").textContent = u;
+  flashSaved("#savedAdmin");
+  sync();
+});
+
+/* ---------- guest ---------- */
+$("#saveGuest").addEventListener('click', ()=>{
+  const err = $("#guestErr");
+  const on = $("#guestOn").checked;
+  const ssid = $("#guestSsid").value;
+  if(on && ssid.trim()===){ return fail(err,"Enable plus a name: give the guest network an SSID."); }
+  err.classList.remove('show');
+  state.guest.enabled = on;
+  state.guest.ssid = ssid;
+  state.guest.isolation = $("#guestIso").checked;
+  flashSaved("#savedGuest");
+  sync();
+});
+
+/* ---------- client join ---------- */
+$("#joinBtn").addEventListener('click', ()=>{
+  const ssid = $("#joinSsid").value;
+  const pass = $("#joinPass").value;
+  const err = $("#clientErr");
+  const ok = $("#clientOk");
+  ok.classList.remove('show'); err.classList.remove('show');
+  if(state.wifi.ssid===){ return fail(err,"There's no wireless network yet. Configure the Wireless tab first."); }
+  if(ssid!==state.wifi.ssid){ return fail(err,"No such network. The SSID must match exactly, including capitalization."); }
+  if(state.wifi.auth!=="open" && pass!==state.wifi.passphrase){ return fail(err,"Wrong passphrase. It is case-sensitive — type it exactly."); }
+  state.client.connected = true;
+  $("#clientSignal").classList.add('up');
+  ok.classList.add('show');
+  sync();
+});
+
+/* ---------- helpers ---------- */
+function fail(errEl,msg){ errEl.textContent = msg; errEl.classList.add('show'); }
+function flashSaved(sel){ const el=$(sel); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1400); }
+
+/* ---------- task evaluation ---------- */
+function taskPass(id){
+  switch(id){
+    case "signin": return state.loggedIn;
+    case "ssid":   return state.wifi.ssid===KEY.ssid && state.wifi.broadcast===true;
+    case "crypto": return state.wifi.auth===KEY.auth && state.wifi.enc===KEY.enc;
+    case "passphrase": return state.wifi.passphrase===KEY.passphrase && strength(state.wifi.passphrase).strong;
+    case "wps":    return state.wifi.wps===false;
+    case "admin":  return state.admin.changedFromDefault &&
+                          state.admin.user!==KEY.factoryUser &&
+                          !(state.admin.user===KEY.factoryUser && state.admin.pass===KEY.factoryPass) &&
+                          strength(state.admin.pass).strong;
+    case "guest":  return state.guest.enabled && state.guest.ssid===KEY.guestSsid && state.guest.isolation===true;
+    case "client": return state.client.connected;
+  }
+  return false;
+}
+function questionCorrect(q){ return answers[q.id]===q.answer; }
+
+/* ---------- render ---------- */
+function renderTasks(){
+  const ol = $("#taskList"); ol.innerHTML=;
+  TASKS.forEach((t,i)=>{
+    const pass = taskPass(t.id);
+    const li = document.createElement('li');
+    li.className = pass ? "done" : ;
+    li.innerHTML = `<span class="tbox ${pass?'done':''}" aria-hidden="true">${pass?'✓':''}</span>
+      <span class="tlabel">${i+1}. ${escapeHtml(t.label)}${t.optional?'<span class="opt">BONUS</span>':''}</span>`;
+    li.querySelector('.tlabel').setAttribute('aria-label', `${t.label} — ${pass?'complete':'incomplete'}`);
+    ol.appendChild(li);
+  });
+}
+function renderQuestions(){
+  const wrap = $("#questionList"); wrap.innerHTML=;
+  QUESTIONS.forEach(q=>{
+    const div = document.createElement('div'); div.className="q";
+    const sel = answers[q.id];
+    const optsHtml = q.options.map((o,idx)=>`
+      <label><input type="radio" name="${q.id}" value="${idx}" ${sel===idx?'checked':''}/> <span>${escapeHtml(o)}</span></label>`).join();
+    const verdict = (sel===undefined) ? : (sel===q.answer ? "ok" : "bad");
+    const vtext = (sel===undefined) ? : (sel===q.answer ? "Correct" : "Not quite — review the matching task.");
+    div.innerHTML = `<div class="prompt">${escapeHtml(q.prompt)}</div>${optsHtml}
+      <div class="verdict ${verdict}">${vtext}</div>`;
+    div.querySelectorAll('input[type=radio]').forEach(r=>{
+      r.addEventListener('change', ()=>{ answers[q.id]=Number(r.value); renderQuestions(); sync(); });
+    });
+    wrap.appendChild(div);
+  });
+}
+function renderStatus(){
+  $("#stSsid").textContent = state.wifi.ssid || "(unset)";
+  $("#stBroadcast").textContent = state.wifi.ssid ? (state.wifi.broadcast?"on":"hidden") : "—";
+  $("#stAuth").textContent = ({open:"Open",wep:"WEP",wpa:"WPA",wpa2:"WPA2-Personal",wpa3:"WPA3-Personal (SAE)"})[state.wifi.auth];
+  $("#stEnc").textContent = ({none:"none",tkip:"TKIP",aes:"AES / GCMP"})[state.wifi.enc];
+  $("#stWps").textContent = state.wifi.wps ? "enabled" : "disabled";
+  $("#stAdmin").textContent = state.admin.changedFromDefault ? state.admin.user+" (changed)" : "admin (FACTORY DEFAULT)";
+  $("#stGuest").textContent = state.guest.enabled ? `${state.guest.ssid||"(unnamed)"}${state.guest.isolation?" · isolated":}` : "off";
+  $("#stClients").textContent = state.client.connected ? "1" : "0";
+}
+function score(){
+  let earned=0;
+  TASKS.forEach(t=>{ if(taskPass(t.id)) earned++; });
+  QUESTIONS.forEach(q=>{ if(questionCorrect(q)) earned++; });
+  return { earned, total: TASKS.length + QUESTIONS.length };
+}
+function navDots(){
+  const map = {
+    status:true,
+    wireless: state.wifi.ssid===KEY.ssid && state.wifi.broadcast,
+    security: state.wifi.auth===KEY.auth && state.wifi.enc===KEY.enc && state.wifi.wps===false && state.wifi.passphrase===KEY.passphrase,
+    admin: taskPass("admin"),
+    guest: taskPass("guest"),
+    client: state.client.connected,
+    login: state.loggedIn
+  };
+  Object.entries(map).forEach(([k,v])=>{ const d=$("#navdot-"+k); if(d) d.classList.toggle('done', !!v); });
+}
+function allComplete(){
+  const tasksOk = TASKS.every(t=>taskPass(t.id));
+  const qOk = QUESTIONS.every(questionCorrect);
+  return tasksOk && qOk;
+}
+function sync(){
+  renderTasks(); navDots(); renderStatus();
+  const s = score();
+  $("#scoreText").textContent = `${s.earned} / ${s.total}`;
+  const ready = allComplete() && $("#handle").value.trim().length>0;
+  $("#submitBtn").disabled = !ready;
+}
+$("#handle").addEventListener('input', sync);
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* =====================================================================
+   SCREENSHOT — prefers html2canvas if pasted; else dependency-free
+   ===================================================================== */
+async function captureLab(){
+  const node = document.querySelector('.wrap');
+  try{
+    if(window.html2canvas){
+      const c = await window.html2canvas(node, {backgroundColor:'#0e1726', scale:1, logging:false});
+      return c.toDataURL('image/png');
+    }
+  }catch(e){ /* fall through */ }
+  try{ return await foreignObjectCapture(node); }
+  catch(e){ return summaryCanvas(); }
+}
+function collectCss(){
+  return $all('style').map(s=>s.textContent).join("\n");
+}
+async function foreignObjectCapture(node){
+  const rect = node.getBoundingClientRect();
+  const w = Math.max(1, Math.ceil(rect.width));
+  const h = Math.max(1, Math.ceil(rect.height));
+  const clone = node.cloneNode(true);
+  // carry live form values into the static clone
+  const src = node.querySelectorAll('input,select,textarea');
+  const dst = clone.querySelectorAll('input,select,textarea');
+  src.forEach((el,i)=>{
+    const d = dst[i]; if(!d) return;
+    if(el.type==='checkbox'||el.type==='radio'){ if(el.checked) d.setAttribute('checked','checked'); else d.removeAttribute('checked'); }
+    else if(el.tagName==='SELECT'){ Array.from(d.options).forEach((o,k)=>{ if(k===el.selectedIndex) o.setAttribute('selected','selected'); }); }
+    else { d.setAttribute('value', el.value); }
+  });
+  const xml = new XMLSerializer().serializeToString(clone);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+    `<foreignObject x="0" y="0" width="${w}" height="${h}">`+
+    `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:#0e1726;padding:18px">`+
+    `<style>${collectCss()}</style>${xml}</div>`+
+    `</foreignObject></svg>`;
+  const url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  const img = new Image();
+  await new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error('svg load')); img.src=url; });
+  const cv = document.createElement('canvas');
+  cv.width=w; cv.height=h;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle='#0e1726'; ctx.fillRect(0,0,w,h);
+  ctx.drawImage(img,0,0);
+  return cv.toDataURL('image/png'); // throws if tainted -> caught by caller
+}
+function summaryCanvas(){
+  const s = score();
+  const cv = document.createElement('canvas'); cv.width=720; cv.height=300;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle='#0e1726'; ctx.fillRect(0,0,720,300);
+  ctx.fillStyle='#e8eefb'; ctx.font='bold 20px system-ui';
+  ctx.fillText(CONFIG.title, 24, 40);
+  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#9fb0d0';
+  const lines = [
+    `assignment: ${CONFIG.assignmentId}`,
+    `SSID: ${state.wifi.ssid||'(unset)'}   auth: ${state.wifi.auth}/${state.wifi.enc}   WPS: ${state.wifi.wps?'on':'off'}`,
+    `admin: ${state.admin.changedFromDefault?state.admin.user+' (changed)':'FACTORY DEFAULT'}`,
+    `guest: ${state.guest.enabled?(state.guest.ssid+(state.guest.isolation?' isolated':'')):'off'}`,
+    `client connected: ${state.client.connected}`,
+    `score: ${s.earned} / ${s.total}`,
+    `captured: ${new Date().toISOString()}`
+  ];
+  lines.forEach((t,i)=> ctx.fillText(t, 24, 80 + i*26));
+  return cv.toDataURL('image/png');
+}
+
+/* =====================================================================
+   SUBMISSION — simple request, no custom headers (avoids CORS preflight)
+   ===================================================================== */
+$("#submitBtn").addEventListener('click', async ()=>{
+  const btn = $("#submitBtn");
+  const status = $("#submitStatus");
+  const setStatus = (cls,msg)=>{ status.className='status-line '+cls; status.textContent=msg; };
+
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("__")){
+    setStatus('bad', "This lab isn't wired up yet: the instructor needs to paste the Apps Script URL into CONFIG.APPS_SCRIPT_URL.");
+    return;
+  }
+  btn.disabled = true;
+  setStatus('busy', "Capturing your work and submitting…");
+
+  let shot;
+  try { shot = await captureLab(); } catch(e){ shot = summaryCanvas(); }
+  if(shot.length > CONFIG.maxScreenshotBytes){ shot = summaryCanvas(); }
+
+  const s = score();
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    handle: $("#handle").value.trim().slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t=>({ id:t.id, label:t.label, passed:taskPass(t.id) })),
+    questions: QUESTIONS.map(q=>({
+      id:q.id, prompt:q.prompt,
+      answer: (answers[q.id]!==undefined ? q.options[answers[q.id]] : null),
+      correct: questionCorrect(q)
+    })),
+    score: s,
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  try{
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify(payload)   // no headers -> text/plain -> no preflight
+    });
+    const out = await res.json();
+    if(out && out.success){
+      setStatus('ok', "Submitted. ");
+      if(out.docUrl){
+        const a = document.createElement('a');
+        a.href = out.docUrl; a.target="_blank"; a.rel="noopener";
+        a.textContent = "Open your submission record";
+        status.appendChild(a);
+      }
+    } else {
+      setStatus('bad', "Submission rejected: " + ((out && out.error) || "unknown error") + ". Tell your instructor.");
+      btn.disabled = false;
+    }
+  }catch(err){
+    // Fallback: fire-and-forget (can't read the Doc link in locked-down contexts)
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) });
+      setStatus('ok', "Sent. The link couldn't be read back here — confirm receipt with your instructor.");
+    }catch(e2){
+      setStatus('bad', "Couldn't reach the submission server. Check your connection and try again, or tell your instructor.");
+      btn.disabled = false;
+    }
+  }
+});
+
+/* ---------- reset ---------- */
+$("#resetBtn").addEventListener('click', ()=>{
+  state = initState();
+  answers = {};
+  ["loginUser","loginPass","ssid","passphrase","newUser","newPass","newPass2","guestSsid","joinSsid","joinPass","handle"]
+    .forEach(id=>{ const el=$("#"+id); if(el) el.value=; });
+  $("#broadcast").checked=true; $("#wps").checked=true; $("#authMode").value="open"; $("#encMode").value="none";
+  $("#guestOn").checked=false; $("#guestIso").checked=false;
+  $("#clientSignal").classList.remove('up'); $("#clientOk").classList.remove('show');
+  $all('.err').forEach(e=>e.classList.remove('show'));
+  $("#passMeter").style.width="0"; $("#adminMeter").style.width="0";
+  $("#devLed").classList.remove('on'); $("#sessionInfo").hidden=true;
+  unlockNav(false); refreshPassFieldVisibility(); showView("login");
+  renderQuestions(); sync();
+  $("#submitStatus").textContent=; $("#submitStatus").className="status-line";
+});
+
+/* ---------- boot ---------- */
+refreshPassFieldVisibility();
+renderQuestions();
+sync();
+showView("login");
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-enterprise-wlan.html",title:"Bring Up an Enterprise WLAN (Corporate + Guest)"}, NEXT={href:"index_netplus-wifi-profile.html",title:"Provision a Secured Wi-Fi Profile & Retire a Stale One"}, CRUMB="All Labs \u203a Unit 1 \u2014 Managing My Connections \u203a Topic 1.2";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

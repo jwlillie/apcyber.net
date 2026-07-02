@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Authoritative DNS: Primary &amp; Secondary Forward Zones</title>
+<!--
+  ============================================================================
+  Network+ / AP Networking Simulation Lab
+  Authoritative DNS: Primary & Secondary Forward Zones
+  assignmentId: netplus-dns-zones
+  Blueprint tags: N10-007:1.8 (Explain the functions of network services / DNS)
+                  APNET:4.2 (The Language of the Network: Protocols / name resolution)
+  ----------------------------------------------------------------------------
+  This is an ORIGINAL, clean-room lab built from the public CompTIA Network+
+  objectives and the public College Board AP Networking framework. Scenario,
+  personas, hostnames, domain names, IP plan, command set, task wording, and
+  question phrasing are the author's own expression and emulate no vendor lab.
+
+  © 2026 <AUTHOR / ORG NAME HERE>. All rights reserved.
+  Licensed for use within the AP Networking / Network+ Lab Library.
+  Replace the placeholder above with your own copyright/license line.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0b1620; --panel:#10202c; --panel-2:#142c3a; --raise:#193a4c;
+    --ink:#e2eef4; --muted:#86abbd; --faint:#5d8294;
+    --line:#1f3c4d; --line-2:#2a536a;
+    --signal:#34d3c9; --amber:#ffb454; --ok:#5bd99a; --bad:#ff6f6f;
+    --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1100px 520px at 88% -8%, #123141 0%, transparent 60%),
+      radial-gradient(900px 460px at -6% 102%, #0f2a33 0%, transparent 58%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased; padding:18px; min-height:100vh;
+  }
+  a{color:var(--signal)}
+  .wrap{max-width:1180px; margin:0 auto}
+
+  /* ---- header / signature transfer link ---- */
+  header.bar{
+    display:flex; flex-wrap:wrap; gap:14px 22px; align-items:flex-end;
+    border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:16px;
+  }
+  .title h1{font-size:1.18rem; margin:0; letter-spacing:.2px}
+  .title .sub{color:var(--muted); font-size:.82rem; margin-top:3px}
+  .tags{display:flex; gap:6px; flex-wrap:wrap; margin-left:auto}
+  .tag{font-family:var(--mono); font-size:.7rem; color:var(--signal);
+    border:1px solid var(--line-2); border-radius:999px; padding:3px 9px; background:#0e2531}
+
+  .link-rail{
+    display:flex; align-items:center; gap:10px; width:100%;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:10px 14px; margin-bottom:16px;
+  }
+  .node{display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:.82rem}
+  .node .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);box-shadow:0 0 0 3px #0c1c26}
+  .node[data-active="1"] .dot{background:var(--amber);box-shadow:0 0 0 3px #2a2010, 0 0 12px var(--amber)}
+  .node .name{color:var(--ink)} .node .ip{color:var(--muted)}
+  .pipe{flex:1; height:2px; position:relative; background:linear-gradient(90deg,var(--line-2),var(--line));border-radius:2px}
+  .pipe .pulse{position:absolute; top:-3px; left:0; width:8px; height:8px; border-radius:50%;
+    background:var(--signal); box-shadow:0 0 10px var(--signal); opacity:0}
+  .pipe[data-xfer="1"]{background:linear-gradient(90deg,var(--signal),#1d6f6a)}
+  .pipe[data-xfer="1"] .pulse{animation:flow 1.1s ease-in-out 1; opacity:1}
+  .pipe .axfr{position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    font-family:var(--mono); font-size:.66rem; color:var(--faint)}
+  .pipe[data-xfer="1"] .axfr{color:var(--signal)}
+  @keyframes flow{from{left:2%}to{left:96%}}
+  @media (prefers-reduced-motion: reduce){ .pipe .pulse{animation:none} }
+
+  /* ---- layout ---- */
+  .grid{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:16px; align-items:start}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+  .col{display:flex; flex-direction:column; gap:16px; min-width:0}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden}
+  .card > h2{margin:0; font-size:.78rem; text-transform:uppercase; letter-spacing:.9px;
+    color:var(--muted); padding:10px 14px; border-bottom:1px solid var(--line); background:#0e1f2a}
+  .card .body{padding:14px}
+
+  /* ---- console ---- */
+  .console{font-family:var(--mono)}
+  .console .out{
+    background:#08141c; border:1px solid var(--line); border-radius:8px;
+    height:300px; overflow:auto; padding:12px; font-size:.82rem; white-space:pre-wrap; word-break:break-word;
+  }
+  .out .ln{margin:0 0 2px}
+  .out .cmd{color:var(--ink)} .out .cmd::before{content:"› "; color:var(--amber)}
+  .out .ok{color:var(--ok)} .out .err{color:var(--bad)} .out .info{color:var(--muted)} .out .sys{color:var(--signal)}
+  .prompt-row{display:flex; align-items:center; gap:8px; margin-top:10px}
+  .prompt-row .ps1{font-family:var(--mono); color:var(--signal); font-size:.82rem; white-space:nowrap}
+  .prompt-row input{
+    flex:1; min-width:0; background:#08141c; color:var(--ink); border:1px solid var(--line);
+    border-radius:8px; padding:9px 11px; font-family:var(--mono); font-size:.84rem;
+  }
+  .prompt-row input:focus-visible{outline:2px solid var(--signal); outline-offset:1px; border-color:var(--line-2)}
+  .hintline{color:var(--faint); font-size:.74rem; margin-top:8px; font-family:var(--mono)}
+
+  /* ---- zone state ---- */
+  .srv-tabs{display:flex; gap:6px; margin-bottom:10px}
+  .srv-tabs button{
+    font-family:var(--mono); font-size:.76rem; color:var(--muted); cursor:pointer;
+    background:#0e1f2a; border:1px solid var(--line); border-radius:7px; padding:6px 10px;
+  }
+  .srv-tabs button[aria-pressed="true"]{color:#06222a; background:var(--signal); border-color:var(--signal); font-weight:600}
+  .srv-tabs button:focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+  .zone{border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden}
+  .zone .zh{display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; padding:8px 11px; background:#0e1f2a; font-family:var(--mono); font-size:.76rem}
+  .zone .zh .zn{color:var(--ink); font-weight:600}
+  .pill{font-family:var(--mono); font-size:.66rem; padding:2px 7px; border-radius:999px; border:1px solid var(--line-2); color:var(--muted)}
+  .pill.primary{color:var(--amber); border-color:#5a3f17}
+  .pill.secondary{color:var(--signal); border-color:#1d5a57}
+  .pill.warn{color:var(--bad); border-color:#5a2222}
+  .recs{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:.76rem}
+  .recs th,.recs td{text-align:left; padding:6px 11px; border-top:1px solid var(--line)}
+  .recs th{color:var(--faint); font-weight:500}
+  .empty{color:var(--faint); font-family:var(--mono); font-size:.76rem; padding:10px 0}
+
+  /* ---- checklist ---- */
+  ul.tasks{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px}
+  ul.tasks li{display:flex; gap:10px; align-items:flex-start; font-size:.85rem}
+  .box{flex:none; width:18px; height:18px; border-radius:5px; border:1.5px solid var(--line-2); margin-top:1px; position:relative; background:#0c1c26}
+  li[data-done="1"] .box{background:var(--ok); border-color:var(--ok)}
+  li[data-done="1"] .box::after{content:"✓"; position:absolute; inset:0; display:grid; place-items:center; color:#06231a; font-size:.74rem; font-weight:800}
+  li[data-done="1"] .tlabel{color:var(--muted)}
+  .tlabel{color:var(--ink)}
+
+  /* ---- questions ---- */
+  .q{border-top:1px solid var(--line); padding:12px 0}
+  .q:first-child{border-top:0; padding-top:0}
+  .q .ask{font-size:.86rem; margin:0 0 8px}
+  .q .ask b{color:var(--amber); font-family:var(--mono); margin-right:6px}
+  .opts{display:flex; flex-direction:column; gap:6px}
+  .opts label{display:flex; gap:9px; align-items:flex-start; font-size:.83rem; cursor:pointer;
+    border:1px solid var(--line); border-radius:7px; padding:8px 10px; background:#0c1c26}
+  .opts label:hover{border-color:var(--line-2)}
+  .opts input{margin-top:2px; accent-color:var(--signal)}
+  .opts label:focus-within{outline:2px solid var(--signal); outline-offset:1px}
+  .q input[type="text"]{width:100%; background:#0c1c26; color:var(--ink); border:1px solid var(--line);
+    border-radius:7px; padding:8px 10px; font-family:var(--mono); font-size:.82rem}
+  .q input[type="text"]:focus-visible{outline:2px solid var(--signal); outline-offset:1px}
+  .qmark{font-size:.74rem; font-family:var(--mono); margin-top:6px; min-height:1em}
+  .qmark.good{color:var(--ok)} .qmark.bad{color:var(--bad)}
+
+  /* ---- submit bar ---- */
+  .submit{position:sticky; bottom:0; margin-top:4px}
+  .submit .body{display:flex; flex-wrap:wrap; gap:12px; align-items:end}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field label{font-size:.74rem; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
+  .field input{background:#0c1c26; color:var(--ink); border:1px solid var(--line-2); border-radius:8px;
+    padding:9px 11px; font-family:var(--mono); font-size:.86rem; width:200px}
+  .field input:focus-visible{outline:2px solid var(--signal); outline-offset:1px}
+  .score{font-family:var(--mono); font-size:.85rem; color:var(--muted)}
+  .score b{color:var(--ink)} .score.pass b{color:var(--ok)}
+  .btn{font-family:var(--sans); font-size:.86rem; font-weight:600; cursor:pointer; border-radius:8px;
+    padding:10px 16px; border:1px solid transparent}
+  .btn.primary{background:var(--signal); color:#06222a}
+  .btn.primary:disabled{opacity:.45; cursor:not-allowed}
+  .btn.ghost{background:transparent; color:var(--muted); border-color:var(--line-2)}
+  .btn:focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+  .status{flex-basis:100%; font-family:var(--mono); font-size:.8rem; min-height:1.1em; color:var(--muted)}
+  .status.ok{color:var(--ok)} .status.err{color:var(--bad)} .status.busy{color:var(--amber)}
+  .status a{word-break:break-all}
+
+  footer.note{margin-top:18px; color:var(--faint); font-size:.72rem; font-family:var(--mono); text-align:center}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-dns-zones", "title": "Lab — Authoritative DNS: Primary &amp; Secondary Forward Zones", "version": "1.0.0", "objectives": ["N10-009:3.4", "APNET:2.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap" id="lab-capture">
+
+  <header class="bar">
+    <div class="title">
+      <h1>Authoritative DNS — Primary &amp; Secondary Forward Zones</h1>
+      <div class="sub">Cobalt Harbor Logistics · NetOps console · stand up name resolution for the new parcel-tracking service</div>
+    </div>
+    <div class="tags" aria-label="Blueprint objectives">
+      <span class="tag">N10-007 · 1.8</span>
+      <span class="tag">AP NET · 4.2</span>
+    </div>
+  </header>
+
+  <!-- signature: live primary -> secondary transfer link -->
+  <div class="link-rail" aria-hidden="true">
+    <div class="node" id="node-core" data-active="1">
+      <span class="dot"></span><span class="name">ns-core</span><span class="ip">10.40.0.5</span>
+    </div>
+    <div class="pipe" id="pipe" data-xfer="0">
+      <span class="axfr">zone transfer</span><span class="pulse"></span>
+    </div>
+    <div class="node" id="node-edge" data-active="0">
+      <span class="dot"></span><span class="name">ns-edge</span><span class="ip">10.40.0.6</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: console -->
+    <div class="col">
+      <section class="card">
+        <h2>NetOps DNS Console</h2>
+        <div class="body console">
+          <div class="out" id="out" role="log" aria-live="polite" aria-label="Console output"></div>
+          <div class="prompt-row">
+            <span class="ps1" id="ps1">ns-core#</span>
+            <label class="sr-only" for="cmd">Console command</label>
+            <input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false"
+                   placeholder="type a command, or 'help'" />
+          </div>
+          <div class="hintline">Tip: <b>help</b> lists commands · <b>↑/↓</b> recall history · <b>brief</b> reprints the task list</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Zone &amp; Record State</h2>
+        <div class="body">
+          <div class="srv-tabs" role="group" aria-label="View nameserver">
+            <button id="vtab-core" aria-pressed="true">ns-core (10.40.0.5)</button>
+            <button id="vtab-edge" aria-pressed="false">ns-edge (10.40.0.6)</button>
+          </div>
+          <div id="zoneview"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: tasks + questions -->
+    <div class="col">
+      <section class="card">
+        <h2>Lab Tasks</h2>
+        <div class="body">
+          <ul class="tasks" id="tasklist"></ul>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Check Your Understanding</h2>
+        <div class="body" id="questions"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- SUBMIT -->
+  <section class="card submit">
+    <div class="body">
+      <div class="field">
+        <label for="handle">Callsign</label>
+        <input id="handle" maxlength="32" autocomplete="off" placeholder="e.g. harbor-tern" />
+      </div>
+      <div class="score" id="scoreline" aria-live="polite">Score <b>0 / 12</b></div>
+      <div style="margin-left:auto; display:flex; gap:10px">
+        <button class="btn ghost" id="reset">Reset lab</button>
+        <button class="btn primary" id="submit">Submit completed lab</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <footer class="note">
+    © 2026 &lt;AUTHOR / ORG NAME HERE&gt; · Clean-room lab · No real names collected — use a callsign only.
+  </footer>
+</div>
+
+<!-- ===================================================================== -->
+<!-- SCRIPT BLOCK 1 — html2canvas                                          -->
+<!-- For a fully dependency-free deliverable, paste the MINIFIED html2canvas -->
+<!-- source between the sentinels below (one-time copy from the html2canvas  -->
+<!-- dist file). The engine uses window.html2canvas when present, and        -->
+<!-- otherwise falls back to a self-drawn canvas summary so submission always -->
+<!-- carries a PNG. Do NOT load it from a CDN in the shipped file.            -->
+<!-- ===================================================================== -->
+<script>/* >>> BEGIN html2canvas (paste minified source here) <<< */
+/* >>> END html2canvas <<< */</script>
+
+<!-- ===================================================================== -->
+<!-- SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, capture, submit          -->
+<!-- ===================================================================== -->
+<script>
+"use strict";
+
+/* ----------------------------- LAB CONFIG ----------------------------- */
+const CONFIG = {
+  assignmentId: "netplus-dns-zones",
+  title: "Authoritative DNS: Primary & Secondary Forward Zones",
+  objectives: ["N10-009:3.4", "APNET:2.3"],
+  // Deployed Apps Script Web App /exec URL — same across the library:
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  // Per-cohort secret; must match a Script Property on the server. Rotate per cohort:
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+  passThreshold: "all tasks + all questions correct"
+};
+
+/* Original answer values for this scenario */
+const KEY = {
+  domain:   "harbor.lan",
+  coreIP:   "10.40.0.5",
+  edgeIP:   "10.40.0.6",
+  service:  { host: "parcel", fqdn: "parcel.harbor.lan", ip: "10.40.8.20" }
+};
+
+/* ------------------------- simulated DNS state ------------------------ */
+const servers = {
+  "ns-core": { ip: KEY.coreIP, zones: {} },
+  "ns-edge": { ip: KEY.edgeIP, zones: {} }
+};
+let active = "ns-core";
+let viewServer = "ns-core";
+const verified = { parcelEdge: false };  // set true only on a real resolve test
+const history = []; let hIdx = -1;
+
+/* --------------------------------- DOM -------------------------------- */
+const $ = (id) => document.getElementById(id);
+const out = $("out"), cmd = $("cmd"), ps1 = $("ps1");
+
+function print(text, cls){
+  const p = document.createElement("p");
+  p.className = "ln " + (cls || "");
+  p.textContent = text;
+  out.appendChild(p);
+  out.scrollTop = out.scrollHeight;
+}
+function echo(c){ print(c, "cmd"); }
+
+/* ------------------------------ helpers ------------------------------- */
+const isIPv4 = (s) => /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(s) &&
+  s.split(".").every(o => +o >= 0 && +o <= 255);
+const zoneOf = (srv, name) => servers[srv].zones[name.toLowerCase()];
+function relToFqdn(zone, name){
+  name = name.toLowerCase().replace(/\.$/, "");
+  if (name === "@") return zone;
+  return name.endsWith("." + zone) || name === zone ? name : name + "." + zone;
+}
+function serverByIP(ip){ return Object.keys(servers).find(s => servers[s].ip === ip); }
+
+/* ------------------------------ commands ------------------------------ */
+function run(line){
+  const raw = line.trim();
+  if (!raw) return;
+  echo((active + "# ") + raw);
+  const t = raw.split(/\s+/);
+  const verb = t[0].toLowerCase();
+
+  switch (verb){
+    case "help": return cmdHelp();
+    case "clear": out.innerHTML = ""; return;
+    case "brief": return printBrief();
+    case "use": return cmdUse(t);
+    case "show": return cmdShow(t);
+    case "zone": return cmdZone(t);
+    case "record": return cmdRecord(t);
+    case "resolve": case "nslookup": return cmdResolve(t);
+    case "reset": return doReset();
+    default:
+      print("unknown command: '" + verb + "'. type 'help' for the command list.", "err");
+  }
+}
+
+function cmdHelp(){
+  print("commands on the active nameserver:", "sys");
+  [
+    "use <ns-core|ns-edge>                      switch the active nameserver",
+    "zone add forward <name> primary           create a primary forward zone",
+    "zone add forward <name> secondary --master <ip>",
+    "                                           create a secondary (replica) zone",
+    "zone set <name> dynamic-update <on|off>    allow/deny automatic record updates",
+    "zone set <name> transfer <ip[,ip]|any|none> who may pull this zone",
+    "zone transfer <name>                       (on a secondary) pull from the master",
+    "record add <zone> <host> A <ipv4>          add an address record",
+    "record add <zone> <host> CNAME <target>    add an alias record",
+    "record list <zone>                         list records in a zone",
+    "resolve <fqdn>                             test name resolution here",
+    "show zones | show config                   inspect this nameserver",
+    "brief                                      reprint the task list",
+    "reset                                      restart the lab"
+  ].forEach(l => print("  " + l, "info"));
+}
+
+function cmdUse(t){
+  const s = (t[1] || "").toLowerCase();
+  if (s !== "ns-core" && s !== "ns-edge")
+    return print("usage: use <ns-core|ns-edge>", "err");
+  active = s; ps1.textContent = active + "#";
+  $("node-core").dataset.active = active === "ns-core" ? "1" : "0";
+  $("node-edge").dataset.active = active === "ns-edge" ? "1" : "0";
+  print("now operating on " + active + " (" + servers[active].ip + ")", "ok");
+}
+
+function cmdShow(t){
+  const what = (t[1] || "").toLowerCase();
+  if (what === "zones"){
+    const z = Object.values(servers[active].zones);
+    if (!z.length) return print("no zones on " + active, "info");
+    z.forEach(zz => print("  " + zz.name + "  [" + zz.type +
+      (zz.type === "secondary" ? " master " + zz.master : "") + "]  records:" + zz.records.length, "info"));
+    return;
+  }
+  if (what === "config"){
+    print("nameserver " + active + " (" + servers[active].ip + ")", "sys");
+    Object.values(servers[active].zones).forEach(z => {
+      print("  zone " + z.name + " type=" + z.type +
+        (z.type === "primary" ? " dynamic-update=" + (z.dynamicUpdate ? "on" : "off") +
+          " transfer=" + xferStr(z) : " master=" + z.master + " loaded=" + (z.transferred ? "yes" : "no")), "info");
+    });
+    return;
+  }
+  print("usage: show <zones|config>", "err");
+}
+function xferStr(z){ return z.transfer === "any" ? "any" : z.transfer === "none" ? "none" : z.transfer.join(","); }
+
+function cmdZone(t){
+  const sub = (t[1] || "").toLowerCase();
+
+  if (sub === "add"){
+    const dir = (t[2] || "").toLowerCase();
+    const name = (t[3] || "").toLowerCase();
+    const type = (t[4] || "").toLowerCase();
+    if (dir !== "forward") return print("usage: zone add forward <name> <primary|secondary> ...", "err");
+    if (!name) return print("zone name required.", "err");
+    if (zoneOf(active, name)) return print("zone '" + name + "' already exists on " + active + ".", "err");
+
+    if (type === "primary"){
+      servers[active].zones[name] = { name, direction:"forward", type:"primary",
+        master:null, dynamicUpdate:true, transfer:"none", records:[], transferred:true };
+      print("primary forward zone '" + name + "' created on " + active + ".", "ok");
+      print("note: dynamic-update defaults to ON and transfer to NONE — review both.", "info");
+    } else if (type === "secondary"){
+      const mi = t.indexOf("--master");
+      const master = mi > -1 ? t[mi+1] : null;
+      if (!master) return print("a secondary zone needs a master: ... secondary --master <ip>", "err");
+      if (!isIPv4(master)) return print("'" + master + "' is not a valid IPv4 address.", "err");
+      servers[active].zones[name] = { name, direction:"forward", type:"secondary",
+        master, dynamicUpdate:false, transfer:"none", records:[], transferred:false };
+      print("secondary forward zone '" + name + "' created on " + active + ", master " + master + ".", "ok");
+      print("run 'zone transfer " + name + "' to pull the zone from the master.", "info");
+    } else {
+      print("zone type must be 'primary' or 'secondary'.", "err");
+    }
+    return finish();
+  }
+
+  if (sub === "set"){
+    const name = (t[2] || "").toLowerCase();
+    const z = zoneOf(active, name);
+    if (!z) return print("no zone '" + name + "' on " + active + ".", "err");
+    const opt = (t[3] || "").toLowerCase();
+    if (opt === "dynamic-update"){
+      const v = (t[4] || "").toLowerCase();
+      if (v !== "on" && v !== "off") return print("usage: zone set <name> dynamic-update <on|off>", "err");
+      z.dynamicUpdate = (v === "on");
+      print("dynamic-update " + v + " for " + name + ".", "ok");
+    } else if (opt === "transfer"){
+      const v = (t[4] || "").toLowerCase();
+      if (!v) return print("usage: zone set <name> transfer <ip[,ip]|any|none>", "err");
+      if (v === "any" || v === "none"){ z.transfer = v; }
+      else {
+        const ips = v.split(",").map(s=>s.trim());
+        if (!ips.every(isIPv4)) return print("transfer list must be IPv4 addresses, 'any', or 'none'.", "err");
+        z.transfer = ips;
+      }
+      print("zone transfers for " + name + " set to " + xferStr(z) + ".", "ok");
+      if (v === "any") print("caution: 'any' exposes the full zone to every host — prefer the secondary's IP.", "info");
+    } else {
+      print("settable: dynamic-update, transfer", "err");
+    }
+    return finish();
+  }
+
+  if (sub === "transfer"){
+    const name = (t[2] || "").toLowerCase();
+    const z = zoneOf(active, name);
+    if (!z) return print("no zone '" + name + "' on " + active + ".", "err");
+    if (z.type !== "secondary") return print("only a secondary zone pulls transfers; '" + name + "' is " + z.type + ".", "err");
+    const msrv = serverByIP(z.master);
+    const mzone = msrv && zoneOf(msrv, name);
+    if (!mzone || mzone.type !== "primary")
+      return print("transfer failed: no primary zone for '" + name + "' at master " + z.master + ".", "err");
+    const allowed = mzone.transfer === "any" ||
+      (Array.isArray(mzone.transfer) && mzone.transfer.includes(servers[active].ip));
+    if (!allowed){
+      print("transfer REFUSED by master " + z.master + ": " + servers[active].ip +
+        " is not on the zone's transfer allow-list.", "err");
+      print("fix: on the master, run 'zone set " + name + " transfer " + servers[active].ip + "'.", "info");
+      return finish();
+    }
+    z.records = mzone.records.map(r => ({ ...r }));
+    z.transferred = true;
+    animateTransfer();
+    print("zone transfer complete: " + z.records.length + " records copied from " + z.master + ".", "ok");
+    return finish();
+  }
+
+  print("usage: zone <add|set|transfer> ...", "err");
+}
+
+function cmdRecord(t){
+  const sub = (t[1] || "").toLowerCase();
+  if (sub === "list"){
+    const name = (t[2] || "").toLowerCase();
+    const z = zoneOf(active, name);
+    if (!z) return print("no zone '" + name + "' on " + active + ".", "err");
+    if (!z.records.length) return print("zone '" + name + "' has no records.", "info");
+    z.records.forEach(r => print("  " + r.name.padEnd(26) + r.type.padEnd(6) + r.value, "info"));
+    return;
+  }
+  if (sub === "add"){
+    const zname = (t[2] || "").toLowerCase();
+    const host  = (t[3] || "");
+    const rtype = (t[4] || "").toUpperCase();
+    const value = (t[5] || "");
+    const z = zoneOf(active, zname);
+    if (!z) return print("no zone '" + zname + "' on " + active + ".", "err");
+    if (z.type === "secondary")
+      return print("cannot edit a secondary zone directly — records arrive via transfer from the master.", "err");
+    if (!host || !rtype || !value) return print("usage: record add <zone> <host> <A|CNAME> <value>", "err");
+    const fqdn = relToFqdn(zname, host);
+    if (rtype === "A"){
+      if (!isIPv4(value)) return print("an A record value must be a valid IPv4 address.", "err");
+    } else if (rtype === "CNAME"){
+      if (isIPv4(value)) return print("a CNAME points at a name, not an IP. Use an A record for an address.", "err");
+    } else {
+      return print("this lab supports A and CNAME records.", "err");
+    }
+    z.records.push({ name: fqdn, type: rtype, value: rtype === "CNAME" ? value.toLowerCase().replace(/\.$/,"") : value });
+    print(rtype + " record added: " + fqdn + " -> " + value, "ok");
+    return finish();
+  }
+  print("usage: record <add|list> ...", "err");
+}
+
+function cmdResolve(t){
+  const q = (t[1] || "").toLowerCase().replace(/\.$/,"");
+  if (!q) return print("usage: resolve <fqdn>", "err");
+  const z = Object.values(servers[active].zones)
+    .find(zz => q === zz.name || q.endsWith("." + zz.name));
+  if (!z) return print("resolve: " + q + " — REFUSED (this server is not authoritative for that name).", "err");
+  if (z.type === "secondary" && !z.transferred)
+    return print("resolve: " + q + " — SERVFAIL (secondary zone not yet loaded; run a zone transfer).", "err");
+
+  let target = q, hop = 0, rec;
+  while (hop++ < 5){
+    rec = z.records.find(r => r.name === target);
+    if (!rec) break;
+    if (rec.type === "CNAME"){ target = rec.value; continue; }
+    if (rec.type === "A"){
+      print("resolve: " + q + " -> " + rec.value + "  (" + active + ", authoritative)", "ok");
+      if (q === KEY.service.fqdn && rec.value === KEY.service.ip && active === "ns-edge")
+        verified.parcelEdge = true;
+      return finish();
+    }
+  }
+  print("resolve: " + q + " — NXDOMAIN (no matching record in zone '" + z.name + "').", "err");
+  return finish();
+}
+
+/* --------------------------- TASK DEFINITIONS ------------------------- */
+const TASKS = [
+  { id:"primary",   label:"Create a primary forward zone for harbor.lan on ns-core",
+    test:() => { const z = zoneOf("ns-core", KEY.domain); return !!z && z.type==="primary" && z.direction==="forward"; } },
+  { id:"dynoff",    label:"Disable dynamic updates on the harbor.lan primary zone",
+    test:() => { const z = zoneOf("ns-core", KEY.domain); return !!z && z.type==="primary" && z.dynamicUpdate===false; } },
+  { id:"xfer",      label:"Restrict zone transfers to ns-edge (10.40.0.6) — not 'any'",
+    test:() => { const z = zoneOf("ns-core", KEY.domain); return !!z && Array.isArray(z.transfer) && z.transfer.includes(KEY.edgeIP); } },
+  { id:"arecord",   label:"Add an A record: parcel.harbor.lan → 10.40.8.20 on ns-core",
+    test:() => { const z = zoneOf("ns-core", KEY.domain); return !!z && z.records.some(r => r.type==="A" && r.name===KEY.service.fqdn && r.value===KEY.service.ip); } },
+  { id:"secondary", label:"Create a secondary harbor.lan zone on ns-edge (master 10.40.0.5)",
+    test:() => { const z = zoneOf("ns-edge", KEY.domain); return !!z && z.type==="secondary" && z.master===KEY.coreIP; } },
+  { id:"transfer",  label:"Transfer the zone so ns-edge holds the parcel record",
+    test:() => { const z = zoneOf("ns-edge", KEY.domain); return !!z && z.transferred && z.records.some(r => r.name===KEY.service.fqdn && r.value===KEY.service.ip); } },
+  { id:"verify",    label:"Verify on ns-edge: resolve parcel.harbor.lan returns 10.40.8.20",
+    test:() => verified.parcelEdge }
+];
+
+/* ----------------------------- QUESTIONS ------------------------------ */
+const QUESTIONS = [
+  { id:"q1", type:"mc",
+    prompt:"Which record type maps a hostname to an IPv4 address?",
+    options:["A","MX","NS","CNAME"], answer:"A" },
+  { id:"q2", type:"mc",
+    prompt:"What best describes a secondary (replica) forward zone?",
+    options:[
+      "A read-only copy kept in sync from the primary via zone transfer, used for redundancy and faster local lookups",
+      "The only writable copy of the zone; the primary forwards edits to it",
+      "A zone that resolves IP addresses back into hostnames",
+      "A cache of recently looked-up names that expires on a timer"
+    ],
+    answer:"A read-only copy kept in sync from the primary via zone transfer, used for redundancy and faster local lookups" },
+  { id:"q3", type:"text",
+    prompt:"What is the name of the process a secondary uses to copy zone data from its master? (two-word term or its acronym)",
+    accept:["zone transfer","zonetransfer","axfr","zone transfers"] },
+  { id:"q4", type:"mc",
+    prompt:"A forward zone resolves names → IP addresses. What does a reverse lookup zone resolve?",
+    options:[
+      "IP addresses → names (PTR records)",
+      "Names → mail servers (MX records)",
+      "Names → aliases (CNAME records)",
+      "Names → IPv6 addresses only (AAAA records)"
+    ],
+    answer:"IP addresses → names (PTR records)" },
+  { id:"q5", type:"mc",
+    prompt:"Why disable dynamic updates on this manually-managed zone?",
+    options:[
+      "So records change only when an admin makes them, preventing unwanted or unauthorized automatic edits",
+      "To make the zone resolve faster for clients",
+      "To allow any host on the network to register its own records",
+      "Because dynamic updates are required before a zone transfer can occur"
+    ],
+    answer:"So records change only when an admin makes them, preventing unwanted or unauthorized automatic edits" }
+];
+
+/* ------------------------------ rendering ----------------------------- */
+function renderTasks(){
+  const ul = $("tasklist"); ul.innerHTML = "";
+  TASKS.forEach(t => {
+    const done = !!t.test();
+    const li = document.createElement("li");
+    li.dataset.done = done ? "1" : "0";
+    li.innerHTML = '<span class="box" aria-hidden="true"></span>' +
+      '<span class="tlabel">' + t.label + '</span>';
+    li.setAttribute("role","listitem");
+    li.setAttribute("aria-label", (done ? "Complete: " : "Incomplete: ") + t.label);
+    ul.appendChild(li);
+  });
+}
+
+function renderQuestions(){
+  const box = $("questions"); box.innerHTML = "";
+  QUESTIONS.forEach((q, i) => {
+    const wrap = document.createElement("div"); wrap.className = "q";
+    const ask = document.createElement("p"); ask.className = "ask";
+    ask.innerHTML = "<b>Q" + (i+1) + "</b>" + q.prompt;
+    wrap.appendChild(ask);
+    if (q.type === "mc"){
+      const opts = document.createElement("div"); opts.className = "opts";
+      q.options.forEach((o, k) => {
+        const id = q.id + "_" + k;
+        const lab = document.createElement("label"); lab.setAttribute("for", id);
+        lab.innerHTML = '<input type="radio" id="'+id+'" name="'+q.id+'" value="'+
+          o.replace(/"/g,"&quot;")+'"><span>'+o+'</span>';
+        opts.appendChild(lab);
+      });
+      wrap.appendChild(opts);
+    } else {
+      const inp = document.createElement("input");
+      inp.type = "text"; inp.name = q.id; inp.autocomplete = "off";
+      inp.setAttribute("aria-label", "Answer for question " + (i+1));
+      inp.placeholder = "type your answer";
+      wrap.appendChild(inp);
+    }
+    const mk = document.createElement("div"); mk.className = "qmark"; mk.id = "mark_" + q.id;
+    wrap.appendChild(mk);
+    box.appendChild(wrap);
+  });
+  box.addEventListener("change", gradeQuestions);
+  box.addEventListener("input", (e) => { if (e.target.type === "text") gradeQuestions(); });
+}
+
+function getAnswer(q){
+  if (q.type === "mc"){
+    const sel = document.querySelector('input[name="'+q.id+'"]:checked');
+    return sel ? sel.value : "";
+  }
+  const inp = document.querySelector('input[name="'+q.id+'"]');
+  return inp ? inp.value.trim() : "";
+}
+function isCorrect(q){
+  const a = getAnswer(q);
+  if (!a) return false;
+  if (q.type === "mc") return a === q.answer;
+  const norm = a.toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
+  return q.accept.some(x => x.toLowerCase().replace(/[^a-z0-9 ]/g,"").trim() === norm);
+}
+function gradeQuestions(){
+  QUESTIONS.forEach(q => {
+    const mk = $("mark_" + q.id);
+    const a = getAnswer(q);
+    if (!a){ mk.textContent = ""; mk.className = "qmark"; return; }
+    if (isCorrect(q)){ mk.textContent = "✓ correct"; mk.className = "qmark good"; }
+    else { mk.textContent = "✗ not yet — review and try again"; mk.className = "qmark bad"; }
+  });
+  updateScore();
+}
+
+function renderZones(){
+  const view = $("zoneview");
+  const z = Object.values(servers[viewServer].zones);
+  view.innerHTML = "";
+  if (!z.length){
+    const e = document.createElement("div"); e.className = "empty";
+    e.textContent = "No zones configured on " + viewServer + " yet.";
+    view.appendChild(e); return;
+  }
+  z.forEach(zz => {
+    const card = document.createElement("div"); card.className = "zone";
+    let pills = '<span class="pill '+zz.type+'">'+zz.type+'</span>';
+    if (zz.type === "primary"){
+      pills += '<span class="pill">dyn-update: '+(zz.dynamicUpdate?'on':'off')+'</span>';
+      pills += '<span class="pill'+(zz.transfer==='any'?' warn':'')+'">xfer: '+xferStr(zz)+'</span>';
+    } else {
+      pills += '<span class="pill">master '+zz.master+'</span>';
+      pills += '<span class="pill'+(zz.transferred?'':' warn')+'">'+(zz.transferred?'loaded':'not loaded')+'</span>';
+    }
+    let rows = zz.records.length
+      ? zz.records.map(r => '<tr><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.value+'</td></tr>').join("")
+      : '<tr><td colspan="3" class="empty">no records</td></tr>';
+    card.innerHTML =
+      '<div class="zh"><span class="zn">'+zz.name+'</span>'+pills+'</div>'+
+      '<table class="recs"><thead><tr><th>name</th><th>type</th><th>value</th></tr></thead><tbody>'+
+      rows+'</tbody></table>';
+    view.appendChild(card);
+  });
+}
+
+function animateTransfer(){
+  const pipe = $("pipe"); pipe.dataset.xfer = "1";
+}
+
+/* ------------------------------- scoring ------------------------------ */
+function tasksPassed(){ return TASKS.filter(t => t.test()).length; }
+function questionsPassed(){ return QUESTIONS.filter(isCorrect).length; }
+function updateScore(){
+  const earned = tasksPassed() + questionsPassed();
+  const total = TASKS.length + QUESTIONS.length;
+  const pass = earned === total;
+  const line = $("scoreline");
+  line.innerHTML = "Score <b>" + earned + " / " + total + "</b>" +
+    (pass ? " — all tasks &amp; questions complete" : "");
+  line.className = "score" + (pass ? " pass" : "");
+  return { earned, total, pass };
+}
+
+/* recompute everything after any state change */
+function finish(){ renderTasks(); renderZones(); updateScore(); }
+function printBrief(){
+  print("TASK BRIEF — Cobalt Harbor Logistics", "sys");
+  TASKS.forEach((t,i) => print("  " + (i+1) + ". [" + (t.test()?"x":" ") + "] " + t.label, "info"));
+}
+
+/* ------------------------------- capture ------------------------------ */
+async function capture(){
+  const el = $("lab-capture");
+  if (window.html2canvas){
+    try{
+      const canvas = await window.html2canvas(el, { backgroundColor:"#0b1620", scale:1, logging:false });
+      return canvas.toDataURL("image/png");
+    }catch(e){ /* fall through to summary card */ }
+  }
+  return summaryCard();
+}
+/* dependency-free fallback: draw a clean state card so a PNG is always present */
+function summaryCard(){
+  const c = document.createElement("canvas");
+  c.width = 920; c.height = 620;
+  const x = c.getContext("2d");
+  x.fillStyle = "#0b1620"; x.fillRect(0,0,c.width,c.height);
+  x.fillStyle = "#34d3c9"; x.font = "bold 22px system-ui,sans-serif";
+  x.fillText("Cobalt Harbor — Authoritative DNS Lab", 32, 44);
+  x.fillStyle = "#86abbd"; x.font = "13px ui-monospace,monospace";
+  x.fillText("assignmentId: " + CONFIG.assignmentId + "   tags: " + CONFIG.objectives.join("  "), 32, 70);
+  x.fillText("callsign: " + ($("handle").value || "—") + "   captured: " + new Date().toISOString(), 32, 90);
+  let y = 132;
+  x.font = "bold 15px system-ui,sans-serif"; x.fillStyle = "#e2eef4";
+  x.fillText("Tasks", 32, y); y += 10;
+  x.font = "13px ui-monospace,monospace";
+  TASKS.forEach(t => { y += 24; const ok = t.test();
+    x.fillStyle = ok ? "#5bd99a" : "#5d8294";
+    x.fillText((ok ? "[x] " : "[ ] ") + t.label, 40, y); });
+  y += 38; x.font = "bold 15px system-ui,sans-serif"; x.fillStyle = "#e2eef4";
+  x.fillText("Questions", 32, y);
+  x.font = "13px ui-monospace,monospace";
+  QUESTIONS.forEach((q,i) => { y += 24; const ok = isCorrect(q);
+    x.fillStyle = ok ? "#5bd99a" : "#5d8294";
+    x.fillText((ok ? "[x] " : "[ ] ") + "Q" + (i+1), 40, y); });
+  const s = updateScore();
+  x.fillStyle = s.pass ? "#5bd99a" : "#ffb454";
+  x.font = "bold 18px system-ui,sans-serif";
+  x.fillText("Score: " + s.earned + " / " + s.total, 640, 160);
+  return c.toDataURL("image/png");
+}
+
+/* ------------------------------- submit ------------------------------- */
+function buildPayload(screenshot){
+  return {
+    assignmentId: CONFIG.assignmentId,
+    handle: $("handle").value.trim().slice(0, 32),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t => ({ id: t.id, label: t.label, passed: !!t.test() })),
+    questions: QUESTIONS.map(q => ({
+      id: q.id, prompt: q.prompt, answer: getAnswer(q), correct: isCorrect(q)
+    })),
+    score: { earned: tasksPassed() + questionsPassed(), total: TASKS.length + QUESTIONS.length },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+}
+
+async function submit(){
+  const status = $("status"), btn = $("submit");
+  const handle = $("handle").value.trim();
+  if (!handle){ status.className = "status err"; status.textContent = "Enter a callsign first (no real names)."; $("handle").focus(); return; }
+  if (CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    status.className = "status err";
+    status.textContent = "APPS_SCRIPT_URL is not set — your instructor needs to paste the deployed /exec URL.";
+    return;
+  }
+  btn.disabled = true; status.className = "status busy"; status.textContent = "Capturing screenshot…";
+  let payload;
+  try{ payload = buildPayload(await capture()); }
+  catch(e){ btn.disabled=false; status.className="status err"; status.textContent="Could not capture the lab. Try again."; return; }
+
+  status.textContent = "Submitting to the gradebook…";
+  try{
+    // SIMPLE request: no custom headers, default text/plain body — avoids CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data && data.success){
+      status.className = "status ok";
+      status.innerHTML = "Submitted ✓ — " + (data.docUrl
+        ? 'your record: <a href="'+data.docUrl+'" target="_blank" rel="noopener">open the lab document</a>'
+        : "saved to the gradebook.");
+    } else {
+      status.className = "status err";
+      status.textContent = "Submission rejected: " + ((data && data.error) || "unknown error") + ". Check with your instructor.";
+    }
+  } catch(e){
+    // Fallback: locked-down context can't read the response. Fire-and-forget.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      status.className = "status ok";
+      status.textContent = "Submitted (offline mode) — confirm receipt with your instructor; the document link isn't readable here.";
+    } catch(e2){
+      status.className = "status err";
+      status.textContent = "Network error — your submission did not send. Try again or tell your instructor.";
+    }
+  } finally { btn.disabled = false; }
+}
+
+/* ------------------------------- reset -------------------------------- */
+function doReset(){
+  for (const s in servers) servers[s].zones = {};
+  active = "ns-core"; viewServer = "ns-core"; verified.parcelEdge = false;
+  ps1.textContent = "ns-core#";
+  $("node-core").dataset.active = "1"; $("node-edge").dataset.active = "0";
+  $("pipe").dataset.xfer = "0";
+  $("vtab-core").setAttribute("aria-pressed","true");
+  $("vtab-edge").setAttribute("aria-pressed","false");
+  out.innerHTML = "";
+  document.querySelectorAll('#questions input').forEach(i => { i.checked=false; i.value=""; });
+  $("handle").value = "";
+  $("status").textContent = ""; $("status").className = "status";
+  banner(); finish(); gradeQuestions();
+}
+
+/* ------------------------------ bootstrap ----------------------------- */
+function banner(){
+  print("Cobalt Harbor NetOps — DNS management console", "sys");
+  print("Scenario: the warehouse team is launching an internal parcel-tracking service.", "info");
+  print("Goal: serve '" + KEY.service.fqdn + "' from a primary zone on ns-core, then keep a", "info");
+  print("redundant copy on ns-edge so lookups survive a core outage. Type 'brief' for tasks,", "info");
+  print("or 'help' for commands. You start on ns-core.", "info");
+}
+
+function wire(){
+  cmd.addEventListener("keydown", (e) => {
+    if (e.key === "Enter"){
+      const v = cmd.value; if (v.trim()){ history.push(v); hIdx = history.length; }
+      run(v); cmd.value = "";
+    } else if (e.key === "ArrowUp"){
+      if (hIdx > 0){ hIdx--; cmd.value = history[hIdx]; e.preventDefault(); }
+    } else if (e.key === "ArrowDown"){
+      if (hIdx < history.length-1){ hIdx++; cmd.value = history[hIdx]; }
+      else { hIdx = history.length; cmd.value = ""; }
+    }
+  });
+  $("vtab-core").addEventListener("click", () => { viewServer="ns-core";
+    $("vtab-core").setAttribute("aria-pressed","true"); $("vtab-edge").setAttribute("aria-pressed","false"); renderZones(); });
+  $("vtab-edge").addEventListener("click", () => { viewServer="ns-edge";
+    $("vtab-edge").setAttribute("aria-pressed","true"); $("vtab-core").setAttribute("aria-pressed","false"); renderZones(); });
+  $("submit").addEventListener("click", submit);
+  $("reset").addEventListener("click", doReset);
+}
+
+wire(); banner(); renderTasks(); renderQuestions(); renderZones(); updateScore();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-cname-records.html",title:"DNS Alias Records \u00b7 Kelp Bay Field Station"}, NEXT={href:"index_netplus-dhcp-options.html",title:"Lab: Global vs. Scope DHCP Options \u2014 Cedar Ridge"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

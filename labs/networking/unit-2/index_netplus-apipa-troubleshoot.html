@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Stranded on 169.254 — APIPA Fallback Lab</title>
+<!--
+  ============================================================================
+  Stranded on 169.254: Diagnosing an APIPA Fallback
+  Network+ (N10-009) / AP Networking simulation lab — single-file build.
+
+  © 2026 <AUTHOR NAME / ORG>. All rights reserved.
+  Licensed for use by the purchasing institution under <LICENSE>.
+  Original clean-room work: scenario, hostnames, IP plan, task and question
+  wording, and all UI are original. Not derived from any vendor's lab.
+  ============================================================================
+-->
+<style id="labcss">
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c2330; --edge:#30363d;
+    --ink:#e6edf3; --ink-dim:#9aa7b4; --accent:#4aa3ff; --accent-ink:#06243f;
+    --ok:#3fb950; --warn:#d29922; --bad:#f85149; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;font-size:15px}
+  a{color:var(--accent)}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px}
+  header.top{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--edge);padding-bottom:12px;margin-bottom:14px}
+  header.top h1{font-size:20px;margin:0}
+  .tags{font-family:var(--mono);font-size:12px;color:var(--ink-dim)}
+  .tags b{color:var(--accent);font-weight:600}
+  .scenario{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;color:var(--ink-dim)}
+  .scenario strong{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;align-items:start}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);overflow:hidden}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;margin:0;padding:10px 14px;background:var(--panel-2);border-bottom:1px solid var(--edge);color:var(--ink-dim)}
+  .card .body{padding:12px 14px}
+
+  /* device picker */
+  .devices{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px;border-bottom:1px solid var(--edge);background:var(--panel-2)}
+  .dev{cursor:pointer;border:1px solid var(--edge);background:var(--panel);color:var(--ink);padding:7px 10px;border-radius:8px;font-family:var(--mono);font-size:12.5px;display:flex;align-items:center;gap:7px}
+  .dev:hover{border-color:var(--accent)}
+  .dev[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-ink)}
+  .dev .led{width:9px;height:9px;border-radius:50%;background:var(--bad);box-shadow:0 0 6px var(--bad)}
+  .dev[data-online="true"] .led{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+  .dev:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* terminal */
+  .term{font-family:var(--mono);font-size:13px;background:#080b10;min-height:300px;max-height:46vh;overflow:auto;padding:12px 14px;white-space:pre-wrap;word-break:break-word}
+  .term .l-prompt{color:#79c0ff}
+  .term .l-ok{color:var(--ok)}
+  .term .l-bad{color:var(--bad)}
+  .term .l-warn{color:var(--warn)}
+  .term .l-dim{color:var(--ink-dim)}
+  .clirow{display:flex;border-top:1px solid var(--edge);background:#080b10}
+  .clirow .ps{font-family:var(--mono);font-size:13px;color:#79c0ff;padding:9px 4px 9px 12px;white-space:nowrap}
+  .clirow input{flex:1;background:transparent;border:0;color:var(--ink);font-family:var(--mono);font-size:13px;padding:9px 12px 9px 4px}
+  .clirow input:focus{outline:none}
+  .clirow input:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+  /* dhcp console */
+  .dhcp .scope{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--edge);border-radius:8px;padding:10px 12px;background:var(--panel-2)}
+  .dhcp .scope .meta{font-family:var(--mono);font-size:12.5px}
+  .dhcp .scope .meta .name{color:var(--ink);font-size:14px}
+  .pill{font-family:var(--mono);font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid}
+  .pill.inactive{color:var(--bad);border-color:var(--bad);background:rgba(248,81,73,.08)}
+  .pill.active{color:var(--ok);border-color:var(--ok);background:rgba(63,185,80,.08)}
+  .dhcp ul{margin:10px 0 0;padding-left:18px;color:var(--ink-dim);font-size:13px}
+  .dhcp ul code{font-family:var(--mono);color:var(--ink)}
+
+  button.act{cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:8px 12px;border-radius:8px}
+  button.act:hover{filter:brightness(1.08)}
+  button.act:disabled{opacity:.5;cursor:not-allowed}
+  button.act:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--edge)}
+  button.ghost:hover{border-color:var(--accent)}
+
+  /* tasks */
+  ol.tasks{list-style:none;margin:0;padding:0}
+  ol.tasks li{display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed var(--edge);align-items:flex-start}
+  ol.tasks li:last-child{border-bottom:0}
+  .chk{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--edge);display:grid;place-items:center;font-size:12px;color:transparent;margin-top:1px}
+  li[data-done="true"] .chk{border-color:var(--ok);color:var(--ok)}
+  li[data-done="true"] .t-text{color:var(--ink-dim);text-decoration:line-through;text-decoration-color:var(--edge)}
+  .t-text{font-size:13.5px}
+  .t-text .hint{display:block;color:var(--ink-dim);font-size:12px;margin-top:2px}
+
+  /* questions */
+  .q{padding:10px 0;border-bottom:1px dashed var(--edge)}
+  .q:last-child{border-bottom:0}
+  .q .prompt{font-size:13.5px;margin-bottom:7px}
+  .q .prompt .n{font-family:var(--mono);color:var(--accent);margin-right:6px}
+  .q label{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-dim);padding:3px 0;cursor:pointer}
+  .q label:hover{color:var(--ink)}
+  .q input[type=text]{width:100%;background:#080b10;border:1px solid var(--edge);border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:13px;padding:7px 10px}
+  .q input[type=text]:focus-visible,.q input[type=radio]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .q .verdict{font-family:var(--mono);font-size:12px;margin-top:5px;min-height:15px}
+  .q .verdict.ok{color:var(--ok)} .q .verdict.bad{color:var(--bad)}
+
+  /* submit bar */
+  .submitbar{margin-top:14px;background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);padding:12px 14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .submitbar .field{display:flex;flex-direction:column;gap:4px}
+  .submitbar label.lbl{font-size:12px;color:var(--ink-dim)}
+  .submitbar input.callsign{background:#080b10;border:1px solid var(--edge);border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:13px;padding:8px 10px;min-width:200px}
+  .submitbar input.callsign:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .scorechip{font-family:var(--mono);font-size:13px;color:var(--ink-dim)}
+  .scorechip b{color:var(--ink)}
+  .status{flex-basis:100%;font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);min-height:16px}
+  .status.ok{color:var(--ok)} .status.bad{color:var(--bad)} .status.busy{color:var(--warn)}
+  .status a{color:var(--accent)}
+  .spacer{flex:1}
+  footer.fine{margin-top:14px;color:var(--ink-dim);font-size:11.5px;text-align:center}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-apipa-troubleshoot", "title": "Stranded on 169.254 — APIPA Fallback Lab", "version": "1.0.0", "objectives": ["N10-009:1.7", "N10-009:5.3", "APNET:2.6"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <!-- everything inside #lab is what gets screenshotted -->
+  <div id="lab">
+    <header class="top">
+      <div>
+        <h1>Stranded on <span style="font-family:var(--mono);color:var(--accent)">169.254</span> — Diagnosing an APIPA Fallback</h1>
+        <div class="tags">N10-009: <b>1.7</b> · <b>1.4</b> · <b>5.5</b> &nbsp;|&nbsp; AP Networking: <b>2.1</b> · <b>2.2</b> · <b>3.6</b></div>
+      </div>
+    </header>
+
+    <div class="scenario">
+      You volunteer as the net-tech at <strong>Tinkergrove Makerspace</strong>. This morning every bench
+      machine came up but nobody can reach the print queue or the internet — yet the machines can still "see"
+      each other. The makerspace runs a flat <strong>10.42.7.0/24</strong> network: gateway
+      <strong>10.42.7.1</strong>, and a small server <strong>core-srv</strong> (10.42.7.10) that hands out
+      leases. Your job: figure out why the benches are islanded, fix the source, and prove the network is back.
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: simulated consoles -->
+      <div>
+        <div class="card">
+          <h2>Bench consoles</h2>
+          <div class="devices" id="devices" role="tablist" aria-label="Select a machine">
+            <button class="dev" role="tab" data-dev="frontdesk-pc" data-online="false" aria-pressed="true"><span class="led"></span>frontdesk-pc</button>
+            <button class="dev" role="tab" data-dev="laser-cut-pc" data-online="false" aria-pressed="false"><span class="led"></span>laser-cut-pc</button>
+            <button class="dev" role="tab" data-dev="vinyl-pc" data-online="false" aria-pressed="false"><span class="led"></span>vinyl-pc</button>
+            <button class="dev" role="tab" data-dev="core-srv" data-online="true" aria-pressed="false"><span class="led"></span>core-srv (DHCP)</button>
+          </div>
+
+          <!-- terminal view (workstations) -->
+          <div id="termView">
+            <div class="term" id="term" role="log" aria-live="polite" aria-label="Console output" tabindex="0"></div>
+            <div class="clirow">
+              <span class="ps" id="ps">frontdesk-pc&gt;</span>
+              <input id="cli" autocomplete="off" autocapitalize="off" spellcheck="false"
+                     aria-label="Command line" placeholder="type a command — try: help">
+            </div>
+          </div>
+
+          <!-- dhcp console view (core-srv) -->
+          <div id="dhcpView" class="body dhcp" hidden>
+            <p class="t-text" style="margin-top:0;color:var(--ink-dim)">
+              <strong style="color:var(--ink)">core-srv → DHCP service</strong> — scope manager
+            </p>
+            <div class="scope">
+              <div class="meta">
+                <div class="name">Bench-Net scope</div>
+                <div class="l-dim">range 10.42.7.50 – 10.42.7.200 · mask 255.255.255.0 · gw 10.42.7.1 · lease 8h</div>
+              </div>
+              <span class="pill inactive" id="scopePill">INACTIVE</span>
+            </div>
+            <ul>
+              <li>Pool addresses available: <code id="poolAvail">151</code></li>
+              <li>Active leases handed out: <code id="leaseCount">0</code></li>
+              <li>An <strong style="color:var(--ink)">inactive</strong> scope answers no requests — clients that ask get nothing back.</li>
+            </ul>
+            <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+              <button class="act" id="activateBtn">Activate scope</button>
+              <button class="act ghost" id="deactivateBtn" disabled>Deactivate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: tasks + questions -->
+      <div>
+        <div class="card" style="margin-bottom:14px">
+          <h2>Task checklist</h2>
+          <div class="body">
+            <ol class="tasks" id="tasks">
+              <li data-task="inspect" data-done="false"><span class="chk">✓</span><span class="t-text">Run <code>ipconfig</code> on all three benches and read their addresses.<span class="hint">Switch between frontdesk-pc, laser-cut-pc, and vinyl-pc.</span></span></li>
+              <li data-task="island" data-done="false"><span class="chk">✓</span><span class="t-text">From a bench, show it can ping a peer bench but <em>not</em> the gateway.<span class="hint">Try <code>ping 10.42.7.1</code> and <code>ping</code> a peer's address.</span></span></li>
+              <li data-task="diagnose" data-done="false"><span class="chk">✓</span><span class="t-text">Open <code>core-srv</code> and confirm the Bench-Net scope is the cause.</span></li>
+              <li data-task="activate" data-done="false"><span class="chk">✓</span><span class="t-text">Activate the scope so the server starts answering.</span></li>
+              <li data-task="renew" data-done="false"><span class="chk">✓</span><span class="t-text">On a bench, pull a real lease with <code>ipconfig /renew</code>.</span></li>
+              <li data-task="verify" data-done="false"><span class="chk">✓</span><span class="t-text">Prove the fix: ping the gateway from a leased bench and succeed.</span></li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Check your understanding</h2>
+          <div class="body" id="questions">
+            <div class="q" data-q="q1" data-type="text" data-answer="ipconfig /renew">
+              <div class="prompt"><span class="n">Q1</span>What single command, run on a bench, pulls a fresh address from the server once the scope is fixed?</div>
+              <input type="text" aria-label="Answer for Q1" placeholder="type the command">
+              <div class="verdict" aria-live="polite"></div>
+            </div>
+            <div class="q" data-q="q2" data-type="mc" data-answer="b">
+              <div class="prompt"><span class="n">Q2</span>Which address range is the tell-tale sign of APIPA self-assignment?</div>
+              <label><input type="radio" name="q2" value="a">10.0.0.0 – 10.255.255.255</label>
+              <label><input type="radio" name="q2" value="b">169.254.0.0 – 169.254.255.255</label>
+              <label><input type="radio" name="q2" value="c">172.16.0.0 – 172.31.255.255</label>
+              <label><input type="radio" name="q2" value="d">192.168.0.0 – 192.168.255.255</label>
+              <div class="verdict" aria-live="polite"></div>
+            </div>
+            <div class="q" data-q="q3" data-type="mc" data-answer="b">
+              <div class="prompt"><span class="n">Q3</span>While islanded, the benches could ping each other but not the gateway. Why?</div>
+              <label><input type="radio" name="q3" value="a">The gateway was powered off.</label>
+              <label><input type="radio" name="q3" value="b">They share the 169.254.0.0/16 link-local network, which has no route to other subnets.</label>
+              <label><input type="radio" name="q3" value="c">A firewall was dropping all ICMP traffic.</label>
+              <label><input type="radio" name="q3" value="d">DNS resolution was failing.</label>
+              <div class="verdict" aria-live="polite"></div>
+            </div>
+            <div class="q" data-q="q4" data-type="text" data-answer="255.255.0.0">
+              <div class="prompt"><span class="n">Q4</span>What subnet mask does a Windows host apply to an APIPA address?</div>
+              <input type="text" aria-label="Answer for Q4" placeholder="dotted-decimal or CIDR">
+              <div class="verdict" aria-live="polite"></div>
+            </div>
+            <div class="q" data-q="q5" data-type="mc" data-answer="b">
+              <div class="prompt"><span class="n">Q5</span>What was the underlying cause of every bench falling back to APIPA?</div>
+              <label><input type="radio" name="q5" value="a">Every Ethernet cable had failed at once.</label>
+              <label><input type="radio" name="q5" value="b">The DHCP scope was inactive, so no server answered the lease requests.</label>
+              <label><input type="radio" name="q5" value="c">Someone typed the wrong gateway by hand on each bench.</label>
+              <label><input type="radio" name="q5" value="d">IPv6 was disabled on the switch.</label>
+              <div class="verdict" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /#lab -->
+
+  <!-- submission bar (outside screenshot is fine, but kept in flow) -->
+  <div class="submitbar">
+    <div class="field">
+      <label class="lbl" for="callsign">Callsign (a handle — no real names)</label>
+      <input class="callsign" id="callsign" autocomplete="off" spellcheck="false" placeholder="e.g. solder-otter">
+    </div>
+    <div class="scorechip">Tasks <b id="taskScore">0/6</b> · Questions <b id="qScore">0/5</b></div>
+    <div class="spacer"></div>
+    <button class="act ghost" id="resetBtn" type="button">Reset lab</button>
+    <button class="act" id="submitBtn" type="button">Submit completed lab</button>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <footer class="fine">
+    © 2026 &lt;AUTHOR NAME / ORG&gt; — original clean-room lab for Network+ (N10-009) &amp; AP Networking.
+    Pseudonymous submission only; do not enter real names or other personal data.
+  </footer>
+</div>
+
+<!-- ====================================================================== -->
+<!-- SCRIPT BLOCK 1: screenshot capture                                      -->
+<!-- Drop-in compatible with html2canvas: if you later paste the minified    -->
+<!-- html2canvas source above this block, snapshot() will use it. Otherwise  -->
+<!-- it falls back to a dependency-free DOM->SVG->canvas capture that works   -->
+<!-- offline and captures the simulated DOM exactly.                          -->
+<!-- ====================================================================== -->
+<script>
+async function snapshot(node, maxWidth){
+  maxWidth = maxWidth || 980;
+  // Preferred path: real html2canvas if present.
+  if (typeof window.html2canvas === 'function'){
+    const canvas = await window.html2canvas(node, {backgroundColor:'#0d1117', scale:1});
+    return downscale(canvas, maxWidth);
+  }
+  // Fallback: serialize the node as XHTML inside an SVG <foreignObject>.
+  const rect = node.getBoundingClientRect();
+  const w = Math.max(1, Math.ceil(rect.width));
+  const h = Math.max(1, Math.ceil(rect.height));
+  const css = (document.getElementById('labcss')||{}).textContent || '';
+  const clone = node.cloneNode(true);
+  // Bake live form state into the clone (XMLSerializer ignores live .value/.checked).
+  const liveInputs = node.querySelectorAll('input');
+  const cloneInputs = clone.querySelectorAll('input');
+  liveInputs.forEach((el, i)=>{
+    const c = cloneInputs[i]; if(!c) return;
+    if (el.type === 'radio' || el.type === 'checkbox'){
+      if (el.checked) c.setAttribute('checked','checked'); else c.removeAttribute('checked');
+    } else {
+      c.setAttribute('value', el.value || '');
+    }
+  });
+  const xhtml = new XMLSerializer().serializeToString(clone);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+      '<foreignObject x="0" y="0" width="100%" height="100%">'+
+        '<div xmlns="http://www.w3.org/1999/xhtml">'+
+          '<style>'+css+'</style>'+
+          '<div style="width:'+w+'px;background:#0d1117">'+xhtml+'</div>'+
+        '</div>'+
+      '</foreignObject>'+
+    '</svg>';
+  const url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  const img = new Image();
+  await new Promise((res, rej)=>{ img.onload=res; img.onerror=rej; img.src=url; });
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,w,h);
+  ctx.drawImage(img, 0, 0);
+  return downscale(canvas, maxWidth);
+}
+function downscale(canvas, maxWidth){
+  if (canvas.width <= maxWidth) return canvas.toDataURL('image/png');
+  const scale = maxWidth / canvas.width;
+  const out = document.createElement('canvas');
+  out.width = maxWidth; out.height = Math.round(canvas.height * scale);
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,out.width,out.height);
+  ctx.drawImage(canvas, 0, 0, out.width, out.height);
+  return out.toDataURL('image/png');
+}
+</script>
+
+<!-- ====================================================================== -->
+<!-- SCRIPT BLOCK 2: engine — CONFIG, answer key, sim logic, submission      -->
+<!-- ====================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------------------- LAB CONFIG ----------------------------- */
+  const CONFIG = {
+    assignmentId: "netplus-apipa-troubleshoot",
+    title: "Stranded on 169.254: Diagnosing an APIPA Fallback",
+    objectives: ["N10-009:1.7", "N10-009:5.3", "APNET:2.6"],
+    // Paste your deployed Apps Script /exec URL here (same across the library):
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    // Per-cohort secret; must match the SUBMISSION_TOKEN Script Property:
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+  };
+
+  // Original network plan (clean-room).
+  const NET = {
+    gateway: "10.42.7.1",
+    mask:    "255.255.255.0",
+    apipaMask: "255.255.0.0",
+    scope:   { from:"10.42.7.50", to:"10.42.7.200", lease:"8h" }
+  };
+
+  // Workstation state. APIPA addresses are fixed per host so peer pings are
+  // deterministic. Real leases are assigned from the pool on /renew.
+  const HOSTS = {
+    "frontdesk-pc": { apipa:"169.254.18.44",  ip:"169.254.18.44",  leased:false },
+    "laser-cut-pc": { apipa:"169.254.91.130", ip:"169.254.91.130", leased:false },
+    "vinyl-pc":     { apipa:"169.254.207.6",  ip:"169.254.207.6",  leased:false }
+  };
+  const LEASE_QUEUE = ["10.42.7.50","10.42.7.51","10.42.7.52"]; // next free addresses
+  let leaseIdx = 0;
+
+  let scopeActive = false;
+  let current = "frontdesk-pc";
+
+  // progress flags used to auto-complete tasks
+  const seen = { ipconfig:{}, gwFail:false, peerOk:false, dhcpViewed:false, renewed:false, verified:false };
+
+  /* ----------------------------- DOM refs ------------------------------- */
+  const $ = (s,r)=> (r||document).querySelector(s);
+  const $$ = (s,r)=> Array.prototype.slice.call((r||document).querySelectorAll(s));
+  const termEl = $("#term"), psEl = $("#ps"), cliEl = $("#cli");
+  const termView = $("#termView"), dhcpView = $("#dhcpView");
+  const statusEl = $("#status");
+
+  /* --------------------------- terminal I/O ----------------------------- */
+  function out(text, cls){
+    const span = document.createElement("span");
+    if (cls) span.className = "l-"+cls;
+    span.textContent = text + "\n";
+    termEl.appendChild(span);
+    termEl.scrollTop = termEl.scrollHeight;
+  }
+  function echoCmd(cmd){ out(psEl.textContent + " " + cmd, "prompt"); }
+
+  function banner(host){
+    termEl.innerHTML = "";
+    out("Tinkergrove Bench Console — " + host, "dim");
+    out("type 'help' for available commands", "dim");
+    out("");
+  }
+
+  /* ------------------------------ commands ------------------------------ */
+  function cmd_help(){
+    out("available commands:", "dim");
+    out("  ipconfig            show this machine's IP configuration");
+    out("  ipconfig /renew     request a fresh lease from DHCP");
+    out("  ipconfig /release   drop the current lease");
+    out("  ping <ip>           send 4 echo requests to an address");
+    out("  cls | clear         clear the screen");
+    out("  help                show this list");
+  }
+
+  function cmd_ipconfig(host){
+    const h = HOSTS[host];
+    out("");
+    out("Windows IP Configuration", "dim");
+    out("");
+    out("Ethernet adapter Bench:");
+    if (h.leased){
+      out("   IPv4 Address . . . . . . . : " + h.ip);
+      out("   Subnet Mask  . . . . . . . : " + NET.mask);
+      out("   Default Gateway  . . . . . : " + NET.gateway);
+      out("   DHCP Enabled . . . . . . . : Yes");
+    } else {
+      out("   Autoconfiguration IPv4 Address . : " + h.ip + "(Preferred)", "warn");
+      out("   Subnet Mask  . . . . . . . : " + NET.apipaMask, "warn");
+      out("   Default Gateway  . . . . . : ", "warn");
+      out("   DHCP Enabled . . . . . . . : Yes");
+      out("   (no DHCP server answered — address is self-assigned / APIPA)", "dim");
+    }
+    out("");
+    seen.ipconfig[host] = true;
+    refresh();
+  }
+
+  function cmd_release(host){
+    const h = HOSTS[host];
+    if (!h.leased){
+      out("No lease to release — adapter is already self-configured (APIPA).", "warn");
+      return;
+    }
+    h.leased = false; h.ip = h.apipa;
+    out("Releasing lease... adapter Bench now self-configured: " + h.ip, "warn");
+    refresh();
+  }
+
+  function cmd_renew(host){
+    const h = HOSTS[host];
+    out("Contacting DHCP server...", "dim");
+    if (!scopeActive){
+      // realistic failure: no offer, fall back to APIPA
+      h.leased = false; h.ip = h.apipa;
+      out("DHCP request timed out — no DHCP server responded.", "bad");
+      out("Adapter Bench self-configured with APIPA address " + h.ip + " / " + NET.apipaMask, "warn");
+      refresh();
+      return;
+    }
+    // success: pull next pool address
+    const addr = LEASE_QUEUE[Math.min(leaseIdx, LEASE_QUEUE.length-1)];
+    leaseIdx++;
+    h.leased = true; h.ip = addr;
+    out("DHCP offer received from core-srv (10.42.7.10).", "ok");
+    out("Lease acquired: " + addr + " / " + NET.mask + "  gateway " + NET.gateway + "  (lease " + NET.scope.lease + ")", "ok");
+    seen.renewed = true;
+    bumpLeaseCounter();
+    refresh();
+  }
+
+  function isApipa(ip){ return /^169\.254\./.test(ip); }
+  function ipValid(ip){ return /^(\d{1,3})(\.\d{1,3}){3}$/.test(ip) && ip.split(".").every(o=>+o>=0&&+o<=255); }
+
+  function cmd_ping(host, target){
+    const h = HOSTS[host];
+    if (!target){ out("Usage: ping <ip-address>   e.g. ping 10.42.7.1", "bad"); return; }
+    if (!ipValid(target)){
+      out("Ping request could not find host " + target + ". Check the address and try again.", "bad");
+      return;
+    }
+    out("");
+    out("Pinging " + target + " with 32 bytes of data:");
+
+    const srcApipa = isApipa(h.ip);
+    const dstApipa = isApipa(target);
+    const peerAddrs = Object.keys(HOSTS).filter(k=>k!==host).map(k=>HOSTS[k].apipa)
+                       .concat(Object.keys(HOSTS).filter(k=>k!==host).map(k=>HOSTS[k].ip));
+    const dstIsPeer = peerAddrs.indexOf(target) !== -1;
+    const dstIsGateway = (target === NET.gateway);
+    const dstIsSelf = (target === h.ip);
+
+    let ok = false, reason = "";
+    if (dstIsSelf){ ok = true; }
+    else if (srcApipa){
+      // On APIPA: can reach other 169.254/16 hosts (link-local), nothing off-link.
+      if (dstApipa && dstIsPeer){ ok = true; }
+      else if (dstIsGateway){ ok = false; reason="gw-offlink"; }
+      else { ok = false; reason="offlink"; }
+    } else {
+      // Leased / on the real subnet: reach gateway and leased peers.
+      if (dstIsGateway){ ok = true; }
+      else if (dstIsPeer){
+        // peer reachable only if that peer is also leased (real address)
+        const leasedPeer = Object.keys(HOSTS).some(k=>HOSTS[k].ip===target && HOSTS[k].leased);
+        ok = leasedPeer || isApipa(target)===false ? leasedPeer : false;
+      } else if (/^10\.42\.7\./.test(target)){ ok = true; } // anything on-subnet replies in this sim
+      else { ok = false; reason="offlink"; }
+    }
+
+    if (ok){
+      for (let i=0;i<4;i++) out("Reply from " + target + ": bytes=32 time<1ms TTL=128", "ok");
+      out("");
+      out("Ping statistics for " + target + ":", "dim");
+      out("    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)", "ok");
+      if (dstIsPeer && srcApipa) seen.peerOk = true;
+      if (dstIsGateway && !srcApipa){ seen.verified = true; }
+    } else {
+      if (reason === "gw-offlink" || reason === "offlink"){
+        for (let i=0;i<4;i++) out("Reply from " + h.ip + ": Destination host unreachable.", "bad");
+      } else {
+        for (let i=0;i<4;i++) out("Request timed out.", "bad");
+      }
+      out("");
+      out("Ping statistics for " + target + ":", "dim");
+      out("    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss)", "bad");
+      if (dstIsGateway && srcApipa) seen.gwFail = true;
+    }
+    out("");
+    refresh();
+  }
+
+  function runCommand(raw){
+    const line = raw.trim();
+    if (!line) return;
+    echoCmd(line);
+    const parts = line.split(/\s+/);
+    const base = parts[0].toLowerCase();
+
+    if (base === "cls" || base === "clear"){ banner(current); return; }
+    if (base === "help"){ cmd_help(); return; }
+    if (base === "ipconfig"){
+      const opt = (parts[1]||"").toLowerCase();
+      if (!opt) return cmd_ipconfig(current);
+      if (opt === "/renew" || opt === "-renew") return cmd_renew(current);
+      if (opt === "/release" || opt === "-release") return cmd_release(current);
+      out("Error: unrecognized option '" + parts[1] + "'. Try ipconfig, ipconfig /renew, or ipconfig /release.", "bad");
+      return;
+    }
+    if (base === "ping"){ return cmd_ping(current, parts[1]); }
+    out("'" + base + "' is not recognized as a command. Type 'help' to see what's available.", "bad");
+  }
+
+  /* ------------------------- device switching --------------------------- */
+  function selectDevice(dev){
+    current = dev;
+    $$("#devices .dev").forEach(b=> b.setAttribute("aria-pressed", String(b.dataset.dev===dev)));
+    if (dev === "core-srv"){
+      termView.hidden = true; dhcpView.hidden = false;
+      seen.dhcpViewed = true; refresh();
+    } else {
+      dhcpView.hidden = true; termView.hidden = false;
+      psEl.textContent = dev + ">";
+      banner(dev);
+      cliEl.focus();
+    }
+  }
+
+  /* ---------------------------- DHCP console ----------------------------- */
+  function bumpLeaseCounter(){
+    const leased = Object.keys(HOSTS).filter(k=>HOSTS[k].leased).length;
+    $("#leaseCount").textContent = String(leased);
+    $("#poolAvail").textContent = String(151 - leased);
+  }
+  function setScope(active){
+    scopeActive = active;
+    const pill = $("#scopePill");
+    pill.textContent = active ? "ACTIVE" : "INACTIVE";
+    pill.className = "pill " + (active ? "active" : "inactive");
+    $("#activateBtn").disabled = active;
+    $("#deactivateBtn").disabled = !active;
+    // reflect server "online" LED meaning service is answering
+    refresh();
+  }
+
+  /* ------------------------------ scoring ------------------------------- */
+  const TASK_DEFS = [
+    { id:"inspect",  test:()=> Object.keys(HOSTS).every(h=>seen.ipconfig[h]) },
+    { id:"island",   test:()=> seen.gwFail && seen.peerOk },
+    { id:"diagnose", test:()=> seen.dhcpViewed },
+    { id:"activate", test:()=> scopeActive },
+    { id:"renew",    test:()=> seen.renewed },
+    { id:"verify",   test:()=> seen.verified }
+  ];
+
+  function normalize(s){
+    return (s||"").toLowerCase().trim()
+      .replace(/\s+/g," ")
+      .replace(/^ipconfig\s+\/?renew$/,"ipconfig /renew");
+  }
+  function checkQuestion(qEl){
+    const type = qEl.dataset.type;
+    const ans = qEl.dataset.answer;
+    let val = "", correct = false;
+    if (type === "text"){
+      val = $("input[type=text]", qEl).value;
+      const n = normalize(val);
+      if (qEl.dataset.q === "q1"){ correct = (n === "ipconfig /renew"); }
+      else if (qEl.dataset.q === "q4"){ correct = (n === "255.255.0.0" || n === "/16" || n === "255.255.0.0 /16"); }
+      else { correct = (n === normalize(ans)); }
+    } else {
+      const sel = $("input[type=radio]:checked", qEl);
+      val = sel ? sel.value : "";
+      correct = (val === ans);
+    }
+    return { answer: val, correct: correct };
+  }
+
+  function gatherTasks(){
+    return TASK_DEFS.map(t=>{
+      const li = $('li[data-task="'+t.id+'"]');
+      const passed = !!t.test();
+      li.dataset.done = String(passed);
+      return { id:t.id, label: $(".t-text", li).textContent.trim(), passed:passed };
+    });
+  }
+  function gatherQuestions(showVerdict){
+    return $$("#questions .q").map(qEl=>{
+      const r = checkQuestion(qEl);
+      const v = $(".verdict", qEl);
+      if (showVerdict){
+        v.textContent = r.answer ? (r.correct ? "✓ correct" : "✗ not quite — revisit this one") : "— no answer yet";
+        v.className = "verdict " + (r.answer ? (r.correct?"ok":"bad") : "");
+      }
+      return {
+        id: qEl.dataset.q,
+        prompt: $(".prompt", qEl).textContent.replace(/^Q\d+/,"").trim(),
+        answer: r.answer,
+        correct: r.correct
+      };
+    });
+  }
+
+  function refresh(){
+    const tasks = gatherTasks();
+    const qs = gatherQuestions(false);
+    const tDone = tasks.filter(t=>t.passed).length;
+    const qDone = qs.filter(q=>q.correct).length;
+    $("#taskScore").textContent = tDone + "/" + tasks.length;
+    $("#qScore").textContent = qDone + "/" + qs.length;
+  }
+
+  /* ---------------------------- submission ------------------------------ */
+  function setStatus(msg, cls){
+    statusEl.innerHTML = msg;
+    statusEl.className = "status" + (cls ? " "+cls : "");
+  }
+
+  async function submit(){
+    const handle = $("#callsign").value.trim();
+    if (!handle){ setStatus("Enter a callsign first (a handle — never your real name).", "bad"); $("#callsign").focus(); return; }
+    if (handle.length > 40){ setStatus("Callsign is too long (40 characters max).", "bad"); return; }
+
+    const tasks = gatherTasks();
+    const questions = gatherQuestions(true);
+    const earned = tasks.filter(t=>t.passed).length + questions.filter(q=>q.correct).length;
+    const total = tasks.length + questions.length;
+
+    if (CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0){
+      setStatus("This lab isn't wired to a submission endpoint yet. Ask your instructor to set APPS_SCRIPT_URL.", "bad");
+      return;
+    }
+
+    setStatus("Capturing your work and submitting…", "busy");
+    let screenshot = "";
+    try { screenshot = await snapshot(document.getElementById("lab"), 980); }
+    catch(e){ screenshot = ""; /* submit without image rather than fail */ }
+
+    const payload = {
+      assignmentId: CONFIG.assignmentId,
+      handle: handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: tasks,
+      questions: questions,
+      score: { earned: earned, total: total },
+      screenshot: screenshot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    try {
+      // Simple request: no custom headers, default text/plain — avoids CORS preflight.
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const out = await res.json();
+      if (out && out.success){
+        const link = out.docUrl ? ' — <a href="'+out.docUrl+'" target="_blank" rel="noopener">open your submission doc</a>' : "";
+        setStatus("Submitted as <b>"+handle+"</b> · scored "+earned+"/"+total+link, "ok");
+      } else {
+        setStatus("Server rejected the submission: " + (out && out.error ? out.error : "unknown error") + ".", "bad");
+      }
+    } catch(err){
+      // Locked-down contexts may block reading the response; retry fire-and-forget.
+      try {
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        setStatus("Submission sent, but the confirmation couldn't be read. Confirm receipt with your instructor.", "busy");
+      } catch(e2){
+        setStatus("Could not reach the submission server. Check your connection and try again.", "bad");
+      }
+    }
+  }
+
+  function resetLab(){
+    Object.keys(HOSTS).forEach(k=>{ HOSTS[k].leased=false; HOSTS[k].ip=HOSTS[k].apipa; });
+    leaseIdx = 0;
+    setScope(false);
+    Object.keys(seen.ipconfig).forEach(k=>delete seen.ipconfig[k]);
+    seen.gwFail=seen.peerOk=seen.dhcpViewed=seen.renewed=seen.verified=false;
+    bumpLeaseCounter();
+    $$("#questions .q").forEach(q=>{
+      const t=$("input[type=text]",q); if(t)t.value="";
+      $$("input[type=radio]",q).forEach(r=>r.checked=false);
+      const v=$(".verdict",q); v.textContent=""; v.className="verdict";
+    });
+    setStatus("");
+    selectDevice("frontdesk-pc");
+    refresh();
+  }
+
+  /* ------------------------------- wiring ------------------------------- */
+  $("#devices").addEventListener("click", e=>{
+    const b = e.target.closest(".dev"); if(!b) return; selectDevice(b.dataset.dev);
+  });
+  $("#devices").addEventListener("keydown", e=>{
+    if (e.key!=="ArrowRight" && e.key!=="ArrowLeft") return;
+    const btns = $$("#devices .dev"); const i = btns.indexOf(document.activeElement);
+    if (i<0) return; e.preventDefault();
+    const n = e.key==="ArrowRight" ? (i+1)%btns.length : (i-1+btns.length)%btns.length;
+    btns[n].focus(); selectDevice(btns[n].dataset.dev);
+  });
+  cliEl.addEventListener("keydown", e=>{
+    if (e.key==="Enter"){ runCommand(cliEl.value); cliEl.value=""; }
+  });
+  $("#activateBtn").addEventListener("click", ()=> setScope(true));
+  $("#deactivateBtn").addEventListener("click", ()=> setScope(false));
+  $("#questions").addEventListener("input", ()=> refresh());
+  $("#questions").addEventListener("change", ()=> refresh());
+  $("#submitBtn").addEventListener("click", submit);
+  $("#resetBtn").addEventListener("click", resetLab);
+
+  // init
+  bumpLeaseCounter();
+  selectDevice("frontdesk-pc");
+  refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-wlan-controller-hardening.html",title:"Harden the Marsh & Co. Wireless Controller"}, NEXT={href:"index_netplus-dhcp-client-fix.html",title:"Back Online \u2014 Restore DHCP Addressing on GREENHOUSE-07"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.6";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

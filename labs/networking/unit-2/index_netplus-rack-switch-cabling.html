@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Lab: Rack-Mount and Cable an Access Switch  (assignmentId: netplus-rack-switch-cabling)
+  Library: Network+ (N10-009) / AP Networking pilot simulation labs
+
+  © 2026 <AUTHOR / ORG — replace this line>. All rights reserved.
+  Licensed for the holding institution's instructional use.
+  Built CLEAN-ROOM from the public CompTIA Network+ objectives and the public
+  College Board AP Networking course framework. Scenario, persona, hostnames,
+  IP/VLAN plan, port map, task wording, and question wording are original to
+  this file. Not derived from, and not a reskin of, any vendor lab.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Rack-Mount and Cable an Access Switch</title>
+<style>
+  :root{
+    --bg:#0a161d; --panel:#102129; --panel-2:#14272f; --line:#22404c;
+    --ink:#dcebf1; --ink-dim:#7fa0ad; --ink-faint:#577483;
+    --accent:#36c6d9; --good:#7ed957; --bad:#ff6b6b; --warn:#f2a341;
+    --focus:#ffd166;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #133038 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    padding:18px; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+  header.lab{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;
+    border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+  header.lab h1{font-size:1.18rem;margin:0;letter-spacing:.2px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+  .tag{font-family:var(--mono);font-size:.7rem;color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .tag.n{color:#8fd3e0;border-color:#235260}
+  .tag.ap{color:#cdbcff;border-color:#3a3460}
+  .brief{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:16px;font-size:.94rem}
+  .brief b{color:#fff}
+  .brief code{font-family:var(--mono);background:#0c1d24;border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;color:#bfe6ee}
+  .grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .card h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-dim);
+    margin:0;padding:10px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-weight:600}
+  .card .body{padding:12px 14px}
+  /* SVG sim */
+  #sim{display:block;width:100%;height:auto;background:#0d1a22;border-radius:8px}
+  .simwrap{padding:10px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 14px 12px}
+  .status{font-family:var(--mono);font-size:.82rem;color:var(--ink);background:#0c1d24;
+    border:1px solid var(--line);border-radius:6px;padding:7px 10px;flex:1;min-width:200px}
+  .status.err{color:var(--bad);border-color:#5b2630}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--ink);padding:8px 13px}
+  button:hover{border-color:#3a6675}
+  button:focus-visible,[tabindex]:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  button.primary{background:linear-gradient(180deg,#1c3f4a,#143038);border-color:#2f6675;color:#eafbff}
+  button.ghost{background:transparent}
+  /* console */
+  .console{font-family:var(--mono);background:#06141a;border:1px solid var(--line);border-radius:8px;
+    padding:10px;font-size:.82rem;min-height:96px;white-space:pre-wrap;color:#bfe6ee}
+  .cmdrow{display:flex;gap:8px;margin-top:8px}
+  .cmdrow .prompt{font-family:var(--mono);color:var(--good);align-self:center}
+  .cmdrow input{flex:1;font-family:var(--mono);background:#06141a;border:1px solid var(--line);
+    color:var(--ink);border-radius:6px;padding:8px 10px}
+  /* checklist */
+  ul.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  ul.checks li{display:flex;gap:9px;align-items:flex-start;font-size:.9rem}
+  .dot{flex:none;width:16px;height:16px;border-radius:50%;margin-top:3px;border:2px solid var(--line)}
+  .dot.on{background:var(--good);border-color:var(--good)}
+  li .lbl{color:var(--ink)} li.done .lbl{color:var(--ink-dim)}
+  li .hint{display:block;font-size:.78rem;color:var(--ink-faint)}
+  /* questions */
+  .q{border-top:1px solid var(--line);padding:11px 0}
+  .q:first-child{border-top:0}
+  .q p{margin:0 0 8px;font-size:.9rem}
+  .q .qn{font-family:var(--mono);color:var(--accent);margin-right:6px}
+  .opt{display:flex;gap:8px;align-items:flex-start;padding:5px 8px;border-radius:7px;cursor:pointer;font-size:.88rem}
+  .opt:hover{background:#0e2129}
+  .opt input{margin-top:3px}
+  .q.right .verdict{color:var(--good)} .q.wrong .verdict{color:var(--bad)}
+  .verdict{font-family:var(--mono);font-size:.76rem;margin-top:4px;min-height:1em}
+  /* submit */
+  .submit{margin-top:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:14px;display:grid;gap:12px}
+  .handlerow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .handlerow label{font-size:.85rem;color:var(--ink-dim)}
+  .handlerow input{font-family:var(--mono);background:#0c1d24;border:1px solid var(--line);
+    color:var(--ink);border-radius:8px;padding:9px 12px;min-width:220px}
+  .scorepill{font-family:var(--mono);font-size:.85rem;color:var(--ink);
+    border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+  .scorepill.pass{color:var(--good);border-color:#2e5a37}
+  #submitStatus{font-family:var(--mono);font-size:.84rem;min-height:1.2em}
+  #submitStatus.ok{color:var(--good)} #submitStatus.warn{color:var(--warn)} #submitStatus.err{color:var(--bad)}
+  #submitStatus a{color:var(--accent)}
+  footer.lic{margin-top:20px;border-top:1px solid var(--line);padding-top:12px;
+    font-size:.72rem;color:var(--ink-faint);font-family:var(--mono)}
+  .privnote{font-size:.78rem;color:var(--ink-faint);margin-top:2px}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-rack-switch-cabling", "title": "Lab — Rack-Mount and Cable an Access Switch", "version": "1.0.0", "objectives": ["N10-009:1.2", "N10-009:2.4", "APNET:2.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab">
+    <h1>Rack-Mount and Cable an Access Switch</h1>
+    <div class="tagrow" aria-label="Blueprint coverage">
+      <span class="tag n" title="Verified against the N10-007 objectives file in this project">N10-007 · 2.1</span>
+      <span class="tag n" title="Verified against the N10-007 objectives file in this project">N10-007 · 2.2</span>
+      <span class="tag ap">AP NET · 3.2</span>
+      <span class="tag ap">AP NET · 3.3</span>
+      <span class="tag ap">AP NET · 2.3</span>
+    </div>
+  </header>
+
+  <section class="brief" aria-label="Scenario and work order">
+    <p style="margin:0 0 8px"><b>Scenario.</b> You are the junior network tech for the
+    <b>Birchwood Community Library</b>. The branch IDF (rack&nbsp;3) is getting a new access
+    switch, <code>ACC-SW-2</code>, so the study rooms and the checkout desk can reach the
+    branch media server, <code>MEDIA-SRV-01</code> at <code>10.40.12.20</code>. Cat&nbsp;6a is
+    already pulled to the patch panel; the rack runs on a UPS.</p>
+    <p style="margin:0"><b>Work order.</b> Rack the switch in the open bay under
+    <code>EDGE-RTR-1</code>, cord it to the UPS battery-backed bank, patch the documented
+    drops to their assigned ports, uplink the switch to the router, connect the server, then
+    verify from the checkout PC. <b>Drop sheet:</b> CHECKOUT&nbsp;→&nbsp;port&nbsp;3 ·
+    STUDY-A&nbsp;→&nbsp;port&nbsp;11 · router uplink&nbsp;→&nbsp;port&nbsp;23 ·
+    server eth0&nbsp;→&nbsp;port&nbsp;15.</p>
+  </section>
+
+  <div class="grid">
+    <!-- ============ SIMULATION ============ -->
+    <div class="card">
+      <h2>Branch IDF — rack 3 &amp; patch field</h2>
+      <div class="simwrap">
+        <!-- The simulation is a single inline SVG: it is the capture surface. -->
+        <svg id="sim" viewBox="0 0 1040 660" role="group"
+             aria-label="Interactive rack and patch-panel simulation">
+          <rect x="0" y="0" width="1040" height="660" fill="#0d1a22"/>
+          <g id="layer"></g>
+        </svg>
+      </div>
+      <div class="toolbar">
+        <span id="status" class="status" role="status" aria-live="polite">Pick up ACC-SW-2 from the parts cart to begin.</span>
+        <button id="resetBtn" class="ghost" type="button">Reset lab</button>
+      </div>
+    </div>
+
+    <!-- ============ RIGHT COLUMN ============ -->
+    <div style="display:grid;gap:16px;align-content:start">
+      <div class="card">
+        <h2>Verify connectivity</h2>
+        <div class="body">
+          <div id="consoleOut" class="console" aria-live="polite">CHECKOUT-PC ~ $ _</div>
+          <div class="cmdrow">
+            <span class="prompt" aria-hidden="true">$</span>
+            <input id="cmd" type="text" autocomplete="off" spellcheck="false"
+                   aria-label="Command line for CHECKOUT-PC"
+                   placeholder="ping 10.40.12.20">
+            <button id="runBtn" type="button">Run</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Task checklist</h2>
+        <div class="body">
+          <ul id="checks" class="checks"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Check your understanding</h2>
+        <div class="body" id="quiz"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SUBMISSION ============ -->
+  <div class="submit">
+    <div class="handlerow">
+      <label for="handle">Callsign</label>
+      <input id="handle" type="text" maxlength="40" autocomplete="off" spellcheck="false"
+             placeholder="e.g. patch-otter-7" aria-label="Your callsign (pseudonym)">
+      <span id="scorePill" class="scorepill">Score 0 / 11</span>
+      <button id="submitBtn" class="primary" type="button">Submit completed lab</button>
+    </div>
+    <div id="submitStatus" role="status" aria-live="polite"></div>
+    <p class="privnote">Use a made-up callsign — no real names, emails, or student IDs. Your
+      instructor keeps the roster separately.</p>
+  </div>
+
+  <footer class="lic">
+    © 2026 &lt;AUTHOR / ORG&gt;. Clean-room build from public N10-009 / AP Networking objectives.
+    assignmentId: netplus-rack-switch-cabling · v1.0.0
+  </footer>
+</div>
+
+<!-- =====================================================================
+  SCRIPT BLOCK 1 — screenshot capture.
+
+  The master prompt calls for an inlined html2canvas. This lab's simulation is
+  rendered entirely as inline SVG, so the screenshot is produced by serializing
+  that SVG to PNG natively — no external library, the file stays truly
+  dependency-free, and the capture is pixel-exact (html2canvas rasterizes the
+  same DOM less reliably). If you specifically want html2canvas, paste its
+  minified MIT source between the markers below and call captureWithHtml2Canvas()
+  from submit() instead of captureSim().
+  ===================================================================== -->
+<script>
+/* ---- OPTIONAL: paste minified html2canvas here -------------------------- */
+/* >>> html2canvas (MIT) goes here if you prefer it <<<                       */
+/* ------------------------------------------------------------------------ */
+
+async function captureSim(){
+  const src = document.getElementById('sim');
+  const clone = src.cloneNode(true);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  const vb = src.viewBox.baseVal;
+  const W = vb.width, H = vb.height, SCALE = 1.4;
+  const xml = new XMLSerializer().serializeToString(clone);
+  const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const c = document.createElement('canvas');
+      c.width = Math.round(W*SCALE); c.height = Math.round(H*SCALE);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#0d1a22'; ctx.fillRect(0,0,c.width,c.height);
+      ctx.drawImage(img,0,0,c.width,c.height);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = ()=>resolve(null);
+    img.src = url;
+  });
+}
+</script>
+
+<!-- =====================================================================
+  SCRIPT BLOCK 2 — engine: CONFIG + ANSWER KEY, sim render, interaction,
+  scoring, capture trigger, and the direct Apps Script POST.
+  ===================================================================== -->
+<script>
+"use strict";
+
+/* ---------------- LAB CONFIG (per §11) ---------------- */
+const CONFIG = {
+  assignmentId: "netplus-rack-switch-cabling",
+  // Both blueprints. N10-007 codes are VERIFIED against the objectives PDF in
+  // this project. The project file is N10-007 v1.0, NOT N10-009 — when the real
+  // N10-009 PDF is added, re-map in labs.json (candidates: N10-009 1.5 media,
+  // 2.x implementation). AP codes are verified against the AP Networking framework.
+  objectives: ["N10-009:1.2", "N10-009:2.4", "APNET:2.4"],
+  // Replace with the deployed Apps Script /exec URL (same across the library):
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  // Per-cohort secret; must match the Script Property on the server. Rotate per cohort.
+  submissionToken: "REPLACE_WITH_COHORT_TOKEN"
+};
+
+/* ---------------- ANSWER KEY (inspectable — formative only, per §7) ------- */
+const PORTMAP = { 'CHECKOUT':3, 'STUDY-A':11, 'RTR_LANA':23, 'SRV_ETH0':15 };
+const QUIZ = [
+  { id:"q1",
+    prompt:"The patch-panel-to-switch runs must carry 10GBASE-T to 100 m past fluorescent lighting. Which copper category is specified on the drop sheet?",
+    options:[["c5e","Cat 5e"],["c6","Cat 6"],["c6a","Cat 6a"],["rg6","RG-6"]],
+    answer:"c6a" },
+  { id:"q2",
+    prompt:"Why was ACC-SW-2 corded to the UPS 'Protected Load' bank rather than the 'Surge Only' bank?",
+    options:[["speed","It gives the ports more bandwidth"],
+             ["batt","Battery backup keeps the switch up through a power loss"],
+             ["poe","It is the only bank that supplies PoE"],
+             ["cheap","It draws less electricity"]],
+    answer:"batt" },
+  { id:"q3",
+    prompt:"Seating a Cat 6a patch cable into a switch port establishes a connection at which OSI layer?",
+    options:[["l1","Layer 1 — Physical"],["l2","Layer 2 — Data Link"],
+             ["l3","Layer 3 — Network"],["l4","Layer 4 — Transport"]],
+    answer:"l1" },
+  { id:"q4",
+    prompt:"CHECKOUT-PC pings MEDIA-SRV-01 successfully even with the router uplink unplugged. Why does that work?",
+    options:[["ignore","ping never uses routers"],
+             ["samelan","Both hosts sit on the same LAN segment, switched at Layer 2"],
+             ["gw","The server is the default gateway"],
+             ["dns","DNS resolves the name without a link"]],
+    answer:"samelan" }
+];
+const TASK_DEFS = [
+  { id:"mount",  label:"Rack ACC-SW-2 in the bay directly under EDGE-RTR-1",
+    hint:"It is the open 1U bay just below the router." },
+  { id:"power",  label:"Cord the switch to the UPS Protected Load bank",
+    hint:"Surge Only has no battery — the switch would drop in an outage." },
+  { id:"pc",     label:"Patch CHECKOUT to switch port 3",
+    hint:"Match the drop sheet exactly." },
+  { id:"study",  label:"Patch STUDY-A to switch port 11",
+    hint:"Match the drop sheet exactly." },
+  { id:"uplink", label:"Uplink the switch to EDGE-RTR-1 (LAN-A) on port 23",
+    hint:"The last ports are conventionally used for uplinks." },
+  { id:"srv",    label:"Connect MEDIA-SRV-01 (eth0) to switch port 15",
+    hint:"Match the drop sheet exactly." },
+  { id:"ping",   label:"Verify: ping 10.40.12.20 from CHECKOUT-PC succeeds",
+    hint:"Power + the CHECKOUT and server links must be in place." }
+];
+
+/* ---------------- SIM STATE ---------------- */
+const state = {
+  inHand:false, mounted:false, bay:null,        // bay: 'A' (correct) | 'B'
+  powered:false, powerBank:null,                // 'protected' | 'surge'
+  links:{},                                      // dest -> swPort
+  pendingPower:false, pendingPort:null,
+  pingResult:null
+};
+
+/* ---------------- GEOMETRY ---------------- */
+const SVGNS = "http://www.w3.org/2000/svg";
+const BAY = { A:{y:104}, B:{y:150} };           // correct bay = A (under router)
+const UPS = { protected:{x:112,y:432}, surge:{x:214,y:432} };
+const DESTS = {
+  'STUDY-A':  {label:"STUDY-A",  x:392, y:360, cable:"#7ed957", group:"Patch panel"},
+  'STUDY-B':  {label:"STUDY-B",  x:520, y:360, cable:"#5d7a86", group:"Patch panel"},
+  'CHECKOUT': {label:"CHECKOUT", x:648, y:360, cable:"#36c6d9", group:"Patch panel"},
+  'MAKERLAB': {label:"MAKERLAB", x:776, y:360, cable:"#5d7a86", group:"Patch panel"},
+  'RTR_LANA': {label:"EDGE-RTR-1 · LAN-A", x:470, y:520, cable:"#f2a341", group:"Uplink"},
+  'SRV_ETH0': {label:"MEDIA-SRV-01 · eth0", x:720, y:520, cable:"#9b8cff", group:"Server"}
+};
+const PORTS = [];
+for(let i=0;i<24;i++){
+  PORTS.push({ n:i+1, x:386 + (i%12)*30, y:(i<12?120:158) });
+}
+const portXY = n => PORTS.find(p=>p.n===n);
+const inletXY = () => ({ x:248, y:BAY[state.bay||'A'].y+20 });
+
+/* ---------------- SVG HELPERS ---------------- */
+function el(tag, attrs={}, children=[]){
+  const n = document.createElementNS(SVGNS, tag);
+  for(const k in attrs){ if(attrs[k]!==null && attrs[k]!==undefined) n.setAttribute(k, attrs[k]); }
+  for(const c of [].concat(children)){ if(c) n.appendChild(c); }
+  return n;
+}
+function text(str, x, y, attrs={}){
+  return el("text", Object.assign({x,y,fill:"#cfe3ec","font-family":"ui-monospace,Menlo,Consolas,monospace","font-size":"12"}, attrs), [document.createTextNode(str)]);
+}
+function btnGroup(label, handler){
+  const g = el("g", {role:"button", tabindex:"0", "aria-label":label, style:"cursor:pointer", focusable:"true"});
+  g.addEventListener("click", handler);
+  g.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); handler(e);} });
+  return g;
+}
+
+/* ---------------- RENDER ---------------- */
+const layer = ()=>document.getElementById("layer");
+function render(){
+  const L = layer(); while(L.firstChild) L.removeChild(L.firstChild);
+
+  /* ---- RACK (left) ---- */
+  L.appendChild(el("rect",{x:40,y:44,width:236,height:474,rx:8,fill:"#16252d",stroke:"#2c4651"}));
+  L.appendChild(text("RACK 3 · BRANCH IDF",54,68,{fill:"#7fa0ad","font-size":"11","letter-spacing":"1"}));
+  // rails
+  L.appendChild(el("rect",{x:48,y:78,width:6,height:300,fill:"#34505d"}));
+  L.appendChild(el("rect",{x:262,y:78,width:6,height:300,fill:"#34505d"}));
+
+  // router (occupied)
+  L.appendChild(el("rect",{x:58,y:84,width:200,height:30,rx:4,fill:"#1f3a44",stroke:"#3a6b78"}));
+  L.appendChild(text("EDGE-RTR-1",70,103,{fill:"#bfe6ee"}));
+  L.appendChild(el("circle",{cx:240,cy:99,r:3,fill:"#7ed957"}));
+
+  // mount bays
+  drawBay("A", "open 1U bay (under router)");
+  drawBay("B", "lower open bay");
+
+  // blank panels (context)
+  for(let i=0;i<3;i++){
+    L.appendChild(el("rect",{x:58,y:198+i*30,width:200,height:24,rx:3,fill:"#13222a",stroke:"#243842"}));
+    L.appendChild(text("— blank —",112,214+i*30,{fill:"#3f5b67","font-size":"11"}));
+  }
+
+  // UPS
+  L.appendChild(el("rect",{x:58,y:404,width:200,height:54,rx:5,fill:"#241f33",stroke:"#473c5e"}));
+  L.appendChild(text("RACK UPS",70,422,{fill:"#cdbcff","font-size":"11"}));
+  drawOutlet("protected","Protected Load","#7ed957");
+  drawOutlet("surge","Surge Only","#c9a23a");
+
+  // parts cart (switch lives here until mounted)
+  if(!state.mounted){
+    const g = btnGroup("Pick up access switch ACC-SW-2", pickUpSwitch);
+    g.appendChild(el("rect",{x:58,y:474,width:200,height:34,rx:5,
+      fill: state.inHand?"#14352b":"#16252d", stroke: state.inHand?"#2f8f5f":"#2c4651","stroke-width":state.inHand?2:1}));
+    g.appendChild(text("ACC-SW-2",72,495,{fill: state.inHand?"#9be8bf":"#bfe6ee"}));
+    g.appendChild(text(state.inHand?"in hand ✓":"parts cart — click",150,495,{fill:"#7fa0ad","font-size":"10"}));
+    L.appendChild(g);
+  }
+
+  // power cable (rack inlet -> chosen outlet)
+  if(state.powered){
+    const i = inletXY(), o = UPS[state.powerBank];
+    L.appendChild(el("path",{d:`M ${i.x} ${i.y} C ${i.x+30} ${i.y+50} ${o.x} ${o.y-50} ${o.x} ${o.y}`,
+      fill:"none", stroke: state.powerBank==="protected"?"#7ed957":"#c9a23a","stroke-width":3,"stroke-linecap":"round",opacity:.9}));
+  }
+
+  /* ---- PATCH FIELD (right) ---- */
+  L.appendChild(el("rect",{x:300,y:44,width:716,height:560,rx:8,fill:"#102129",stroke:"#22404c"}));
+  L.appendChild(text("PATCH FIELD",316,68,{fill:"#7fa0ad","font-size":"11","letter-spacing":"1"}));
+
+  if(!state.mounted){
+    L.appendChild(text("Rack the switch to expose its 24 ports.",430,250,{fill:"#577483","font-size":"13"}));
+  } else {
+    // switch ports
+    L.appendChild(text("ACC-SW-2  (front · 1–24)",372,104,{fill:"#9be8bf","font-size":"12"}));
+    PORTS.forEach(p=>{
+      const used = Object.values(state.links).includes(p.n);
+      const sel = state.pendingPort===p.n;
+      const g = btnGroup(`Switch port ${p.n}${used?", patched":""}`, ()=>selectPort(p.n));
+      g.appendChild(el("rect",{x:p.x-11,y:p.y-11,width:22,height:18,rx:3,
+        fill: used?"#0e3340":"#16242c",
+        stroke: sel?"#ffd166":(used?"#36c6d9":"#365663"),"stroke-width": sel?2.5:1.2}));
+      g.appendChild(text(String(p.n),p.x,p.y+3,{fill:"#9fc2cf","font-size":"9","text-anchor":"middle"}));
+      L.appendChild(g);
+    });
+
+    // destination jacks
+    L.appendChild(text("Patch panel (room drops)",340,318,{fill:"#7fa0ad","font-size":"11"}));
+    for(const id in DESTS){ drawDest(id); }
+
+    // cables
+    for(const dest in state.links){
+      drawCable(dest, state.links[dest]);
+    }
+  }
+
+  /* ---- RESULTS RIBBON (inside SVG so the screenshot is self-explanatory) ---- */
+  drawRibbon();
+  syncPanels();
+}
+
+function drawBay(key, aria){
+  const L=layer(), y=BAY[key].y, correct = key==="A";
+  if(state.mounted && state.bay===key){
+    // mounted switch
+    L.appendChild(el("rect",{x:58,y:y+2,width:200,height:30,rx:4,fill:"#14352b",stroke:"#2f8f5f"}));
+    L.appendChild(text("ACC-SW-2",70,y+21,{fill:"#9be8bf"}));
+    // power inlet button
+    const i = inletXY();
+    const g = btnGroup("Switch power inlet", inletClick);
+    g.appendChild(el("rect",{x:i.x-7,y:i.y-7,width:14,height:14,rx:2,
+      fill: state.powered?"#0e3a24":"#1a2b22",
+      stroke: state.pendingPower?"#ffd166":(state.powered?"#7ed957":"#3a6b50"),"stroke-width":state.pendingPower?2.5:1.4}));
+    L.appendChild(g);
+    return;
+  }
+  // empty bay (clickable while switch in hand)
+  const active = state.inHand && !state.mounted;
+  const g = active ? btnGroup(`Mount switch in ${aria}`, ()=>mountInBay(key)) : el("g");
+  g.appendChild(el("rect",{x:58,y:y+2,width:200,height:30,rx:4,
+    fill: active?"#102a2f":"#13222a",
+    stroke: active?"#2f6675":"#243842","stroke-dasharray": active?"5 4":null,
+    style: active?"cursor:pointer":null}));
+  g.appendChild(text(correct?"open bay":"open bay",112,y+21,{fill:"#3f5b67","font-size":"11"}));
+  if(active){ g.setAttribute("role","button"); g.setAttribute("tabindex","0"); g.setAttribute("aria-label",`Mount switch in ${aria}`);}  
+  layer().appendChild(g);
+}
+
+function drawOutlet(key, label, color){
+  const o = UPS[key];
+  const armed = state.pendingPower;
+  const chosen = state.powered && state.powerBank===key;
+  const g = btnGroup(`UPS ${label} outlet`, ()=>chooseOutlet(key));
+  g.appendChild(el("circle",{cx:o.x,cy:o.y,r:9,
+    fill: chosen?"#0e3a24":"#1b1626",
+    stroke: armed?"#ffd166":color,"stroke-width": (armed||chosen)?2.5:1.4, style:"cursor:pointer"}));
+  g.appendChild(el("circle",{cx:o.x,cy:o.y,r:2.4,fill:color}));
+  g.appendChild(text(label,o.x,o.y+22,{fill:"#9aa7b0","font-size":"9.5","text-anchor":"middle"}));
+  layer().appendChild(g);
+}
+
+function drawDest(id){
+  const d=DESTS[id];
+  const used = state.links[id]!==undefined;
+  const g = btnGroup(`${d.label} jack${used?", patched":""}`, ()=>selectDest(id));
+  g.appendChild(el("rect",{x:d.x-52,y:d.y-15,width:104,height:30,rx:5,
+    fill: used?"#0e2a31":"#16242c", stroke: used?d.cable:"#365663","stroke-width":used?1.8:1.2,style:"cursor:pointer"}));
+  g.appendChild(el("rect",{x:d.x-9,y:d.y-9,width:18,height:8,rx:1.5,fill:"#0a161d",stroke:d.cable}));
+  g.appendChild(text(d.label,d.x,d.y+24,{fill:"#9fc2cf","font-size":"10","text-anchor":"middle"}));
+  layer().appendChild(g);
+}
+
+function drawCable(dest, swPort){
+  const a = portXY(swPort), b = DESTS[dest];
+  if(!a||!b) return;
+  const d = `M ${a.x} ${a.y+9} C ${a.x} ${a.y+90} ${b.x} ${b.y-70} ${b.x} ${b.y-9}`;
+  // invisible wide hit area for removal
+  const hit = el("path",{d, fill:"none", stroke:"#000", "stroke-opacity":"0","stroke-width":14, style:"cursor:pointer"});
+  hit.addEventListener("click", ()=>removeLink(dest));
+  hit.setAttribute("role","button"); hit.setAttribute("tabindex","0");
+  hit.setAttribute("aria-label",`Cable ${DESTS[dest].label} on port ${swPort} — activate to remove`);
+  hit.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();removeLink(dest);} });
+  layer().appendChild(el("path",{d, fill:"none", stroke:DESTS[dest].cable, "stroke-width":3, "stroke-linecap":"round", opacity:.92}));
+  layer().appendChild(hit);
+}
+
+function drawRibbon(){
+  const L=layer();
+  const {tasks, quizScore, score, total} = grade();
+  const passedT = tasks.filter(t=>t.passed).length;
+  L.appendChild(el("rect",{x:40,y:526,width:236,height:78,rx:8,fill:"#0c1d24",stroke:"#22404c"}));
+  L.appendChild(text("STATUS",54,548,{fill:"#577483","font-size":"10","letter-spacing":"1"}));
+  const handle = (document.getElementById("handle")?.value||"").trim() || "—";
+  L.appendChild(text("callsign: "+handle.slice(0,18),54,568,{fill:"#cfe3ec","font-size":"11"}));
+  L.appendChild(text(`tasks ${passedT}/${tasks.length}   quiz ${quizScore}/${QUIZ.length}`,54,586,{fill:"#9fc2cf","font-size":"11"}));
+  L.appendChild(text(`score ${score}/${total}`,54,600,{fill: (score===total)?"#7ed957":"#f2a341","font-size":"11"}));
+  // task dots
+  tasks.forEach((t,i)=>{
+    L.appendChild(el("circle",{cx:198+ (i%4)*18, cy:548 + Math.floor(i/4)*18, r:5,
+      fill: t.passed?"#7ed957":"#1b2c34", stroke: t.passed?"#7ed957":"#365663"}));
+  });
+}
+
+/* ---------------- INTERACTIONS ---------------- */
+function setStatus(msg, err){
+  const s=document.getElementById("status"); s.textContent=msg; s.classList.toggle("err",!!err);
+}
+function pickUpSwitch(){
+  if(state.mounted) return;
+  state.inHand = !state.inHand;
+  setStatus(state.inHand ? "ACC-SW-2 in hand — click the open bay directly under EDGE-RTR-1." : "Switch set down.");
+  render();
+}
+function mountInBay(key){
+  if(!state.inHand) { setStatus("Pick up ACC-SW-2 from the parts cart first.", true); return; }
+  state.mounted=true; state.bay=key; state.inHand=false;
+  if(key==="A") setStatus("Switch racked. Now cord its power inlet to the UPS.");
+  else setStatus("Mounted in the lower bay — the work order specifies the bay under EDGE-RTR-1. Reset the mount if you want full marks.", true);
+  render();
+}
+function inletClick(){
+  if(!state.mounted){ setStatus("Rack the switch first.", true); return; }
+  state.pendingPower=true;
+  setStatus("Power cable in hand — pick a UPS outlet bank (Protected Load keeps it alive in an outage).");
+  render();
+}
+function chooseOutlet(key){
+  if(!state.pendingPower && !state.powered){ setStatus("Click the switch power inlet first.", true); return; }
+  state.powered=true; state.powerBank=key; state.pendingPower=false;
+  if(key==="protected") setStatus("Powered from the Protected Load bank. Start patching the drops to their assigned ports.");
+  else setStatus("Powered — but Surge Only has no battery; the switch would drop in an outage. Re-cord to Protected Load for full marks.", true);
+  render();
+}
+function selectPort(n){
+  if(!state.powered){ setStatus("Power the switch before patching.", true); return; }
+  state.pendingPort = (state.pendingPort===n) ? null : n;
+  setStatus(state.pendingPort ? `Port ${n} selected — click the destination jack to land the cable.` : "Selection cleared.");
+  render();
+}
+function selectDest(id){
+  if(!state.mounted){ setStatus("Rack and power the switch first.", true); return; }
+  if(state.pendingPort===null){ setStatus("Select a switch port first, then the destination.", true); return; }
+  // a switch port carries one link; clear any other dest using this port
+  for(const d in state.links){ if(state.links[d]===state.pendingPort) delete state.links[d]; }
+  state.links[id] = state.pendingPort;
+  setStatus(`Patched ${DESTS[id].label} to port ${state.pendingPort}.`);
+  state.pendingPort=null;
+  state.pingResult=null;
+  render();
+}
+function removeLink(dest){
+  delete state.links[dest]; state.pingResult=null;
+  setStatus(`Removed the ${DESTS[dest].label} cable.`);
+  render();
+}
+function resetLab(){
+  state.inHand=false; state.mounted=false; state.bay=null; state.powered=false;
+  state.powerBank=null; state.links={}; state.pendingPower=false; state.pendingPort=null;
+  state.pingResult=null;
+  document.getElementById("consoleOut").textContent = "CHECKOUT-PC ~ $ _";
+  document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+  document.querySelectorAll('.q').forEach(q=>q.classList.remove("right","wrong"));
+  setStatus("Lab reset. Pick up ACC-SW-2 from the parts cart to begin.");
+  render();
+}
+
+/* ---------------- VERIFY (ping) ---------------- */
+function reachable(dest){ return state.powered && state.links[dest]!==undefined; }
+function runCommand(){
+  const raw = (document.getElementById("cmd").value||"").trim();
+  const out = document.getElementById("consoleOut");
+  const cmd = raw.toLowerCase().replace(/\s+/g," ");
+  if(!cmd){ return; }
+  if(cmd === "ping 10.40.12.20" || cmd === "ping media-srv-01"){
+    let lines = [`CHECKOUT-PC ~ $ ${raw}`, ""];
+    let ok=false;
+    if(!state.powered){ lines.push("PING 10.40.12.20: switch offline — no power.","Request timed out."); }
+    else if(!reachable("CHECKOUT")){ lines.push("PING 10.40.12.20:","Destination host unreachable — CHECKOUT-PC has no link to the switch."); }
+    else if(!reachable("SRV_ETH0")){ lines.push("PING 10.40.12.20:","Request timed out — MEDIA-SRV-01 (eth0) is not patched to the switch."); }
+    else {
+      ok=true;
+      for(let i=0;i<4;i++) lines.push(`Reply from 10.40.12.20: bytes=32 time=${1+i%2}ms TTL=128`);
+      lines.push("","4 packets transmitted, 4 received, 0% loss.");
+    }
+    state.pingResult = ok ? "success" : "fail";
+    out.textContent = lines.join("\n");
+    render();
+  } else if(cmd.startsWith("ping")){
+    out.textContent = `CHECKOUT-PC ~ $ ${raw}\n\nPing that host? The server you need is MEDIA-SRV-01 at 10.40.12.20.`;
+  } else {
+    out.textContent = `CHECKOUT-PC ~ $ ${raw}\n\n'${raw.split(" ")[0]}' is not recognized. Try: ping 10.40.12.20`;
+  }
+}
+
+/* ---------------- GRADING ---------------- */
+function grade(){
+  const tasks = TASK_DEFS.map(t=>{
+    let passed=false;
+    switch(t.id){
+      case "mount":  passed = state.mounted && state.bay==="A"; break;
+      case "power":  passed = state.powered && state.powerBank==="protected"; break;
+      case "pc":     passed = state.links["CHECKOUT"]===PORTMAP["CHECKOUT"]; break;
+      case "study":  passed = state.links["STUDY-A"]===PORTMAP["STUDY-A"]; break;
+      case "uplink": passed = state.links["RTR_LANA"]===PORTMAP["RTR_LANA"]; break;
+      case "srv":    passed = state.links["SRV_ETH0"]===PORTMAP["SRV_ETH0"]; break;
+      case "ping":   passed = state.pingResult==="success"; break;
+    }
+    return { id:t.id, label:t.label, passed };
+  });
+  const questions = QUIZ.map(q=>{
+    const sel = document.querySelector(`input[name="${q.id}"]:checked`);
+    const a = sel ? sel.value : null;
+    return { id:q.id, prompt:q.prompt, answer:a, correct: a===q.answer };
+  });
+  const quizScore = questions.filter(q=>q.correct).length;
+  const earned = tasks.filter(t=>t.passed).length + quizScore;
+  const total = tasks.length + questions.length;
+  return { tasks, questions, quizScore, score:earned, total };
+}
+
+/* ---------------- PANEL SYNC ---------------- */
+function buildQuiz(){
+  const box=document.getElementById("quiz");
+  QUIZ.forEach((q,qi)=>{
+    const wrap=document.createElement("div"); wrap.className="q"; wrap.id="q_"+q.id;
+    const p=document.createElement("p");
+    p.innerHTML = `<span class="qn">Q${qi+1}.</span>${q.prompt.replace(/</g,"&lt;")}`;
+    wrap.appendChild(p);
+    q.options.forEach(([val,labelTxt])=>{
+      const lab=document.createElement("label"); lab.className="opt";
+      const inp=document.createElement("input");
+      inp.type="radio"; inp.name=q.id; inp.value=val;
+      inp.addEventListener("change", ()=>{ markQuestion(q); syncPanels(); });
+      lab.appendChild(inp);
+      const span=document.createElement("span"); span.textContent=labelTxt; lab.appendChild(span);
+      wrap.appendChild(lab);
+    });
+    const v=document.createElement("div"); v.className="verdict"; wrap.appendChild(v);
+    box.appendChild(wrap);
+  });
+}
+function markQuestion(q){
+  const sel=document.querySelector(`input[name="${q.id}"]:checked`);
+  const wrap=document.getElementById("q_"+q.id);
+  const v=wrap.querySelector(".verdict");
+  if(!sel){ wrap.classList.remove("right","wrong"); v.textContent=""; return; }
+  const right = sel.value===q.answer;
+  wrap.classList.toggle("right",right); wrap.classList.toggle("wrong",!right);
+  v.textContent = right ? "✓ correct" : "✗ not quite — review the briefing";
+}
+function buildChecks(){
+  const ul=document.getElementById("checks");
+  TASK_DEFS.forEach(t=>{
+    const li=document.createElement("li"); li.id="chk_"+t.id;
+    li.innerHTML = `<span class="dot" aria-hidden="true"></span>
+      <span><span class="lbl">${t.label}</span><span class="hint">${t.hint}</span></span>`;
+    ul.appendChild(li);
+  });
+}
+function syncPanels(){
+  const g=grade();
+  g.tasks.forEach(t=>{
+    const li=document.getElementById("chk_"+t.id); if(!li) return;
+    li.classList.toggle("done",t.passed);
+    li.querySelector(".dot").classList.toggle("on",t.passed);
+  });
+  const pill=document.getElementById("scorePill");
+  pill.textContent=`Score ${g.score} / ${g.total}`;
+  const pass = g.score===g.total;
+  pill.classList.toggle("pass",pass);
+}
+
+/* ---------------- SUBMIT (direct Apps Script POST, §4) ---------------- */
+async function submit(){
+  const ss=document.getElementById("submitStatus");
+  ss.className=""; 
+  const handle=(document.getElementById("handle").value||"").trim();
+  if(!handle){ ss.className="err"; ss.textContent="Enter a callsign first (a made-up handle, not your name)."; return; }
+  const g=grade();
+  ss.textContent="Capturing and submitting…";
+  const screenshot = await captureSim();
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    handle,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: g.tasks,
+    questions: g.questions,
+    score: { earned:g.score, total:g.total },
+    screenshot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    ss.className="warn";
+    ss.textContent="No endpoint configured yet — your instructor still needs to deploy the Apps Script and paste its /exec URL. (Your score this run: "+g.score+"/"+g.total+".)";
+    return;
+  }
+  try{
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      ss.className="ok";
+      ss.innerHTML = `Submitted (${g.score}/${g.total}). Your record: <a href="${out.docUrl}" target="_blank" rel="noopener">open the Doc</a>.`;
+    } else {
+      ss.className="err"; ss.textContent="Server rejected the submission: "+((out&&out.error)||"unknown reason")+".";
+    }
+  }catch(e){
+    // CORS-locked fallback: fire-and-forget, can't read docUrl
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      ss.className="warn";
+      ss.textContent="Sent, but the response was blocked by your browser — confirm receipt with your instructor.";
+    }catch(e2){
+      ss.className="err"; ss.textContent="Submission failed: "+e2.message;
+    }
+  }
+}
+
+/* ---------------- BOOT ---------------- */
+document.getElementById("resetBtn").addEventListener("click", resetLab);
+document.getElementById("runBtn").addEventListener("click", runCommand);
+document.getElementById("cmd").addEventListener("keydown", e=>{ if(e.key==="Enter") runCommand(); });
+document.getElementById("submitBtn").addEventListener("click", submit);
+document.getElementById("handle").addEventListener("input", render);
+buildQuiz(); buildChecks(); render();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-dhcp-scope-warehouse.html",title:"Provision the Warehouse DHCP Pool \u2014 Network+ / AP Networking Lab"}, NEXT={href:"index_netplus-voip-poe-connect.html",title:"Lab \u2014 VoIP Drop & PoE Bring-Up (Riverside Library)"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.4";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Field Check: Adapter Install &amp; UPS Runtime — Cedarline Robotics</title>
+<!--
+  =====================================================================
+  Lab: Field Check — Adapter Install & UPS Runtime
+  assignmentId: netplus-nic-ups-fieldcheck
+  Blueprint tags (see manifest for provenance):
+    N10-009: 2.1 (physical installs / media & connectors), 3.x power/UPS,
+             5.x verify connectivity  -- PROVISIONAL, verify vs real N10-009 PDF
+    N10-007 (anchored from supplied objectives): 2.1 cabling, 3.2 availability/UPS
+    APNET: TBD  -- pending genuine AP Networking framework
+  Clean-room original work. No vendor lab wording/scenario/values reused.
+
+  © 2026 <YOUR NAME / ORG>.  All rights reserved.
+  License: <choose, e.g. "Proprietary — internal classroom use" or an SPDX id>.
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#0e1620; --panel:#152130; --panel-2:#1b2a3c; --edge:#26384f;
+    --ink:#e7eef6; --ink-dim:#9fb2c6; --ink-faint:#6d8197;
+    --amber:#ffb454;            /* single signal accent */
+    --amber-soft:#5a3f1c;
+    --good:#5ad19a; --good-bg:#163328;
+    --bad:#ff7a6b; --bad-bg:#3a1d1c;
+    --live:#7ee0ff;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Roboto Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:10px; --r-sm:6px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 80% -10%, #16263a 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1060px;margin:0 auto;padding:20px 16px 48px}
+  header.top{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--edge);padding-bottom:14px}
+  .brand{font-family:var(--mono);letter-spacing:.04em;font-size:13px;color:var(--ink-dim)}
+  .brand b{color:var(--amber);font-weight:600}
+  h1{font-size:clamp(20px,2.6vw,28px);margin:.1em 0 .15em;letter-spacing:-.01em}
+  .sub{color:var(--ink-dim);font-size:14px;max-width:62ch}
+  .tagrow{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-top:8px}
+  .tagrow span{display:inline-block;border:1px solid var(--edge);border-radius:99px;padding:2px 8px;margin:2px 6px 2px 0;color:var(--ink-dim)}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin:20px 0 0;border-bottom:1px solid var(--edge)}
+  .tab{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ink-dim);
+       font:600 14px/1 var(--sans);padding:11px 14px;cursor:pointer;border-radius:var(--r-sm) var(--r-sm) 0 0}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--amber);background:linear-gradient(180deg,var(--panel) 0%,transparent 100%)}
+  .tab:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+  .tab .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink-faint);margin-right:7px;vertical-align:1px}
+  .tab[data-done="true"] .dot{background:var(--good);box-shadow:0 0 0 3px var(--good-bg)}
+
+  .grid{display:grid;grid-template-columns:1.35fr .9fr;gap:16px;margin-top:16px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);padding:14px}
+  .panel h2{font-size:14px;letter-spacing:.02em;margin:.1em 0 .7em;color:var(--ink)}
+  .panel h2 .mono{font-family:var(--mono);color:var(--ink-faint);font-weight:500;font-size:12px;margin-left:8px}
+
+  /* sim stage */
+  .stage{background:var(--panel-2);border:1px solid var(--edge);border-radius:var(--r);padding:14px;min-height:300px}
+  .stage svg{width:100%;height:auto;display:block}
+  .legend{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:8px}
+
+  /* action buttons */
+  .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  button.act{appearance:none;font:600 13px/1.1 var(--sans);color:var(--ink);
+    background:var(--panel);border:1px solid var(--edge);border-radius:var(--r-sm);
+    padding:9px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:border-color .12s,background .12s,transform .04s}
+  button.act:hover{border-color:var(--amber)}
+  button.act:active{transform:translateY(1px)}
+  button.act:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+  button.act[disabled]{opacity:.42;cursor:not-allowed;border-color:var(--edge)}
+  button.act[data-done="true"]{border-color:var(--good);background:var(--good-bg);color:#cdf3e2}
+  button.act .k{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+  .seg{display:inline-flex;border:1px solid var(--edge);border-radius:var(--r-sm);overflow:hidden}
+  .seg button{border:0;border-radius:0;background:var(--panel)}
+  .seg button + button{border-left:1px solid var(--edge)}
+
+  /* console / feedback */
+  .console{font-family:var(--mono);font-size:12.5px;background:#0a121b;border:1px solid var(--edge);border-radius:var(--r-sm);
+    padding:10px 12px;min-height:76px;margin-top:12px;white-space:pre-wrap;color:var(--ink-dim)}
+  .console .err{color:var(--bad)} .console .ok{color:var(--good)} .console .hint{color:var(--amber)}
+
+  /* checklist */
+  ul.tasks{list-style:none;margin:0;padding:0}
+  ul.tasks li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--edge);font-size:13.5px}
+  ul.tasks li:last-child{border-bottom:0}
+  .chk{flex:0 0 auto;width:18px;height:18px;border-radius:5px;border:1px solid var(--ink-faint);margin-top:1px;position:relative}
+  li[data-pass="true"] .chk{border-color:var(--good);background:var(--good-bg)}
+  li[data-pass="true"] .chk::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:2px solid var(--good);border-top:0;border-left:0;transform:rotate(40deg)}
+  li[data-pass="true"] .tlabel{color:var(--ink)}
+  .tlabel{color:var(--ink-dim)}
+
+  /* questions */
+  fieldset.q{border:1px solid var(--edge);border-radius:var(--r-sm);margin:0 0 10px;padding:10px 12px}
+  fieldset.q legend{font-size:13px;color:var(--ink);padding:0 6px}
+  .opt{display:flex;gap:9px;align-items:flex-start;padding:5px 0;font-size:13.5px;color:var(--ink-dim);cursor:pointer}
+  .opt input{margin-top:3px;accent-color:var(--amber)}
+  fieldset.q[data-state="correct"]{border-color:var(--good)}
+  fieldset.q[data-state="wrong"]{border-color:var(--bad)}
+  .qmark{font-family:var(--mono);font-size:11px;margin-left:8px}
+  .qmark.ok{color:var(--good)} .qmark.no{color:var(--bad)}
+
+  /* submit bar */
+  .subbar{margin-top:18px;background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);padding:14px;
+    display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end}
+  @media (max-width:660px){.subbar{grid-template-columns:1fr}}
+  label.fld{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-dim)}
+  label.fld input{font:500 14px var(--mono);color:var(--ink);background:#0a121b;border:1px solid var(--edge);border-radius:var(--r-sm);padding:10px 11px}
+  label.fld input:focus-visible{outline:2px solid var(--live);outline-offset:1px}
+  .scorepill{font-family:var(--mono);font-size:13px;color:var(--ink-dim);align-self:center;white-space:nowrap}
+  .scorepill b{color:var(--amber)}
+  button.primary{appearance:none;font:700 14px var(--sans);color:#1a1206;background:var(--amber);border:0;border-radius:var(--r-sm);padding:12px 16px;cursor:pointer}
+  button.primary[disabled]{background:var(--amber-soft);color:var(--ink-faint);cursor:not-allowed}
+  button.primary:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+  button.ghost{appearance:none;font:600 13px var(--sans);color:var(--ink-dim);background:transparent;border:1px solid var(--edge);border-radius:var(--r-sm);padding:11px 13px;cursor:pointer}
+  button.ghost:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+
+  .status{margin-top:12px;font-size:13.5px;min-height:1.4em}
+  .status.live{color:var(--live)} .status.ok{color:var(--good)} .status.bad{color:var(--bad)}
+  .status a{color:var(--amber)}
+
+  footer{margin-top:28px;border-top:1px solid var(--edge);padding-top:12px;font-size:11.5px;color:var(--ink-faint);font-family:var(--mono)}
+  .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-nic-ups-fieldcheck", "title": "Field Check: Adapter Install &amp; UPS Runtime — Cedarline Robotics", "version": "1.0.0", "objectives": ["N10-009:1.5", "N10-009:2.4", "APNET:1.2"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand"><b>CEDARLINE ROBOTICS</b> · Site Ops Field Console</div>
+      <h1>Field Check: Adapter Install &amp; UPS Runtime</h1>
+      <p class="sub">Two stops on the work order. Seat and cable a network adapter at the Prototyping Bay bench, confirm the link, then validate that the Comms Room battery backups carry the load when utility power drops. Work the steps in a safe, real-world order — the console will flag mistakes the way the gear would.</p>
+      <div class="tagrow" aria-label="Blueprint coverage (provisional)">
+        <span>N10-009 · 2.1 media &amp; installs</span>
+        <span>N10-009 · power/UPS</span>
+        <span>N10-009 · 5.x verify</span>
+        <span>AP Networking · TBD</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- LOCATION TABS -->
+  <div class="tabs" role="tablist" aria-label="Locations">
+    <button class="tab" id="tab-bay" role="tab" aria-selected="true" aria-controls="loc-bay" data-loc="bay" data-done="false">
+      <span class="dot" aria-hidden="true"></span>Prototyping Bay · Bench 4
+    </button>
+    <button class="tab" id="tab-comms" role="tab" aria-selected="false" aria-controls="loc-comms" tabindex="-1" data-loc="comms" data-done="false">
+      <span class="dot" aria-hidden="true"></span>Comms Room
+    </button>
+  </div>
+
+  <!-- ============ LOCATION 1: PROTOTYPING BAY ============ -->
+  <section id="loc-bay" role="tabpanel" aria-labelledby="tab-bay" tabindex="0">
+    <div class="grid">
+      <div class="panel" aria-label="Workstation simulation">
+        <h2>Bench 4 workstation <span class="mono">host: cdl-ws-b4 · jack J17 (DATA)</span></h2>
+        <div class="stage" id="stage-bay">
+          <!-- self-drawn chassis + wall plate -->
+          <svg viewBox="0 0 560 300" role="img" aria-label="PC chassis with two PCIe slots and a wall plate with two jacks">
+            <defs>
+              <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#27384c"/><stop offset="1" stop-color="#172534"/>
+              </linearGradient>
+            </defs>
+            <!-- wall plate -->
+            <rect x="14" y="20" width="120" height="150" rx="8" fill="#b23b2e" stroke="#7c281f"/>
+            <text x="74" y="40" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#ffd9d2">WALL PLATE</text>
+            <!-- J17 data jack -->
+            <rect id="jackJ17" x="34" y="58" width="80" height="34" rx="5" fill="#0a121b" stroke="#ffd9d2"/>
+            <text x="74" y="79" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12" fill="#ffd9d2">J17 ⛁ DATA</text>
+            <!-- J18 voice jack -->
+            <rect id="jackJ18" x="34" y="104" width="80" height="34" rx="5" fill="#0a121b" stroke="#ffd9d2"/>
+            <text x="74" y="125" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12" fill="#ffd9d2">J18 ☎ VOICE</text>
+
+            <!-- patch cable (drawn when connected) -->
+            <path id="cable" d="" fill="none" stroke="#ffb454" stroke-width="4" stroke-linecap="round" opacity="0"/>
+
+            <!-- chassis -->
+            <rect x="250" y="20" width="296" height="262" rx="12" fill="url(#metal)" stroke="#0c1722"/>
+            <text x="398" y="40" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#9fb2c6">cdl-ws-b4 — chassis</text>
+            <!-- case cover overlay -->
+            <rect id="cover" x="256" y="48" width="284" height="200" rx="8" fill="#1d2c3e" stroke="#33506e"/>
+            <text id="coverTxt" x="398" y="152" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12" fill="#6d8197">[ side panel — closed ]</text>
+
+            <!-- internal: PCIe slots (revealed when open) -->
+            <g id="internals" opacity="0">
+              <text x="398" y="70" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#6d8197">PCIe slots</text>
+              <rect x="290" y="84" width="216" height="26" rx="4" fill="#0a121b" stroke="#33506e"/>
+              <text x="298" y="101" font-family="ui-monospace,monospace" font-size="11" fill="#9fb2c6">x16 #1 — GPU (occupied)</text>
+              <rect id="slotX1" x="290" y="120" width="216" height="26" rx="4" fill="#0a121b" stroke="#33506e"/>
+              <text id="slotX1Txt" x="298" y="137" font-family="ui-monospace,monospace" font-size="11" fill="#9fb2c6">x1 #2 — free</text>
+              <!-- NIC, drawn when seated -->
+              <g id="nicCard" opacity="0">
+                <rect x="292" y="118" width="212" height="30" rx="4" fill="#143a2c" stroke="#5ad19a"/>
+                <circle id="nicPort" cx="486" cy="133" r="7" fill="#0a121b" stroke="#5ad19a"/>
+                <text x="300" y="138" font-family="ui-monospace,monospace" font-size="11" fill="#bff0db">Aria NX-110 1GbE — seated</text>
+              </g>
+            </g>
+
+            <!-- PSU plug / power button -->
+            <rect id="psu" x="266" y="252" width="92" height="20" rx="4" fill="#0a121b" stroke="#33506e"/>
+            <text id="psuTxt" x="312" y="266" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#ff7a6b">PSU: UNPLUGGED</text>
+            <circle id="pwrLed" cx="520" cy="262" r="9" fill="#2a3b4f" stroke="#0c1722"/>
+            <text x="520" y="283" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#6d8197">PWR</text>
+          </svg>
+          <div class="legend">Tip: the red box is a comms wall plate. One jack carries data, the other carries the desk phone.</div>
+        </div>
+
+        <div class="acts" id="acts-bay">
+          <button class="act" data-a="poweroff">Shut down PC</button>
+          <button class="act" data-a="unplug">Unplug power cord</button>
+          <button class="act" data-a="open">Open side panel</button>
+          <button class="act" data-a="seat">Seat Aria NX-110 in x1&nbsp;#2</button>
+          <span class="seg" role="group" aria-label="Run patch cable to a wall jack">
+            <button class="act" data-a="cable" data-jack="J17">Cable → J17</button>
+            <button class="act" data-a="cable" data-jack="J18">Cable → J18</button>
+          </span>
+          <button class="act" data-a="close">Close side panel</button>
+          <button class="act" data-a="replug">Reconnect power cord</button>
+          <button class="act" data-a="poweron">Power on</button>
+          <button class="act" data-a="settings">Open Settings → Network</button>
+        </div>
+        <div class="console" id="con-bay" role="status" aria-live="polite">Awaiting first action. Start with safety.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Work order — Bench 4</h2>
+        <ul class="tasks" id="tasks-bay">
+          <li data-pass="false" id="t1"><span class="chk" aria-hidden="true"></span><span class="tlabel">De-energize first: shut down, then unplug the cord before opening the case.</span></li>
+          <li data-pass="false" id="t2"><span class="chk" aria-hidden="true"></span><span class="tlabel">Seat the Aria NX-110 adapter in the free PCIe x1 slot.</span></li>
+          <li data-pass="false" id="t3"><span class="chk" aria-hidden="true"></span><span class="tlabel">Patch from the correct wall jack to the new adapter.</span></li>
+          <li data-pass="false" id="t4"><span class="chk" aria-hidden="true"></span><span class="tlabel">Re-energize and boot the workstation.</span></li>
+          <li data-pass="false" id="t5"><span class="chk" aria-hidden="true"></span><span class="tlabel">Confirm the adapter has a DHCP lease and internet reach.</span></li>
+        </ul>
+        <button class="ghost" id="reset-bay" style="margin-top:12px">Reset this bench</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOCATION 2: COMMS ROOM ============ -->
+  <section id="loc-comms" role="tabpanel" aria-labelledby="tab-comms" tabindex="0" hidden>
+    <div class="grid">
+      <div class="panel" aria-label="Comms room simulation">
+        <h2>Comms Room rack <span class="mono">UTILITY · WP-3 · 2× VoltGuard R2000, 1× Mini-650</span></h2>
+        <div class="stage" id="stage-comms">
+          <svg viewBox="0 0 560 320" role="img" aria-label="Equipment rack with three UPS units fed from a utility wall receptacle">
+            <!-- utility receptacle -->
+            <rect x="14" y="18" width="120" height="92" rx="8" fill="#b23b2e" stroke="#7c281f"/>
+            <text x="74" y="38" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#ffd9d2">UTILITY · WP-3</text>
+            <circle id="rec1" cx="44" cy="66" r="9" fill="#5ad19a" stroke="#0c1722"/>
+            <circle id="rec2" cx="74" cy="66" r="9" fill="#5ad19a" stroke="#0c1722"/>
+            <circle id="rec3" cx="104" cy="66" r="9" fill="#5ad19a" stroke="#0c1722"/>
+            <text x="74" y="98" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#ffd9d2">3 feeds</text>
+
+            <!-- feed lines -->
+            <path id="line1" d="M53 66 H205" stroke="#5ad19a" stroke-width="3"/>
+            <path id="line2" d="M83 66 Q150 66 150 150 H205" stroke="#5ad19a" stroke-width="3" fill="none"/>
+            <path id="line3" d="M113 66 Q190 66 190 232 H205" stroke="#5ad19a" stroke-width="3" fill="none"/>
+
+            <!-- rack -->
+            <rect x="205" y="20" width="340" height="284" rx="10" fill="#172534" stroke="#0c1722"/>
+            <!-- R2000 #1 -->
+            <g>
+              <rect x="220" y="48" width="310" height="40" rx="6" fill="#1d2c3e" stroke="#33506e"/>
+              <text x="232" y="72" font-family="ui-monospace,monospace" font-size="11" fill="#9fb2c6">VoltGuard R2000 · ups-r1</text>
+              <circle id="ups1" cx="500" cy="68" r="8" fill="#5ad19a"/>
+            </g>
+            <!-- R2000 #2 -->
+            <g>
+              <rect x="220" y="130" width="310" height="40" rx="6" fill="#1d2c3e" stroke="#33506e"/>
+              <text x="232" y="154" font-family="ui-monospace,monospace" font-size="11" fill="#9fb2c6">VoltGuard R2000 · ups-r2</text>
+              <circle id="ups2" cx="500" cy="150" r="8" fill="#5ad19a"/>
+            </g>
+            <!-- protected gear -->
+            <rect x="220" y="92" width="310" height="34" rx="5" fill="#0a121b" stroke="#33506e"/>
+            <text x="232" y="113" font-family="ui-monospace,monospace" font-size="11" fill="#bdd0e4">cdl-sw-core1 · cdl-sw-acc2 (protected)</text>
+            <circle id="swLed" cx="500" cy="109" r="6" fill="#7ee0ff"/>
+            <rect x="220" y="174" width="310" height="34" rx="5" fill="#0a121b" stroke="#33506e"/>
+            <text x="232" y="195" font-family="ui-monospace,monospace" font-size="11" fill="#bdd0e4">cdl-rtr-edge + console monitors</text>
+            <circle id="rtrLed" cx="500" cy="191" r="6" fill="#7ee0ff"/>
+            <!-- Mini-650 -->
+            <g>
+              <rect x="220" y="212" width="310" height="40" rx="6" fill="#1d2c3e" stroke="#33506e"/>
+              <text x="232" y="236" font-family="ui-monospace,monospace" font-size="11" fill="#9fb2c6">VoltGuard Mini-650 · ups-d1</text>
+              <circle id="ups3" cx="500" cy="232" r="8" fill="#5ad19a"/>
+            </g>
+            <!-- mode readout -->
+            <rect x="220" y="262" width="310" height="30" rx="5" fill="#0a121b" stroke="#33506e"/>
+            <text id="modeTxt" x="232" y="282" font-family="ui-monospace,monospace" font-size="11" fill="#5ad19a">MODE: line power — all feeds present</text>
+          </svg>
+          <div class="legend">Green LED = on utility (line) power. Amber = running on battery. Cyan = protected load energized.</div>
+        </div>
+
+        <div class="acts" id="acts-comms">
+          <button class="act" data-a="pull" data-feed="1">Pull feed 1 (ups-r1)</button>
+          <button class="act" data-a="pull" data-feed="2">Pull feed 2 (ups-r2)</button>
+          <button class="act" data-a="pull" data-feed="3">Pull feed 3 (ups-d1)</button>
+          <button class="act" data-a="verify">Verify protected load &amp; runtime</button>
+        </div>
+        <div class="console" id="con-comms" role="status" aria-live="polite">All three utility feeds present. Pull them to test battery cutover. Leave them out when done.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Work order — Comms Room</h2>
+        <ul class="tasks" id="tasks-comms">
+          <li data-pass="false" id="t6"><span class="chk" aria-hidden="true"></span><span class="tlabel">Drop all three utility feeds from WP-3 to simulate an outage.</span></li>
+          <li data-pass="false" id="t7"><span class="chk" aria-hidden="true"></span><span class="tlabel">Verify the protected gear rides through on battery and read remaining runtime.</span></li>
+        </ul>
+        <p class="legend" style="margin-top:10px">Leave the feeds unplugged when you finish — that's the held state for this check.</p>
+        <button class="ghost" id="reset-comms" style="margin-top:6px">Reset comms room</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ KNOWLEDGE CHECK ============ -->
+  <div class="panel" style="margin-top:16px">
+    <h2>Knowledge check <span class="mono">5 questions</span></h2>
+    <div id="qbox"></div>
+  </div>
+
+  <!-- ============ SUBMISSION ============ -->
+  <div class="subbar">
+    <label class="fld">Callsign (your handle — no real names)
+      <input id="handle" maxlength="32" autocomplete="off" spellcheck="false" placeholder="e.g. relay-fox" />
+    </label>
+    <div class="scorepill" id="scorepill">Progress <b id="earned">0</b>/<b id="total">12</b></div>
+    <button class="primary" id="submitBtn" disabled>Submit completed lab</button>
+  </div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+
+  <footer>
+    netplus-nic-ups-fieldcheck · clean-room original · self-rendered UI, no captured screenshots ·
+    © 2026 &lt;YOUR NAME / ORG&gt; · client-side scoring is self-reported (re-validate server-side if it must be trustworthy).
+  </footer>
+</div>
+
+<!-- ============================================================= -->
+<!-- SCRIPT BLOCK 1: html2canvas                                    -->
+<!-- Paste the proven minified html2canvas you already inline in    -->
+<!-- the Security+ labs between the markers below. If absent, the   -->
+<!-- engine falls back to a built-in SVG-foreignObject capture so   -->
+<!-- the file still works dependency-free (no CDN).                 -->
+<!-- ============================================================= -->
+<script>
+/* ===== BEGIN html2canvas (paste minified source here) ===== */
+/* (intentionally empty — built-in fallback used if window.html2canvas is undefined) */
+/* ===== END html2canvas ===== */
+</script>
+
+<!-- ============================================================= -->
+<!-- SCRIPT BLOCK 2: engine + CONFIG + ANSWER KEY                   -->
+<!-- ============================================================= -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- PER-LAB CONFIG (edit per assignment) ---------- */
+  const CONFIG = {
+    assignmentId: "netplus-nic-ups-fieldcheck",
+    objectives: ["N10-009:1.5", "N10-009:2.4", "APNET:1.2"], // provisional; see manifest
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE"
+  };
+
+  /* ---------- ANSWER KEY (client-side; inspectable — see footer) ---------- */
+  const QUESTIONS = [
+    { id:"q1", prompt:"A basic 1 GbE adapter needs a single PCIe lane. Which slot is the right fit?",
+      options:["PCIe x1","PCIe x16 only","An empty RAM slot","A SATA port"], answer:0 },
+    { id:"q2", prompt:"Before opening a workstation case to add a card, the correct first move is to:",
+      options:["Open the case, then shut down","Shut down, then unplug the power cord","Leave it running for live testing","Unplug the monitor only"], answer:1 },
+    { id:"q3", prompt:"You confirm the adapter pulled a DHCP lease in 10.40.x and can reach the internet. In troubleshooting terms, this step is:",
+      options:["Establishing a theory of cause","Escalating to a vendor","Verifying full system functionality","Documenting the outage"], answer:2 },
+    { id:"q4", prompt:"When utility power drops, what does a UPS give the connected load?",
+      options:["Faster throughput","Battery runtime for a graceful shutdown or ride-through","More PoE budget","A new IP address"], answer:1 },
+    { id:"q5", prompt:"Which best distinguishes a UPS from a plain surge strip?",
+      options:["A UPS adds VLANs","A surge strip provides battery runtime","A UPS provides battery runtime; a surge strip does not","They are identical"], answer:2 }
+  ];
+
+  const TASK_IDS = ["t1","t2","t3","t4","t5","t6","t7"];
+  const TOTAL = TASK_IDS.length + QUESTIONS.length;
+
+  /* ---------- STATE ---------- */
+  const S = {
+    bay:{ off:false, unplugged:false, open:false, nic:false, cable:null, closed:false, replugged:false, on:false, settings:false },
+    comms:{ feeds:{1:true,2:true,3:true}, verified:false, runtime:0 },
+    pass:{t1:false,t2:false,t3:false,t4:false,t5:false,t6:false,t7:false},
+    q:{}
+  };
+
+  const $ = s=>document.querySelector(s);
+  const $$ = s=>Array.prototype.slice.call(document.querySelectorAll(s));
+
+  /* ---------- TABS ---------- */
+  function selectTab(loc){
+    $$(".tab").forEach(t=>{
+      const on = t.dataset.loc===loc;
+      t.setAttribute("aria-selected", on?"true":"false");
+      t.tabIndex = on?0:-1;
+    });
+    $("#loc-bay").hidden = loc!=="bay";
+    $("#loc-comms").hidden = loc!=="comms";
+  }
+  $$(".tab").forEach(t=>{
+    t.addEventListener("click",()=>selectTab(t.dataset.loc));
+    t.addEventListener("keydown",e=>{
+      if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
+        e.preventDefault();
+        const order=["bay","comms"]; let i=order.indexOf(t.dataset.loc);
+        i=(e.key==="ArrowRight"? i+1 : i+order.length-1)%order.length;
+        const next=$(`.tab[data-loc="${order[i]}"]`); selectTab(order[i]); next.focus();
+      }
+    });
+  });
+
+  /* ---------- BAY: console + svg helpers ---------- */
+  const conBay = $("#con-bay");
+  function log(el, msg, cls){ el.innerHTML = cls?`<span class="${cls}">${msg}</span>`:msg; }
+
+  function drawCable(connected){
+    const c = $("#cable");
+    if(connected){
+      // from a jack to the NIC port (487,133), curved
+      const fromY = S.bay.cable==="J17" ? 75 : 121;
+      c.setAttribute("d", `M114 ${fromY} C 200 ${fromY}, 200 133, 479 133`);
+      c.setAttribute("opacity","1");
+    } else { c.setAttribute("opacity","0"); }
+  }
+  function renderBay(){
+    $("#cover").style.opacity = S.bay.open ? .12 : 1;
+    $("#coverTxt").textContent = S.bay.open ? "" : (S.bay.closed ? "[ side panel — closed ]" : "[ side panel — closed ]");
+    $("#internals").setAttribute("opacity", S.bay.open ? 1 : 0);
+    $("#nicCard").setAttribute("opacity", S.bay.nic ? 1 : 0);
+    $("#slotX1Txt").textContent = S.bay.nic ? "x1 #2 — Aria NX-110" : "x1 #2 — free";
+    $("#psuTxt").textContent = "PSU: " + (S.bay.replugged ? "CONNECTED" : "UNPLUGGED");
+    $("#psuTxt").setAttribute("fill", S.bay.replugged ? "#5ad19a" : "#ff7a6b");
+    $("#pwrLed").setAttribute("fill", S.bay.on ? "#5ad19a" : "#2a3b4f");
+    drawCable(!!S.bay.cable);
+    // disable/enable buttons by valid order
+    setEnabled("[data-a=open]", S.bay.off && S.bay.unplugged && !S.bay.open);
+    setEnabled("[data-a=seat]", S.bay.open && !S.bay.nic);
+    setEnabled("[data-a=cable][data-jack=J17]", S.bay.nic && !S.bay.cable);
+    setEnabled("[data-a=cable][data-jack=J18]", S.bay.nic && !S.bay.cable);
+    setEnabled("[data-a=close]", S.bay.open && S.bay.nic);
+    setEnabled("[data-a=replug]", S.bay.closed && !S.bay.replugged);
+    setEnabled("[data-a=poweron]", S.bay.replugged && !S.bay.on);
+    setEnabled("[data-a=settings]", S.bay.on);
+    markDone("[data-a=poweroff]", S.bay.off);
+    markDone("[data-a=unplug]", S.bay.unplugged);
+    markDone("[data-a=open]", S.bay.open);
+    markDone("[data-a=seat]", S.bay.nic);
+    markDone("[data-a=cable][data-jack=J17]", S.bay.cable==="J17");
+    markDone("[data-a=close]", S.bay.closed);
+    markDone("[data-a=replug]", S.bay.replugged);
+    markDone("[data-a=poweron]", S.bay.on);
+    markDone("[data-a=settings]", S.bay.settings && S.bay.cable==="J17" && S.bay.nic);
+  }
+  function setEnabled(sel,on){ $$("#acts-bay "+sel).forEach(b=>b.disabled=!on); }
+  function markDone(sel,on){ $$("#acts-bay "+sel).forEach(b=>b.dataset.done=on?"true":"false"); }
+
+  $("#acts-bay").addEventListener("click",e=>{
+    const b=e.target.closest("button.act"); if(!b||b.disabled) return;
+    const a=b.dataset.a;
+    if(a==="poweroff"){ S.bay.off=true; log(conBay,"System halted. Safe to continue.","ok"); }
+    else if(a==="unplug"){
+      if(!S.bay.off){ return log(conBay,"Refused: shut the system down before pulling the cord. Hot-yanking power risks the board.","err"); }
+      S.bay.unplugged=true; log(conBay,"Power cord removed. The unit is fully de-energized.","ok");
+    }
+    else if(a==="open"){ S.bay.open=true; log(conBay,"Side panel off. Two PCIe slots visible: x16 #1 is the GPU, x1 #2 is free.","ok"); }
+    else if(a==="seat"){ S.bay.nic=true; log(conBay,"Aria NX-110 seated and latched in x1 #2. A 1 GbE card only needs one lane.","ok"); }
+    else if(a==="cable"){
+      const j=b.dataset.jack;
+      if(j==="J18"){ return log(conBay,"J18 is the VOICE jack — that's the desk-phone run. Data terminates on J17. Try again.","err"); }
+      S.bay.cable="J17"; log(conBay,"Cat6 patch run J17 → NX-110. Data jack matched.","ok");
+    }
+    else if(a==="close"){ S.bay.closed=true; S.bay.open=false; log(conBay,"Side panel back on.","ok"); }
+    else if(a==="replug"){ S.bay.replugged=true; log(conBay,"Power cord reconnected. PSU energized.","ok"); }
+    else if(a==="poweron"){ S.bay.on=true; log(conBay,"POST complete — workstation booted.","ok"); }
+    else if(a==="settings"){
+      S.bay.settings=true;
+      if(S.bay.cable==="J17" && S.bay.nic){
+        log(conBay,"Settings → Network:\n  NX-110  ·  Connected\n  IPv4   10.40.18.62/22 (DHCP)\n  Gateway 10.40.16.1   DNS 10.40.0.10\n  Internet: reachable ✓","ok");
+      } else {
+        log(conBay,"Settings → Network:\n  NX-110 · No link. Check the patch run to the data jack (J17).","err");
+      }
+    }
+    evalBay(); renderBay(); refreshScore();
+  });
+
+  function evalBay(){
+    S.pass.t1 = S.bay.off && S.bay.unplugged && S.bay.open;      // safety order before opening
+    // if opened without de-energizing it can't be true because open requires both anyway
+    S.pass.t1 = S.bay.off && S.bay.unplugged;                    // both safety steps done
+    S.pass.t2 = S.bay.nic;
+    S.pass.t3 = S.bay.cable==="J17";
+    S.pass.t4 = S.bay.replugged && S.bay.on;
+    S.pass.t5 = S.bay.settings && S.bay.nic && S.bay.cable==="J17";
+    paintTasks();
+    $("#tab-bay").dataset.done = (S.pass.t1&&S.pass.t2&&S.pass.t3&&S.pass.t4&&S.pass.t5)?"true":"false";
+  }
+
+  /* ---------- COMMS ---------- */
+  const conComms=$("#con-comms");
+  function renderComms(){
+    [1,2,3].forEach(n=>{
+      const fed=S.comms.feeds[n];
+      $("#rec"+n).setAttribute("fill", fed ? "#5ad19a" : "#2a3b4f");
+      $("#line"+n).setAttribute("stroke", fed ? "#5ad19a" : "#3a4a5e");
+      $("#ups"+n).setAttribute("fill", fed ? "#5ad19a" : "#ffb454"); // amber = on battery
+      $$(`#acts-comms [data-a=pull][data-feed="${n}"]`).forEach(b=>b.dataset.done = fed?"false":"true");
+    });
+    const anyBattery = !S.comms.feeds[1]||!S.comms.feeds[2]||!S.comms.feeds[3];
+    const allOut = !S.comms.feeds[1]&&!S.comms.feeds[2]&&!S.comms.feeds[3];
+    $("#modeTxt").textContent = allOut ? "MODE: on battery — all UPS carrying load"
+                        : anyBattery ? "MODE: partial outage — some UPS on battery"
+                        : "MODE: line power — all feeds present";
+    $("#modeTxt").setAttribute("fill", allOut ? "#ffb454" : "#5ad19a");
+    // protected load stays cyan/lit regardless (that's the lesson)
+    setEnabledC("[data-a=verify]", allOut);
+    $$("#acts-comms [data-a=verify]").forEach(b=>b.dataset.done = S.comms.verified?"true":"false");
+  }
+  function setEnabledC(sel,on){ $$("#acts-comms "+sel).forEach(b=>b.disabled=!on); }
+
+  $("#acts-comms").addEventListener("click",e=>{
+    const b=e.target.closest("button.act"); if(!b||b.disabled) return;
+    if(b.dataset.a==="pull"){
+      const n=b.dataset.feed; S.comms.feeds[n]=!S.comms.feeds[n];
+      log(conComms, S.comms.feeds[n] ? `Feed ${n} re-seated — that UPS is back on line power.`
+        : `Feed ${n} pulled. ups ${n} switched to battery; its load kept power without a blip.`, S.comms.feeds[n]?"hint":"ok");
+      S.comms.verified=false;
+    } else if(b.dataset.a==="verify"){
+      S.comms.verified=true; S.comms.runtime = 17; // minutes, original value
+      log(conComms,`Verified: cdl-sw-core1, cdl-sw-acc2, cdl-rtr-edge and the console monitors are all still energized on battery.\nEstimated runtime at present load: ~${S.comms.runtime} min.\nA load on a plain surge strip would already be dark — that's the difference a UPS makes.`,"ok");
+    }
+    evalComms(); renderComms(); refreshScore();
+  });
+
+  function evalComms(){
+    S.pass.t6 = !S.comms.feeds[1]&&!S.comms.feeds[2]&&!S.comms.feeds[3];
+    S.pass.t7 = S.comms.verified && S.pass.t6;
+    paintTasks();
+    $("#tab-comms").dataset.done = (S.pass.t6&&S.pass.t7)?"true":"false";
+  }
+
+  function paintTasks(){
+    TASK_IDS.forEach(id=>{ const li=$("#"+id); if(li) li.dataset.pass = S.pass[id]?"true":"false"; });
+  }
+
+  /* ---------- QUESTIONS ---------- */
+  const qbox=$("#qbox");
+  QUESTIONS.forEach((q,qi)=>{
+    const fs=document.createElement("fieldset"); fs.className="q"; fs.id=q.id; fs.dataset.state="";
+    const lg=document.createElement("legend"); lg.innerHTML = q.prompt + `<span class="qmark" id="${q.id}-m"></span>`;
+    fs.appendChild(lg);
+    q.options.forEach((opt,oi)=>{
+      const id=`${q.id}-o${oi}`;
+      const lab=document.createElement("label"); lab.className="opt"; lab.setAttribute("for",id);
+      lab.innerHTML=`<input type="radio" name="${q.id}" id="${id}" value="${oi}"><span>${opt}</span>`;
+      fs.appendChild(lab);
+    });
+    qbox.appendChild(fs);
+    fs.addEventListener("change",e=>{
+      const val=parseInt(e.target.value,10);
+      S.q[q.id]=val;
+      const correct = val===q.answer;
+      fs.dataset.state = correct?"correct":"wrong";
+      const m=$("#"+q.id+"-m");
+      m.textContent = correct?"correct":"try again"; m.className="qmark "+(correct?"ok":"no");
+      refreshScore();
+    });
+  });
+
+  /* ---------- SCORING ---------- */
+  function computeScore(){
+    let earned=0;
+    TASK_IDS.forEach(id=>{ if(S.pass[id]) earned++; });
+    QUESTIONS.forEach(q=>{ if(S.q[q.id]===q.answer) earned++; });
+    return earned;
+  }
+  function refreshScore(){
+    const e=computeScore();
+    $("#earned").textContent=e; $("#total").textContent=TOTAL;
+    const ready = e===TOTAL && $("#handle").value.trim().length>0;
+    $("#submitBtn").disabled = !ready;
+    $("#scorepill").firstChild && ($("#scorepill").childNodes[0].nodeValue = e===TOTAL? "Ready " : "Progress ");
+  }
+  $("#handle").addEventListener("input",refreshScore);
+
+  /* ---------- RESET ---------- */
+  $("#reset-bay").addEventListener("click",()=>{
+    S.bay={off:false,unplugged:false,open:false,nic:false,cable:null,closed:false,replugged:false,on:false,settings:false};
+    S.pass.t1=S.pass.t2=S.pass.t3=S.pass.t4=S.pass.t5=false;
+    log(conBay,"Bench reset. Start with safety.","hint"); evalBay(); renderBay(); refreshScore();
+  });
+  $("#reset-comms").addEventListener("click",()=>{
+    S.comms={feeds:{1:true,2:true,3:true},verified:false,runtime:0};
+    S.pass.t6=S.pass.t7=false;
+    log(conComms,"Comms room reset. All feeds present.","hint"); evalComms(); renderComms(); refreshScore();
+  });
+
+  /* ---------- SCREENSHOT (html2canvas if present, else SVG fallback) ---------- */
+  async function captureLabArea(){
+    const node = document.querySelector(".wrap");
+    if (window.html2canvas){
+      const canvas = await window.html2canvas(node, {backgroundColor:"#0e1620", scale:1, logging:false});
+      return canvas.toDataURL("image/png");
+    }
+    // Built-in fallback: serialize the DOM into an SVG <foreignObject>, rasterize to canvas.
+    return await svgSnapshot(node);
+  }
+  function svgSnapshot(node){
+    return new Promise((resolve,reject)=>{
+      try{
+        const rect=node.getBoundingClientRect();
+        const w=Math.min(Math.ceil(rect.width),1100), h=Math.min(Math.ceil(rect.height),2600);
+        const clone=node.cloneNode(true);
+        // inline computed background so the capture isn't transparent
+        const wrapBg="#0e1620";
+        const xhtml=new XMLSerializer().serializeToString(clone);
+        const svg=
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+          `<rect width="100%" height="100%" fill="${wrapBg}"/>`+
+          `<foreignObject width="100%" height="100%">`+
+          `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px">${xhtml}</div>`+
+          `</foreignObject></svg>`;
+        const blob=new Blob([svg],{type:"image/svg+xml;charset=utf-8"});
+        const url=URL.createObjectURL(blob);
+        const img=new Image();
+        img.onload=()=>{
+          const c=document.createElement("canvas"); c.width=w; c.height=h;
+          const ctx=c.getContext("2d"); ctx.fillStyle=wrapBg; ctx.fillRect(0,0,w,h);
+          ctx.drawImage(img,0,0);
+          URL.revokeObjectURL(url);
+          try{ resolve(c.toDataURL("image/png")); }
+          catch(err){ resolve(""); } // tainted-canvas guard
+        };
+        img.onerror=()=>{ URL.revokeObjectURL(url); resolve(""); };
+        img.src=url;
+      }catch(err){ resolve(""); }
+    });
+  }
+
+  /* ---------- SUBMIT ---------- */
+  const statusEl=$("#status");
+  function setStatus(msg,cls){ statusEl.textContent=msg; statusEl.className="status"+(cls?(" "+cls):""); }
+
+  $("#submitBtn").addEventListener("click", async ()=>{
+    const handle=$("#handle").value.trim().slice(0,32);
+    if(!handle){ return setStatus("Enter a callsign first.","bad"); }
+    if(computeScore()!==TOTAL){ return setStatus("Finish every task and question before submitting.","bad"); }
+
+    $("#submitBtn").disabled=true;
+    setStatus("Capturing your work and submitting…","live");
+
+    let shot="";
+    try{ shot=await captureLabArea(); }catch(e){ shot=""; }
+
+    const payload={
+      assignmentId: CONFIG.assignmentId,
+      handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: [
+        {id:"t1",label:"De-energized before opening case", passed:S.pass.t1},
+        {id:"t2",label:"Adapter seated in PCIe x1", passed:S.pass.t2},
+        {id:"t3",label:"Patched from correct data jack (J17)", passed:S.pass.t3},
+        {id:"t4",label:"Re-energized and booted", passed:S.pass.t4},
+        {id:"t5",label:"Confirmed DHCP lease + internet", passed:S.pass.t5},
+        {id:"t6",label:"Dropped all utility feeds", passed:S.pass.t6},
+        {id:"t7",label:"Verified battery ride-through + runtime", passed:S.pass.t7}
+      ],
+      questions: QUESTIONS.map(q=>({
+        id:q.id, prompt:q.prompt,
+        answer: (S.q[q.id]!=null? q.options[S.q[q.id]] : null),
+        correct: S.q[q.id]===q.answer
+      })),
+      score:{ earned:computeScore(), total:TOTAL },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    try{
+      // Simple request: no custom headers, text/plain body — avoids CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+      const out=await res.json();
+      if(out && out.success){
+        setStatus("Submitted. ", "ok");
+        if(out.docUrl){
+          const a=document.createElement("a"); a.href=out.docUrl; a.target="_blank"; a.rel="noopener";
+          a.textContent="Open your submission record";
+          statusEl.appendChild(a);
+        }
+      } else {
+        setStatus("The server rejected the submission: "+((out&&out.error)||"unknown error")+". Tell your instructor.","bad");
+        $("#submitBtn").disabled=false;
+      }
+    }catch(err){
+      // Fallback: fire-and-forget (can't read docUrl in locked-down contexts).
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+        setStatus("Submission sent, but the confirmation couldn't be read here. Confirm receipt with your instructor.","live");
+      }catch(e2){
+        setStatus("Couldn't reach the submission service. Check your connection and the lab URL, then retry.","bad");
+        $("#submitBtn").disabled=false;
+      }
+    }
+  });
+
+  /* ---------- INIT ---------- */
+  selectTab("bay");
+  evalBay(); renderBay(); evalComms(); renderComms(); refreshScore();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-wifi-radio-disabled.html",title:"Signal Lost \u2014 Wireless Adapter Diagnosis"}, NEXT={href:"index_netplus-soho-wifi-setup.html",title:"Set Up the Home-Office Wi-Fi (Willowbrook Lane)"}, CRUMB="All Labs \u203a Unit 1 \u2014 Managing My Connections \u203a Topic 1.2";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

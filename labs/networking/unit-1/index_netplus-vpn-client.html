@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Connect a Tablet to the Staff VPN</title>
+<!--
+  =====================================================================
+  Network+ / AP Networking Lab Library
+  Lab: netplus-vpn-client — "Connect a Tablet to the Staff VPN"
+  Blueprint tags:   •  N10-009:3.5 (confirm vs real N10-009 PDF)
+                  APNET:1.4 (Unit 1, Topic 1.4 "Locking It Down")
+
+  Clean-room original work. Built from the public CompTIA Network+
+  objectives and the public AP Networking framework. No third-party
+  lab's scenario, persona, hostnames, addressing, values, wording,
+  ordering, or screenshots are used or reproduced.
+
+  © 2026 <AUTHOR NAME / ORG>. All rights reserved.
+  Licensed for use within the author's Network+ / AP Networking lab
+  library. Replace this notice with your own copyright/license line.
+  =====================================================================
+-->
+<style>
+  :root{
+    --ink:#16302d;        /* library ink (deep teal-green) */
+    --ink-2:#244b46;
+    --paper:#f6f1e7;      /* warm paper */
+    --paper-2:#efe8d8;
+    --card:#ffffff;
+    --teal:#1f6f6b;
+    --teal-d:#185754;
+    --brass:#a9772a;      /* civic brass accent */
+    --line:#ddd5c4;
+    --line-d:#c8bfa9;
+    --ok:#1f7a4d;
+    --ok-bg:#e7f3ec;
+    --bad:#a83232;
+    --bad-bg:#f6e7e4;
+    --muted:#5c6b66;
+    --focus:#0b6e99;
+    --radius:14px;
+    --shadow:0 10px 30px rgba(22,48,45,.10);
+    --display:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --body:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#10201e; --paper-2:#152825; --card:#152b28;
+      --ink:#eaf2ef; --ink-2:#cfe0db; --line:#2b423e; --line-d:#365450;
+      --muted:#9fb3ad; --ok-bg:#10302420; --bad-bg:#3a201d;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--body); color:var(--ink); background:
+      radial-gradient(1200px 500px at 80% -10%, var(--paper-2), transparent 60%),
+      var(--paper);
+    line-height:1.5; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:clamp(16px,3vw,34px)}
+  a{color:var(--teal-d)}
+  /* ---- masthead ---- */
+  .mast{display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; margin-bottom:18px}
+  .crest{
+    width:46px;height:46px;border-radius:11px;flex:0 0 auto;
+    background:linear-gradient(160deg,var(--teal),var(--teal-d));
+    display:grid;place-items:center;color:#fff;box-shadow:var(--shadow);
+  }
+  .crest svg{width:26px;height:26px}
+  .mast h1{font-family:var(--display); font-weight:600; font-size:clamp(1.3rem,2.6vw,1.7rem); margin:.1rem 0 .15rem; letter-spacing:.2px}
+  .eyebrow{font:600 .72rem/1 var(--body); letter-spacing:.16em; text-transform:uppercase; color:var(--brass)}
+  .tags{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  .tag{font:600 .68rem/1 var(--mono); color:var(--ink-2); background:var(--paper-2);
+    border:1px solid var(--line-d); padding:5px 8px; border-radius:999px}
+  /* ---- layout grid ---- */
+  .grid{display:grid; grid-template-columns:1.15fr .85fr; gap:20px; align-items:start}
+  @media (max-width:860px){ .grid{grid-template-columns:1fr} }
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+  .panel > h2{font-family:var(--display); font-weight:600; font-size:1.05rem; margin:0;
+    padding:14px 18px; border-bottom:1px solid var(--line)}
+  .panel .body{padding:16px 18px}
+  /* ---- scenario ---- */
+  .scenario{background:linear-gradient(180deg,var(--paper-2),transparent); border:1px solid var(--line-d);
+    border-radius:var(--radius); padding:16px 18px; margin-bottom:20px}
+  .scenario p{margin:.4rem 0}
+  .cardvals{display:grid; grid-template-columns:1fr 1fr; gap:8px 18px; margin-top:10px}
+  @media (max-width:560px){ .cardvals{grid-template-columns:1fr} }
+  .cardvals .kv{display:flex; justify-content:space-between; gap:10px; padding:7px 10px;
+    background:var(--card); border:1px dashed var(--line-d); border-radius:9px}
+  .cardvals .kv b{font:600 .8rem/1.3 var(--body)}
+  .cardvals .kv code{font:600 .82rem/1.3 var(--mono); color:var(--teal-d)}
+  /* ---- tablet sim ---- */
+  .tablet{margin:6px auto 2px; max-width:430px; background:var(--ink);
+    border-radius:26px; padding:14px; box-shadow:var(--shadow)}
+  .tablet .screen{background:var(--card); border-radius:16px; overflow:hidden; border:1px solid #0003}
+  .statusbar{display:flex; justify-content:space-between; align-items:center;
+    padding:7px 14px; font:600 .72rem/1 var(--body); color:var(--muted); background:var(--paper-2)}
+  .statusbar .net{display:flex; gap:8px; align-items:center}
+  .vpnchip{font:700 .64rem/1 var(--mono); letter-spacing:.06em; padding:3px 7px; border-radius:6px;
+    border:1px solid var(--line-d); color:var(--muted)}
+  .vpnchip.on{color:#fff; background:var(--ok); border-color:transparent}
+  .settings-head{display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line)}
+  .settings-head .ico{width:30px;height:30px;border-radius:8px;background:var(--teal);display:grid;place-items:center;color:#fff}
+  .settings-head .ico svg{width:18px;height:18px}
+  .settings-head h3{margin:0; font:600 .98rem/1.1 var(--body)}
+  .settings-head small{display:block; color:var(--muted); font-weight:500}
+  .scr-body{padding:14px 16px 18px}
+  .field{margin:0 0 12px}
+  .field label{display:block; font:600 .8rem/1.3 var(--body); margin-bottom:5px}
+  .field .hint{color:var(--muted); font-weight:500}
+  .field input, .field select{
+    width:100%; font:500 .92rem/1.3 var(--body); color:var(--ink);
+    padding:10px 11px; border:1px solid var(--line-d); border-radius:10px; background:var(--card);
+  }
+  .field input::placeholder{color:#9aa6a1}
+  .field.invalid input, .field.invalid select{border-color:var(--bad); background:var(--bad-bg)}
+  .field .err{display:none; color:var(--bad); font:600 .74rem/1.3 var(--body); margin-top:5px}
+  .field.invalid .err{display:block}
+  .row-btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px}
+  button{font:600 .88rem/1 var(--body); cursor:pointer; border-radius:10px; border:1px solid transparent; padding:11px 15px}
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible{
+    outline:3px solid var(--focus); outline-offset:2px}
+  .btn-primary{background:var(--teal); color:#fff}
+  .btn-primary:hover{background:var(--teal-d)}
+  .btn-ghost{background:var(--card); border-color:var(--line-d); color:var(--ink)}
+  .btn-ghost:hover{background:var(--paper-2)}
+  .btn-danger{background:var(--card); border-color:var(--line-d); color:var(--bad)}
+  /* saved profile list */
+  .profiles{margin-top:6px}
+  .profiles h4{margin:14px 0 6px; font:600 .74rem/1 var(--body); letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  .profile{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:12px 13px; border:1px solid var(--line-d); border-radius:11px; background:var(--paper-2)}
+  .profile .meta b{font:600 .9rem/1.2 var(--body); display:block}
+  .profile .meta small{color:var(--muted)}
+  .empty{color:var(--muted); font-size:.86rem; padding:10px 2px}
+  /* toggle */
+  .switch{position:relative; width:48px; height:28px; flex:0 0 auto}
+  .switch input{position:absolute; inset:0; opacity:0; margin:0; cursor:pointer}
+  .switch .track{position:absolute; inset:0; background:var(--line-d); border-radius:999px; transition:background .18s}
+  .switch .knob{position:absolute; top:3px; left:3px; width:22px; height:22px; background:#fff; border-radius:50%;
+    box-shadow:0 1px 3px #0004; transition:left .18s}
+  .switch input:checked + .track{background:var(--ok)}
+  .switch input:checked + .track + .knob{left:23px}
+  /* connect prompt */
+  .connect-box{margin-top:12px; border:1px solid var(--line-d); border-radius:11px; padding:13px; background:var(--card)}
+  .connect-box[hidden]{display:none}
+  .sb-status{margin-top:10px; font:600 .85rem/1.4 var(--body)}
+  .sb-status.ok{color:var(--ok)} .sb-status.bad{color:var(--bad)}
+  /* ---- task checklist ---- */
+  ol.tasks, ol.qs{list-style:none; margin:0; padding:0}
+  ol.tasks li{display:flex; gap:11px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--line)}
+  ol.tasks li:last-child{border-bottom:0}
+  .check{width:22px;height:22px;border-radius:6px;border:2px solid var(--line-d); flex:0 0 auto; display:grid; place-items:center; margin-top:1px}
+  .check svg{width:13px;height:13px; opacity:0; transform:scale(.6); transition:.18s}
+  li.done .check{background:var(--ok); border-color:var(--ok)}
+  li.done .check svg{opacity:1; transform:scale(1)}
+  li.done .t-label{color:var(--muted); text-decoration:line-through}
+  .t-label{font-size:.9rem}
+  /* ---- questions ---- */
+  ol.qs li{padding:14px 0; border-bottom:1px solid var(--line)}
+  ol.qs li:last-child{border-bottom:0}
+  .q-prompt{font:600 .9rem/1.4 var(--body); margin-bottom:8px}
+  .opts{display:grid; gap:7px}
+  .opt{display:flex; gap:9px; align-items:flex-start; padding:9px 11px; border:1px solid var(--line-d);
+    border-radius:9px; cursor:pointer; background:var(--card)}
+  .opt:hover{background:var(--paper-2)}
+  .opt input{margin-top:3px}
+  .opt.correct{border-color:var(--ok); background:var(--ok-bg)}
+  .opt.wrong{border-color:var(--bad); background:var(--bad-bg)}
+  .q-feedback{font:600 .76rem/1.3 var(--body); margin-top:6px; min-height:1em}
+  .q-feedback.ok{color:var(--ok)} .q-feedback.bad{color:var(--bad)}
+  /* ---- submission bar ---- */
+  .submit-bar{margin-top:22px; background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px}
+  .submit-bar .row{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end}
+  .submit-bar .field{flex:1 1 220px; margin:0}
+  .scoreline{font:600 .9rem/1.3 var(--body); margin:2px 0 0}
+  .scoreline .pill{display:inline-block; padding:3px 10px; border-radius:999px; background:var(--paper-2);
+    border:1px solid var(--line-d); margin-left:6px}
+  #subStatus{margin-top:12px; font:600 .9rem/1.45 var(--body); white-space:pre-line}
+  #subStatus.ok{color:var(--ok)} #subStatus.bad{color:var(--bad)} #subStatus.busy{color:var(--teal-d)}
+  #subStatus a{font-weight:700}
+  .privacy{margin-top:10px; font-size:.78rem; color:var(--muted)}
+  .footer{margin:26px 2px 6px; font-size:.74rem; color:var(--muted)}
+  .visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important; animation:none!important} }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-vpn-client", "title": "Connect a Tablet to the Staff VPN", "version": "1.0.0", "objectives": ["N10-009:3.5", "APNET:1.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap">
+
+  <!-- ===== masthead ===== -->
+  <header class="mast">
+    <div class="crest" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/>
+      </svg>
+    </div>
+    <div>
+      <div class="eyebrow">Network+ &middot; AP Networking lab</div>
+      <h1>Connect a Tablet to the Staff VPN</h1>
+      <div class="tags" aria-label="Blueprint objective tags">
+        <span class="tag">N10-007 &middot; 3.4</span>
+        <span class="tag">N10-009 &middot; 4.5</span>
+        <span class="tag">APNET &middot; 1.4.B.2</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== scenario ===== -->
+  <section class="scenario" aria-labelledby="scn-h">
+    <h2 id="scn-h" style="font-family:var(--display); font-weight:600; margin:0 0 .2rem; font-size:1.05rem">The job</h2>
+    <p>You volunteer as a tech aide at the <strong>Cedar Hollow Community Library</strong>. The library
+       runs a remote-access (client-to-site) VPN so staff can reach the catalog admin tools from home.
+       You're on your couch, connected to your home Wi-Fi, and you need to add the VPN profile to a
+       loaner tablet and bring the tunnel up.</p>
+    <p>Use the connection details from the setup card the librarian handed you. The VPN type is
+       <strong>IKEv2</strong> (which runs over IPsec). Enter every value exactly.</p>
+    <div class="cardvals" role="group" aria-label="VPN setup card values">
+      <div class="kv"><b>Profile name</b><code>CedarHollow-Staff</code></div>
+      <div class="kv"><b>Connection type</b><code>IKEv2</code></div>
+      <div class="kv"><b>Server address</b><code>203.0.113.40</code></div>
+      <div class="kv"><b>Account (username)</b><code>t.okafor</code></div>
+      <div class="kv"><b>Pre-shared key</b><code>Cedar!Hollow#7</code></div>
+      <div class="kv"><b>Your sign-in password</b><code>R3ading-R00m!2</code></div>
+    </div>
+  </section>
+
+  <div class="grid">
+
+    <!-- ===== LEFT: tablet simulator ===== -->
+    <section class="panel" aria-labelledby="sim-h">
+      <h2 id="sim-h">TabletOS &mdash; Settings</h2>
+      <div class="body">
+        <div class="tablet">
+          <div class="screen">
+            <div class="statusbar">
+              <span>9:41</span>
+              <span class="net">
+                <span>HomeWiFi</span>
+                <span id="vpnChip" class="vpnchip" aria-live="polite">VPN OFF</span>
+              </span>
+            </div>
+
+            <div class="settings-head">
+              <div class="ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div>
+                <h3>VPN &amp; Network</h3>
+                <small>Add VPN Configuration</small>
+              </div>
+            </div>
+
+            <div class="scr-body">
+              <div class="field" id="f-type">
+                <label for="vpnType">Connection type</label>
+                <select id="vpnType" aria-describedby="f-type-err">
+                  <option value=>Choose a type…</option>
+                  <option value="IKEv2">IKEv2</option>
+                  <option value="IPsec">IPsec (manual)</option>
+                  <option value="L2TP">L2TP</option>
+                  <option value="PPTP">PPTP</option>
+                </select>
+                <p class="err" id="f-type-err">Pick the type listed on the setup card.</p>
+              </div>
+
+              <div class="field" id="f-name">
+                <label for="vpnName">Profile name <span class="hint">(description)</span></label>
+                <input id="vpnName" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. CedarHollow-Staff">
+                <p class="err" id="f-name-err">Enter the profile name from the card.</p>
+              </div>
+
+              <div class="field" id="f-server">
+                <label for="vpnServer">Server address</label>
+                <input id="vpnServer" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="e.g. 203.0.113.40">
+                <p class="err" id="f-server-err">That doesn't match the server on the card. Check each octet.</p>
+              </div>
+
+              <div class="field" id="f-account">
+                <label for="vpnAccount">Account</label>
+                <input id="vpnAccount" type="text" autocomplete="off" spellcheck="false" placeholder="username">
+                <p class="err" id="f-account-err">Enter the account username from the card.</p>
+              </div>
+
+              <div class="field" id="f-psk">
+                <label for="vpnPsk">Pre-shared key <span class="hint">(secret)</span></label>
+                <input id="vpnPsk" type="text" autocomplete="off" spellcheck="false" placeholder="shared secret">
+                <p class="err" id="f-psk-err">The pre-shared key doesn't match the card. It's case-sensitive.</p>
+              </div>
+
+              <div class="row-btns">
+                <button class="btn-primary" id="btnSave" type="button">Save configuration</button>
+                <button class="btn-ghost" id="btnClear" type="button">Clear fields</button>
+              </div>
+
+              <div class="profiles" aria-live="polite">
+                <h4>Saved profiles</h4>
+                <div id="profileList"><p class="empty">No VPN profiles yet.</p></div>
+              </div>
+
+              <div class="connect-box" id="connectBox" hidden>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+                  <div>
+                    <strong id="connName">CedarHollow-Staff</strong>
+                    <div class="empty" id="connState" style="padding:0">Status: Not connected</div>
+                  </div>
+                  <span class="switch">
+                    <input type="checkbox" id="vpnToggle" role="switch" aria-checked="false" aria-label="VPN connection">
+                    <span class="track" aria-hidden="true"></span><span class="knob" aria-hidden="true"></span>
+                  </span>
+                </div>
+                <div id="authRow" class="field" style="margin:12px 0 0" hidden>
+                  <label for="vpnPass">Sign-in password</label>
+                  <input id="vpnPass" type="password" autocomplete="off" placeholder="account password">
+                  <div class="row-btns">
+                    <button class="btn-primary" id="btnAuth" type="button">Connect</button>
+                  </div>
+                </div>
+                <p class="sb-status" id="connMsg" aria-live="polite"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== RIGHT: tasks + questions ===== -->
+    <div>
+      <section class="panel" aria-labelledby="task-h" style="margin-bottom:20px">
+        <h2 id="task-h">Tasks</h2>
+        <div class="body">
+          <ol class="tasks" id="taskList"></ol>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="q-h">
+        <h2 id="q-h">Check your understanding</h2>
+        <div class="body">
+          <ol class="qs" id="qList"></ol>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== submission bar ===== -->
+  <section class="submit-bar" aria-labelledby="sub-h">
+    <h2 id="sub-h" style="font-family:var(--display); font-weight:600; margin:0 0 10px; font-size:1.05rem">Turn it in</h2>
+    <div class="row">
+      <div class="field">
+        <label for="handle">Callsign <span class="hint">(a nickname &mdash; never your real name)</span></label>
+        <input id="handle" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="e.g. river-otter-77">
+      </div>
+      <div>
+        <button class="btn-primary" id="btnSubmit" type="button">Submit completed lab</button>
+      </div>
+      <div>
+        <button class="btn-danger" id="btnReset" type="button">Reset lab</button>
+      </div>
+    </div>
+    <p class="scoreline">Progress<span class="pill" id="scorePill">0 / 10</span></p>
+    <p id="subStatus" role="status" aria-live="polite"></p>
+    <p class="privacy">Use a made-up callsign. This lab collects no name, email, or student ID. A picture of
+       your finished screen is sent to your instructor along with your task and question results.</p>
+  </section>
+
+  <p class="footer">
+    Clean-room build for the Network+ / AP Networking lab library &middot; tags  / N10-009:3.5 / APNET:1.4
+    &copy; 2026 &lt;AUTHOR&gt;. Replace with your own copyright/license line.
+  </p>
+</div>
+
+<!-- =========================================================
+     SCRIPT 1 — INLINE html2canvas HERE
+     Paste the full minified source of html2canvas v1.4.1 (MIT)
+     between the two marker comments below to make this file
+     fully dependency-free. Until you do, the lab still works:
+     it submits without a screenshot and says so on screen.
+     Source: https://github.com/niklasvh/html2canvas/releases
+     (download html2canvas.min.js, paste its contents in).
+     ========================================================= -->
+<script>
+/* ----- BEGIN html2canvas.min.js (paste here) ----- */
+
+/* ----- END html2canvas.min.js ----- */
+</script>
+
+<!-- =========================================================
+     SCRIPT 2 — engine, CONFIG + ANSWER KEY, logic, POST
+     ========================================================= -->
+<script>
+(function(){
+  "use strict";
+
+  /* ================= CONFIG (per-lab) ================= */
+  const CONFIG = {
+    assignmentId: "netplus-vpn-client",
+    objectives: ["N10-009:3.5", "APNET:1.4"],
+    // Paste the deployed Apps Script /exec URL (shared across the library):
+    APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+    // Per-cohort secret — rotate each term (kept identical to a Script Property):
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    maxScreenshotBytes: 1500000   // soft guard; server caps too
+  };
+
+  /* ================= ANSWER KEY (per-lab) =================
+     Inspectable in dev tools — see §7. Scores are self-reported
+     and fine for formative work; have the Apps Script re-score
+     server-side if a grade must be trustworthy. */
+  const KEY = {
+    type:    "IKEv2",
+    name:    "CedarHollow-Staff",
+    server:  "203.0.113.40",
+    account: "t.okafor",
+    psk:     "Cedar!Hollow#7",
+    pass:    "R3ading-R00m!2"
+  };
+
+  const TASKS = [
+    { id:"type",    label:"Set the connection type to IKEv2" },
+    { id:"server",  label:"Enter the server address from the card" },
+    { id:"account", label:"Enter the account username" },
+    { id:"psk",     label:"Enter the pre-shared key (secret)" },
+    { id:"save",    label:"Save the VPN configuration" },
+    { id:"connect", label:"Turn the VPN on and reach a Connected state" }
+  ];
+
+  const QUESTIONS = [
+    {
+      id:"q1",
+      prompt:"One tablet connecting back to the library's network across the internet is which kind of VPN?",
+      options:[
+        "Site-to-site VPN",
+        "Client-to-site (remote-access) VPN",
+        "Split-DNS VPN",
+        "Out-of-band console link"
+      ],
+      answer:1
+    },
+    {
+      id:"q2",
+      prompt:"On open public Wi-Fi, what does the IPsec tunnel mainly give you?",
+      options:[
+        "A faster connection",
+        "Confidentiality and integrity for traffic in transit",
+        "A stronger Wi-Fi signal",
+        "Longer battery life"
+      ],
+      answer:1
+    },
+    {
+      id:"q3",
+      prompt:"The pre-shared key helps authenticate the tunnel itself. What authenticates YOU as the user?",
+      options:[
+        "The server's IP address",
+        "Your account username and password",
+        "The Wi-Fi network name (SSID)",
+        "The tablet's MAC address"
+      ],
+      answer:1
+    },
+    {
+      id:"q4",
+      prompt:"Why bring up the VPN before working on an untrusted hotspot (per the secure-connection guidance)?",
+      options:[
+        "It turns off HTTPS so pages load faster",
+        "It hides the page only from the website owner",
+        "It encrypts your traffic so credentials and data aren't exposed to others on that network",
+        "It lets you skip signing in"
+      ],
+      answer:2
+    }
+  ];
+
+  /* ================= STATE ================= */
+  const state = {
+    saved:false, connected:false,
+    tasks:Object.fromEntries(TASKS.map(t=>[t.id,false])),
+    answers:Object.fromEntries(QUESTIONS.map(q=>[q.id,null]))
+  };
+  const $ = s => document.querySelector(s);
+  const el = {
+    type:$("#vpnType"), name:$("#vpnName"), server:$("#vpnServer"),
+    account:$("#vpnAccount"), psk:$("#vpnPsk"),
+    btnSave:$("#btnSave"), btnClear:$("#btnClear"),
+    profileList:$("#profileList"), connectBox:$("#connectBox"),
+    toggle:$("#vpnToggle"), authRow:$("#authRow"), pass:$("#vpnPass"),
+    btnAuth:$("#btnAuth"), connState:$("#connState"), connMsg:$("#connMsg"),
+    vpnChip:$("#vpnChip"), connName:$("#connName"),
+    taskList:$("#taskList"), qList:$("#qList"),
+    scorePill:$("#scorePill"), subStatus:$("#subStatus"),
+    handle:$("#handle"), btnSubmit:$("#btnSubmit"), btnReset:$("#btnReset")
+  };
+
+  /* ================= RENDER tasks & questions ================= */
+  TASKS.forEach(t=>{
+    const li=document.createElement("li");
+    li.id="task-"+t.id;
+    li.innerHTML='<span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>'
+      +'<span class="t-label">'+t.label+'</span>';
+    el.taskList.appendChild(li);
+  });
+
+  QUESTIONS.forEach((q,qi)=>{
+    const li=document.createElement("li");
+    const opts=q.options.map((o,oi)=>(
+      '<label class="opt"><input type="radio" name="'+q.id+'" value="'+oi+'"> <span>'+o+'</span></label>'
+    )).join();
+    li.innerHTML='<div class="q-prompt">'+(qi+1)+'. '+q.prompt+'</div>'
+      +'<div class="opts" id="opts-'+q.id+'">'+opts+'</div>'
+      +'<div class="q-feedback" id="fb-'+q.id+'" aria-live="polite"></div>';
+    el.qList.appendChild(li);
+  });
+  QUESTIONS.forEach(q=>{
+    document.getElementsByName(q.id).forEach(r=>{
+      r.addEventListener("change",()=>{
+        state.answers[q.id]=Number(r.value);
+        gradeQuestion(q);
+        refresh();
+      });
+    });
+  });
+
+  function gradeQuestion(q){
+    const chosen=state.answers[q.id];
+    const fb=$("#fb-"+q.id);
+    const labels=$("#opts-"+q.id).querySelectorAll(".opt");
+    labels.forEach(l=>l.classList.remove("correct","wrong"));
+    if(chosen===null){fb.textContent=;fb.className="q-feedback";return;}
+    if(chosen===q.answer){
+      labels[chosen].classList.add("correct");
+      fb.textContent="Correct.";fb.className="q-feedback ok";
+    }else{
+      labels[chosen].classList.add("wrong");
+      fb.textContent="Not quite — re-read the scenario and try again.";
+      fb.className="q-feedback bad";
+    }
+  }
+
+  /* ================= SIM behaviour ================= */
+  function fieldMatches(){
+    return {
+      type:    el.type.value===KEY.type,
+      name:    el.name.value.trim()===KEY.name,
+      server:  el.server.value.trim()===KEY.server,
+      account: el.account.value.trim()===KEY.account,
+      psk:     el.psk.value===KEY.psk
+    };
+  }
+  function setInvalid(id,on){ $("#f-"+id).classList.toggle("invalid",on); }
+
+  el.btnSave.addEventListener("click",()=>{
+    const m=fieldMatches();
+    setInvalid("type",!m.type); setInvalid("name",!m.name);
+    setInvalid("server",!m.server); setInvalid("account",!m.account);
+    setInvalid("psk",!m.psk);
+    const ok = m.type && m.name && m.server && m.account && m.psk;
+    // task flags that don't depend on Save
+    state.tasks.type=m.type; state.tasks.server=m.server;
+    state.tasks.account=m.account; state.tasks.psk=m.psk;
+    if(!ok){ state.saved=false; renderProfiles(); refresh(); return; }
+    state.saved=true; state.tasks.save=true;
+    el.connName.textContent=el.name.value.trim();
+    renderProfiles();
+    el.connectBox.hidden=false;
+    refresh();
+  });
+
+  el.btnClear.addEventListener("click",()=>{
+    ["type","name","server","account","psk"].forEach(k=>{ el[k].value=; setInvalid("f"==="f"?k:k,false); });
+    ["type","name","server","account","psk"].forEach(k=>setInvalid(k,false));
+  });
+
+  function renderProfiles(){
+    if(!state.saved){ el.profileList.innerHTML='<p class="empty">No VPN profiles yet.</p>'; return; }
+    el.profileList.innerHTML=
+      '<div class="profile" role="group" aria-label="Saved VPN profile">'
+      +'<div class="meta"><b>'+escapeHtml(el.name.value.trim())+'</b>'
+      +'<small>'+escapeHtml(el.type.value)+' &middot; '+escapeHtml(el.server.value.trim())+'</small></div>'
+      +'<span class="vpnchip">Ready</span></div>';
+  }
+
+  el.toggle.addEventListener("change",()=>{
+    if(el.toggle.checked){
+      el.toggle.setAttribute("aria-checked","true");
+      el.authRow.hidden=false; el.connMsg.textContent=; el.connMsg.className="sb-status";
+      el.connState.textContent="Status: Authenticating…";
+      el.pass.focus();
+    }else{
+      el.toggle.setAttribute("aria-checked","false");
+      disconnect();
+    }
+  });
+
+  el.btnAuth.addEventListener("click",authenticate);
+  el.pass.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); authenticate(); }});
+
+  function authenticate(){
+    if(el.pass.value===KEY.pass){
+      state.connected=true; state.tasks.connect=true;
+      el.authRow.hidden=true;
+      el.connState.textContent="Status: Connected";
+      el.connMsg.textContent="Tunnel established. The library catalog tools are reachable.";
+      el.connMsg.className="sb-status ok";
+      el.vpnChip.textContent="VPN ON"; el.vpnChip.classList.add("on");
+    }else{
+      state.connected=false; state.tasks.connect=false;
+      el.connState.textContent="Status: Authentication failed";
+      el.connMsg.textContent="Authentication failed — check the sign-in password on the card (it's case-sensitive) and try again.";
+      el.connMsg.className="sb-status bad";
+    }
+    refresh();
+  }
+
+  function disconnect(){
+    state.connected=false; state.tasks.connect=false;
+    el.authRow.hidden=true; el.pass.value=;
+    el.connState.textContent="Status: Not connected";
+    el.connMsg.textContent=; el.connMsg.className="sb-status";
+    el.vpnChip.textContent="VPN OFF"; el.vpnChip.classList.remove("on");
+    refresh();
+  }
+
+  /* ================= scoring / refresh ================= */
+  function tasksPassed(){ return TASKS.filter(t=>state.tasks[t.id]).length; }
+  function questionsPassed(){ return QUESTIONS.filter(q=>state.answers[q.id]===q.answer).length; }
+  function total(){ return TASKS.length + QUESTIONS.length; }
+  function earned(){ return tasksPassed()+questionsPassed(); }
+
+  function refresh(){
+    TASKS.forEach(t=>{
+      document.getElementById("task-"+t.id).classList.toggle("done",!!state.tasks[t.id]);
+    });
+    el.scorePill.textContent=earned()+" / "+total();
+  }
+
+  /* ================= submission ================= */
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+  async function capture(){
+    if(typeof html2canvas!=="function") return ;   // graceful: not inlined yet
+    try{
+      const node=document.querySelector(".grid");
+      const canvas=await html2canvas(node,{scale:1,backgroundColor:getComputedStyle(document.body).backgroundColor});
+      let url=canvas.toDataURL("image/png");
+      if(url.length>CONFIG.maxScreenshotBytes){ url=canvas.toDataURL("image/jpeg",0.7); }
+      return url;
+    }catch(e){ return ; }
+  }
+
+  function buildPayload(shot){
+    return {
+      assignmentId: CONFIG.assignmentId,
+      handle: el.handle.value.trim(),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(t=>({id:t.id,label:t.label,passed:!!state.tasks[t.id]})),
+      questions: QUESTIONS.map(q=>({
+        id:q.id, prompt:q.prompt,
+        answer: state.answers[q.id]===null?null:q.options[state.answers[q.id]],
+        correct: state.answers[q.id]===q.answer
+      })),
+      score:{ earned:earned(), total:total() },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  function setStatus(msg,kind){ el.subStatus.textContent=msg; el.subStatus.className=kind||; }
+
+  el.btnSubmit.addEventListener("click",async()=>{
+    const handle=el.handle.value.trim();
+    if(!handle){ setStatus("Enter a callsign before submitting.","bad"); el.handle.focus(); return; }
+    if(earned()<total()){
+      const go=confirm("You haven't finished every task and question yet. Submit anyway?");
+      if(!go) return;
+    }
+    el.btnSubmit.disabled=true;
+    setStatus("Capturing your screen and sending…","busy");
+
+    const shot=await capture();
+    const payload=buildPayload(shot);
+
+    if(/^PASTE_/.test(CONFIG.APPS_SCRIPT_URL)){
+      el.btnSubmit.disabled=false;
+      setStatus("This lab isn't wired to a submission endpoint yet.\nAsk your instructor to paste the Apps Script /exec URL into APPS_SCRIPT_URL.\n(Your work is complete: "+earned()+"/"+total()+(shot?:" — screenshot skipped: html2canvas not inlined")+".)","bad");
+      return;
+    }
+
+    try{
+      // §4 simple request: no custom headers → no CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", body:JSON.stringify(payload) });
+      const out=await res.json();
+      if(out && out.success){
+        const link=out.docUrl?(' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission</a>'):;
+        el.subStatus.innerHTML='Submitted. Saved as '+escapeHtml(handle)+' — '+earned()+'/'+total()+'.'+link;
+        el.subStatus.className="ok";
+      }else{
+        setStatus("The server rejected the submission: "+((out&&out.error)||"unknown reason")+". Check with your instructor.","bad");
+        el.btnSubmit.disabled=false;
+      }
+    }catch(err){
+      // Fallback: fire-and-forget (can't read docUrl in a locked-down context).
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{ method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+        setStatus("Sent, but this browser blocked reading the reply. Confirm with your instructor that it arrived.","busy");
+      }catch(e2){
+        setStatus("Couldn't reach the submission server. Check your connection and try again, or tell your instructor.","bad");
+        el.btnSubmit.disabled=false;
+      }
+    }
+  });
+
+  /* ================= reset ================= */
+  el.btnReset.addEventListener("click",()=>{
+    if(!confirm("Reset the whole lab? This clears your fields, answers, and progress.")) return;
+    ["type","name","server","account","psk","pass","handle"].forEach(k=>{ if(el[k]) el[k].value=; });
+    ["type","name","server","account","psk"].forEach(k=>setInvalid(k,false));
+    el.toggle.checked=false; el.toggle.setAttribute("aria-checked","false");
+    el.connectBox.hidden=true; el.authRow.hidden=true;
+    state.saved=false; state.connected=false;
+    TASKS.forEach(t=>state.tasks[t.id]=false);
+    QUESTIONS.forEach(q=>{ state.answers[q.id]=null; $("#fb-"+q.id).textContent=; $("#fb-"+q.id).className="q-feedback";
+      $("#opts-"+q.id).querySelectorAll(".opt").forEach(l=>l.classList.remove("correct","wrong"));
+      document.getElementsByName(q.id).forEach(r=>r.checked=false); });
+    renderProfiles();
+    el.vpnChip.textContent="VPN OFF"; el.vpnChip.classList.remove("on");
+    el.connMsg.textContent=; el.connState.textContent="Status: Not connected";
+    setStatus(" ");
+    refresh();
+  });
+
+  /* live-update task flags as fields change (before Save) */
+  ["type","name","server","account","psk"].forEach(k=>{
+    el[k].addEventListener("input",()=>{
+      const m=fieldMatches();
+      state.tasks.type=m.type; state.tasks.server=m.server;
+      state.tasks.account=m.account; state.tasks.psk=m.psk;
+      if(state.saved && !(m.type&&m.name&&m.server&&m.account&&m.psk)){
+        state.saved=false; state.tasks.save=false; state.connected=false;
+        el.connectBox.hidden=true; renderProfiles(); disconnect();
+      }
+      refresh();
+    });
+  });
+
+  renderProfiles();
+  refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-guest-wlan-byod.html",title:"Guest WLAN for BYOD \u2014 AirLoom WLC Lab"}, NEXT={href:"index_netplus-secure-admin-access.html",title:"Harden the Edge Firewall Console (fw-edge-01)"}, CRUMB="All Labs \u203a Unit 1 \u2014 Managing My Connections \u203a Topic 1.4";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

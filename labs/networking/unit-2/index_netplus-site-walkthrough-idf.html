@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>IDF Walkthrough — Network+ / AP Networking Lab</title>
+<!--
+  IDF Walkthrough: Identify the Gear in Annex B
+  Single-file simulation lab — CompTIA Network+ (N10-009) + AP Networking V.1.
+  © 2026 [AUTHOR / LIBRARY]. All rights reserved. Original clean-room work built
+  from public objectives; no third-party lab text, values, or screenshots copied.
+-->
+<style>
+  .lab{--bg:#0e1620;--panel:#16212e;--panel-2:#1d2c3c;--line:#27384a;--ink:#e7eef6;
+    --ink-dim:#9fb1c2;--ink-faint:#6c8197;--link:#3ddc84;--act:#f5a524;--fault:#ff5d5d;
+    --info:#5aa7ff;--radius:10px;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .lab *{box-sizing:border-box}
+  .lab{font-family:var(--sans);color:var(--ink);background:var(--bg);min-height:100vh;
+    margin:0 auto;padding:18px;line-height:1.5;max-width:1100px}
+  .lab a{color:var(--info)}
+  .lab h1{font-size:1.35rem;margin:0 0 2px}
+  .lab .eyebrow{font:600 .68rem/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--act);margin:0 0 8px}
+  .lab .sub{color:var(--ink-dim);margin:0 0 14px;font-size:.92rem}
+  .lab .tag{display:inline-block;font:600 .66rem/1 var(--mono);color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;padding:4px 8px;margin:0 6px 6px 0}
+  .lab .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:14px}
+  @media (max-width:820px){.lab .grid{grid-template-columns:1fr}}
+  .lab .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+  .lab .card h2{font-size:.95rem;margin:0 0 10px}
+  .lab .card h2 .n{font:600 .7rem var(--mono);color:var(--ink-faint)}
+
+  /* rack */
+  .lab .rack{display:flex;flex-direction:column;gap:8px;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+  .lab .ru{display:grid;grid-template-columns:54px 1fr;gap:10px;align-items:center;
+    background:#0a121b;border:1px solid var(--line);border-radius:8px;padding:10px}
+  .lab .ru .glyph{height:38px;border-radius:4px;border:1px solid #34506a;display:grid;place-items:center;
+    font:600 .62rem var(--mono);color:var(--ink-faint)}
+  .lab .ru .body{display:flex;flex-direction:column;gap:6px}
+  .lab .ru .name{font:600 .82rem var(--mono);color:var(--ink)}
+  .lab .ru select{background:#0a121b;border:1px solid var(--line);color:var(--ink);
+    border-radius:6px;padding:6px 8px;font-size:.8rem}
+  .lab .ru select.right{border-color:var(--link)}
+  .lab .ru select.wrong{border-color:var(--fault)}
+  .lab .ports{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+  .lab .port{font:600 .62rem var(--mono);border:1px solid var(--line);background:#10202c;
+    color:var(--ink-dim);border-radius:4px;padding:4px 6px;cursor:pointer}
+  .lab .port.active{border-color:var(--link);color:var(--link);background:rgba(61,220,132,.12)}
+  .lab .uplink{height:3px;background:repeating-linear-gradient(90deg,#34506a 0 8px,transparent 8px 14px);margin:2px 0}
+  .lab .uplink.traced{background:var(--act)}
+
+  .lab ol.tasks,.lab ol.qs{list-style:none;margin:0;padding:0}
+  .lab .task{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .lab .task:last-child{border-bottom:0}
+  .lab .task .box{flex:0 0 auto;width:18px;height:18px;border-radius:4px;border:1.5px solid var(--ink-faint);
+    margin-top:2px;display:grid;place-items:center;font-size:.7rem}
+  .lab .task.passed .box{border-color:var(--link);background:rgba(61,220,132,.15);color:var(--link)}
+  .lab .task .label{font-size:.86rem}
+  .lab .task .hint{display:block;color:var(--ink-faint);font-size:.74rem;margin-top:2px}
+
+  .lab .q{padding:10px 0;border-bottom:1px dashed var(--line)}
+  .lab .q:last-child{border-bottom:0}
+  .lab .q p{margin:0 0 8px;font-size:.86rem}
+  .lab .q label{display:flex;gap:8px;align-items:flex-start;font-size:.83rem;color:var(--ink-dim);cursor:pointer}
+  .lab .q .opts{display:flex;flex-direction:column;gap:6px}
+  .lab .q .verdict{font:600 .72rem var(--mono);margin-top:6px}
+  .lab .q .verdict.good{color:var(--link)} .lab .q .verdict.bad{color:var(--fault)}
+
+  .lab .submitbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-top:14px}
+  .lab .submitbar input[type=text]{background:#0a121b;border:1px solid var(--line);color:var(--ink);
+    border-radius:6px;padding:9px 11px;font-size:.9rem;min-width:170px}
+  .lab .submitbar label{font-size:.8rem;color:var(--ink-dim)}
+  .lab .score{font:600 .82rem var(--mono);color:var(--ink-dim);margin-left:auto}
+  .lab button.btn{font:600 .85rem var(--sans);border:1px solid var(--line);background:var(--panel-2);
+    color:var(--ink);padding:9px 14px;border-radius:8px;cursor:pointer}
+  .lab button.btn.primary{background:var(--link);color:#04150b;border-color:var(--link)}
+  .lab .status{flex-basis:100%;font-size:.84rem;color:var(--ink-dim);min-height:1.2em}
+  .lab .status.good{color:var(--link)} .lab .status.bad{color:var(--fault)}
+  .lab button:focus-visible,.lab select:focus-visible,.lab input:focus-visible,
+  .lab .port:focus-visible,.lab a:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+  .lab .foot{margin-top:14px;color:var(--ink-faint);font-size:.72rem}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-site-walkthrough-idf", "title": "IDF Walkthrough", "version": "1.0.0", "objectives": ["N10-009:1.2", "N10-009:2.4", "APNET:2.2"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<main class="lab" id="lab">
+  <p class="eyebrow">Network Operations · Site Survey</p>
+  <h1>IDF Walkthrough — Annex B</h1>
+  <p class="sub">Brightwater Community College. Inventory the wiring closet: identify each device, its role, and the uplink out of the frame — before any work begins.</p>
+  <div id="tagbar"></div>
+
+  <div class="grid">
+    <section class="card" aria-label="Rack elevation">
+      <h2>Annex B closet — rack elevation <span class="n">IDF-B</span></h2>
+      <div class="rack" id="rack"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn" id="btnTrace" type="button">Trace fiber uplink to MDF</button>
+        <button class="btn" id="btnReset" type="button">Reset</button>
+      </div>
+      <div class="uplink" id="uplinkLine" aria-hidden="true"></div>
+      <p class="foot" id="traceMsg">Uplink not traced yet.</p>
+    </section>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <section class="card" aria-label="Tasks"><h2>Tasks</h2><ol class="tasks" id="tasks"></ol></section>
+      <section class="card" aria-label="Questions"><h2>Check questions</h2><ol class="qs" id="qs"></ol></section>
+    </div>
+  </div>
+
+  <div class="submitbar">
+    <label for="handle">Callsign</label>
+    <input type="text" id="handle" maxlength="32" autocomplete="off" placeholder="e.g. annex-otter">
+    <button class="btn primary" id="btnSubmit" type="button">Submit completed lab</button>
+    <span class="score" id="score">0 / 0</span>
+    <span class="status" id="status" role="status" aria-live="polite"></span>
+    <span class="foot" style="flex-basis:100%;margin:0">Use a made-up callsign. No names, emails, or IDs are collected.</span>
+  </div>
+  <p class="foot">© 2026 [AUTHOR / LIBRARY]. Client-side scoring is self-reported; the Apps Script can re-score server-side.</p>
+</main>
+
+<script>/* Optional: paste minified html2canvas (MIT) here to upgrade capture. */</script>
+<script>
+(function(){
+  "use strict";
+  /* ===== CONFIG ===== */
+  const CONFIG = {
+    assignmentId:"netplus-site-walkthrough-idf",
+    title:"IDF Walkthrough — Identify the Gear in Annex B",
+    objectives:["N10-009:1.2","N10-009:2.4","APNET:2.2"],
+    APPS_SCRIPT_URL:"PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken:"PER_COHORT_SECRET_HERE"
+  };
+  const ROLES = ["(unassigned)","Demarcation point","Edge router / firewall","Access switch","Patch panel","UPS"];
+  /* devices with correct role; uplink port + trace handled separately */
+  const DEVICES = [
+    {id:"DMARC-B",     name:"DMARC-B",     role:"Demarcation point",      g:"DMARC"},
+    {id:"anx-b-rtr1",  name:"anx-b-rtr1",  role:"Edge router / firewall", g:"RTR/FW"},
+    {id:"anx-b-sw1",   name:"anx-b-sw1",   role:"Access switch",          g:"SW"},
+    {id:"PP-B",        name:"PP-B (24-port)",role:"Patch panel",          g:"PATCH", ports:true},
+    {id:"AnnexB-UPS1", name:"AnnexB-UPS1", role:"UPS",                    g:"UPS"}
+  ];
+  const state = { picked:{}, uplinkPort:false, traced:false };
+
+  const TASKS = [
+    {id:"demarc",label:"Tag the demarcation point",hint:"DMARC-B marks the ISP/campus boundary.",pass:s=>s.picked["DMARC-B"]==="Demarcation point"},
+    {id:"edge",  label:"Tag the edge router / firewall",hint:"The device facing the ISP side.",pass:s=>s.picked["anx-b-rtr1"]==="Edge router / firewall"},
+    {id:"access",label:"Tag the access switch",hint:"Connects end devices in the building.",pass:s=>s.picked["anx-b-sw1"]==="Access switch"},
+    {id:"patch", label:"Identify the patch panel and mark the active uplink port (U1)",hint:"Tag PP-B, then click port U1.",pass:s=>s.picked["PP-B"]==="Patch panel" && s.uplinkPort},
+    {id:"ups",   label:"Tag the UPS",hint:"Backup power for the closet.",pass:s=>s.picked["AnnexB-UPS1"]==="UPS"},
+    {id:"trace", label:"Trace the fiber uplink leaving the IDF",hint:"Use Trace fiber uplink to MDF.",pass:s=>s.traced}
+  ];
+  const QUESTIONS = [
+    {id:"q1",prompt:"Which device marks the boundary between the ISP and the campus network?",type:"mc",
+       options:["The access switch","The demarcation point","The UPS","The patch panel"],answer:"The demarcation point"},
+    {id:"q2",prompt:"What is the access switch's primary role in this closet?",type:"mc",
+       options:["Routes between the campus and the internet","Provides end-device (host) access ports for this building","Backs up power during an outage","Terminates the single-mode fiber"],
+       answer:"Provides end-device (host) access ports for this building"},
+    {id:"q3",prompt:"Which medium carries the uplink out of this IDF, and why is it used for that run?",type:"mc",
+       options:["Cat 6A copper — cheapest for short runs","Single-mode fiber — long distance with low loss","Coax — legacy backbone standard","Wireless bridge — no cabling needed"],
+       answer:"Single-mode fiber — long distance with low loss"},
+    {id:"q4",prompt:"What does the UPS primarily protect against?",type:"mc",
+       options:["Malware on the switch","Loss of utility power / outages","Fiber cuts on the uplink","Unauthorized logins"],answer:"Loss of utility power / outages"}
+  ];
+
+  /* ===== shared engine ===== */
+  const $=s=>document.querySelector(s);
+  const answers={};
+  function renderTags(){const b=$("#tagbar");CONFIG.objectives.forEach(o=>{const s=document.createElement("span");s.className="tag";s.textContent=o;b.appendChild(s);});}
+
+  function buildRack(){
+    const r=$("#rack");
+    DEVICES.forEach(d=>{
+      const ru=document.createElement("div");ru.className="ru";
+      let portsHtml=;
+      if(d.ports){
+        portsHtml='<div class="ports" id="ports-'+d.id+'">'+
+          ["P1","P2","P3","P4","P5","U1"].map(p=>'<button type="button" class="port" data-p="'+p+'">'+p+'</button>').join()+'</div>';
+      }
+      ru.innerHTML='<div class="glyph">'+d.g+'</div><div class="body"><span class="name">'+d.name+'</span>'+
+        '<select id="sel-'+d.id+'" aria-label="Role for '+d.name+'">'+
+        ROLES.map(x=>'<option>'+x+'</option>').join()+'</select>'+portsHtml+'</div>';
+      r.appendChild(ru);
+      ru.querySelector("select").addEventListener("change",e=>{
+        state.picked[d.id]=e.target.value; styleSelect(d); refresh();
+      });
+      if(d.ports){
+        ru.querySelectorAll(".port").forEach(btn=>btn.addEventListener("click",()=>{
+          const p=btn.getAttribute("data-p");
+          ru.querySelectorAll(".port").forEach(x=>x.classList.remove("active"));
+          if(p==="U1"){btn.classList.add("active");state.uplinkPort=true;}
+          else{state.uplinkPort=false;}
+          refresh();
+        }));
+      }
+    });
+  }
+  function styleSelect(d){
+    const sel=$("#sel-"+d.id); sel.classList.remove("right","wrong");
+    const v=state.picked[d.id];
+    if(!v||v==="(unassigned)")return;
+    sel.classList.add(v===d.role?"right":"wrong");
+  }
+  function trace(){
+    state.traced=true; $("#uplinkLine").classList.add("traced");
+    $("#traceMsg").textContent="Single-mode fiber on port U1 traced from PP-B out of Annex B to the MDF.";
+    refresh();
+  }
+
+  function renderTasks(){const ol=$("#tasks");ol.innerHTML=;TASKS.forEach(t=>{const li=document.createElement("li");li.className="task";li.id="task-"+t.id;li.innerHTML='<span class="box"></span><span class="label">'+t.label+'<span class="hint">'+t.hint+'</span></span>';ol.appendChild(li);});}
+  function renderQuestions(){const ol=$("#qs");ol.innerHTML=;QUESTIONS.forEach(q=>{const li=document.createElement("li");li.className="q";li.id="q-"+q.id;let h='<p>'+q.prompt+'</p>';if(q.type==="mc"){h+='<div class="opts">'+q.options.map(o=>'<label><input type="radio" name="'+q.id+'" value="'+o.replace(/"/g,'&quot;')+'"> '+o+'</label>').join()+'</div>';}else{h+='<input type="text" id="in-'+q.id+'" autocomplete="off">';}h+='<div class="verdict" id="v-'+q.id+'"></div>';li.innerHTML=h;ol.appendChild(li);});}
+  function collectAnswers(){QUESTIONS.forEach(q=>{if(q.type==="mc"){const s=document.querySelector('input[name="'+q.id+'"]:checked');answers[q.id]=s?s.value:;}else{answers[q.id]=($("#in-"+q.id).value||).trim();}});}
+  function gradeQuestion(q){return (answers[q.id]||).trim().toLowerCase()===q.answer.toLowerCase();}
+  function refresh(){
+    let tp=0;TASKS.forEach(t=>{const ok=t.pass(state);const li=$("#task-"+t.id);li.classList.toggle("passed",ok);li.querySelector(".box").textContent=ok?"✓":;if(ok)tp++;});
+    collectAnswers();let qp=0;QUESTIONS.forEach(q=>{if(gradeQuestion(q))qp++;});
+    QUESTIONS.forEach(q=>{const v=$("#v-"+q.id);const a=answers[q.id];if(!a){v.textContent=;v.className="verdict";return;}const ok=gradeQuestion(q);v.textContent=ok?"Correct":"Re-check the rack.";v.className="verdict "+(ok?"good":"bad");});
+    $("#score").textContent=(tp+qp)+" / "+(TASKS.length+QUESTIONS.length);
+    return {earned:tp+qp,total:TASKS.length+QUESTIONS.length,allTasks:tp===TASKS.length};
+  }
+  async function captureLab(node){if(window.html2canvas){try{const c=await window.html2canvas(node,{backgroundColor:"#0e1620",scale:1});return c.toDataURL("image/png");}catch(e){}}return await svgSnapshot(node);}
+  async function svgSnapshot(node){const rect=node.getBoundingClientRect();const w=Math.min(Math.ceil(rect.width),1100),h=Math.min(Math.ceil(rect.height),2600);const css=Array.from(document.styleSheets).map(ss=>{try{return Array.from(ss.cssRules).map(r=>r.cssText).join();}catch(e){return ;}}).join();const clone=node.cloneNode(true);clone.querySelectorAll("input").forEach(i=>{if(i.checked)i.setAttribute("checked","checked");if(i.value)i.setAttribute("value",i.value);});const xml=new XMLSerializer().serializeToString(clone);const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>'+css+'</style>'+xml+'</div></foreignObject></svg>';const url="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);return await new Promise(res=>{const img=new Image();img.onload=()=>{const cv=document.createElement("canvas");cv.width=w;cv.height=h;const ctx=cv.getContext("2d");ctx.fillStyle="#0e1620";ctx.fillRect(0,0,w,h);try{ctx.drawImage(img,0,0);res(cv.toDataURL("image/png"));}catch(e){res(null);}};img.onerror=()=>res(null);img.src=url;});}
+  async function submit(){
+    const st=$("#status");st.className="status";st.textContent=;
+    const handle=($("#handle").value||).trim();
+    if(!handle){st.classList.add("bad");st.textContent="Enter a callsign first.";$("#handle").focus();return;}
+    const r=refresh();const btn=$("#btnSubmit");btn.disabled=true;st.textContent="Capturing and submitting…";
+    let shot=null;try{shot=await captureLab($("#lab"));}catch(e){}
+    const payload={assignmentId:CONFIG.assignmentId,handle,clientTimestamp:new Date().toISOString(),objectives:CONFIG.objectives,
+      tasks:TASKS.map(t=>({id:t.id,label:t.label,passed:!!t.pass(state)})),
+      questions:QUESTIONS.map(q=>({id:q.id,prompt:q.prompt,answer:answers[q.id]||correct:gradeQuestion(q)})),
+      score:{earned:r.earned,total:r.total},screenshot:shot||submissionToken:CONFIG.submissionToken};
+    try{const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});const out=await res.json();
+      if(out&&out.success){st.classList.add("good");st.innerHTML="Submitted. "+(out.docUrl?'<a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your lab record ↗</a>':"Recorded.");}
+      else{st.classList.add("bad");st.textContent="Rejected: "+((out&&out.error)||"unknown error")+".";btn.disabled=false;}
+    }catch(e){try{await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});st.textContent="Submitted (offline mode). Confirm receipt with your instructor.";}
+      catch(e2){st.classList.add("bad");st.textContent="Couldn't reach the submission service.";btn.disabled=false;}}
+  }
+  function reset(){
+    state.picked={};state.uplinkPort=false;state.traced=false;
+    DEVICES.forEach(d=>{$("#sel-"+d.id).value="(unassigned)";$("#sel-"+d.id).classList.remove("right","wrong");});
+    document.querySelectorAll(".port").forEach(p=>p.classList.remove("active"));
+    $("#uplinkLine").classList.remove("traced");$("#traceMsg").textContent="Uplink not traced yet.";
+    document.querySelectorAll("#qs input[type=radio]").forEach(i=>i.checked=false);
+    $("#status").textContent=;$("#status").className="status";refresh();
+  }
+  renderTags();buildRack();renderTasks();renderQuestions();
+  $("#btnTrace").addEventListener("click",trace);
+  $("#btnReset").addEventListener("click",reset);
+  $("#btnSubmit").addEventListener("click",submit);
+  document.querySelectorAll("#qs input").forEach(el=>el.addEventListener("input",refresh));
+  refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-l2-mac-spoof.html",title:"Layer 2 Identity \u2014 Inspect & Spoof a MAC Address"}, NEXT={href:"index_netplus-campus-site-links.html",title:"Campus Backbone \u2014 Map How Three Buildings Connect"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.2";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

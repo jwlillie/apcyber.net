@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  Back Online: Replacing a Failed Network Card
+  assignmentId: netplus-nic-swap
+  Blueprint tags:
+    CompTIA Network+ N10-009 : 1.5 (transmission media & transceivers),
+                               5.5 (use the appropriate tools to verify connectivity)
+    AP Networking (pilot V.1) : 2.3.B (determine appropriate transmission media),
+                                3.3.C (configure / connect a LAN)
+  Note: this project's objectives PDF is N10-007 (media/cabling = 2.1). These tags
+  target N10-009 per the library spec; confirm against the real N10-009 objectives.
+
+  © 2026 [YOUR NAME / ORG]. All rights reserved.
+  Original clean-room work. Not derived from, and not to be confused with, any
+  third-party courseware (TestOut Network Pro, Cisco NetAcad, etc.). Scenario,
+  persona, hostnames, IP plan, part names, command output, and question wording
+  are original expression authored for this library. License: [SET LICENSE].
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Back Online — Replacing a Failed Network Card</title>
+<style>
+  :root{
+    --bg:#0e1726;
+    --panel:#152133;
+    --panel-2:#1c2c44;
+    --ink:#e7eef9;
+    --ink-dim:#9fb1cc;
+    --line:#2a3a55;
+    --accent:#3ea6ff;
+    --accent-2:#5ce0c2;
+    --good:#36c98a;
+    --bad:#ff6b6b;
+    --warn:#f6c560;
+    --slot:#27406b;
+    --term-bg:#0a1220;
+    --term-ink:#bfe9d6;
+    --radius:12px;
+    --focus:#ffd166;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    padding:18px;
+  }
+  a{color:var(--accent)}
+  h1{font-size:1.25rem;margin:0 0 2px}
+  h2{font-size:1rem;margin:0 0 8px;letter-spacing:.2px}
+  .sub{color:var(--ink-dim);font-size:.9rem;margin:0 0 14px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+  .tag{font-size:.72rem;background:var(--panel-2);border:1px solid var(--line);
+       color:var(--ink-dim);padding:2px 8px;border-radius:999px}
+  .wrap{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
+  @media (max-width:880px){.wrap{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+         padding:14px}
+  .panel + .panel{margin-top:14px}
+  .muted{color:var(--ink-dim)}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .tab{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+       padding:7px 12px;border-radius:8px;cursor:pointer;font:inherit}
+  .tab[aria-selected="true"]{background:var(--accent);color:#06223d;border-color:var(--accent);font-weight:600}
+  .view{display:none}
+  .view.active{display:block}
+  .bin{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px;
+        display:flex;flex-direction:column;gap:6px}
+  .card .name{font-weight:600}
+  .card .spec{font-size:.82rem;color:var(--ink-dim)}
+  .nic-svg{width:100%;height:54px;display:block}
+  .slot-area{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:6px 0 12px;
+             background:var(--panel-2);border:1px dashed var(--line);border-radius:10px;padding:12px}
+  .slot{min-width:160px;min-height:60px;border:2px dashed var(--slot);border-radius:8px;
+        display:flex;align-items:center;justify-content:center;color:var(--ink-dim);
+        text-align:center;padding:8px;font-size:.86rem}
+  .slot.filled{border-style:solid;border-color:var(--accent-2);color:var(--ink)}
+  .backpanel{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  .port{width:70px;height:54px;border-radius:8px;border:2px solid var(--line);
+        background:#0b1626;display:flex;align-items:center;justify-content:center;
+        flex-direction:column;gap:4px;font-size:.7rem;color:var(--ink-dim)}
+  .port.up{border-color:var(--good);color:var(--good)}
+  .jack{width:64px;height:54px;border-radius:8px;border:2px solid var(--line);background:#0b1626;
+        display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--ink-dim)}
+  .cable{height:4px;flex:1;min-width:40px;border-radius:4px;background:var(--line)}
+  .cable.live{background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+  .led{width:10px;height:10px;border-radius:50%;background:#33425e}
+  .led.on{background:var(--good);box-shadow:0 0 8px var(--good)}
+  button{font:inherit}
+  .btn{background:var(--accent);color:#06223d;border:1px solid var(--accent);
+       padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);font-weight:500}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .term{background:var(--term-bg);border:1px solid var(--line);border-radius:10px;padding:10px;
+        font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86rem;
+        color:var(--term-ink)}
+  .term .out{white-space:pre-wrap;min-height:150px;max-height:300px;overflow:auto;margin:0}
+  .term .prompt{display:flex;gap:6px;align-items:center;margin-top:8px}
+  .term .prompt span{color:var(--accent-2)}
+  .term input{flex:1;background:#08101d;border:1px solid var(--line);color:var(--term-ink);
+        font:inherit;padding:6px 8px;border-radius:6px}
+  fieldset{border:1px solid var(--line);border-radius:10px;margin:0 0 10px;padding:10px}
+  legend{padding:0 6px;color:var(--ink);font-weight:600;font-size:.95rem}
+  .opt{display:flex;gap:8px;align-items:flex-start;padding:4px 2px}
+  .checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .checklist li{display:flex;gap:10px;align-items:flex-start;background:var(--panel-2);
+        border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .mark{flex:0 0 20px;height:20px;border-radius:50%;border:2px solid var(--line);
+        display:flex;align-items:center;justify-content:center;font-size:.78rem;color:var(--ink-dim);margin-top:1px}
+  .mark.pass{background:var(--good);border-color:var(--good);color:#04231a}
+  .mark.fail{border-color:var(--bad);color:var(--bad)}
+  .li-body .hint{font-size:.8rem;color:var(--warn);margin-top:2px}
+  .sub-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  .sub-bar label{font-weight:600}
+  .sub-bar input[type=text]{background:#0b1626;border:1px solid var(--line);color:var(--ink);
+        padding:8px 10px;border-radius:8px;min-width:180px}
+  .status{font-size:.9rem;min-height:1.2em}
+  .status.ok{color:var(--good)}
+  .status.err{color:var(--bad)}
+  .scorepill{display:inline-block;background:var(--panel-2);border:1px solid var(--line);
+        border-radius:999px;padding:3px 10px;font-weight:600}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+  .footer{margin-top:16px;color:var(--ink-dim);font-size:.78rem}
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important;scroll-behavior:auto !important}
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-nic-swap", "title": "Back Online — Replacing a Failed Network Card", "version": "1.0.0", "objectives": ["N10-009:1.5", "N10-009:5.5", "APNET:1.1"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+
+<header>
+  <h1>Back Online — Replacing a Failed Network Card</h1>
+  <p class="sub">Lab&nbsp;<code>netplus-nic-swap</code> · self-rendered simulation · pseudonymous submission</p>
+  <div class="tags" aria-label="Blueprint objectives">
+    <span class="tag">N10-009 · 1.5</span>
+    <span class="tag">N10-009 · 5.5</span>
+    <span class="tag">AP Networking · 2.3.B</span>
+    <span class="tag">AP Networking · 3.3.C</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===================== SIMULATION ===================== -->
+  <section class="panel" aria-label="Simulation">
+    <h2>Tinker Loft makerspace — Mezzanine front-desk PC</h2>
+    <p class="muted" style="margin-top:-4px">
+      The desk PC <code>MEZZ-DESK-04</code> dropped off the network this morning. You've
+      confirmed the onboard adapter is dead. There's a parts bin of add-in cards and a
+      free expansion slot. The Cat&nbsp;5e drop to this desk is already run (~25&nbsp;m).
+      Get it back on the LAN <em>and</em> the internet.
+    </p>
+
+    <div class="tabs" role="tablist" aria-label="Simulation stations">
+      <button class="tab" role="tab" id="tab-bench" aria-selected="true" aria-controls="view-bench">1 · Parts bench</button>
+      <button class="tab" role="tab" id="tab-cable" aria-selected="false" aria-controls="view-cable">2 · Back panel</button>
+      <button class="tab" role="tab" id="tab-term" aria-selected="false" aria-controls="view-term">3 · Console</button>
+    </div>
+
+    <!-- Bench -->
+    <div class="view active" id="view-bench" role="tabpanel" aria-labelledby="tab-bench">
+      <div class="slot-area">
+        <div class="slot" id="slotEl">Empty PCIe slot</div>
+        <button class="btn ghost" id="removeBtn" disabled>Remove installed card</button>
+      </div>
+      <h2 style="font-size:.92rem">Parts bin — pick a card to install</h2>
+      <div class="bin" id="binEl" role="list"></div>
+    </div>
+
+    <!-- Cable -->
+    <div class="view" id="view-cable" role="tabpanel" aria-labelledby="tab-cable" hidden>
+      <p class="muted">Connect the existing Cat&nbsp;5e patch cable between the installed card's
+        Ethernet port and the wall jack.</p>
+      <div class="backpanel">
+        <div class="port" id="portEl"><span id="portLabel">no card</span><span class="led" id="portLed" aria-hidden="true"></span></div>
+        <div class="cable" id="cableEl" aria-hidden="true"></div>
+        <div class="jack">Wall<br>jack</div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" id="cableBtn" disabled>Connect patch cable</button>
+        <span class="muted" id="cableMsg"></span>
+      </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="view" id="view-term" role="tabpanel" aria-labelledby="tab-term" hidden>
+      <p class="muted">A small management shell on the workstation. Try <code>help</code>.
+        Useful checks: <code>linkstatus</code>, <code>ipconfig</code>, <code>ping gateway</code>,
+        <code>ping internet</code>.</p>
+      <div class="term">
+        <pre class="out" id="termOut" aria-live="polite">MEZZ-DESK-04 management shell. Type "help" to begin.</pre>
+        <div class="prompt">
+          <span>MEZZ-DESK-04&gt;</span>
+          <label for="termIn" class="sr-only" style="position:absolute;left:-9999px">command</label>
+          <input id="termIn" type="text" autocomplete="off" spellcheck="false" placeholder="type a command and press Enter" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TASKS / QUESTIONS / SUBMIT ===================== -->
+  <section aria-label="Lab tasks, questions and submission">
+    <div class="panel">
+      <h2>Tasks <span class="scorepill" id="taskScore">0 / 4</span></h2>
+      <ul class="checklist" id="taskList"></ul>
+    </div>
+
+    <div class="panel">
+      <h2>Knowledge check <span class="scorepill" id="qScore">0 / 3</span></h2>
+      <form id="qForm"></form>
+    </div>
+
+    <div class="panel">
+      <h2>Submit</h2>
+      <p class="muted" style="margin-top:-4px">Use a <strong>callsign</strong>, not your real name.
+        No emails, IDs, or personal info are collected.</p>
+      <div class="sub-bar">
+        <label for="handleIn">Callsign</label>
+        <input id="handleIn" type="text" maxlength="40" placeholder="e.g. copper-fox" autocomplete="off" />
+        <button class="btn" id="submitBtn">Submit completed lab</button>
+        <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+      </div>
+      <p class="status" id="statusEl" role="status" aria-live="polite"></p>
+      <p class="muted" style="font-size:.8rem">
+        Pass threshold: all 4 tasks complete <em>and</em> all 3 questions correct.
+        Scoring here is self-reported (client-side); the gradebook server can re-score if configured.
+      </p>
+    </div>
+  </section>
+</div>
+
+<p class="footer">© 2026 [YOUR NAME / ORG]. Original clean-room lab for the Network+ / AP Networking library. All rights reserved.</p>
+
+<!-- ============================================================
+     SCRIPT 1 — INLINE html2canvas HERE
+     To make this file fully dependency-free (library spec §2/§3),
+     paste the full minified html2canvas (v1.4.x) source between the
+     two markers below. Until you do, captureScreenshot() falls back to
+     a lightweight state-snapshot canvas so submissions still carry a PNG.
+     Source: https://github.com/niklasvh/html2canvas (download the .min.js).
+     ============================================================ -->
+<script id="html2canvas-inline">
+/* >>> html2canvas-begin  (paste minified source on the next line) */
+/* >>> html2canvas-end */
+</script>
+
+<!-- ============================================================
+     SCRIPT 2 — ENGINE + CONFIG + ANSWER KEY
+     ============================================================ -->
+<script>
+(function(){
+  "use strict";
+
+  // ---------- CONFIG (per-lab edits live here) ----------
+  const CONFIG = {
+    assignmentId: "netplus-nic-swap",
+    objectives: ["N10-009:1.5", "N10-009:5.5", "APNET:1.1"],
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "SET_PER_COHORT_TOKEN",
+    net: { ip:"10.42.7.58", mask:"255.255.255.0", gw:"10.42.7.1", dns:"10.42.7.2",
+           wan:"198.51.100.20" }   // wan target uses TEST-NET-2 documentation range
+  };
+
+  // Parts bin — original part names + true Ethernet standards.
+  const CARDS = [
+    { id:"card-ge",     name:"PortLink GX-1000", std:"1000BASE-T", mbps:1000, eth:true,
+      blurb:"Gigabit copper, RJ-45" },
+    { id:"card-fe",     name:"PortLink FE-100",  std:"100BASE-TX", mbps:100,  eth:true,
+      blurb:"Fast Ethernet copper, RJ-45" },
+    { id:"card-legacy", name:"RetroNet 10T",     std:"10BASE-T",   mbps:10,   eth:true,
+      blurb:"Legacy 10 Mbps copper, RJ-45" },
+    { id:"card-wifi",   name:"AeroLink W6",      std:"Wi-Fi 6 (802.11ax)", mbps:0, eth:false,
+      blurb:"Wireless adapter — no RJ-45 port" }
+  ];
+  const FASTEST_ETH = "card-ge"; // correct selection: fastest Ethernet card in the bin
+
+  // Tasks (auto-checked against sim state)
+  const TASKS = [
+    { id:"select",   label:"Install the fastest available Ethernet card into the free slot." },
+    { id:"connect",  label:"Connect the Cat 5e patch cable from the card to the wall jack." },
+    { id:"ip",       label:"Confirm the PC pulled an IPv4 address and gateway (run ipconfig)." },
+    { id:"internet", label:"Confirm reachability beyond the LAN (ping an internet host)." }
+  ];
+
+  // Questions — original wording, multiple choice. `key` = correct option id.
+  const QUESTIONS = [
+    { id:"q1",
+      prompt:"Of the cards in the bin, which Ethernet standard delivers the highest link rate?",
+      options:[
+        {id:"a", text:"10BASE-T"},
+        {id:"b", text:"100BASE-TX"},
+        {id:"c", text:"1000BASE-T"},
+        {id:"d", text:"Wi-Fi 6 (802.11ax)"}
+      ], key:"c",
+      answerText:"1000BASE-T" },
+    { id:"q2",
+      prompt:"The desk drop is Category 5e, about 25 m. Will it carry the installed card's full rated speed?",
+      options:[
+        {id:"a", text:"Yes — Cat 5e supports 1 Gbps to 100 m, so 25 m is fine."},
+        {id:"b", text:"No — Cat 5e tops out at 100 Mbps."},
+        {id:"c", text:"No — gigabit needs fiber."},
+        {id:"d", text:"Only if you also install a crossover cable."}
+      ], key:"a",
+      answerText:"Yes — Cat 5e supports 1 Gbps to 100 m" },
+    { id:"q3",
+      prompt:"After the cable is seated, which single check best confirms the PC reached the internet, not just the local LAN?",
+      options:[
+        {id:"a", text:"A successful ping to the default gateway."},
+        {id:"b", text:"A successful ping to a public address outside the subnet."},
+        {id:"c", text:"The link LED turning green."},
+        {id:"d", text:"Seeing an IP address in ipconfig."}
+      ], key:"b",
+      answerText:"A successful ping to a public address outside the subnet" }
+  ];
+
+  // ---------- in-memory state (no localStorage/sessionStorage) ----------
+  const state = {
+    installed:null, cabled:false, ranIp:false, ranWan:false,
+    answers:{}, taskPass:{}, qCorrect:{}
+  };
+  const linkUp = () => {
+    const c = CARDS.find(x=>x.id===state.installed);
+    return !!(c && c.eth && state.cabled);
+  };
+
+  // ---------- DOM ----------
+  const $ = s => document.querySelector(s);
+  const binEl=$("#binEl"), slotEl=$("#slotEl"), removeBtn=$("#removeBtn");
+  const portEl=$("#portEl"), portLabel=$("#portLabel"), portLed=$("#portLed"),
+        cableEl=$("#cableEl"), cableBtn=$("#cableBtn"), cableMsg=$("#cableMsg");
+  const termOut=$("#termOut"), termIn=$("#termIn");
+  const taskList=$("#taskList"), qForm=$("#qForm");
+  const taskScore=$("#taskScore"), qScore=$("#qScore");
+  const handleIn=$("#handleIn"), submitBtn=$("#submitBtn"), resetBtn=$("#resetBtn"), statusEl=$("#statusEl");
+
+  function nicSvg(){
+    return '<svg class="nic-svg" viewBox="0 0 200 54" aria-hidden="true">'+
+      '<rect x="2" y="6" width="176" height="42" rx="4" fill="#0b1626" stroke="#3a4d70"/>'+
+      '<rect x="150" y="14" width="26" height="26" rx="3" fill="#16263f" stroke="#5ce0c2"/>'+
+      '<rect x="156" y="20" width="14" height="9" rx="1" fill="#0a1220" stroke="#5ce0c2"/>'+
+      '<rect x="10" y="44" width="120" height="8" fill="#caa34a"/>'+
+      '<circle cx="40" cy="22" r="5" fill="#1c2c44" stroke="#3a4d70"/>'+
+      '<circle cx="62" cy="30" r="4" fill="#1c2c44" stroke="#3a4d70"/>'+
+      '</svg>';
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected','false'));
+      tab.setAttribute('aria-selected','true');
+      document.querySelectorAll('.view').forEach(v=>{v.classList.remove('active');v.hidden=true;});
+      const v=document.getElementById(tab.getAttribute('aria-controls'));
+      v.classList.add('active'); v.hidden=false;
+    });
+  });
+
+  // ---------- render bin ----------
+  function renderBin(){
+    binEl.innerHTML="";
+    CARDS.forEach(c=>{
+      const div=document.createElement('div');
+      div.className="card"; div.setAttribute('role','listitem');
+      div.innerHTML = nicSvg()+
+        '<div class="name">'+c.name+'</div>'+
+        '<div class="spec">'+c.std+(c.eth?(' · '+c.mbps+' Mbps'):'')+'</div>'+
+        '<div class="spec">'+c.blurb+'</div>';
+      const b=document.createElement('button');
+      b.className="btn"; b.textContent = state.installed===c.id ? "Installed" : "Install this card";
+      b.disabled = state.installed===c.id;
+      b.addEventListener('click',()=>installCard(c.id));
+      div.appendChild(b);
+      binEl.appendChild(div);
+    });
+  }
+
+  function installCard(id){
+    state.installed=id; state.cabled=false; state.ranIp=false; state.ranWan=false;
+    const c=CARDS.find(x=>x.id===id);
+    slotEl.classList.add('filled');
+    slotEl.textContent = c.name+" — "+c.std;
+    removeBtn.disabled=false;
+    renderBin(); renderBackPanel(); evaluate();
+    term('Installed '+c.name+' into the expansion slot.');
+  }
+  removeBtn.addEventListener('click',()=>{
+    state.installed=null; state.cabled=false; state.ranIp=false; state.ranWan=false;
+    slotEl.classList.remove('filled'); slotEl.textContent="Empty PCIe slot";
+    removeBtn.disabled=true;
+    renderBin(); renderBackPanel(); evaluate();
+  });
+
+  // ---------- back panel ----------
+  function renderBackPanel(){
+    const c=CARDS.find(x=>x.id===state.installed);
+    if(!c){
+      portLabel.textContent="no card"; portEl.classList.remove('up');
+      portLed.classList.remove('on'); cableEl.classList.remove('live');
+      cableBtn.disabled=true; cableBtn.textContent="Connect patch cable"; cableMsg.textContent="Install a card first.";
+      return;
+    }
+    if(!c.eth){
+      portLabel.textContent="no RJ-45"; portEl.classList.remove('up');
+      portLed.classList.remove('on'); cableEl.classList.remove('live');
+      cableBtn.disabled=true; cableBtn.textContent="Connect patch cable";
+      cableMsg.textContent="This is a wireless adapter — it has no Ethernet port to cable.";
+      return;
+    }
+    cableBtn.disabled=false;
+    portLabel.textContent="RJ-45";
+    cableBtn.textContent = state.cabled ? "Disconnect cable" : "Connect patch cable";
+    portEl.classList.toggle('up', state.cabled);
+    portLed.classList.toggle('on', state.cabled);
+    cableEl.classList.toggle('live', state.cabled);
+    cableMsg.textContent = state.cabled ? ("Link up at "+c.mbps+" Mbps, full-duplex.") : "";
+  }
+  cableBtn.addEventListener('click',()=>{
+    const c=CARDS.find(x=>x.id===state.installed);
+    if(!c||!c.eth) return;
+    state.cabled=!state.cabled;
+    if(!state.cabled){ state.ranIp=false; state.ranWan=false; }
+    renderBackPanel(); evaluate();
+  });
+
+  // ---------- console ----------
+  function term(line){ termOut.textContent += "\n" + line; termOut.scrollTop=termOut.scrollHeight; }
+  function runCmd(raw){
+    const cmd=raw.trim(); if(!cmd) return;
+    term("MEZZ-DESK-04> "+cmd);
+    const parts=cmd.split(/\s+/); const base=parts[0].toLowerCase(); const arg=(parts[1]||"").toLowerCase();
+    const c=CARDS.find(x=>x.id===state.installed);
+    if(base==="help"){
+      term("commands: help, clear, linkstatus, ipconfig, ping <gateway|internet|"+CONFIG.net.gw+"|"+CONFIG.net.wan+">");
+    } else if(base==="clear"){
+      termOut.textContent="MEZZ-DESK-04 management shell.";
+    } else if(base==="linkstatus"){
+      if(linkUp()) term("port enp1  link UP  ("+c.mbps+" Mbps, full-duplex, auto-negotiated)");
+      else if(c&&!c.eth) term("port enp1  no Ethernet interface on installed adapter");
+      else if(c&&!state.cabled) term("port enp1  link DOWN  (cable not connected)");
+      else term("port enp1  link DOWN  (no card installed)");
+    } else if(base==="ipconfig" || base==="ipcfg"){
+      if(linkUp()){
+        term("adapter "+c.name+" ("+c.std+")");
+        term("  link ............ : up, "+c.mbps+" Mbps full-duplex");
+        term("  IPv4 address .... : "+CONFIG.net.ip);
+        term("  subnet mask ..... : "+CONFIG.net.mask);
+        term("  default gateway . : "+CONFIG.net.gw);
+        term("  DNS server ...... : "+CONFIG.net.dns);
+        term("  source .......... : DHCP (lease 8h remaining)");
+        state.ranIp=true; evaluate();
+      } else {
+        term("  media state ..... : disconnected");
+        term("  (no DHCP lease — bring the link up first)");
+      }
+    } else if(base==="ping"){
+      if(!arg){ term("usage: ping <gateway|internet|address>"); }
+      else if(!linkUp()){ term("ping: network unreachable — no active link."); }
+      else if(arg==="gateway"||arg==="gw"||arg===CONFIG.net.gw){
+        pingReply(CONFIG.net.gw); term("local LAN reachable.");
+      } else if(arg==="internet"||arg==="wan"||arg===CONFIG.net.wan){
+        pingReply(CONFIG.net.wan); term("internet reachable (left the local subnet).");
+        state.ranWan=true; evaluate();
+      } else {
+        term("ping: cannot resolve '"+arg+"' — try 'gateway' or 'internet'.");
+      }
+    } else {
+      term("unknown command: '"+base+"'. type 'help' for the list.");
+    }
+  }
+  function pingReply(t){
+    term("PING "+t);
+    term("reply from "+t+": time=1ms TTL=64");
+    term("reply from "+t+": time=1ms TTL=64");
+    term("2 sent, 2 received, 0% loss");
+  }
+  termIn.addEventListener('keydown',e=>{
+    if(e.key==="Enter"){ runCmd(termIn.value); termIn.value=""; }
+  });
+
+  // ---------- tasks / questions render ----------
+  function renderTasks(){
+    taskList.innerHTML="";
+    TASKS.forEach(t=>{
+      const li=document.createElement('li');
+      const pass=!!state.taskPass[t.id];
+      li.innerHTML='<span class="mark '+(pass?'pass':'')+'">'+(pass?'✓':'')+'</span>'+
+        '<div class="li-body"><div>'+t.label+'</div>'+
+        (t.hint&&!pass?('<div class="hint">'+t.hint+'</div>'):'')+'</div>';
+      taskList.appendChild(li);
+    });
+  }
+  function renderQuestions(){
+    qForm.innerHTML="";
+    QUESTIONS.forEach(q=>{
+      const fs=document.createElement('fieldset');
+      const lg=document.createElement('legend'); lg.textContent=q.prompt; fs.appendChild(lg);
+      q.options.forEach(o=>{
+        const id=q.id+"-"+o.id;
+        const wrap=document.createElement('label'); wrap.className="opt"; wrap.setAttribute('for',id);
+        const inp=document.createElement('input');
+        inp.type="radio"; inp.name=q.id; inp.id=id; inp.value=o.id;
+        inp.checked = state.answers[q.id]===o.id;
+        inp.addEventListener('change',()=>{ state.answers[q.id]=o.id; evaluate(); });
+        wrap.appendChild(inp);
+        const sp=document.createElement('span'); sp.textContent=o.text; wrap.appendChild(sp);
+        fs.appendChild(wrap);
+      });
+      qForm.appendChild(fs);
+    });
+  }
+
+  // ---------- evaluation ----------
+  function evaluate(){
+    // task: select fastest Ethernet
+    state.taskPass.select = state.installed===FASTEST_ETH;
+    TASKS[0].hint = (state.installed && state.installed!==FASTEST_ETH)
+      ? ( (CARDS.find(c=>c.id===state.installed)||{}).eth
+          ? "That card links, but it isn't the fastest Ethernet option — compare rated speeds."
+          : "That's a wireless adapter; the task calls for wired Ethernet." )
+      : "";
+    // task: connect cable (only meaningful on an Ethernet card)
+    state.taskPass.connect = linkUp();
+    TASKS[1].hint = (!linkUp() && state.installed && (CARDS.find(c=>c.id===state.installed)||{}).eth)
+      ? "Card is in — now connect the patch cable on the Back panel tab." : "";
+    // task: ip + internet
+    state.taskPass.ip = !!state.ranIp && linkUp();
+    state.taskPass.internet = !!state.ranWan && linkUp();
+    TASKS[2].hint = (!state.taskPass.ip) ? "Run 'ipconfig' in the Console once the link is up." : "";
+    TASKS[3].hint = (!state.taskPass.internet) ? "Run 'ping internet' in the Console once the link is up." : "";
+
+    // questions
+    QUESTIONS.forEach(q=>{ state.qCorrect[q.id] = state.answers[q.id]===q.key; });
+
+    const tp = TASKS.filter(t=>state.taskPass[t.id]).length;
+    const qp = QUESTIONS.filter(q=>state.qCorrect[q.id]).length;
+    taskScore.textContent = tp+" / "+TASKS.length;
+    qScore.textContent = qp+" / "+QUESTIONS.length;
+    renderTasks();
+  }
+
+  // ---------- screenshot ----------
+  async function captureScreenshot(node){
+    try{
+      if(window.html2canvas){
+        const canvas=await window.html2canvas(node,{backgroundColor:"#0e1726",scale:1,logging:false});
+        return canvas.toDataURL("image/png");
+      }
+    }catch(e){ /* fall through to snapshot */ }
+    return fallbackSnapshot();
+  }
+  function fallbackSnapshot(){
+    // Lightweight evidence canvas used until html2canvas is inlined.
+    const w=720,h=420,cv=document.createElement('canvas');cv.width=w;cv.height=h;
+    const x=cv.getContext('2d');
+    x.fillStyle="#0e1726";x.fillRect(0,0,w,h);
+    x.fillStyle="#e7eef9";x.font="bold 18px system-ui";x.fillText("netplus-nic-swap — state snapshot",20,34);
+    x.font="13px system-ui";x.fillStyle="#9fb1cc";
+    let y=70;
+    const c=CARDS.find(z=>z.id===state.installed);
+    const lines=[
+      "Card installed : "+(c?c.name+" ("+c.std+")":"none"),
+      "Cable          : "+(state.cabled?"connected":"not connected"),
+      "Link           : "+(linkUp()?"up":"down"),
+      "ipconfig run   : "+(state.ranIp?"yes":"no"),
+      "internet ping  : "+(state.ranWan?"yes":"no"),
+      "",
+      "Tasks:"
+    ];
+    lines.forEach(l=>{x.fillText(l,20,y);y+=22;});
+    TASKS.forEach(t=>{x.fillStyle=state.taskPass[t.id]?"#36c98a":"#ff6b6b";
+      x.fillText((state.taskPass[t.id]?"[x] ":"[ ] ")+t.label.slice(0,70),34,y);y+=20;});
+    y+=8;x.fillStyle="#9fb1cc";x.fillText("Questions:",20,y);y+=22;
+    QUESTIONS.forEach((q,i)=>{x.fillStyle=state.qCorrect[q.id]?"#36c98a":"#ff6b6b";
+      x.fillText((state.qCorrect[q.id]?"[x] ":"[ ] ")+"Q"+(i+1),34,y);y+=20;});
+    x.fillStyle="#5b6b86";x.font="11px system-ui";x.fillText(new Date().toISOString(),20,h-16);
+    return cv.toDataURL("image/png");
+  }
+
+  // ---------- submit ----------
+  function setStatus(msg,kind){ statusEl.textContent=msg; statusEl.className="status"+(kind?(" "+kind):""); }
+
+  submitBtn.addEventListener('click', async ()=>{
+    evaluate();
+    const handle=(handleIn.value||"").trim();
+    if(!handle){ setStatus("Enter a callsign before submitting.","err"); handleIn.focus(); return; }
+    if(handle.length>40){ setStatus("Callsign is too long (40 chars max).","err"); return; }
+
+    const tasksPayload=TASKS.map(t=>({id:t.id,label:t.label,passed:!!state.taskPass[t.id]}));
+    const qPayload=QUESTIONS.map(q=>{
+      const sel=state.answers[q.id];
+      const selText=(q.options.find(o=>o.id===sel)||{}).text||"";
+      return {id:q.id,prompt:q.prompt,answer:selText,correct:!!state.qCorrect[q.id]};
+    });
+    const earned=tasksPayload.filter(t=>t.passed).length + qPayload.filter(q=>q.correct).length;
+    const total=tasksPayload.length+qPayload.length;
+
+    setStatus("Capturing and submitting…");
+    submitBtn.disabled=true;
+    const shot=await captureScreenshot(document.querySelector('.wrap'));
+
+    const payload={
+      assignmentId:CONFIG.assignmentId,
+      handle:handle,
+      clientTimestamp:new Date().toISOString(),
+      objectives:CONFIG.objectives,
+      tasks:tasksPayload,
+      questions:qPayload,
+      score:{earned:earned,total:total},
+      screenshot:shot,
+      submissionToken:CONFIG.submissionToken
+    };
+
+    try{
+      // Simple request: NO custom headers, default text/plain body => no CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+      const out=await res.json();
+      if(out&&out.success){
+        const link=out.docUrl?(' — <a href="'+out.docUrl+'" target="_blank" rel="noopener">view your Doc</a>'):"";
+        statusEl.innerHTML='<span style="color:var(--good)">Submitted: '+earned+'/'+total+'.'+link+'</span>';
+      } else {
+        setStatus("Server rejected the submission"+(out&&out.error?(": "+out.error):". Tell your instructor."),"err");
+      }
+    }catch(e){
+      // Fallback: fire-and-forget when the response can't be read in a locked-down context.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+        setStatus("Submitted (offline mode): "+earned+"/"+total+". Confirm receipt with your instructor — no Doc link is available in this mode.");
+      }catch(e2){
+        setStatus("Could not reach the submission server. Check the URL / your connection and try again.","err");
+      }
+    } finally {
+      submitBtn.disabled=false;
+    }
+  });
+
+  // ---------- reset ----------
+  resetBtn.addEventListener('click',()=>{
+    state.installed=null;state.cabled=false;state.ranIp=false;state.ranWan=false;
+    state.answers={};state.taskPass={};state.qCorrect={};
+    slotEl.classList.remove('filled');slotEl.textContent="Empty PCIe slot";removeBtn.disabled=true;
+    termOut.textContent='MEZZ-DESK-04 management shell. Type "help" to begin.';
+    handleIn.value="";setStatus("");
+    renderBin();renderBackPanel();renderQuestions();evaluate();
+  });
+
+  // ---------- init ----------
+  renderBin();renderBackPanel();renderQuestions();evaluate();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV=null, NEXT={href:"index_netplus-ethernet-connect.html",title:"Desk Online \u00b7 Wire & Verify a LAN Connection"}, CRUMB="All Labs \u203a Unit 1 \u2014 Managing My Connections \u203a Topic 1.1";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

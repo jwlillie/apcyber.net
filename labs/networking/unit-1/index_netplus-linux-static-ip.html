@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Static IPv4 on a Linux Workstation — Cedar Hollow Lab</title>
+<!--
+  ============================================================================
+  Lab: Static IPv4 on a Linux Workstation  (assignmentId: netplus-linux-static-ip)
+  Library: Network+ (N10-xxx) / AP Networking simulation labs
+  Built clean-room from public objectives. No vendor lab text, hostnames,
+  IP plans, scenarios, or screenshots are reused. All expression original.
+
+  © 2026 <AUTHOR NAME / ORG>. All rights reserved.
+  Licensed for use within <YOUR PROGRAM>. Replace this notice with your own.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0e1726; --panel:#16223a; --panel-2:#1d2c49; --edge:#2b3d61;
+    --ink:#cdd6e6; --ink-dim:#8b9bbd; --ink-faint:#5e6f93;
+    --amber:#e7a13c; --teal:#43c7b8; --red:#e0605f; --grn:#6fcf7e;
+    --term-bg:#0a111e; --focus:#7fb2ff;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #14233f 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; min-height:100vh; padding:18px;
+  }
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+  a{color:var(--teal)}
+  .wrap{max-width:1100px;margin:0 auto}
+
+  header.lab{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:baseline;
+    border-bottom:1px solid var(--edge);padding-bottom:14px;margin-bottom:18px}
+  header.lab h1{font-size:1.32rem;margin:0;letter-spacing:.2px;font-weight:650}
+  .tagline{color:var(--ink-dim);font-size:.92rem;max-width:62ch}
+  .codes{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+  .code{font-size:.72rem;letter-spacing:.4px;border:1px solid var(--edge);
+    border-radius:999px;padding:2px 9px;color:var(--ink-dim);white-space:nowrap}
+  .code b{color:var(--amber);font-weight:600}
+
+  .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);overflow:hidden}
+  .card h2{font-size:.78rem;text-transform:uppercase;letter-spacing:1.4px;
+    color:var(--ink-dim);margin:0;padding:11px 14px;border-bottom:1px solid var(--edge);
+    background:var(--panel-2);font-weight:650}
+  .card .body{padding:14px}
+
+  /* ---- terminal ---- */
+  .term-shell{background:var(--term-bg);border:1px solid var(--edge);border-radius:var(--radius);
+    display:flex;flex-direction:column;min-height:420px}
+  .term-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid #15233c}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .dot.r{background:#e0605f}.dot.y{background:#e7a13c}.dot.g{background:#6fcf7e}
+  .term-bar .who{margin-left:8px;color:var(--ink-faint);font-size:.8rem}
+  #termOut{flex:1;padding:12px 14px;overflow:auto;font-size:.86rem;white-space:pre-wrap;
+    word-break:break-word;max-height:46vh;min-height:240px}
+  #termOut .cmd{color:#e9eefc}
+  #termOut .prompt{color:var(--teal)}
+  #termOut .err{color:var(--red)}
+  #termOut .ok{color:var(--grn)}
+  #termOut .muted{color:var(--ink-faint)}
+  .term-input{display:flex;align-items:center;gap:8px;border-top:1px solid #15233c;padding:9px 12px}
+  .term-input .ps1{color:var(--teal);font-size:.86rem;white-space:nowrap}
+  #cmd{flex:1;background:transparent;border:0;color:#e9eefc;font-size:.9rem;outline:none;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  #cmd::placeholder{color:var(--ink-faint)}
+
+  .hint{font-size:.8rem;color:var(--ink-faint);margin-top:10px}
+  .hint code{background:#0c1626;border:1px solid var(--edge);border-radius:5px;padding:1px 6px;color:var(--ink-dim)}
+
+  /* ---- status lamps (signature element) ---- */
+  .lamps{display:grid;gap:10px}
+  .lamp{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--edge);
+    border-radius:8px;background:var(--panel-2)}
+  .lamp .bulb{width:14px;height:14px;border-radius:50%;flex:none;background:#27344f;
+    box-shadow:inset 0 0 0 1px #3a4d72}
+  .lamp.lit .bulb{background:var(--teal);box-shadow:0 0 10px 1px rgba(67,199,184,.7)}
+  .lamp .l-title{font-size:.86rem;font-weight:600}
+  .lamp .l-sub{font-size:.74rem;color:var(--ink-faint)}
+  .lamp.lit .l-sub{color:var(--teal)}
+
+  /* ---- checklist ---- */
+  ul.checks{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+  ul.checks li{display:flex;gap:10px;align-items:flex-start;font-size:.86rem;color:var(--ink-dim)}
+  ul.checks li .box{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--edge);
+    flex:none;margin-top:2px;display:grid;place-items:center;font-size:.7rem;color:#0a111e}
+  ul.checks li.done{color:var(--ink)}
+  ul.checks li.done .box{background:var(--teal);border-color:var(--teal)}
+  ul.checks li.done .box::after{content:"✓";font-weight:800}
+
+  /* ---- questions ---- */
+  .q{border-top:1px solid var(--edge);padding:12px 0}
+  .q:first-of-type{border-top:0;padding-top:2px}
+  .q label{display:block;font-size:.86rem;margin-bottom:7px}
+  .q .qnum{color:var(--amber);font-weight:700;margin-right:6px}
+  .q input[type=text]{width:100%;background:#0c1626;border:1px solid var(--edge);border-radius:7px;
+    color:var(--ink);padding:8px 10px;font-size:.88rem;outline:none}
+  .q input[type=text]:focus{border-color:var(--focus);box-shadow:0 0 0 2px rgba(127,178,255,.25)}
+  .q .verdict{font-size:.78rem;margin-top:6px;min-height:1em}
+  .q .verdict.ok{color:var(--grn)} .q .verdict.no{color:var(--red)}
+
+  /* ---- submit bar ---- */
+  .submit{margin-top:18px;background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);padding:14px}
+  .submit .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:.76rem;color:var(--ink-dim);letter-spacing:.3px}
+  .field input{background:#0c1626;border:1px solid var(--edge);border-radius:7px;color:var(--ink);
+    padding:9px 11px;font-size:.9rem;outline:none;min-width:220px}
+  .field input:focus{border-color:var(--focus);box-shadow:0 0 0 2px rgba(127,178,255,.25)}
+  .score-pill{font-size:.84rem;color:var(--ink-dim)}
+  .score-pill b{color:var(--ink)}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--edge);
+    background:var(--panel-2);color:var(--ink);padding:10px 16px;font-weight:600}
+  button:hover{border-color:var(--ink-faint)}
+  button:focus-visible,a:focus-visible,input:focus-visible,#cmd:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  button.primary{background:var(--amber);border-color:var(--amber);color:#221705}
+  button.primary:hover{filter:brightness(1.05)}
+  button.primary:disabled{opacity:.5;cursor:not-allowed;filter:none}
+  button.ghost{background:transparent}
+  .status{margin-top:12px;font-size:.86rem;min-height:1.2em}
+  .status.ok{color:var(--grn)} .status.no{color:var(--red)} .status.work{color:var(--amber)}
+
+  .legalnote{margin-top:22px;color:var(--ink-faint);font-size:.74rem;border-top:1px solid var(--edge);padding-top:12px}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none!important;animation:none!important}
+    .lamp.lit .bulb{box-shadow:0 0 0 1px var(--teal)}
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-linux-static-ip", "title": "Static IPv4 on a Linux Workstation — Cedar Hollow Lab", "version": "1.0.0", "objectives": ["N10-009:1.7", "APNET:1.2"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap" id="labArea">
+
+  <header class="lab">
+    <div>
+      <h1>Static IPv4 on a Linux Workstation</h1>
+      <div class="tagline">Cedar Hollow Animal Hospital is retiring its DHCP server. Convert the
+        front-desk Ubuntu PC <span class="mono">reception-pc</span> from a dynamic lease to a fixed
+        address using <span class="mono">nmcli</span>, then prove it can reach the gateway, the
+        internet, and resolve a name.</div>
+    </div>
+    <div class="codes" aria-label="Blueprint alignment">
+      <span class="code">N10-007 <b>1.4</b></span>
+      <span class="code">N10-007 <b>1.8</b></span>
+      <span class="code">N10-007 <b>5.2</b></span>
+      <span class="code">AP Net <b>1.2</b></span>
+      <span class="code">AP Net <b>1.1</b></span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT: simulated terminal -->
+    <section class="card" aria-label="Terminal">
+      <h2>reception-pc — Terminal</h2>
+      <div class="body">
+        <div class="term-shell" role="group" aria-label="Simulated Linux terminal">
+          <div class="term-bar">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <span class="who mono">tech@reception-pc:~</span>
+          </div>
+          <div id="termOut" class="mono" role="log" aria-live="polite" aria-label="Terminal output" tabindex="0"></div>
+          <form class="term-input" id="termForm" autocomplete="off">
+            <span class="ps1 mono">tech@reception-pc:~$</span>
+            <label for="cmd" class="visually-hidden" style="position:absolute;left:-9999px">Command input</label>
+            <input id="cmd" class="mono" name="cmd" type="text" spellcheck="false"
+                   placeholder="type a command — try: help" />
+          </form>
+        </div>
+        <p class="hint">This is a focused console, not a full shell. Supported: <code>help</code>,
+          <code>ip a</code>, <code>nmcli connection show</code>, <code>nmcli connection modify …</code>,
+          <code>nmcli connection up office-lan</code>, <code>ping</code>, <code>clear</code>.</p>
+      </div>
+    </section>
+
+    <!-- RIGHT: status + tasks + questions -->
+    <div style="display:grid;gap:18px">
+
+      <section class="card" aria-label="Connectivity status">
+        <h2>Connectivity</h2>
+        <div class="body">
+          <div class="lamps">
+            <div class="lamp" id="lampGw"><span class="bulb"></span><div>
+              <div class="l-title">Gateway reachable</div>
+              <div class="l-sub" aria-live="polite">no link yet</div></div></div>
+            <div class="lamp" id="lampNet"><span class="bulb"></span><div>
+              <div class="l-title">Internet path</div>
+              <div class="l-sub" aria-live="polite">not verified</div></div></div>
+            <div class="lamp" id="lampDns"><span class="bulb"></span><div>
+              <div class="l-title">Name resolution</div>
+              <div class="l-sub" aria-live="polite">not verified</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Task checklist">
+        <h2>Tasks</h2>
+        <div class="body">
+          <ul class="checks" id="taskList"></ul>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Knowledge check">
+        <h2>Knowledge check</h2>
+        <div class="body" id="qList"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- SUBMIT BAR -->
+  <div class="submit">
+    <div class="row">
+      <div class="field">
+        <label for="handle">Callsign (no real names)</label>
+        <input id="handle" type="text" maxlength="32" placeholder="e.g. copper-otter-7" />
+      </div>
+      <div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span class="score-pill" id="scorePill">Score <b>0 / 13</b></span>
+        <button type="button" class="ghost" id="resetBtn">Reset lab</button>
+        <button type="button" class="primary" id="submitBtn" disabled>Submit completed lab</button>
+      </div>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <p class="legalnote">
+    Simulated training environment. Addresses use documentation ranges (RFC 5737 / RFC 2606) and are
+    not real hosts. © 2026 &lt;AUTHOR&gt; — replace with your library's copyright/license line.
+  </p>
+
+</div><!-- /#labArea -->
+
+<!-- ========================================================================
+     SCRIPT BLOCK 1 — inlined html2canvas
+     The build environment had network egress disabled, so the minified source
+     could not be auto-fetched. Paste the minified html2canvas v1.4.1 source on
+     the single line marked below to make the file fully dependency-free.
+     A text-snapshot fallback runs if it is absent, so the lab still submits.
+     ======================================================================== -->
+<script>/* >>> PASTE MINIFIED html2canvas SOURCE HERE (one line) <<< */</script>
+
+<!-- ========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, checking, capture, POST
+     ======================================================================== -->
+<script>
+"use strict";
+
+/* ----------------------------- LAB CONFIG ------------------------------- */
+const CONFIG = {
+  assignmentId: "netplus-linux-static-ip",
+  objectives: ["N10-009:1.7", "APNET:1.2"],
+  // Instructor fills these two in (same APPS_SCRIPT_URL across the whole library):
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+
+  // ---- ANSWER KEY (original values; documentation ranges) ----
+  connName: "office-lan",
+  device:   "enp4s0",
+  target: {
+    address: "10.20.30.40/24",
+    gateway: "10.20.30.1",
+    dns:     ["198.51.100.10","198.51.100.11"], // order-insensitive
+    method:  "manual"
+  },
+  // off-LAN host used to prove the internet path (a DNS resolver IP):
+  netProbe: "198.51.100.10",
+  // hostname used to prove name resolution + the IP it "resolves" to:
+  fqdn:     "www.cedarhollow.example",
+  fqdnIp:   "203.0.113.20"
+};
+
+/* ----------------------------- SIM STATE -------------------------------- */
+const S = {
+  // staged profile (what nmcli modify edits)
+  staged:  { method:"auto", address:null, gateway:null, dns:[] },
+  // applied profile (what `connection up` activates; pings read this)
+  applied: { method:"auto", address:null, gateway:null, dns:[], up:false },
+  flags:   { inspected:false, pingGw:false, pingNet:false, pingDns:false }
+};
+
+/* --------------------------- TASK / QUESTION DEFS ----------------------- */
+const TASKS = [
+  { id:"inspect", label:"Inspect the current interface configuration", pass:()=>S.flags.inspected },
+  { id:"addr",    label:"Set the static IPv4 address and /24 prefix",   pass:()=>S.staged.address===CONFIG.target.address },
+  { id:"gw",      label:"Set the default gateway",                      pass:()=>S.staged.gateway===CONFIG.target.gateway },
+  { id:"dns",     label:"Set both DNS resolvers",                       pass:()=>sameSet(S.staged.dns,CONFIG.target.dns) },
+  { id:"manual",  label:"Switch the profile off DHCP (method manual)",  pass:()=>S.staged.method==="manual" },
+  { id:"up",      label:"Apply the profile (bring the connection up)",  pass:()=>S.applied.up && S.applied.method==="manual" },
+  { id:"pgw",     label:"Confirm the link to the gateway",              pass:()=>S.flags.pingGw },
+  { id:"pnet",    label:"Confirm the path out to the internet",         pass:()=>S.flags.pingNet },
+  { id:"pdns",    label:"Confirm DNS name resolution works",            pass:()=>S.flags.pingDns }
+];
+
+const QUESTIONS = [
+  { id:"q1", prompt:"A subnet mask of 255.255.255.0 is written as which CIDR prefix?",
+    check:v=>/^\/?24$/.test(v.trim()), answer:"/24" },
+  { id:"q2", prompt:"For the 10.20.30.0/24 network, what is the broadcast address?",
+    check:v=>v.trim()==="10.20.30.255", answer:"10.20.30.255" },
+  { id:"q3", prompt:"Which nmcli IPv4 property must be set to manual so the PC stops requesting a DHCP lease?",
+    check:v=>v.trim().toLowerCase().replace(/\s/g,"")==="ipv4.method", answer:"ipv4.method" },
+  { id:"q4", prompt:"When you pinged the hostname, which service turned the name into an IP before any ICMP left the PC?",
+    check:v=>/^dns$/i.test(v.trim()), answer:"DNS" }
+];
+
+const TOTAL = TASKS.length + QUESTIONS.length;
+
+/* ------------------------------- HELPERS -------------------------------- */
+function sameSet(a,b){ if(a.length!==b.length) return false;
+  const A=[...a].sort(), B=[...b].sort(); return A.every((x,i)=>x===B[i]); }
+const isIp = s => /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(s);
+const isCidr = s => { const m=/^(.+)\/(\d{1,2})$/.exec(s); return m && isIp(m[1]) && +m[2]>=0 && +m[2]<=32; };
+
+/* ------------------------------ TERMINAL -------------------------------- */
+const out = document.getElementById("termOut");
+function echo(text, cls){ const span=document.createElement("span");
+  if(cls) span.className=cls; span.textContent=text+"\n"; out.appendChild(span);
+  out.scrollTop=out.scrollHeight; }
+function echoCmd(cmd){ const l=document.createElement("div");
+  l.innerHTML='<span class="prompt">tech@reception-pc:~$ </span><span class="cmd"></span>';
+  l.querySelector(".cmd").textContent=cmd; out.appendChild(l); out.scrollTop=out.scrollHeight; }
+
+function banner(){
+  echo("Ubuntu 24.04 LTS — reception-pc","muted");
+  echo("Cedar Hollow Animal Hospital · front desk workstation","muted");
+  echo('Type "help" to see the commands available in this lab.\n',"muted");
+}
+
+function showIp(){
+  S.flags.inspected = true;
+  echo("1: lo: <LOOPBACK,UP> mtu 65536");
+  echo("    inet 127.0.0.1/8 scope host lo");
+  const a = S.applied;
+  if(a.up && a.address){
+    echo("2: "+CONFIG.device+": <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 state UP");
+    echo("    inet "+a.address+" brd "+broadcastFor(a.address)+" scope global "+CONFIG.device);
+  } else {
+    echo("2: "+CONFIG.device+": <BROADCAST,MULTICAST> mtu 1500 state DOWN");
+    echo("    "+(S.applied.method==="auto"
+      ? "(no lease — the clinic DHCP server is offline)"
+      : "(profile configured but not yet brought up)"),"muted");
+  }
+}
+function broadcastFor(cidr){ // /24 only in this lab
+  const ip=cidr.split("/")[0].split("."); ip[3]="255"; return ip.join("."); }
+
+function nmcliShowList(){
+  echo("NAME        UUID                                  TYPE      DEVICE");
+  echo(CONFIG.connName.padEnd(12)+"7b1c…a9  ethernet  "+CONFIG.device);
+}
+function nmcliShowOne(){
+  const s=S.staged;
+  echo("connection.id:        "+CONFIG.connName);
+  echo("connection.type:      802-3-ethernet");
+  echo("ipv4.method:          "+s.method);
+  echo("ipv4.addresses:       "+(s.address||"--"));
+  echo("ipv4.gateway:         "+(s.gateway||"--"));
+  echo("ipv4.dns:             "+(s.dns.length?s.dns.join(", "):"--"));
+}
+
+function nmcliModify(args){
+  // args after "modify": <conn> <prop> <value...>
+  const conn=args.shift();
+  if(conn===undefined){ return echo("Error: missing connection name.","err"); }
+  if(conn.toLowerCase()!==CONFIG.connName){
+    return echo("Error: unknown connection '"+conn+"'. Run: nmcli connection show","err"); }
+  const prop=(args.shift()||"").toLowerCase();
+  const value=args.join(" ").replace(/^["']|["']$/g,"").trim();
+  switch(prop){
+    case "ipv4.addresses": case "ipv4.address":
+      if(!isCidr(value)) return echo("Error: ipv4.addresses needs address/prefix, e.g. 10.20.30.40/24","err");
+      S.staged.address=value; ok("ipv4.addresses set to "+value); break;
+    case "ipv4.gateway":
+      if(!isIp(value)) return echo("Error: '"+value+"' is not a valid IPv4 gateway.","err");
+      S.staged.gateway=value; ok("ipv4.gateway set to "+value); break;
+    case "ipv4.dns":
+      { const list=value.split(/[ ,]+/).filter(Boolean);
+        if(!list.length||!list.every(isIp)) return echo("Error: ipv4.dns expects one or more IPv4 addresses.","err");
+        S.staged.dns=list; ok("ipv4.dns set to "+list.join(", ")); } break;
+    case "ipv4.method":
+      if(!["manual","auto"].includes(value)) return echo("Error: ipv4.method must be 'auto' or 'manual'.","err");
+      S.staged.method=value; ok("ipv4.method set to "+value); break;
+    case "":
+      echo("Error: missing property. Try ipv4.addresses / ipv4.gateway / ipv4.dns / ipv4.method","err"); break;
+    default:
+      echo("Error: invalid property '"+prop+"'.","err");
+  }
+  refresh();
+}
+function ok(msg){ echo(msg,"muted"); }
+
+function nmcliUp(args){
+  const conn=args[0];
+  if(conn===undefined||conn.toLowerCase()!==CONFIG.connName)
+    return echo("Error: unknown connection '"+(conn||"")+"'.","err");
+  if(S.staged.method==="manual" && !S.staged.address)
+    return echo("Error: cannot activate — manual method set but no ipv4.addresses.","err");
+  S.applied = { ...S.staged, dns:[...S.staged.dns], up:true };
+  echo("Connection successfully activated ("+CONFIG.connName+").","ok");
+  refresh();
+}
+function nmcliDown(args){ S.applied.up=false; echo("Connection '"+CONFIG.connName+"' deactivated.","muted"); refresh(); }
+
+function doPing(args){
+  // parse: [-c N] target
+  let count=4, target=null;
+  for(let i=0;i<args.length;i++){
+    if(args[i]==="-c"){ count=+args[++i]||4; }
+    else if(!args[i].startsWith("-")){ target=args[i]; }
+  }
+  if(!target) return echo("ping: usage: ping [-c count] <destination>","err");
+  const a=S.applied;
+  const live = a.up && a.address && a.method==="manual";
+  if(!live) return echo("connect: Network is unreachable","err");
+
+  const onLan = target===CONFIG.target.gateway || sameSubnet24(target,a.address);
+  // resolve hostname?
+  let dest=target, resolved=true;
+  if(!isIp(target)){
+    if(target===CONFIG.fqdn && a.dns.length){ dest=CONFIG.fqdnIp; }
+    else { return echo("ping: "+target+": Name or service not known","err"); }
+  }
+  // reachability: gateway always (once up); off-LAN requires a gateway set
+  const reachable = onLan ? !!a.address : !!a.gateway;
+  if(!reachable) return echo("connect: Network is unreachable","err");
+
+  echo("PING "+target+" ("+dest+") 56(84) bytes of data.");
+  for(let i=1;i<=Math.min(count,4);i++)
+    echo("64 bytes from "+dest+": icmp_seq="+i+" ttl=64 time="+(0.3+Math.random()*0.9).toFixed(2)+" ms");
+  echo("--- "+target+" ping statistics ---");
+  echo(count+" packets transmitted, "+count+" received, 0% packet loss","ok");
+
+  if(target===CONFIG.target.gateway) S.flags.pingGw=true;
+  if(target===CONFIG.netProbe || (isIp(target)&&!onLan)) S.flags.pingNet=true;
+  if(!isIp(target) && target===CONFIG.fqdn) S.flags.pingDns=true;
+  refresh();
+}
+function sameSubnet24(ip,cidr){ if(!isIp(ip)||!cidr) return false;
+  const a=ip.split("."), b=cidr.split("/")[0].split(".");
+  return a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2]; }
+
+function help(){
+  echo("Commands available in this lab:");
+  echo("  ip a                              show interface addresses");
+  echo("  nmcli connection show             list profiles");
+  echo("  nmcli connection show "+CONFIG.connName+"      show this profile's settings");
+  echo("  nmcli connection modify "+CONFIG.connName+" <property> <value>");
+  echo("        properties: ipv4.addresses  ipv4.gateway  ipv4.dns  ipv4.method");
+  echo("  nmcli connection up "+CONFIG.connName+"        apply the profile");
+  echo("  ping [-c N] <ip|hostname>         test reachability");
+  echo("  clear                             clear the screen");
+}
+
+/* abbreviation-aware nmcli word matcher (con/c -> connection, mod/m -> modify) */
+function expand(word, full){ return full.startsWith(word) && word.length>=1; }
+
+function runCommand(raw){
+  const line=raw.trim(); if(!line) return;
+  echoCmd(line);
+  const t=line.split(/\s+/);
+  const cmd=t[0];
+
+  if(cmd==="clear"){ out.innerHTML=""; return; }
+  if(cmd==="help"){ help(); return; }
+
+  if(cmd==="ip"){
+    const sub=(t[1]||"");
+    if(["a","addr","address"].includes(sub)){ showIp(); return; }
+    echo("Object \""+sub+"\" is unknown, try \"ip help\".","err"); return;
+  }
+
+  if(cmd==="ping"){ doPing(t.slice(1)); return; }
+
+  if(cmd==="nmcli"){
+    let rest=t.slice(1);
+    const obj=rest.shift()||"";
+    if(!expand(obj,"connection")){
+      echo("Error: object '"+obj+"' is unknown. This lab uses 'connection'.","err"); return; }
+    const action=rest.shift()||"";
+    if(expand(action,"show")){
+      if(rest.length===0) nmcliShowList();
+      else if(rest[0].toLowerCase()===CONFIG.connName) nmcliShowOne();
+      else echo("Error: unknown connection '"+rest[0]+"'.","err");
+      return;
+    }
+    if(expand(action,"modify")){ nmcliModify(rest); return; }
+    if(action==="up"){ nmcliUp(rest); return; }
+    if(action==="down"){ nmcliDown(rest); return; }
+    echo("Error: action '"+action+"' is unknown (use show / modify / up / down).","err"); return;
+  }
+
+  echo("bash: "+cmd+": command not found","err");
+}
+
+/* ------------------------------- RENDER --------------------------------- */
+function renderTasks(){
+  const ul=document.getElementById("taskList"); ul.innerHTML="";
+  TASKS.forEach(tk=>{
+    const li=document.createElement("li");
+    const done=tk.pass(); if(done) li.classList.add("done");
+    li.innerHTML='<span class="box" aria-hidden="true"></span>';
+    const s=document.createElement("span"); s.textContent=tk.label; li.appendChild(s);
+    li.setAttribute("aria-label",(done?"Complete: ":"Incomplete: ")+tk.label);
+    ul.appendChild(li);
+  });
+}
+function renderLamps(){
+  setLamp("lampGw",S.flags.pingGw,"link confirmed","no link yet");
+  setLamp("lampNet",S.flags.pingNet,"path confirmed","not verified");
+  setLamp("lampDns",S.flags.pingDns,"resolution confirmed","not verified");
+}
+function setLamp(id,on,onTxt,offTxt){
+  const el=document.getElementById(id); el.classList.toggle("lit",on);
+  el.querySelector(".l-sub").textContent = on?onTxt:offTxt;
+}
+let questionsBuilt=false;
+function buildQuestions(){
+  const box=document.getElementById("qList");
+  QUESTIONS.forEach((q,i)=>{
+    const d=document.createElement("div"); d.className="q";
+    d.innerHTML='<label for="'+q.id+'"><span class="qnum">'+(i+1)+'.</span>'+q.prompt+'</label>'+
+      '<input id="'+q.id+'" type="text" autocomplete="off" spellcheck="false" />'+
+      '<div class="verdict" id="v_'+q.id+'" aria-live="polite"></div>';
+    box.appendChild(d);
+    d.querySelector("input").addEventListener("input",()=>{ checkQuestion(q); refresh(); });
+  });
+  questionsBuilt=true;
+}
+function checkQuestion(q){
+  const inp=document.getElementById(q.id), v=document.getElementById("v_"+q.id);
+  const val=inp.value;
+  if(val.trim()===""){ v.textContent=""; v.className="verdict"; q._correct=false; return; }
+  q._correct=q.check(val);
+  v.textContent=q._correct?"Correct":"Not yet — check your reasoning.";
+  v.className="verdict "+(q._correct?"ok":"no");
+}
+function score(){
+  const t=TASKS.filter(x=>x.pass()).length;
+  const qn=QUESTIONS.filter(x=>x._correct).length;
+  return { tasks:t, questions:qn, earned:t+qn, total:TOTAL };
+}
+function refresh(){
+  renderTasks(); renderLamps();
+  const sc=score();
+  document.getElementById("scorePill").innerHTML="Score <b>"+sc.earned+" / "+sc.total+"</b>";
+  document.getElementById("submitBtn").disabled =
+    document.getElementById("handle").value.trim().length===0;
+}
+
+/* ------------------------------ CAPTURE --------------------------------- */
+async function capture(){
+  const node=document.getElementById("labArea");
+  if(typeof html2canvas==="function"){
+    try{ const c=await html2canvas(node,{backgroundColor:"#0e1726",scale:1});
+      return c.toDataURL("image/png"); }catch(e){ /* fall through */ }
+  }
+  return fallbackSnapshot();
+}
+function fallbackSnapshot(){
+  // Minimal dependency-free PNG: render score + task state to a canvas.
+  const c=document.createElement("canvas"); c.width=900; c.height=520;
+  const x=c.getContext("2d");
+  x.fillStyle="#0e1726"; x.fillRect(0,0,c.width,c.height);
+  x.fillStyle="#e7a13c"; x.font="bold 22px monospace";
+  x.fillText("Cedar Hollow Lab — Static IPv4 (text snapshot)",24,40);
+  x.fillStyle="#cdd6e6"; x.font="14px monospace";
+  const sc=score(); let y=80;
+  x.fillText("handle: "+(document.getElementById("handle").value||"(none)"),24,y); y+=22;
+  x.fillText("score: "+sc.earned+" / "+sc.total+"   tasks "+sc.tasks+"/"+TASKS.length+
+             "   questions "+sc.questions+"/"+QUESTIONS.length,24,y); y+=28;
+  TASKS.forEach(t=>{ const d=t.pass(); x.fillStyle=d?"#6fcf7e":"#5e6f93";
+    x.fillText((d?"[x] ":"[ ] ")+t.label,24,y); y+=20; });
+  return c.toDataURL("image/png");
+}
+
+/* ------------------------------- SUBMIT --------------------------------- */
+async function submit(){
+  const status=document.getElementById("status");
+  const handle=document.getElementById("handle").value.trim();
+  if(!handle){ status.textContent="Enter a callsign first."; status.className="status no"; return; }
+  QUESTIONS.forEach(checkQuestion);
+  const sc=score();
+  status.textContent="Capturing your work…"; status.className="status work";
+  const shot=await capture();
+
+  const payload={
+    assignmentId:CONFIG.assignmentId,
+    handle, clientTimestamp:new Date().toISOString(),
+    objectives:CONFIG.objectives,
+    tasks:TASKS.map(t=>({id:t.id,label:t.label,passed:t.pass()})),
+    questions:QUESTIONS.map(q=>({id:q.id,prompt:q.prompt,answer:document.getElementById(q.id).value,correct:!!q._correct})),
+    score:{earned:sc.earned,total:sc.total},
+    screenshot:shot,
+    submissionToken:CONFIG.submissionToken
+  };
+
+  if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){
+    status.innerHTML="Demo mode — no submission URL is wired in yet. Your work is complete "+
+      "("+sc.earned+"/"+sc.total+"). Ask your instructor for the lab's submission link.";
+    status.className="status work"; console.log("Payload that would POST:",payload); return;
+  }
+
+  status.textContent="Submitting…"; status.className="status work";
+  try{
+    const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data && data.success){
+      status.innerHTML="Submitted ✓ — "+sc.earned+"/"+sc.total+". "+
+        (data.docUrl?'<a href="'+data.docUrl+'" target="_blank" rel="noopener">Open your record</a>':"");
+      status.className="status ok";
+    } else { throw new Error((data&&data.error)||"Server rejected the submission."); }
+  }catch(err){
+    // last-resort fire-and-forget for locked-down contexts
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+      status.textContent="Sent, but the confirmation couldn't be read. Confirm with your instructor.";
+      status.className="status work";
+    }catch(e2){
+      status.textContent="Submission failed: "+err.message+" — check your connection and try again.";
+      status.className="status no";
+    }
+  }
+}
+
+/* ------------------------------- RESET ---------------------------------- */
+function resetLab(){
+  S.staged={method:"auto",address:null,gateway:null,dns:[]};
+  S.applied={method:"auto",address:null,gateway:null,dns:[],up:false};
+  S.flags={inspected:false,pingGw:false,pingNet:false,pingDns:false};
+  QUESTIONS.forEach(q=>{q._correct=false; const i=document.getElementById(q.id); if(i){i.value="";} 
+    const v=document.getElementById("v_"+q.id); if(v){v.textContent="";v.className="verdict";}});
+  out.innerHTML=""; banner();
+  document.getElementById("status").textContent=""; document.getElementById("status").className="status";
+  refresh();
+}
+
+/* ------------------------------- WIRING --------------------------------- */
+document.getElementById("termForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const inp=document.getElementById("cmd");
+  runCommand(inp.value); inp.value=""; refresh();
+});
+document.getElementById("handle").addEventListener("input",refresh);
+document.getElementById("submitBtn").addEventListener("click",submit);
+document.getElementById("resetBtn").addEventListener("click",resetLab);
+
+buildQuestions(); banner(); refresh();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-ip-config.html",title:"Lab \u2014 Static IPv4 on a Dual-Homed Workstation \u00b7 Marsh & Pike"}, NEXT={href:"index_netplus-enterprise-wlan.html",title:"Bring Up an Enterprise WLAN (Corporate + Guest)"}, CRUMB="All Labs \u203a Unit 1 \u2014 Managing My Connections \u203a Topic 1.2";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

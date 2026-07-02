@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex">
+<title>Offline at the Front Desk — SOHO Gateway Fault</title>
+<!--
+  ============================================================================
+  Offline at the Front Desk: SOHO Gateway Fault
+  A browser-based simulation lab for CompTIA Network+ (N10-009) and the
+  College Board AP Networking pilot.
+
+  assignmentId : netplus-soho-gateway-fault
+  objectives   : N10-009:5.1 (network troubleshooting methodology)
+                 APNET:2.1.A  (root causes of a SOHO network issue)
+                 APNET:3.6.B  (incorrect/missing gateway prevents network access)
+
+  This lab is built clean-room from the public N10-009 objectives and the
+  public AP Networking course framework. Scenario, hostnames, IP plan,
+  task/question wording, and UI are original. No third-party lab content
+  (TestOut, Cisco NetAcad/Packet Tracer, or any vendor) is reproduced.
+
+  © 2026 [AUTHOR NAME]. All rights reserved.
+  Licensed to the purchasing institution for classroom use.
+  Replace [AUTHOR NAME] with the library author's own copyright/license line.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Network operations console palette */
+    --noc-bg:        #0e1622;
+    --noc-bg-2:      #0a111b;
+    --panel:         #16202e;
+    --panel-2:       #192536;
+    --panel-hi:      #1d2a3a;
+    --border:        #243549;
+    --border-hi:     #31506b;
+    --text:          #d6e2f0;
+    --text-dim:      #8fa3bb;
+    --text-faint:    #5e7186;
+    --signal:        #36e0c4;  /* link up / pass */
+    --signal-deep:   #1f9d88;
+    --fault:         #f0a23b;  /* warning / misconfig */
+    --down:          #ff5d6c;  /* link down / fail */
+    --accent-ink:    #0a111b;
+    --focus:         #7fd6ff;
+    --mono: ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono","Consolas","Liberation Mono",monospace;
+    --sans: ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r: 8px;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1100px 540px at 80% -10%, rgba(54,224,196,.06), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(127,150,255,.05), transparent 60%),
+      var(--noc-bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:22px 18px 40px; }
+
+  /* ---------- header ---------- */
+  header.lab-head{
+    display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;
+    justify-content:space-between; padding-bottom:16px; margin-bottom:18px;
+    border-bottom:1px solid var(--border);
+  }
+  .title-block h1{
+    font-size:clamp(20px,3.6vw,30px); line-height:1.05; margin:0;
+    letter-spacing:-.01em; font-weight:700;
+  }
+  .title-block .sub{ color:var(--text-dim); font-size:13.5px; margin-top:6px; max-width:56ch; }
+  .tag-row{ display:flex; flex-wrap:wrap; gap:6px; margin-top:11px; }
+  .tag{
+    font-family:var(--mono); font-size:11px; letter-spacing:.04em;
+    padding:3px 8px; border-radius:999px; border:1px solid var(--border-hi);
+    color:var(--text-dim); background:var(--panel-2); text-transform:uppercase;
+  }
+  .tag b{ color:var(--signal); font-weight:600; }
+  .scorecard{
+    text-align:right; font-family:var(--mono); min-width:140px;
+  }
+  .scorecard .lbl{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); }
+  .scorecard .val{ font-size:30px; font-weight:700; line-height:1; }
+  .scorecard .val .of{ color:var(--text-faint); font-size:18px; }
+  .scorecard .state{ font-size:11px; margin-top:4px; letter-spacing:.08em; text-transform:uppercase; color:var(--fault); }
+  .scorecard.ready .state{ color:var(--signal); }
+
+  /* ---------- signature: link map ---------- */
+  .linkmap-panel{
+    border:1px solid var(--border); border-radius:var(--r);
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    padding:16px 14px 12px; margin-bottom:18px; overflow-x:auto;
+  }
+  .linkmap-panel .cap{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--mono); font-size:11px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--text-faint); margin-bottom:4px;
+  }
+  .linkmap{ display:flex; align-items:center; min-width:620px; gap:2px; }
+  .node{
+    flex:0 0 auto; text-align:center; width:96px;
+  }
+  .node .icon{
+    width:54px; height:42px; margin:0 auto 6px; border-radius:7px;
+    border:1px solid var(--border-hi); background:var(--panel-hi);
+    display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .node.host.active .icon{ border-color:var(--signal); box-shadow:0 0 0 1px var(--signal-deep); }
+  .node .icon svg{ width:26px; height:26px; }
+  .node .nm{ font-family:var(--mono); font-size:10.5px; color:var(--text); line-height:1.2; }
+  .node .ip{ font-family:var(--mono); font-size:9.5px; color:var(--text-faint); }
+  .node .led{
+    position:absolute; top:-5px; right:-5px; width:11px; height:11px; border-radius:50%;
+    background:var(--text-faint); border:2px solid var(--noc-bg);
+  }
+  .led.up{ background:var(--signal); box-shadow:0 0 7px var(--signal); }
+  .led.warn{ background:var(--fault); box-shadow:0 0 7px var(--fault); }
+  .led.down{ background:var(--down); box-shadow:0 0 7px var(--down); }
+  .link{
+    flex:1 1 auto; height:3px; min-width:30px; border-radius:2px;
+    background:var(--border-hi); position:relative;
+  }
+  .link.up{ background:var(--signal); }
+  .link.warn{ background:var(--fault); }
+  .link.down{ background:repeating-linear-gradient(90deg,var(--down) 0 6px,transparent 6px 12px); }
+  @media (prefers-reduced-motion:no-preference){
+    .link.up::after{
+      content:""; position:absolute; top:-1px; left:0; width:8px; height:5px; border-radius:3px;
+      background:#bafff2; animation:flow 1.4s linear infinite;
+    }
+    @keyframes flow{ from{left:-8px;opacity:0} 10%{opacity:1} 90%{opacity:1} to{left:100%;opacity:0} }
+    .led.warn{ animation:pulse 1.3s ease-in-out infinite; }
+    @keyframes pulse{ 50%{ box-shadow:0 0 12px var(--fault); } }
+  }
+
+  /* ---------- layout grid ---------- */
+  .grid{ display:grid; grid-template-columns:1.15fr 1fr; gap:18px; align-items:start; }
+  @media (max-width:860px){ .grid{ grid-template-columns:1fr; } }
+
+  .panel{
+    border:1px solid var(--border); border-radius:var(--r); background:var(--panel);
+    overflow:hidden;
+  }
+  .panel > .bar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 13px; border-bottom:1px solid var(--border);
+    background:var(--panel-2);
+  }
+  .panel > .bar h2{
+    font-size:12px; letter-spacing:.13em; text-transform:uppercase; margin:0;
+    color:var(--text-dim); font-family:var(--mono); font-weight:600;
+  }
+  .panel .body{ padding:13px; }
+
+  /* host switch */
+  .hostswitch{ display:flex; gap:6px; }
+  .hostswitch button{
+    font-family:var(--mono); font-size:11.5px; padding:5px 10px; cursor:pointer;
+    background:var(--panel-hi); color:var(--text-dim); border:1px solid var(--border);
+    border-radius:6px;
+  }
+  .hostswitch button[aria-pressed="true"]{
+    color:var(--accent-ink); background:var(--signal); border-color:var(--signal); font-weight:700;
+  }
+
+  /* terminal */
+  .term{
+    background:var(--noc-bg-2); border:1px solid var(--border); border-radius:6px;
+    font-family:var(--mono); font-size:12.5px; color:#c6f3e8;
+    height:330px; display:flex; flex-direction:column;
+  }
+  .term .out{ flex:1; overflow-y:auto; padding:10px 11px; white-space:pre-wrap; word-break:break-word; }
+  .term .out .sys{ color:var(--text-faint); }
+  .term .out .err{ color:var(--down); }
+  .term .out .ok{ color:var(--signal); }
+  .term .out .warn{ color:var(--fault); }
+  .term .out .cmd{ color:#fff; }
+  .term .inrow{ display:flex; align-items:center; border-top:1px solid var(--border); }
+  .term .prompt{ padding:0 0 0 10px; color:var(--signal); white-space:nowrap; }
+  .term input{
+    flex:1; background:transparent; border:0; color:#eafff9; font-family:var(--mono);
+    font-size:12.5px; padding:9px 10px; outline:none;
+  }
+
+  /* settings */
+  .cfg{ font-family:var(--mono); font-size:12.5px; }
+  .cfg .row{ display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px dashed var(--border); }
+  .cfg .row:last-child{ border-bottom:0; }
+  .cfg .k{ color:var(--text-dim); }
+  .cfg .v{ color:var(--text); text-align:right; }
+  .cfg .v.bad{ color:var(--fault); }
+  .cfg input[type=text]{
+    font-family:var(--mono); font-size:12.5px; width:150px; text-align:right;
+    background:var(--noc-bg-2); color:var(--text); border:1px solid var(--border-hi);
+    border-radius:5px; padding:4px 7px;
+  }
+  .editline{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; }
+  .hint{ font-size:11.5px; color:var(--text-faint); margin-top:8px; }
+  .readonly-note{ font-size:11px; color:var(--text-faint); font-style:italic; margin-top:8px; }
+
+  /* buttons */
+  .btn{
+    font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer;
+    border-radius:6px; padding:7px 13px; border:1px solid var(--border-hi);
+    background:var(--panel-hi); color:var(--text);
+  }
+  .btn:hover{ border-color:var(--signal); }
+  .btn.primary{ background:var(--signal); color:var(--accent-ink); border-color:var(--signal); }
+  .btn.primary:hover{ filter:brightness(1.07); }
+  .btn.ghost{ background:transparent; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; border-color:var(--border); }
+
+  /* checklist */
+  .checklist{ list-style:none; margin:0; padding:0; }
+  .checklist li{
+    display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:13px;
+  }
+  .checklist li:last-child{ border-bottom:0; }
+  .box{
+    flex:0 0 auto; width:19px; height:19px; border-radius:5px; margin-top:1px;
+    border:1.5px solid var(--border-hi); display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:var(--accent-ink);
+  }
+  li.done .box{ background:var(--signal); border-color:var(--signal); }
+  li.done .txt{ color:var(--text); }
+  .txt{ color:var(--text-dim); }
+  .txt .step{ font-family:var(--mono); font-size:10.5px; color:var(--text-faint); display:block; letter-spacing:.08em; text-transform:uppercase; }
+
+  /* questions */
+  .q{ border-bottom:1px solid var(--border); padding:13px 0; }
+  .q:first-child{ padding-top:2px; }
+  .q:last-child{ border-bottom:0; }
+  .q legend, .q .prompt{ font-size:13px; font-weight:600; padding:0; margin:0 0 9px; color:var(--text); }
+  .q .qn{ font-family:var(--mono); color:var(--signal); font-size:11px; margin-right:6px; }
+  .opts{ display:flex; flex-direction:column; gap:6px; }
+  .opt{ display:flex; align-items:center; gap:9px; font-size:13px; color:var(--text-dim); cursor:pointer; }
+  .opt input{ accent-color:var(--signal); width:16px; height:16px; }
+  .q input[type=text]{
+    font-family:var(--mono); font-size:13px; width:190px; max-width:100%;
+    background:var(--noc-bg-2); color:var(--text); border:1px solid var(--border-hi);
+    border-radius:5px; padding:6px 9px;
+  }
+  .verdict{ font-size:11.5px; font-family:var(--mono); margin-top:8px; min-height:15px; }
+  .verdict.right{ color:var(--signal); }
+  .verdict.wrong{ color:var(--down); }
+  .q .check{ margin-top:9px; }
+
+  /* submission */
+  .submit-panel{ margin-top:18px; }
+  .submit-grid{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); font-family:var(--mono); }
+  .field input{
+    font-family:var(--mono); font-size:14px; background:var(--noc-bg-2); color:var(--text);
+    border:1px solid var(--border-hi); border-radius:6px; padding:9px 11px; width:240px; max-width:100%;
+  }
+  #status{ font-size:13px; font-family:var(--mono); margin-top:12px; min-height:18px; }
+  #status.ok{ color:var(--signal); } #status.err{ color:var(--down); } #status.work{ color:var(--fault); }
+  #status a{ color:var(--focus); }
+
+  /* focus visibility — quality floor */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:2px solid var(--focus); outline-offset:2px; border-radius:4px;
+  }
+  .privacy{ font-size:11.5px; color:var(--text-faint); margin-top:14px; max-width:70ch; }
+  footer.legal{ margin-top:26px; padding-top:14px; border-top:1px solid var(--border); font-size:11px; color:var(--text-faint); }
+  .visually-hidden{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-soho-gateway-fault", "title": "Offline at the Front Desk — SOHO Gateway Fault", "version": "1.0.0", "objectives": ["N10-009:5.3", "APNET:2.6"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab-head">
+    <div class="title-block">
+      <h1>Offline at the Front Desk</h1>
+      <div class="sub">The front-desk workstation at Marsh&nbsp;&amp;&nbsp;Pike Land Surveyors lost internet access this morning, right after a contractor "tidied up" its network settings. The back-office machine still works. Find out why the front desk is offline and bring it back.</div>
+      <div class="tag-row" aria-label="Objective coverage">
+        <span class="tag"><b>N10-009</b>&nbsp;5.1 · methodology</span>
+        <span class="tag"><b>AP NET</b>&nbsp;2.1.A · SOHO root cause</span>
+        <span class="tag"><b>AP NET</b>&nbsp;3.6.B · gateway fault</span>
+      </div>
+    </div>
+    <div class="scorecard" id="scorecard" aria-live="polite">
+      <div class="lbl">Lab progress</div>
+      <div class="val"><span id="earned">0</span><span class="of"> / <span id="total">14</span></span></div>
+      <div class="state" id="readystate">Incomplete</div>
+    </div>
+  </header>
+
+  <!-- SIGNATURE: live link map -->
+  <section class="linkmap-panel" aria-label="Network link map">
+    <div class="cap"><span>Link map · <span id="lm-host">fd-survey01</span></span><span id="lm-legend">run a ping to light the path</span></div>
+    <div class="linkmap" id="linkmap">
+      <div class="node host active" id="n-host">
+        <div class="icon"><span class="led" id="led-host"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#9fd6cb" stroke-width="1.6"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>
+        </div>
+        <div class="nm" id="lm-hostname">fd-survey01</div>
+        <div class="ip" id="lm-hostip">10.55.8.40</div>
+      </div>
+      <div class="link" id="lk-1"></div>
+      <div class="node">
+        <div class="icon"><span class="led" id="led-sw"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#9fb6d6" stroke-width="1.6"><rect x="2" y="9" width="20" height="6" rx="1"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/></svg>
+        </div>
+        <div class="nm">acc-sw01</div><div class="ip">switch</div>
+      </div>
+      <div class="link" id="lk-2"></div>
+      <div class="node">
+        <div class="icon"><span class="led" id="led-rtr"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#9fb6d6" stroke-width="1.6"><rect x="2" y="11" width="20" height="7" rx="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0M17 7l2-2M17 7h-2"/></svg>
+        </div>
+        <div class="nm">edge-rtr01</div><div class="ip">10.55.8.1</div>
+      </div>
+      <div class="link" id="lk-3"></div>
+      <div class="node">
+        <div class="icon"><span class="led" id="led-net"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#9fb6d6" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+        </div>
+        <div class="nm">internet</div><div class="ip">9.9.9.9</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid">
+
+    <!-- LEFT: tools (terminal + settings) -->
+    <div>
+      <section class="panel" style="margin-bottom:18px;">
+        <div class="bar">
+          <h2>Terminal</h2>
+          <div class="hostswitch" role="group" aria-label="Select machine">
+            <button id="tab-front" aria-pressed="true" onclick="setHost('front')">fd-survey01</button>
+            <button id="tab-back" aria-pressed="false" onclick="setHost('back')">bo-survey02</button>
+          </div>
+        </div>
+        <div class="body">
+          <div class="term">
+            <div class="out" id="termOut" role="log" aria-live="polite" aria-label="Terminal output"></div>
+            <div class="inrow">
+              <span class="prompt" id="termPrompt">fd-survey01&gt;</span>
+              <label class="visually-hidden" for="termIn">Terminal command for the selected machine</label>
+              <input id="termIn" autocomplete="off" autocapitalize="off" spellcheck="false"
+                     placeholder="type a command — try: help" onkeydown="termKey(event)" />
+            </div>
+          </div>
+          <div class="hint">Commands: <b>ipconfig</b>, <b>ping &lt;host&gt;</b>, <b>tracert &lt;host&gt;</b>, <b>help</b>, <b>clear</b>. Targets you can reach today include 10.55.8.1, 10.55.8.5, 10.55.8.41, 9.9.9.9, and the name status.marshpike.example.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="bar"><h2>Network connection details</h2><span style="font-family:var(--mono);font-size:11px;color:var(--text-faint)" id="cfg-host">fd-survey01</span></div>
+        <div class="body">
+          <div class="cfg">
+            <div class="row"><span class="k">IPv4 address</span><span class="v" id="cfg-ip">10.55.8.40</span></div>
+            <div class="row"><span class="k">Subnet mask</span><span class="v" id="cfg-mask">255.255.255.0</span></div>
+            <div class="row"><span class="k">Default gateway</span><span class="v" id="cfg-gw">10.55.8.250</span></div>
+            <div class="row"><span class="k">DNS server</span><span class="v" id="cfg-dns">10.55.8.5</span></div>
+          </div>
+          <div id="editzone">
+            <div class="editline">
+              <label for="gwEdit" style="font-family:var(--mono);font-size:12px;color:var(--text-dim)">Set default gateway</label>
+              <input type="text" id="gwEdit" value="10.55.8.250" autocomplete="off" spellcheck="false" inputmode="decimal" />
+            </div>
+            <div class="editline" style="justify-content:flex-end;">
+              <button class="btn primary" id="applyBtn" onclick="applyGateway()">Apply changes</button>
+            </div>
+            <div class="hint" id="cfg-msg">You can edit this machine's default gateway. The other machine on the network is read-only.</div>
+          </div>
+          <div class="readonly-note" id="readonly-note" style="display:none">Read-only: you can inspect bo-survey02, but only fd-survey01 needs changes.</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: tasks + questions -->
+    <div>
+      <section class="panel" style="margin-bottom:18px;">
+        <div class="bar"><h2>Troubleshooting checklist</h2><button class="btn ghost" style="font-size:11px;padding:4px 9px" onclick="resetLab()">Reset</button></div>
+        <div class="body">
+          <ul class="checklist" id="checklist"></ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="bar"><h2>Questions</h2></div>
+        <div class="body" id="questions"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- SUBMISSION -->
+  <section class="panel submit-panel">
+    <div class="bar"><h2>Submit completed lab</h2></div>
+    <div class="body">
+      <div class="submit-grid">
+        <div class="field">
+          <label for="handle">Callsign</label>
+          <input id="handle" maxlength="40" autocomplete="off" spellcheck="false" placeholder="e.g. blue-otter-7" />
+        </div>
+        <button class="btn primary" id="submitBtn" onclick="submitLab()">Submit completed lab</button>
+        <button class="btn ghost" onclick="resetLab()">Reset lab</button>
+      </div>
+      <div id="status" aria-live="polite"></div>
+      <p class="privacy">Use a <b>callsign</b>, not your real name. This lab collects no email, no student ID, and no other personal information — only your callsign, your answers, and a screenshot of this screen go to your instructor's drive.</p>
+    </div>
+  </section>
+
+  <footer class="legal">
+    Offline at the Front Desk · assignmentId <code>netplus-soho-gateway-fault</code> · objectives N10-009:5.1, APNET:2.1.A, APNET:3.6.B<br>
+    © 2026 [AUTHOR NAME]. Original clean-room courseware. Replace with the library author's copyright/license line.
+  </footer>
+</div>
+
+<!-- ============================================================= -->
+<!-- SCRIPT BLOCK 1 — html2canvas                                  -->
+<!--                                                               -->
+<!-- For a pixel-perfect DOM screenshot, paste the MINIFIED        -->
+<!-- html2canvas source between the markers below. The file then   -->
+<!-- has zero runtime dependencies (no CDN). If you leave it        -->
+<!-- empty, the lab still works: captureScreenshot() falls back to  -->
+<!-- drawing a state-summary PNG with the Canvas API (see block 2). -->
+<!-- ============================================================= -->
+<script>
+/* ===== PASTE html2canvas MINIFIED SOURCE HERE (optional) ===== */
+/* (left intentionally empty; built-in fallback is used instead)  */
+/* ===== END html2canvas ===== */
+</script>
+
+<!-- ============================================================= -->
+<!-- SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, submission        -->
+<!-- ============================================================= -->
+<script>
+"use strict";
+
+/* ---------------- CONFIG ---------------- */
+const CONFIG = {
+  assignmentId: "netplus-soho-gateway-fault",
+  objectives:   ["N10-009:5.3", "APNET:2.6"],
+  // --- set these at deploy time (see INSTRUCTOR_SETUP.md) ---
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  submissionToken: "REPLACE_WITH_COHORT_TOKEN"
+};
+
+/* ---------------- NETWORK MODEL (answer key lives here) ---------------- */
+const MASK = "255.255.255.0";
+const ROUTER_IP = "10.55.8.1";          // the only real default gateway on this LAN
+const DNS_IP    = "10.55.8.5";
+
+// Hosts. fd-survey01 ships with a wrong default gateway (the planted fault).
+const HOSTS = {
+  front: { name:"fd-survey01", ip:"10.55.8.40", mask:MASK, gw:"10.55.8.250", dns:DNS_IP, editable:true },
+  back:  { name:"bo-survey02", ip:"10.55.8.41", mask:MASK, gw:ROUTER_IP,     dns:DNS_IP, editable:false }
+};
+
+// Devices that actually exist on the LAN and answer ICMP.
+const LAN_HOSTS = {
+  "10.55.8.1":  "edge-rtr01 (router)",
+  "10.55.8.2":  "acc-sw01 (switch mgmt)",
+  "10.55.8.5":  "core-dns01 (DNS)",
+  "10.55.8.40": "fd-survey01",
+  "10.55.8.41": "bo-survey02"
+};
+// Names the DNS server knows about -> public (off-link) addresses.
+const DNS_RECORDS = {
+  "status.marshpike.example": "203.0.113.20",
+  "marshpike.example":        "203.0.113.10"
+};
+const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+
+/* ---------------- STATE ---------------- */
+let activeHost = "front";
+const flags = {
+  gatheredFront:false, symptomFront:false,   // looked at config / saw the failure on front
+  gatheredBack:false,  baselineBack:false,   // looked at config / saw it work on back
+  fixApplied:false, verified:false
+};
+const answers = {}; // question id -> submitted value
+
+/* ---------------- IP MATH ---------------- */
+function ipToInt(ip){
+  const m = IPV4_RE.exec(ip.trim()); if(!m) return null;
+  let n=0; for(let i=1;i<=4;i++){ const o=+m[i]; if(o<0||o>255) return null; n=(n*256)+o; }
+  return n>>>0;
+}
+function validIp(ip){ return ipToInt(ip)!==null; }
+function sameSubnet(a,b,mask){
+  const ia=ipToInt(a), ib=ipToInt(b), im=ipToInt(mask);
+  if(ia===null||ib===null||im===null) return false;
+  return ((ia&im)>>>0) === ((ib&im)>>>0);
+}
+
+/* ---------------- TERMINAL ---------------- */
+const termOut = () => document.getElementById("termOut");
+function tprint(text, cls){
+  const span = document.createElement("span");
+  if(cls) span.className = cls;
+  span.textContent = text + "\n";
+  termOut().appendChild(span);
+  termOut().scrollTop = termOut().scrollHeight;
+}
+function termKey(e){
+  if(e.key !== "Enter") return;
+  const inp = e.target; const line = inp.value; inp.value="";
+  const h = HOSTS[activeHost];
+  tprint(h.name + "> " + line, "cmd");
+  runCommand(line.trim());
+}
+function runCommand(raw){
+  if(!raw){ return; }
+  const parts = raw.split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  const arg = parts[1];
+  if(cmd==="help"){
+    tprint("Available commands:", "sys");
+    tprint("  ipconfig            show this machine's IP settings", "sys");
+    tprint("  ping <host>         test reachability to an IP or name", "sys");
+    tprint("  tracert <host>      trace the path, hop by hop", "sys");
+    tprint("  clear               clear the screen", "sys");
+    return;
+  }
+  if(cmd==="clear"||cmd==="cls"){ termOut().innerHTML=""; return; }
+  if(cmd==="ipconfig"){ doIpconfig(); return; }
+  if(cmd==="ping"){ if(!arg){ tprint("Missing host. Example: ping 10.55.8.1","err"); return;} doPing(arg); return; }
+  if(cmd==="tracert"||cmd==="traceroute"){ if(!arg){ tprint("Missing host. Example: tracert 9.9.9.9","err"); return;} doTracert(arg); return; }
+  tprint("'" + parts[0] + "' is not recognized as a command. Type help for a list.", "err");
+}
+function doIpconfig(){
+  const h = HOSTS[activeHost];
+  tprint("");
+  tprint("Connection details — " + h.name, "sys");
+  tprint("   IPv4 Address . . . . . . : " + h.ip);
+  tprint("   Subnet Mask  . . . . . . : " + h.mask);
+  tprint("   Default Gateway  . . . . : " + h.gw + (h.gw===ROUTER_IP ? "" : "   <-- check this"), h.gw===ROUTER_IP?null:"warn");
+  tprint("   DNS Server . . . . . . . : " + h.dns);
+  tprint("");
+  if(activeHost==="front") flags.gatheredFront = true;
+  if(activeHost==="back")  flags.gatheredBack  = true;
+  refresh();
+}
+
+// Returns {reachable:bool, kind:'onlink-host'|'onlink-dead'|'routed'|'no-route', ip, viaGateway:bool}
+function resolveReach(h, ip){
+  const onlink = sameSubnet(h.ip, ip, h.mask);
+  if(onlink){
+    if(ip===h.ip || LAN_HOSTS[ip]) return {reachable:true,  kind:"onlink-host", viaGateway:false};
+    return {reachable:false, kind:"onlink-dead", viaGateway:false};
+  }
+  // off-link: needs a valid, existing router as the gateway
+  const gwOnLink = sameSubnet(h.ip, h.gw, h.mask);
+  const gwIsRouter = (h.gw===ROUTER_IP) && !!LAN_HOSTS[h.gw];
+  if(gwOnLink && gwIsRouter) return {reachable:true, kind:"routed", viaGateway:true};
+  return {reachable:false, kind:"no-route", viaGateway:true};
+}
+function doPing(target){
+  const h = HOSTS[activeHost];
+  let ip = target, shownName = null;
+  if(!IPV4_RE.test(target)){
+    // name -> needs DNS
+    const dnsReach = resolveReach(h, h.dns).reachable; // is DNS server reachable?
+    if(!dnsReach){ tprint("Ping request could not find host " + target + " — DNS server " + h.dns + " did not respond.","err"); return; }
+    const rec = DNS_RECORDS[target.toLowerCase()];
+    if(!rec){ tprint("Ping request could not find host " + target + ". Check the name and try again.","err"); return; }
+    ip = rec; shownName = target;
+    tprint("Resolved " + target + " -> " + ip + " (via DNS " + h.dns + ")","sys");
+  } else if(!validIp(target)){
+    tprint("Bad IP address " + target + ".","err"); return;
+  }
+
+  const r = resolveReach(h, ip);
+  const label = shownName ? (shownName + " [" + ip + "]") : ip;
+  tprint("Pinging " + label + " with 32 bytes of data:");
+
+  if(r.reachable){
+    for(let i=0;i<4;i++) tprint("Reply from " + ip + ": bytes=32 time=" + (r.kind==="onlink-host"?(1+i%2):(11+i*2)) + "ms TTL=" + (r.kind==="onlink-host"?128:54), "ok");
+    tprint("    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)","ok");
+  } else if(r.kind==="onlink-dead"){
+    for(let i=0;i<4;i++) tprint("Request timed out.","err");
+    tprint("    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss)","err");
+  } else { // no-route
+    tprint("Default gateway " + h.gw + " did not respond — no route to remote networks.","warn");
+    for(let i=0;i<4;i++) tprint("Request timed out.","err");
+    tprint("    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss)","err");
+  }
+  tprint("");
+
+  // task signals: was this an OFF-LINK / internet target?
+  const offlink = !sameSubnet(h.ip, ip, h.mask);
+  if(offlink){
+    if(activeHost==="front"){
+      flags.symptomFront = true;                         // saw the symptom
+      if(r.reachable) flags.verified = true;             // works after fix
+    }
+    if(activeHost==="back" && r.reachable) flags.baselineBack = true;
+  }
+  updateLinkMap(h, ip, r, offlink);
+  refresh();
+}
+function doTracert(target){
+  const h = HOSTS[activeHost];
+  let ip = target, shownName=null;
+  if(!IPV4_RE.test(target)){
+    const rec = DNS_RECORDS[target.toLowerCase()];
+    const dnsReach = resolveReach(h,h.dns).reachable;
+    if(!dnsReach){ tprint("Unable to resolve target system name " + target + ".","err"); return; }
+    if(!rec){ tprint("Unable to resolve target system name " + target + ".","err"); return; }
+    ip = rec; shownName=target;
+  } else if(!validIp(target)){ tprint("Bad IP address " + target + ".","err"); return; }
+
+  const r = resolveReach(h, ip);
+  tprint("Tracing route to " + (shownName?shownName+" ["+ip+"]":ip) + ", max 30 hops:");
+  if(r.kind==="onlink-host"){ tprint("  1    <1 ms   " + ip + "   (on-link, direct)","ok"); tprint("Trace complete.","ok"); }
+  else if(r.kind==="onlink-dead"){ tprint("  1    *  *  *   Request timed out (no host at " + ip + ").","err"); tprint("Trace failed.","err"); }
+  else if(r.kind==="routed"){
+    tprint("  1     1 ms   " + ROUTER_IP + "   edge-rtr01","ok");
+    tprint("  2    12 ms   198.51.100.1   isp-edge","ok");
+    tprint("  3    18 ms   " + ip + "   destination","ok");
+    tprint("Trace complete.","ok");
+  } else { // no-route: the FIRST hop (the gateway) is where it breaks
+    tprint("  1    *  *  *   Request timed out.   <-- gateway " + h.gw + " unreachable","warn");
+    tprint("Trace failed at the first hop: the default gateway never answered.","err");
+  }
+  tprint("");
+  const offlink = !sameSubnet(h.ip, ip, h.mask);
+  if(offlink && activeHost==="front") flags.symptomFront = true;
+  updateLinkMap(h, ip, r, offlink);
+  refresh();
+}
+
+/* ---------------- LINK MAP ---------------- */
+function setLed(id, cls){ const el=document.getElementById(id); el.className="led"+(cls?(" "+cls):""); }
+function setLink(id, cls){ const el=document.getElementById(id); el.className="link"+(cls?(" "+cls):""); }
+function updateLinkMap(h, ip, r, offlink){
+  // host -> switch -> router are physically fine; the fault is logical (gateway)
+  setLed("led-host","up"); setLed("led-sw","up");
+  if(!offlink){
+    // local ping: light up to router region only if target on-link host
+    setLink("lk-1", r.reachable?"up":"down");
+    setLink("lk-2", r.reachable?"up":"warn");
+    setLed("led-rtr", r.reachable?"up":"warn");
+    setLink("lk-3",""); setLed("led-net","");
+    return;
+  }
+  if(r.reachable){
+    setLink("lk-1","up"); setLink("lk-2","up"); setLink("lk-3","up");
+    setLed("led-rtr","up"); setLed("led-net","up");
+  } else {
+    // failed hop = host -> router, because gateway is wrong
+    setLink("lk-1","up"); setLink("lk-2","down"); setLink("lk-3","down");
+    setLed("led-rtr","down"); setLed("led-net","down");
+  }
+}
+
+/* ---------------- SETTINGS / FIX ---------------- */
+function syncCfgPanel(){
+  const h = HOSTS[activeHost];
+  document.getElementById("cfg-host").textContent = h.name;
+  document.getElementById("cfg-ip").textContent   = h.ip;
+  document.getElementById("cfg-mask").textContent = h.mask;
+  const gwEl = document.getElementById("cfg-gw");
+  gwEl.textContent = h.gw;
+  gwEl.className = "v" + (h.gw===ROUTER_IP ? "" : " bad");
+  document.getElementById("cfg-dns").textContent  = h.dns;
+  document.getElementById("editzone").style.display   = h.editable ? "" : "none";
+  document.getElementById("readonly-note").style.display = h.editable ? "none" : "";
+  if(h.editable) document.getElementById("gwEdit").value = h.gw;
+}
+function applyGateway(){
+  const h = HOSTS.front;
+  const val = document.getElementById("gwEdit").value.trim();
+  const msg = document.getElementById("cfg-msg");
+  if(!validIp(val)){ msg.textContent = "That isn't a valid IPv4 address. Use four numbers 0–255, e.g. 10.55.8.1."; msg.style.color="var(--down)"; return; }
+  if(!sameSubnet(h.ip, val, h.mask)){ msg.textContent = "A default gateway must be on the same subnet as the host (10.55.8.0/24)."; msg.style.color="var(--fault)"; return; }
+  h.gw = val;
+  flags.fixApplied = (val===ROUTER_IP);
+  if(activeHost==="front") flags.verified = false; // must re-verify after a change
+  msg.style.color = "var(--text-faint)";
+  msg.textContent = (val===ROUTER_IP)
+    ? "Applied. Now switch to fd-survey01's terminal and ping an internet target to verify."
+    : "Applied " + val + ". That isn't the router this network uses — compare with the working machine.";
+  syncCfgPanel(); refresh();
+}
+
+/* ---------------- HOST SWITCH ---------------- */
+function setHost(which){
+  activeHost = which;
+  const h = HOSTS[which];
+  document.getElementById("tab-front").setAttribute("aria-pressed", which==="front");
+  document.getElementById("tab-back").setAttribute("aria-pressed",  which==="back");
+  document.getElementById("termPrompt").textContent = h.name + ">";
+  document.getElementById("termIn").focus();
+  document.getElementById("lm-host").textContent = h.name;
+  document.getElementById("lm-hostname").textContent = h.name;
+  document.getElementById("lm-hostip").textContent = h.ip;
+  // reset link LEDs on switch
+  ["led-host","led-sw","led-rtr","led-net"].forEach(i=>setLed(i,""));
+  ["lk-1","lk-2","lk-3"].forEach(i=>setLink(i,""));
+  syncCfgPanel(); refresh();
+}
+
+/* ---------------- TASKS ---------------- */
+const TASKS = [
+  { id:"gather-front", step:"Identify the problem", label:"Gather fd-survey01's IP settings (run ipconfig or read the details panel).",
+    pass:()=>flags.gatheredFront },
+  { id:"symptom-front", step:"Identify symptoms", label:"From fd-survey01, ping an internet target (e.g. 9.9.9.9) and observe the failure.",
+    pass:()=>flags.symptomFront },
+  { id:"gather-back", step:"Compare a working host", label:"Gather bo-survey02's IP settings for comparison.",
+    pass:()=>flags.gatheredBack },
+  { id:"baseline-back", step:"Confirm the baseline", label:"From bo-survey02, ping the same internet target and confirm it succeeds.",
+    pass:()=>flags.baselineBack },
+  { id:"theory", step:"Establish a theory", label:"Name the single setting causing the outage (answer Q6 correctly).",
+    pass:()=>checkAnswer("q6") },
+  { id:"fix", step:"Implement the solution", label:"Correct fd-survey01's default gateway to the right value and apply it.",
+    pass:()=>flags.fixApplied },
+  { id:"verify", step:"Verify functionality", label:"From fd-survey01, ping an internet target again and confirm it now succeeds.",
+    pass:()=>flags.verified }
+];
+
+/* ---------------- QUESTIONS (answer key) ---------------- */
+const QUESTIONS = [
+  { id:"q1", type:"text", prompt:"What IPv4 address is assigned to fd-survey01?", answer:"10.55.8.40", match:ipEq },
+  { id:"q2", type:"text", prompt:"What default gateway is configured on fd-survey01 before you fix it?", answer:"10.55.8.250", match:ipEq },
+  { id:"q3", type:"choice", prompt:"From fd-survey01 (before the fix), pinging another machine on the same subnet (10.55.8.41)…",
+    options:["Succeeds","Fails / times out","Returns 'host not found'"], answer:"Succeeds" },
+  { id:"q4", type:"choice", prompt:"From fd-survey01 (before the fix), pinging 9.9.9.9…",
+    options:["Succeeds","Fails / times out","Returns 'host not found'"], answer:"Fails / times out" },
+  { id:"q5", type:"text", prompt:"What default gateway does the working machine bo-survey02 use?", answer:"10.55.8.1", match:ipEq },
+  { id:"q6", type:"choice", prompt:"Comparing the two machines, the single setting that differs and explains the outage is the…",
+    options:["IP address","Subnet mask","Default gateway","DNS server"], answer:"Default gateway" },
+  { id:"q7", type:"choice", prompt:"At which OSI layer does an incorrect default gateway stop traffic from reaching remote networks?",
+    options:["Layer 1 — Physical","Layer 2 — Data link","Layer 3 — Network","Layer 4 — Transport"], answer:"Layer 3 — Network" }
+];
+function ipEq(given, key){ return given.trim()===key; }
+function checkAnswer(id){
+  const q = QUESTIONS.find(x=>x.id===id);
+  const v = answers[id];
+  if(v==null || v==="") return false;
+  if(q.match) return q.match(v, q.answer);
+  return v===q.answer;
+}
+
+/* ---------------- RENDER ---------------- */
+function renderChecklist(){
+  const ul = document.getElementById("checklist");
+  ul.innerHTML="";
+  TASKS.forEach(t=>{
+    const done = t.pass();
+    const li=document.createElement("li");
+    li.className = done?"done":"";
+    li.innerHTML = '<span class="box" aria-hidden="true">'+(done?"✓":"")+'</span>'+
+      '<span class="txt"><span class="step">'+t.step+'</span>'+t.label+'</span>';
+    ul.appendChild(li);
+  });
+}
+function renderQuestions(){
+  const host = document.getElementById("questions");
+  host.innerHTML="";
+  QUESTIONS.forEach((q,idx)=>{
+    const n = idx+1;
+    if(q.type==="text"){
+      const div=document.createElement("div"); div.className="q";
+      div.innerHTML =
+        '<div class="prompt"><span class="qn">Q'+n+'</span>'+q.prompt+'</div>'+
+        '<input type="text" id="in-'+q.id+'" autocomplete="off" spellcheck="false" placeholder="type your answer" />'+
+        '<div><button class="btn ghost check" onclick="answerText(\''+q.id+'\')">Check</button></div>'+
+        '<div class="verdict" id="vd-'+q.id+'" aria-live="polite"></div>';
+      host.appendChild(div);
+    } else {
+      const fs=document.createElement("fieldset"); fs.className="q"; fs.style.border="0"; fs.style.padding="13px 0"; fs.style.margin="0";
+      let opts="";
+      q.options.forEach((o,i)=>{
+        opts += '<label class="opt"><input type="radio" name="'+q.id+'" value="'+o.replace(/"/g,'&quot;')+'" onchange="answerChoice(\''+q.id+'\',this.value)"> '+o+'</label>';
+      });
+      fs.innerHTML =
+        '<legend><span class="qn">Q'+n+'</span>'+q.prompt+'</legend>'+
+        '<div class="opts">'+opts+'</div>'+
+        '<div class="verdict" id="vd-'+q.id+'" aria-live="polite"></div>';
+      host.appendChild(fs);
+    }
+  });
+}
+function answerText(id){
+  const v=document.getElementById("in-"+id).value;
+  answers[id]=v;
+  showVerdict(id);
+  refresh();
+}
+function answerChoice(id,v){ answers[id]=v; showVerdict(id); refresh(); }
+function showVerdict(id){
+  const el=document.getElementById("vd-"+id);
+  if(answers[id]==null || answers[id]==="" ){ el.textContent=""; el.className="verdict"; return; }
+  const ok=checkAnswer(id);
+  el.textContent = ok ? "Correct" : "Not yet — re-check against what the tools are telling you.";
+  el.className = "verdict " + (ok?"right":"wrong");
+}
+
+/* ---------------- SCORE / REFRESH ---------------- */
+function computeScore(){
+  const tasksPassed = TASKS.filter(t=>t.pass()).length;
+  const qCorrect = QUESTIONS.filter(q=>checkAnswer(q.id)).length;
+  const earned = tasksPassed + qCorrect;
+  const total = TASKS.length + QUESTIONS.length;
+  return {earned, total, complete: earned===total};
+}
+function refresh(){
+  renderChecklist();
+  const s = computeScore();
+  document.getElementById("earned").textContent = s.earned;
+  document.getElementById("total").textContent  = s.total;
+  const card=document.getElementById("scorecard");
+  const st=document.getElementById("readystate");
+  if(s.complete){ card.classList.add("ready"); st.textContent="Ready to submit"; }
+  else { card.classList.remove("ready"); st.textContent="Incomplete"; }
+}
+
+/* ---------------- SCREENSHOT ---------------- */
+async function captureScreenshot(){
+  // Use html2canvas if it was pasted into block 1; otherwise draw a summary.
+  if(typeof window.html2canvas === "function"){
+    try{
+      const canvas = await window.html2canvas(document.querySelector(".wrap"), {backgroundColor:"#0e1622", scale:1});
+      return canvas.toDataURL("image/png");
+    }catch(e){ /* fall through to summary */ }
+  }
+  return drawSummaryPng();
+}
+function drawSummaryPng(){
+  const W=820, H=900, c=document.createElement("canvas"); c.width=W; c.height=H;
+  const x=c.getContext("2d");
+  x.fillStyle="#0e1622"; x.fillRect(0,0,W,H);
+  x.fillStyle="#36e0c4"; x.font="bold 24px sans-serif";
+  x.fillText("Offline at the Front Desk — lab record", 28, 44);
+  x.fillStyle="#8fa3bb"; x.font="13px monospace";
+  x.fillText("assignmentId: "+CONFIG.assignmentId, 28, 70);
+  x.fillText("objectives: "+CONFIG.objectives.join(", "), 28, 90);
+  const handle=(document.getElementById("handle").value||"(no callsign)");
+  x.fillText("callsign: "+handle, 28, 110);
+  x.fillText("captured: "+new Date().toISOString(), 28, 130);
+
+  let y=168;
+  x.fillStyle="#d6e2f0"; x.font="bold 15px sans-serif"; x.fillText("Host settings", 28, y); y+=8;
+  x.font="12px monospace";
+  ["front","back"].forEach(k=>{
+    const h=HOSTS[k]; y+=22;
+    const gwBad = h.gw!==ROUTER_IP;
+    x.fillStyle="#d6e2f0";
+    x.fillText(h.name+"  ip="+h.ip+"  mask="+h.mask, 28, y);
+    y+=18; x.fillStyle = gwBad ? "#f0a23b" : "#8fa3bb";
+    x.fillText("    gateway="+h.gw+(gwBad?"  (off-network)":"")+"   dns="+h.dns, 28, y);
+  });
+
+  y+=34; x.fillStyle="#d6e2f0"; x.font="bold 15px sans-serif"; x.fillText("Checklist", 28, y);
+  x.font="13px sans-serif";
+  TASKS.forEach(t=>{ y+=22; const done=t.pass();
+    x.fillStyle=done?"#36e0c4":"#5e7186"; x.fillText((done?"[x] ":"[ ] ")+t.label.slice(0,86), 28, y); });
+
+  y+=34; x.fillStyle="#d6e2f0"; x.font="bold 15px sans-serif"; x.fillText("Questions", 28, y);
+  x.font="13px sans-serif";
+  QUESTIONS.forEach((q,i)=>{ y+=22; const ok=checkAnswer(q.id);
+    x.fillStyle=ok?"#36e0c4":"#ff5d6c";
+    const a = answers[q.id]==null?"(blank)":String(answers[q.id]);
+    x.fillText("Q"+(i+1)+" "+(ok?"OK":"--")+"  "+a, 28, y); });
+
+  const s=computeScore();
+  y+=44; x.fillStyle="#36e0c4"; x.font="bold 22px sans-serif";
+  x.fillText("Score: "+s.earned+" / "+s.total, 28, y);
+  return c.toDataURL("image/png");
+}
+
+/* ---------------- SUBMIT ---------------- */
+async function submitLab(){
+  const status=document.getElementById("status");
+  const btn=document.getElementById("submitBtn");
+  const handle=document.getElementById("handle").value.trim();
+  if(!handle){ status.className="err"; status.textContent="Enter a callsign before submitting."; document.getElementById("handle").focus(); return; }
+
+  const s=computeScore();
+  if(!s.complete){
+    if(!confirm("Some tasks or questions aren't complete yet ("+s.earned+"/"+s.total+"). Submit anyway?")) return;
+  }
+
+  btn.disabled=true; status.className="work"; status.textContent="Capturing screenshot and submitting…";
+
+  let shot="";
+  try{ shot = await captureScreenshot(); }catch(e){ shot=""; }
+
+  const payload = {
+    assignmentId: CONFIG.assignmentId,
+    handle: handle,
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(t=>({ id:t.id, label:t.label, passed:!!t.pass() })),
+    questions: QUESTIONS.map(q=>({ id:q.id, prompt:q.prompt, answer:(answers[q.id]??""), correct:checkAnswer(q.id) })),
+    score: { earned:s.earned, total:s.total },
+    screenshot: shot,
+    submissionToken: CONFIG.submissionToken
+  };
+
+  try{
+    // Simple request: no custom headers, text/plain body => no CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body:JSON.stringify(payload) });
+    const out = await res.json();
+    if(out && out.success){
+      status.className="ok";
+      status.innerHTML = "Submitted. Your instructor's copy: " +
+        (out.docUrl ? '<a href="'+out.docUrl+'" target="_blank" rel="noopener">open document</a>' : "(saved)");
+    } else {
+      status.className="err";
+      status.textContent = "The server rejected the submission" + (out&&out.error ? (": "+out.error) : ". Check with your instructor.");
+      btn.disabled=false;
+    }
+  }catch(e){
+    // Locked-down fallback: fire-and-forget; cannot read the doc link.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body:JSON.stringify(payload) });
+      status.className="ok";
+      status.textContent = "Submitted (send-only mode). Confirm receipt with your instructor — no link is available in this mode.";
+    }catch(e2){
+      status.className="err";
+      status.textContent = "Submission failed: "+e2.message+". Check your connection or ask your instructor for the lab URL.";
+      btn.disabled=false;
+    }
+  }
+}
+
+/* ---------------- RESET ---------------- */
+function resetLab(){
+  HOSTS.front.gw="10.55.8.250";
+  Object.keys(flags).forEach(k=>flags[k]=false);
+  Object.keys(answers).forEach(k=>delete answers[k]);
+  termOut().innerHTML="";
+  document.getElementById("status").textContent=""; document.getElementById("status").className="";
+  document.getElementById("submitBtn").disabled=false;
+  document.getElementById("cfg-msg").textContent="You can edit this machine's default gateway. The other machine on the network is read-only.";
+  document.getElementById("cfg-msg").style.color="var(--text-faint)";
+  renderQuestions();
+  setHost("front");
+  tprint("fd-survey01 console ready. Type help to begin.","sys");
+  tprint("Reported issue: \"front desk can't open any website this morning.\"","sys");
+}
+
+/* ---------------- INIT ---------------- */
+renderQuestions();
+setHost("front");
+tprint("fd-survey01 console ready. Type help to begin.","sys");
+tprint("Reported issue: \"front desk can't open any website this morning.\"","sys");
+refresh();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-ipconfig-gateway.html",title:"Lab: No Internet on the Drafting Bay PC \u2014 IP / Gateway Troubleshooting"}, NEXT={href:"index_netplus-soho-ipfix.html",title:"SOHO Connectivity Lab \u2014 The Loaner That Won't Reach the Internet"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.6";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

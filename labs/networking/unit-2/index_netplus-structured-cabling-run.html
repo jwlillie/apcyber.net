@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Wire Up the New Bench — Structured Cabling Run</title>
+<!--
+  ============================================================================
+  Network+ / AP Networking Lab Library
+  Lab: Wire Up the New Bench — Structured Cabling Run
+  assignmentId: netplus-structured-cabling-run
+  Objectives:   N10-007 2.1 (deploy the appropriate cabling solution),
+                N10-007 1.4 (IP addressing / DHCP address assignment),
+                AP Networking 3.1 (wired connections, switch ports, cabling),
+                AP Networking 1.2 (connecting & verifying a device).
+  NOTE: The objectives PDF supplied with this project is the N10-007 version.
+        For an N10-009 build, the cabling objective remaps to ~1.5
+        (transmission media and transceivers). Tags live in CONFIG + manifest
+        so the re-map is a data edit, not a rebuild.
+
+  Clean-room original work. Scenario, persona, hostnames, IP plan, VLAN IDs,
+  port numbers, task wording, and question wording are all original. No vendor
+  lab content (TestOut/LabSim, Cisco NetAcad/Packet Tracer, or other) is copied.
+  UI is self-drawn markup/SVG; no captured product screenshots.
+
+  © 2026 <AUTHOR NAME / ORG>. All rights reserved.
+  Licensed for instructional use within your institution. Replace this notice
+  with your own copyright/license line before distribution.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --rack:#1b2230; --rack-2:#141a24;
+    --ink:#e8eef5; --muted:#90a0b3; --line:#2a3442; --line-2:#384556;
+    --cable:#34c6d6;        /* Cat6 aqua — accent / signature */
+    --cable-bad:#f0a93a;    /* wrong-segment amber */
+    --copper:#c98a3a; --jack:#0a0e14;
+    --ok:#46c266; --warn:#f0883e; --err:#f76d5e;
+    --focus:#7cd4ff;
+    --mono:ui-monospace,"SFMono-Regular","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #12202b 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased; padding:18px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  a{color:var(--focus)}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+
+  /* ---- header ---- */
+  header.lab{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  .title-block h1{
+    font-size:clamp(20px,3.4vw,28px);margin:0;letter-spacing:.2px;font-weight:680;
+  }
+  .title-block .sub{color:var(--muted);font-size:13.5px;margin-top:3px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:.4px;color:var(--ink);
+    background:var(--rack);border:1px solid var(--line-2);padding:3px 8px;border-radius:999px;
+  }
+  .tag.np{border-color:#2f5663}
+  .tag.ap{border-color:#5a4a2a}
+
+  /* ---- scenario ---- */
+  .scenario{
+    background:linear-gradient(180deg,var(--panel),#12161d);
+    border:1px solid var(--line);border-left:3px solid var(--cable);
+    border-radius:var(--radius);padding:13px 15px;margin-bottom:16px;font-size:14px
+  }
+  .scenario b{color:var(--ink)}
+  .scenario .who{font-family:var(--mono);font-size:12px;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.4px}
+
+  .grid{display:grid;grid-template-columns:1.55fr .95fr;gap:16px;align-items:start}
+  @media (max-width:840px){.grid{grid-template-columns:1fr}}
+
+  /* ---- tabs ---- */
+  .tabs{display:flex;gap:4px;background:var(--rack-2);border:1px solid var(--line);
+    border-radius:10px 10px 0 0;padding:5px;overflow:auto}
+  .tab{
+    appearance:none;border:1px solid transparent;background:transparent;color:var(--muted);
+    font:inherit;font-size:13px;padding:8px 12px;border-radius:7px;cursor:pointer;white-space:nowrap
+  }
+  .tab[aria-selected="true"]{background:var(--panel);color:var(--ink);border-color:var(--line-2)}
+  .tab .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--line-2);margin-right:7px;vertical-align:middle}
+  .tab[data-done="true"] .dot{background:var(--ok)}
+
+  .stage{
+    background:var(--panel);border:1px solid var(--line);border-top:none;
+    border-radius:0 0 10px 10px;padding:16px;min-height:330px
+  }
+  .panelview{display:none}
+  .panelview.active{display:block}
+  .view-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+  .view-h h2{font-size:15px;margin:0;font-weight:640}
+  .view-h .loc{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.4px}
+  .hint{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .btn{
+    appearance:none;font:inherit;font-size:13px;border-radius:8px;cursor:pointer;
+    padding:8px 13px;border:1px solid var(--line-2);background:var(--rack);color:var(--ink)
+  }
+  .btn:hover{border-color:var(--cable)}
+  .btn.primary{background:var(--cable);color:#04222a;border-color:var(--cable);font-weight:640}
+  .btn.ghost{background:transparent}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+  /* ---- rack / cabling canvas ---- */
+  .rack{position:relative;background:
+      repeating-linear-gradient(180deg,var(--rack) 0 38px,#192231 38px 40px);
+    border:1px solid var(--line-2);border-radius:10px;padding:14px}
+  .rack-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+  .gear{position:relative;z-index:1;margin-bottom:14px}
+  .gear:last-child{margin-bottom:0}
+  .gear-label{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px;display:flex;justify-content:space-between}
+  .gear-label .id{color:var(--ink)}
+  .ports{display:flex;flex-wrap:wrap;gap:6px}
+  .port{
+    position:relative;width:34px;height:30px;border-radius:5px;
+    border:1px solid var(--line-2);background:var(--jack);color:var(--muted);
+    font-family:var(--mono);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center
+  }
+  .port[disabled]{cursor:not-allowed;opacity:.5}
+  .port .pin{position:absolute;inset:6px 5px auto 5px;height:5px;border-radius:2px;background:#283142}
+  .port.live{border-color:var(--copper)}
+  .port.live .pin{background:var(--copper)}
+  .port.armed{border-color:var(--focus);box-shadow:0 0 0 2px rgba(124,212,255,.35)}
+  .port.connected{border-color:var(--ok)}
+  .port.connected .pin{background:var(--ok)}
+  .port.wrong{border-color:var(--cable-bad)}
+  .port.wrong .pin{background:var(--cable-bad)}
+  .port .lab{position:relative;z-index:1;margin-top:8px}
+  .legend{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:10px;display:flex;gap:14px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+
+  /* office faceplate + PC */
+  .office{display:flex;gap:18px;flex-wrap:wrap;align-items:stretch}
+  .unit{flex:1 1 200px;background:var(--rack);border:1px solid var(--line-2);border-radius:10px;padding:14px;position:relative;z-index:1}
+  .unit h3{margin:0 0 4px;font-size:13px}
+  .unit .meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px}
+  .faceplate{background:#0c0f15;border:1px solid var(--line-2);border-radius:8px;padding:14px;display:flex;justify-content:center}
+  .pc{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .pc .tower{width:70px;height:96px;border-radius:8px;background:linear-gradient(160deg,#222c3a,#161d28);border:1px solid var(--line-2);position:relative}
+  .pc .tower::before{content:"";position:absolute;top:10px;left:12px;right:12px;height:4px;border-radius:3px;background:#2c3848}
+  .pc .tower::after{content:"";position:absolute;top:20px;left:12px;width:10px;height:10px;border-radius:50%;background:#2c3848}
+  .office-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+
+  /* settings panel */
+  .settings{background:var(--rack);border:1px solid var(--line-2);border-radius:10px;max-width:480px}
+  .settings .bar{padding:10px 14px;border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .settings .body{padding:14px}
+  .field{padding:12px;border:1px solid var(--line);border-radius:9px;margin-bottom:10px;background:#10151d}
+  .field .k{font-size:13px;font-weight:600;margin-bottom:2px}
+  .field .d{font-size:12px;color:var(--muted);margin-bottom:9px}
+  .seg{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+  .seg button{appearance:none;border:none;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;padding:7px 14px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--cable);color:#04222a;font-weight:640}
+
+  /* status */
+  .statuscard{border:1px solid var(--line-2);border-radius:10px;padding:16px;background:#10151d;font-size:14px}
+  .statuscard .head{display:flex;align-items:center;gap:9px;font-weight:640;margin-bottom:8px}
+  .blip{width:11px;height:11px;border-radius:50%;background:var(--err)}
+  .blip.ok{background:var(--ok)} .blip.warn{background:var(--warn)}
+  .kv{font-family:var(--mono);font-size:12.5px;color:var(--ink);margin-top:10px;display:grid;grid-template-columns:auto 1fr;gap:3px 14px}
+  .kv .lab{color:var(--muted)}
+
+  /* ---- right column: checklist + questions ---- */
+  .side h2{font-size:13px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:16px}
+  ul.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  ul.checks li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px}
+  .mark{flex:0 0 18px;width:18px;height:18px;border-radius:5px;border:1px solid var(--line-2);margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent}
+  li.done .mark{background:var(--ok);border-color:var(--ok);color:#04220f}
+  li.done .txt{color:var(--ink)}
+  .txt{color:var(--muted)}
+
+  .q{margin-bottom:14px}
+  .q:last-child{margin-bottom:0}
+  .q .prompt{font-size:13.5px;margin-bottom:8px}
+  .q .prompt .n{font-family:var(--mono);color:var(--cable);margin-right:6px}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opt{display:flex;gap:9px;align-items:flex-start;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer}
+  .opt:hover{border-color:var(--line-2)}
+  .opt input{margin-top:2px}
+  .opt.correct{border-color:var(--ok)}
+  .opt.incorrect{border-color:var(--err)}
+
+  /* ---- submission bar ---- */
+  .submit{background:linear-gradient(180deg,var(--panel),#12161d);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-top:4px}
+  .submit .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  label.fld{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+  label.fld input{background:#0c0f15;border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:9px 11px;font:inherit;min-width:200px}
+  .score-pill{font-family:var(--mono);font-size:12.5px;background:var(--rack);border:1px solid var(--line-2);border-radius:999px;padding:6px 12px}
+  .status-line{margin-top:11px;font-size:13px;min-height:20px}
+  .status-line.ok{color:var(--ok)} .status-line.err{color:var(--err)} .status-line.busy{color:var(--warn)}
+  footer.lic{margin-top:18px;color:var(--muted);font-size:11.5px;font-family:var(--mono);line-height:1.7}
+
+  @media (prefers-reduced-motion: no-preference){
+    .blip.ok{animation:pulse 2.4s ease-in-out infinite}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(70,194,102,.45)}50%{box-shadow:0 0 0 6px rgba(70,194,102,0)}}
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-structured-cabling-run", "title": "Wire Up the New Bench — Structured Cabling Run", "version": "1.0.0", "objectives": ["N10-009:2.4", "APNET:2.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab">
+    <div class="title-block">
+      <h1>Wire Up the New Bench</h1>
+      <div class="sub">Structured cabling run · patch-panel cross-connect · DHCP client · verify reachability</div>
+    </div>
+    <div class="tags" aria-label="Blueprint coverage">
+      <span class="tag np">N10-007 · 2.1</span>
+      <span class="tag np">N10-007 · 1.4</span>
+      <span class="tag ap">AP NET · 3.1</span>
+      <span class="tag ap">AP NET · 1.2</span>
+    </div>
+  </header>
+
+  <div class="scenario">
+    <span class="who">WORK ORDER #C-4471 · Marrow &amp; Finch Design Studio · on-site tech</span>
+    A drafting workstation, <b>BENCH-12</b>, just moved into the <b>Studio B</b> bay. The wall jack
+    there (faceplate <b>B12</b>) is already punched down to the patch panel in the comms closet — but
+    nobody ran the cross-connect from the panel to the access switch, and the workstation isn't plugged
+    in. Finish the run, set BENCH-12 to pull its address automatically, and confirm it reaches the LAN
+    and the internet. Studio B lives on <b>VLAN 50</b>, configured on switch port <b>9</b>.
+  </div>
+
+  <div class="grid">
+    <!-- ===================== SIMULATION + CAPTURE ZONE ===================== -->
+    <div id="capture">
+      <div class="tabs" role="tablist" aria-label="Lab stations">
+        <button class="tab" role="tab" id="tab-closet"   aria-selected="true"  aria-controls="view-closet"   data-view="closet"><span class="dot"></span>1 · Comms closet</button>
+        <button class="tab" role="tab" id="tab-office"   aria-selected="false" aria-controls="view-office"   data-view="office" tabindex="-1"><span class="dot"></span>2 · Studio B</button>
+        <button class="tab" role="tab" id="tab-settings" aria-selected="false" aria-controls="view-settings" data-view="settings" tabindex="-1"><span class="dot"></span>3 · Network settings</button>
+        <button class="tab" role="tab" id="tab-status"   aria-selected="false" aria-controls="view-status"   data-view="status" tabindex="-1"><span class="dot"></span>4 · Verify</button>
+      </div>
+
+      <div class="stage">
+        <!-- VIEW 1: CLOSET -->
+        <section class="panelview active" id="view-closet" role="tabpanel" aria-labelledby="tab-closet">
+          <div class="view-h"><h2>Comms closet — cross-connect</h2><span class="loc">RACK 1 · IDF-Studio</span></div>
+          <p class="hint">Run a Cat6 patch cable from patch-panel port <b>B12</b> to a switch port. Click one port, then the other. Studio B is on VLAN 50.</p>
+          <div class="rack" id="rack">
+            <svg class="rack-svg" id="rackSvg" aria-hidden="true"></svg>
+
+            <div class="gear">
+              <div class="gear-label"><span>PATCH PANEL</span><span class="id">PP-1 · 24-port</span></div>
+              <div class="ports" id="panelPorts"></div>
+            </div>
+
+            <div class="gear">
+              <div class="gear-label"><span>ACCESS SWITCH</span><span class="id">SW-ACCESS-2 · Gi 1–24</span></div>
+              <div class="ports" id="switchPorts"></div>
+            </div>
+
+            <div class="legend">
+              <span><i style="background:var(--copper)"></i>terminated jack</span>
+              <span><i style="background:var(--ok)"></i>patched OK</span>
+              <span><i style="background:var(--cable-bad)"></i>wrong port</span>
+            </div>
+          </div>
+          <div class="toolbar">
+            <button class="btn ghost" id="closetUnplug">Unplug patch cable</button>
+          </div>
+        </section>
+
+        <!-- VIEW 2: OFFICE -->
+        <section class="panelview" id="view-office" role="tabpanel" aria-labelledby="tab-office" hidden>
+          <div class="view-h"><h2>Studio B — the bench</h2><span class="loc">Faceplate B12 · Drop 1</span></div>
+          <p class="hint">Connect the workstation NIC to the wall jack with a Cat6 patch cable. Click the NIC, then the jack.</p>
+          <div class="office" id="office">
+            <svg class="office-svg" id="officeSvg" aria-hidden="true"></svg>
+
+            <div class="unit">
+              <h3>Wall faceplate</h3>
+              <div class="meta">Jack B12 → PP-1/B12</div>
+              <div class="faceplate">
+                <button class="port live" id="wallJack" aria-label="Studio B wall jack B12, terminated to patch panel port B12">
+                  <span class="pin"></span><span class="lab">B12</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="unit">
+              <h3>BENCH-12</h3>
+              <div class="meta">Drafting workstation · onboard NIC</div>
+              <div class="pc">
+                <div class="tower"></div>
+                <button class="port live" id="nicPort" aria-label="BENCH-12 network interface card port">
+                  <span class="pin"></span><span class="lab">NIC</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="toolbar">
+            <button class="btn ghost" id="officeUnplug">Unplug from jack</button>
+          </div>
+        </section>
+
+        <!-- VIEW 3: SETTINGS -->
+        <section class="panelview" id="view-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+          <div class="view-h"><h2>BENCH-12 — Ethernet settings</h2><span class="loc">Network &amp; internet</span></div>
+          <p class="hint">Set both IP and DNS assignment to <b>Automatic (DHCP)</b>, then apply.</p>
+          <div class="settings">
+            <div class="bar">⚙  Settings › Network &amp; internet › Ethernet (BENCH-12)</div>
+            <div class="body">
+              <div class="field">
+                <div class="k">IP assignment</div>
+                <div class="d">Where the address, mask, and gateway come from.</div>
+                <div class="seg" role="group" aria-label="IP assignment">
+                  <button id="ip-manual" aria-pressed="true">Manual</button>
+                  <button id="ip-auto" aria-pressed="false">Automatic (DHCP)</button>
+                </div>
+              </div>
+              <div class="field">
+                <div class="k">DNS assignment</div>
+                <div class="d">Where name-resolution servers come from.</div>
+                <div class="seg" role="group" aria-label="DNS assignment">
+                  <button id="dns-manual" aria-pressed="true">Manual</button>
+                  <button id="dns-auto" aria-pressed="false">Automatic (DHCP)</button>
+                </div>
+              </div>
+              <div class="toolbar">
+                <button class="btn primary" id="applyBtn">Apply settings</button>
+                <span id="applyNote" class="status-line"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: STATUS -->
+        <section class="panelview" id="view-status" role="tabpanel" aria-labelledby="tab-status" hidden>
+          <div class="view-h"><h2>Confirm connectivity</h2><span class="loc">BENCH-12 · adapter status</span></div>
+          <p class="hint">Run the connection check after wiring and applying DHCP. It reads the adapter the way the Settings app would.</p>
+          <div class="statuscard" id="statusCard" aria-live="polite">
+            <div class="head"><span class="blip" id="blip"></span><span id="statusTitle">No connection yet</span></div>
+            <div id="statusDetail">Complete the cabling and DHCP steps, then run the check.</div>
+            <div class="kv" id="statusKv" hidden></div>
+          </div>
+          <div class="toolbar">
+            <button class="btn primary" id="checkBtn">Run connection check</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- TASK CHECKLIST + QUESTIONS (captured with the sim for grading evidence) -->
+      <div class="side" style="margin-top:16px">
+        <div class="card">
+          <h2>Task checklist</h2>
+          <ul class="checks" id="checks"></ul>
+        </div>
+        <div class="card">
+          <h2>Review questions</h2>
+          <div id="questions"></div>
+        </div>
+      </div>
+    </div>
+    <!-- =================== END CAPTURE ZONE =================== -->
+
+    <!-- RIGHT COLUMN: live progress mirror on wide screens -->
+    <aside class="side" aria-hidden="true">
+      <div class="card">
+        <h2>Progress</h2>
+        <div class="score-pill" id="progressPill">0 / 10 complete</div>
+        <p class="txt" style="font-size:12.5px;margin:10px 0 0">
+          Six wiring &amp; config tasks and four questions. All ten must pass to submit a complete lab.
+        </p>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===================== SUBMISSION BAR (outside capture: no PII/token in screenshot) ===================== -->
+  <div class="submit">
+    <div class="row">
+      <label class="fld">Callsign (pseudonym — no real names)
+        <input id="handle" maxlength="40" autocomplete="off" placeholder="e.g. blue-heron-09" />
+      </label>
+      <span class="score-pill" id="scorePill">Score 0 / 10</span>
+      <button class="btn primary" id="submitBtn">Submit completed lab</button>
+      <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+    </div>
+    <div class="status-line" id="submitStatus" role="status" aria-live="polite"></div>
+  </div>
+
+  <footer class="lic">
+    © 2026 &lt;AUTHOR NAME / ORG&gt; — Network+ / AP Networking Lab Library. Clean-room original work;
+    not affiliated with or derived from any vendor's lab product. assignmentId: netplus-structured-cabling-run.
+  </footer>
+</div>
+
+<!-- ========================================================================
+     SCRIPT BLOCK 1 — INLINE html2canvas HERE
+     ------------------------------------------------------------------------
+     Paste the FULL minified source of html2canvas v1.4.1 between the two
+     markers below (the file ships dependency-free; do NOT load from a CDN).
+     Get it from the official dist: html2canvas.min.js (~150 KB).
+     Until it is pasted, the lab still works and still POSTs — the screenshot
+     is simply omitted and the learner is told to mention that to the teacher.
+     See INSTRUCTOR_SETUP.md → "Inline html2canvas".
+======================================================================== -->
+<script>
+/* ===== BEGIN html2canvas (paste minified library on the next line) ===== */
+
+/* ===== END html2canvas ===== */
+</script>
+
+<!-- ========================================================================
+     SCRIPT BLOCK 2 — engine, CONFIG, answer key, scoring, capture, POST
+======================================================================== -->
+<script>
+"use strict";
+
+/* ----------------------------- LAB CONFIG ------------------------------ */
+const CONFIG = {
+  assignmentId: "netplus-structured-cabling-run",
+  objectives: ["N10-009:2.4", "APNET:2.4"],
+  // Deployed Apps Script /exec URL — same across the whole library:
+  APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+  // Per-cohort secret; must match the Script Property TOKEN. Rotate per cohort:
+  submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+
+  // Original answer values for this lab:
+  values: {
+    site:"Marrow & Finch", host:"BENCH-12", room:"Studio B",
+    panelPort:"B12", switch:"SW-ACCESS-2", correctSwitchPort:9, uplinkPort:24,
+    vlan:50, subnet:"10.40.50.0/24", gateway:"10.40.50.1", dns:"10.40.50.10",
+    lease:"10.40.50.137", mask:"255.255.255.0"
+  }
+};
+
+/* Task definitions (labels shown to learner; pass computed from sim state). */
+const TASKS = [
+  { id:"closet_patch", label:"Cross-connect made: PP-1/B12 → SW-ACCESS-2 port 9" },
+  { id:"office_patch", label:"BENCH-12 NIC patched to wall jack B12" },
+  { id:"ipv4_auto",    label:"IP assignment set to Automatic (DHCP)" },
+  { id:"dns_auto",     label:"DNS assignment set to Automatic (DHCP)" },
+  { id:"applied",      label:"Settings applied to the adapter" },
+  { id:"verified",     label:"Connection check shows LAN + internet" }
+];
+
+/* Review questions (original wording) + answer key (client-side, self-reported). */
+const QUESTIONS = [
+  { id:"q1",
+    prompt:"On a standard cross-connect, the patch cable from a patch-panel port to a switch port should be a:",
+    options:["Straight-through cable","Crossover cable","Rollover (console) cable","Loopback plug"],
+    answer:0 },
+  { id:"q2",
+    prompt:"Before you turned on automatic addressing, BENCH-12 showed 169.254.x.x. That address means:",
+    options:["The DHCP server assigned it","No DHCP lease was obtained, so the host self-assigned (APIPA)","It is a public internet address","It is the network's default gateway"],
+    answer:1 },
+  { id:"q3",
+    prompt:"Both ends of the Studio B run are punched down to T568B. If one end were terminated to T568A instead, the result on this copper run would be:",
+    options:["An unintended crossover","A rollover cable","No electrical difference at all","A fiber connection"],
+    answer:0 },
+  { id:"q4",
+    prompt:"BENCH-12 received an IP address, subnet mask, default gateway, and DNS server without anyone typing them in. Which service delivered them?",
+    options:["DNS","DHCP","NAT","ARP"],
+    answer:1 }
+];
+
+/* ------------------------------- STATE -------------------------------- */
+const S = {
+  view:"closet",
+  pending:null,            // {type:'panel'|'switch'|'nic'|'jack', port?}
+  closet:null,             // { switchPort:Number } when B12 is patched
+  office:false,            // NIC <-> B12 jack
+  ipv4:"manual", dns:"manual", applied:false, verified:false,
+  answers:{}               // qid -> selected index
+};
+const V = CONFIG.values;
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+
+/* --------------------------- DERIVED / SCORING ------------------------- */
+function link(){ return !!S.closet && S.office; }
+function correctSegment(){ return !!S.closet && S.closet.switchPort === V.correctSwitchPort; }
+function leased(){ return link() && correctSegment() && S.ipv4==="auto" && S.applied; }
+
+function taskState(){
+  return {
+    closet_patch: !!S.closet && S.closet.switchPort === V.correctSwitchPort,
+    office_patch: S.office,
+    ipv4_auto:    S.ipv4==="auto",
+    dns_auto:     S.dns==="auto",
+    applied:      S.applied && S.ipv4==="auto",
+    verified:     S.verified && leased() && S.dns==="auto"
+  };
+}
+function questionState(){
+  const out = {};
+  QUESTIONS.forEach(q => out[q.id] = (S.answers[q.id] === q.answer));
+  return out;
+}
+function score(){
+  const t = taskState(), q = questionState();
+  const earned = Object.values(t).filter(Boolean).length + Object.values(q).filter(Boolean).length;
+  return { earned, total: TASKS.length + QUESTIONS.length };
+}
+
+/* ------------------------------ RENDER -------------------------------- */
+function buildPorts(){
+  // Patch panel: B12 is the only live (terminated) port; others are inert.
+  const panel = $("#panelPorts"); panel.innerHTML = "";
+  const cols = ["A","B"];
+  for (let r=1;r<=12;r++){
+    cols.forEach(c=>{
+      const id = c+(r<10?("0"+r):r); // A01..B12
+      const b = document.createElement("button");
+      b.className = "port" + (id==="B12" ? " live" : "");
+      b.innerHTML = '<span class="pin"></span><span class="lab">'+id+'</span>';
+      if (id==="B12"){
+        b.dataset.role="panel";
+        b.setAttribute("aria-label","Patch panel port B12, terminated to Studio B wall jack");
+      } else {
+        b.disabled = true;
+        b.title = "Terminated to another room";
+        b.setAttribute("aria-label","Patch panel port "+id+", terminated to another room");
+      }
+      panel.appendChild(b);
+    });
+  }
+  // Switch: ports 1..24, port 24 is the uplink (reserved).
+  const sw = $("#switchPorts"); sw.innerHTML = "";
+  for (let p=1;p<=24;p++){
+    const b = document.createElement("button");
+    b.className = "port";
+    b.innerHTML = '<span class="pin"></span><span class="lab">'+p+'</span>';
+    if (p===V.uplinkPort){
+      b.disabled = true; b.title="Uplink to core — reserved";
+      b.setAttribute("aria-label","Switch port "+p+", uplink to core, reserved");
+    } else {
+      b.dataset.role="switch"; b.dataset.port=String(p);
+      b.setAttribute("aria-label","Switch SW-ACCESS-2 port "+p);
+    }
+    sw.appendChild(b);
+  }
+}
+
+function renderPorts(){
+  // panel B12
+  const b12 = $('#panelPorts [data-role="panel"]');
+  const bad = S.closet && !correctSegment();
+  if (b12){
+    b12.classList.toggle("armed", S.pending && S.pending.type==="panel");
+    b12.classList.toggle("connected", !!S.closet && correctSegment());
+    b12.classList.toggle("wrong", !!bad);
+    b12.setAttribute("aria-pressed", String(!!S.closet));
+  }
+  // switch ports
+  $$('#switchPorts [data-role="switch"]').forEach(el=>{
+    const p = Number(el.dataset.port);
+    const conn = S.closet && S.closet.switchPort===p;
+    el.classList.toggle("armed", S.pending && S.pending.type==="switch" && S.pending.port===p);
+    el.classList.toggle("connected", !!conn && p===V.correctSwitchPort);
+    el.classList.toggle("wrong", !!conn && p!==V.correctSwitchPort);
+    el.setAttribute("aria-pressed", String(!!conn));
+  });
+  // office
+  const nic=$("#nicPort"), jack=$("#wallJack");
+  if (nic){ nic.classList.toggle("armed",S.pending&&S.pending.type==="nic"); nic.classList.toggle("connected",S.office); nic.setAttribute("aria-pressed",String(S.office)); }
+  if (jack){ jack.classList.toggle("armed",S.pending&&S.pending.type==="jack"); jack.classList.toggle("connected",S.office); jack.setAttribute("aria-pressed",String(S.office)); }
+  drawCables();
+}
+
+function drawCables(){
+  // closet cable
+  const svg=$("#rackSvg"), rack=$("#rack");
+  if (svg && rack){
+    svg.innerHTML="";
+    if (S.closet){
+      const from=$('#panelPorts [data-role="panel"]');
+      const to=$('#switchPorts [data-port="'+S.closet.switchPort+'"]');
+      if (from && to) drawPath(svg, rack, from, to, correctSegment()? "var(--cable)":"var(--cable-bad)");
+    }
+  }
+  // office cable
+  const osvg=$("#officeSvg"), off=$("#office");
+  if (osvg && off){
+    osvg.innerHTML="";
+    if (S.office){
+      const nic=$("#nicPort"), jack=$("#wallJack");
+      if (nic && jack) drawPath(osvg, off, nic, jack, "var(--cable)");
+    }
+  }
+}
+function drawPath(svg, container, a, b, color){
+  const cr=container.getBoundingClientRect();
+  const ar=a.getBoundingClientRect(), br=b.getBoundingClientRect();
+  const ax=ar.left-cr.left+ar.width/2, ay=ar.top-cr.top+ar.height/2;
+  const bx=br.left-cr.left+br.width/2, by=br.top-cr.top+br.height/2;
+  const dy=Math.max(28, Math.abs(by-ay)*0.55);
+  const d=`M ${ax} ${ay} C ${ax} ${ay+dy}, ${bx} ${by-dy}, ${bx} ${by}`;
+  const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("d",d); p.setAttribute("fill","none");
+  p.setAttribute("stroke",color); p.setAttribute("stroke-width","4");
+  p.setAttribute("stroke-linecap","round"); p.setAttribute("opacity","0.9");
+  svg.appendChild(p);
+}
+
+function renderSettings(){
+  $("#ip-manual").setAttribute("aria-pressed",String(S.ipv4==="manual"));
+  $("#ip-auto").setAttribute("aria-pressed",String(S.ipv4==="auto"));
+  $("#dns-manual").setAttribute("aria-pressed",String(S.dns==="manual"));
+  $("#dns-auto").setAttribute("aria-pressed",String(S.dns==="auto"));
+  const note=$("#applyNote");
+  note.className="status-line";
+  if (S.applied){
+    if (S.ipv4==="auto"){ note.classList.add("ok"); note.textContent="Applied. Adapter set to request a DHCP lease."; }
+    else { note.classList.add("err"); note.textContent="Applied, but IP is still Manual — no lease will be requested."; }
+  } else note.textContent="";
+}
+
+function renderStatus(){
+  const blip=$("#blip"), title=$("#statusTitle"), detail=$("#statusDetail"), kv=$("#statusKv");
+  blip.className="blip"; kv.hidden=true; kv.innerHTML="";
+  let cls="err", t="No connection yet", d="Complete the cabling and DHCP steps, then run the check.";
+
+  if (!S.verified){
+    // passive: reflect current wiring but don't reveal lease until checked
+    if (!link()) { t="Cable unplugged"; d="At least one end of the run is open. Plug both the closet cross-connect and the bench."; }
+    else { t="Ready to check"; d="Wiring detected. Run the connection check to read the adapter."; cls="warn"; }
+  } else {
+    if (!link()){ t="Cable unplugged"; d="No link. Check the closet cross-connect and the bench patch."; }
+    else if (!correctSegment()){
+      cls="warn";
+      t="Link up — wrong segment";
+      d="The bench is patched, but not to the Studio B VLAN. Studio B (VLAN "+V.vlan+") lives on switch port "+V.correctSwitchPort+". On this port no DHCP server is reachable, so the host fell back to APIPA (169.254.x.x). Re-patch B12 to port "+V.correctSwitchPort+".";
+    }
+    else if (S.ipv4!=="auto"){
+      cls="warn"; t="Link up — no IP";
+      d="Link is good and on the right segment, but IP assignment is still Manual, so no lease was requested. Set IP assignment to Automatic (DHCP) and apply.";
+    }
+    else if (!S.applied){
+      cls="warn"; t="Link up — settings not applied";
+      d="Automatic addressing is selected but not applied yet. Apply the settings to request a lease.";
+    }
+    else {
+      cls="ok"; t="Connected — internet reachable";
+      d="BENCH-12 leased an address on the Studio B segment and can reach the LAN and the internet.";
+      kv.hidden=false;
+      kv.innerHTML =
+        kvRow("Host", V.host) + kvRow("Leased IP", V.lease) + kvRow("Mask", V.mask) +
+        kvRow("Gateway", V.gateway) + kvRow("DNS", V.dns) +
+        kvRow("Switch port", V.switch+" Gi 1/"+V.correctSwitchPort+" (VLAN "+V.vlan+")");
+    }
+  }
+  blip.classList.add(cls);
+  title.textContent=t; detail.textContent=d;
+}
+function kvRow(k,v){ return '<span class="lab">'+k+'</span><span>'+v+'</span>'; }
+
+function renderChecks(){
+  const t=taskState(), q=questionState();
+  const ul=$("#checks"); ul.innerHTML="";
+  TASKS.forEach(task=>{
+    const li=document.createElement("li");
+    const done=!!t[task.id];
+    li.className=done?"done":"";
+    li.innerHTML='<span class="mark" aria-hidden="true">'+(done?"✓":"")+'</span><span class="txt">'+task.label+'</span>';
+    ul.appendChild(li);
+  });
+  const sc=score();
+  $("#scorePill").textContent="Score "+sc.earned+" / "+sc.total;
+  $("#progressPill").textContent=sc.earned+" / "+sc.total+" complete";
+
+  // tab "done" dots
+  $("#tab-closet").dataset.done=String(t.closet_patch);
+  $("#tab-office").dataset.done=String(t.office_patch);
+  $("#tab-settings").dataset.done=String(t.ipv4_auto && t.dns_auto && t.applied);
+  $("#tab-status").dataset.done=String(t.verified);
+  void q;
+}
+
+function renderAll(){ renderPorts(); renderSettings(); renderStatus(); renderChecks(); }
+
+/* --------------------------- INTERACTIONS ----------------------------- */
+function armOrConnect(type, port){
+  // Closet pairing
+  if (type==="panel" || type==="switch"){
+    if (!S.pending){ S.pending={type, port}; renderPorts(); return; }
+    if (S.pending.type===type){ // re-arm same side
+      S.pending = (type==="switch" && S.pending.port===port) ? null : {type, port};
+      renderPorts(); return;
+    }
+    // opposite sides → make the cross-connect
+    const sp = type==="switch" ? port : S.pending.port;
+    S.closet = { switchPort: sp };
+    S.pending=null; S.verified=false; renderAll(); return;
+  }
+  // Office pairing
+  if (type==="nic" || type==="jack"){
+    if (!S.pending){ S.pending={type}; renderPorts(); return; }
+    if (S.pending.type===type){ S.pending=null; renderPorts(); return; }
+    if ((S.pending.type==="nic"&&type==="jack")||(S.pending.type==="jack"&&type==="nic")){
+      S.office=true; S.pending=null; S.verified=false; renderAll(); return;
+    }
+  }
+}
+
+function wireEvents(){
+  // tabs (with arrow-key support)
+  const tabs=$$('.tab');
+  tabs.forEach((tab,i)=>{
+    tab.addEventListener("click",()=>selectView(tab.dataset.view));
+    tab.addEventListener("keydown",e=>{
+      if (e.key==="ArrowRight"||e.key==="ArrowLeft"){
+        e.preventDefault();
+        const dir=e.key==="ArrowRight"?1:-1;
+        const n=tabs[(i+dir+tabs.length)%tabs.length];
+        n.focus(); selectView(n.dataset.view);
+      }
+    });
+  });
+
+  // closet ports (event delegation)
+  $("#panelPorts").addEventListener("click",e=>{
+    const b=e.target.closest('[data-role="panel"]'); if(b && !b.disabled) armOrConnect("panel");
+  });
+  $("#switchPorts").addEventListener("click",e=>{
+    const b=e.target.closest('[data-role="switch"]'); if(b && !b.disabled) armOrConnect("switch", Number(b.dataset.port));
+  });
+  $("#closetUnplug").addEventListener("click",()=>{ S.closet=null; S.pending=null; S.verified=false; renderAll(); });
+
+  // office
+  $("#nicPort").addEventListener("click",()=>armOrConnect("nic"));
+  $("#wallJack").addEventListener("click",()=>armOrConnect("jack"));
+  $("#officeUnplug").addEventListener("click",()=>{ S.office=false; S.pending=null; S.verified=false; renderAll(); });
+
+  // settings
+  $("#ip-manual").addEventListener("click",()=>{ S.ipv4="manual"; S.applied=false; S.verified=false; renderAll(); });
+  $("#ip-auto").addEventListener("click",()=>{ S.ipv4="auto"; S.applied=false; S.verified=false; renderAll(); });
+  $("#dns-manual").addEventListener("click",()=>{ S.dns="manual"; S.applied=false; S.verified=false; renderAll(); });
+  $("#dns-auto").addEventListener("click",()=>{ S.dns="auto"; S.applied=false; S.verified=false; renderAll(); });
+  $("#applyBtn").addEventListener("click",()=>{ S.applied=true; S.verified=false; renderAll(); });
+
+  // verify
+  $("#checkBtn").addEventListener("click",()=>{ S.verified=true; renderAll(); selectView("status"); });
+
+  // submit / reset
+  $("#submitBtn").addEventListener("click",submit);
+  $("#resetBtn").addEventListener("click",resetLab);
+
+  window.addEventListener("resize",drawCables);
+}
+
+function selectView(view){
+  S.view=view;
+  $$('.tab').forEach(t=>{
+    const on=t.dataset.view===view;
+    t.setAttribute("aria-selected",String(on));
+    t.tabIndex = on?0:-1;
+  });
+  $$('.panelview').forEach(p=>{
+    const on = p.id==="view-"+view;
+    p.classList.toggle("active",on);
+    p.hidden=!on;
+  });
+  // cables need a layout pass once the panel is visible
+  requestAnimationFrame(drawCables);
+}
+
+function buildQuestions(){
+  const wrap=$("#questions"); wrap.innerHTML="";
+  QUESTIONS.forEach((q,qi)=>{
+    const div=document.createElement("div"); div.className="q";
+    div.innerHTML='<div class="prompt"><span class="n">Q'+(qi+1)+'</span>'+q.prompt+'</div>';
+    const opts=document.createElement("div"); opts.className="opts";
+    q.options.forEach((o,oi)=>{
+      const id=q.id+"_"+oi;
+      const lab=document.createElement("label"); lab.className="opt"; lab.setAttribute("for",id);
+      lab.innerHTML='<input type="radio" id="'+id+'" name="'+q.id+'" value="'+oi+'"> <span>'+o+'</span>';
+      lab.querySelector("input").addEventListener("change",()=>{ S.answers[q.id]=oi; renderChecks(); });
+      opts.appendChild(lab);
+    });
+    div.appendChild(opts); wrap.appendChild(div);
+  });
+}
+
+/* ------------------------------ SUBMIT -------------------------------- */
+function buildPayload(screenshot){
+  const t=taskState(), q=questionState(), sc=score();
+  return {
+    assignmentId: CONFIG.assignmentId,
+    handle: ($("#handle").value||"").trim().slice(0,40),
+    clientTimestamp: new Date().toISOString(),
+    objectives: CONFIG.objectives,
+    tasks: TASKS.map(x=>({ id:x.id, label:x.label, passed:!!t[x.id] })),
+    questions: QUESTIONS.map(x=>({
+      id:x.id, prompt:x.prompt,
+      answer: (S.answers[x.id]!=null ? x.options[S.answers[x.id]] : null),
+      correct: !!q[x.id]
+    })),
+    score: { earned: sc.earned, total: sc.total },
+    screenshot: screenshot || "",
+    submissionToken: CONFIG.submissionToken
+  };
+}
+
+async function capture(){
+  const node=$("#capture");
+  if (typeof html2canvas !== "function") return ""; // library not inlined yet
+  try{
+    const canvas = await html2canvas(node, { backgroundColor:"#0e1116", scale:1, logging:false });
+    return canvas.toDataURL("image/png");
+  }catch(_){ return ""; }
+}
+
+function setStatus(msg, kind){
+  const el=$("#submitStatus"); el.className="status-line"+(kind?(" "+kind):""); el.textContent=msg;
+}
+
+async function submit(){
+  const handle=($("#handle").value||"").trim();
+  if (!handle){ setStatus("Enter a callsign first (a pseudonym — no real names).","err"); $("#handle").focus(); return; }
+
+  const sc=score();
+  if (sc.earned < sc.total){
+    setStatus("Heads up: "+sc.earned+" / "+sc.total+" complete. You can still submit, but the checklist will show what's missing. Submitting…","busy");
+  } else {
+    setStatus("All "+sc.total+" complete. Capturing and submitting…","busy");
+  }
+
+  const shot = await capture();
+  const noShot = !shot;
+  const payload = buildPayload(shot);
+
+  if (CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_") === 0){
+    setStatus("Submission URL isn't configured yet. Ask your instructor to set APPS_SCRIPT_URL.","err");
+    return;
+  }
+
+  try{
+    // Simple request: no custom headers, text/plain body → no CORS preflight.
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if (out && out.success){
+      let m = "Submitted as “"+handle+"”.";
+      if (out.docUrl) m += " ";
+      setStatus(m + (noShot? "  (No screenshot was attached — tell your instructor the capture library wasn't inlined.)":""),"ok");
+      if (out.docUrl){
+        const el=$("#submitStatus");
+        const a=document.createElement("a"); a.href=out.docUrl; a.target="_blank"; a.rel="noopener"; a.textContent="Open your submission";
+        el.appendChild(document.createTextNode(" ")); el.appendChild(a);
+      }
+    } else {
+      setStatus("The server rejected the submission"+(out&&out.error?(": "+out.error):". Check with your instructor."),"err");
+    }
+  }catch(err){
+    // Fallback: fire-and-forget (can't read docUrl) for locked-down contexts.
+    try{
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+      setStatus("Submitted (offline mode). The reply couldn't be read here — confirm with your instructor that it arrived.","busy");
+    }catch(_){
+      setStatus("Couldn't reach the submission server. Check your connection and try again.","err");
+    }
+  }
+}
+
+function resetLab(){
+  S.pending=null; S.closet=null; S.office=false;
+  S.ipv4="manual"; S.dns="manual"; S.applied=false; S.verified=false; S.answers={};
+  $("#handle").value="";
+  $$('input[type="radio"]').forEach(r=>r.checked=false);
+  setStatus("","");
+  selectView("closet");
+  renderAll();
+}
+
+/* ------------------------------- INIT --------------------------------- */
+buildPorts();
+buildQuestions();
+wireEvents();
+selectView("closet");
+renderAll();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-physical-power-trace.html",title:"Dark Rack \u2014 Beacon Hollow Community Radio | Networking Lab"}, NEXT={href:"index_netplus-poe-priority.html",title:"Lab \u2014 Powering the Makerspace AP: PoE Budget & Priority"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.4";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Harden the Wireless Edge — Wireless Intrusion Prevention Lab</title>
+<!--
+  ============================================================================
+  Lab: Harden the Wireless Edge — Configure Wireless Intrusion Prevention
+  assignmentId: netplus-wireless-ips
+  Library: CompTIA Network+ (N10-00x) / AP Networking pilot — simulation labs
+  Blueprint tags (verified against the provided objectives file, N10-007):
+      N10-009:4.3  Given a scenario, secure a basic wireless network
+      N10-009:2.3  Summarize common networking attacks (rogue AP, evil twin,
+                   deauthentication, DoS, brute force)
+        Troubleshoot common wireless issues (rogue DHCP server)
+      APNET:2.5    Guarding My Network — Identifying Security Needs
+                   (2.5.A unauthorized/unmonitored devices; 2.5.B mitigating
+                   unknown-device risk / guest segmentation)
+  NOTE: When the official N10-009 objectives PDF is supplied, re-map the codes
+  in labs.json — this is a data edit, not a rebuild (see library §8/§9).
+
+  ORIGINALITY: Built clean-room from the public CompTIA objectives and the
+  public College Board AP Networking framework. Scenario, brand, IP plan,
+  SSIDs, lockout value, task/question wording, and UI are original and are NOT
+  derived from any third-party courseware.
+
+  © 2026 [AUTHOR / ORG NAME]. All rights reserved.
+  License: [YOUR LICENSE HERE]. Replace this line with the library's notice.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0f1622;
+    --panel:#16202e;
+    --panel-2:#1d2a3a;
+    --card:#ffffff;
+    --ink:#10202c;
+    --ink-soft:#4a5b67;
+    --line:#d8e0e6;
+    --line-dark:#2a3a4d;
+    --accent:#14a8a0;
+    --accent-deep:#0c7f78;
+    --good:#1f9d57;
+    --good-bg:#e7f6ec;
+    --bad:#c0392b;
+    --bad-bg:#fbe9e7;
+    --warn:#b8860b;
+    --chip:#eef3f6;
+    --focus:#ffb000;
+    --radius:10px;
+    --shadow:0 6px 24px rgba(6,18,30,.18);
+    color-scheme:light;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(180deg,#0c121c,#0f1622 220px);
+    color:var(--ink);
+    padding:18px;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+  h1,h2,h3{margin:0 0 .35em}
+  h1{font-size:1.35rem;color:#eaf3f5;letter-spacing:.2px}
+  .sub{color:#9fb3bf;margin:0 0 16px;font-size:.92rem}
+  a{color:var(--accent)}
+
+  /* layout */
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+  /* simulated browser + controller */
+  .sim{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .chrome{display:flex;align-items:center;gap:10px;background:#e9eef2;padding:9px 12px;border-bottom:1px solid var(--line)}
+  .dots{display:flex;gap:6px}
+  .dots i{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .dots .r{background:#ff5f57}.dots .y{background:#febc2e}.dots .g{background:#28c840}
+  .addr{flex:1;background:#fff;border:1px solid var(--line);border-radius:20px;padding:5px 12px;color:#33505e;font-size:.83rem;display:flex;align-items:center;gap:6px;min-width:0}
+  .addr svg{flex:none}
+  .addr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .ctrl{display:grid;grid-template-columns:170px 1fr;min-height:560px}
+  @media (max-width:560px){.ctrl{grid-template-columns:1fr}}
+  .nav{background:var(--panel);color:#cdd9e2;padding:16px 0}
+  .brand{display:flex;align-items:center;gap:9px;padding:0 16px 14px;border-bottom:1px solid var(--line-dark);margin-bottom:10px}
+  .brand .logo{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#2bd4c4);display:grid;place-items:center;color:#03201e;font-weight:800}
+  .brand b{color:#fff;font-size:.95rem;line-height:1.1}
+  .brand small{display:block;color:#7e95a5;font-weight:600;font-size:.66rem;letter-spacing:.7px}
+  .nav button{all:unset;display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;color:#aebecb;cursor:pointer;font-size:.88rem}
+  .nav button[aria-current="true"]{background:var(--panel-2);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
+  .nav button:hover{color:#fff}
+  .nav button:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+  .nav .dotwarn{margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--warn)}
+
+  .content{padding:20px 22px 26px}
+  .page-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .page-h h2{color:var(--ink);font-size:1.12rem}
+  .crumb{color:var(--ink-soft);font-size:.78rem}
+  .lead{color:var(--ink-soft);margin:0 0 16px;font-size:.9rem}
+
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+  .tabs button{all:unset;cursor:pointer;padding:9px 14px;font-size:.86rem;color:var(--ink-soft);border-radius:8px 8px 0 0}
+  .tabs button[aria-selected="true"]{color:var(--accent-deep);font-weight:700;box-shadow:inset 0 -2px 0 var(--accent)}
+  .tabs button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+  .field{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:14px 0;border-bottom:1px dashed var(--line)}
+  .field:last-child{border-bottom:0}
+  .field .meta{max-width:62%}
+  .field .meta b{display:block;font-size:.93rem}
+  .field .meta p{margin:.25em 0 0;color:var(--ink-soft);font-size:.82rem}
+  .field .ctl{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+
+  /* switch */
+  .switch{position:relative;width:50px;height:28px;flex:none}
+  .switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+  .switch .track{position:absolute;inset:0;background:#c4ced6;border-radius:20px;transition:background .15s}
+  .switch .thumb{position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+  .switch input:checked + .track{background:var(--accent)}
+  .switch input:checked + .track + .thumb{left:25px}
+  .switch input:focus-visible + .track{outline:3px solid var(--focus);outline-offset:2px}
+  .state-txt{font-size:.74rem;font-weight:700;letter-spacing:.4px;color:var(--ink-soft)}
+  .state-txt.on{color:var(--accent-deep)}
+
+  select,input[type=number]{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-width:150px}
+  select:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:1px;border-color:var(--accent)}
+  .inline-num{display:flex;align-items:center;gap:8px}
+  .inline-num input{width:96px;min-width:0}
+  .unit{color:var(--ink-soft);font-size:.8rem}
+  .err{color:var(--bad);font-size:.76rem;max-width:200px;text-align:right}
+  .hint{color:var(--ink-soft);font-size:.74rem}
+
+  .banner{display:flex;gap:10px;background:#fff7e6;border:1px solid #f0d28a;border-radius:8px;padding:10px 12px;font-size:.82rem;color:#6b5410;margin-bottom:16px}
+  .banner svg{flex:none;margin-top:1px}
+
+  /* side panel */
+  .side{display:flex;flex-direction:column;gap:16px;position:sticky;top:18px}
+  .box{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 16px 18px}
+  .box h3{font-size:.78rem;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft)}
+
+  ul.checks{list-style:none;margin:6px 0 0;padding:0}
+  ul.checks li{display:flex;gap:9px;padding:7px 0;font-size:.84rem;align-items:flex-start;border-bottom:1px solid #eef2f5}
+  ul.checks li:last-child{border-bottom:0}
+  .mark{flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:.7rem;font-weight:800;margin-top:1px}
+  .mark.todo{background:#e7edf1;color:#90a2ad}
+  .mark.done{background:var(--good-bg);color:var(--good)}
+  .checks .lbl{color:var(--ink)}
+  .checks li.is-done .lbl{color:var(--ink-soft)}
+
+  fieldset.q{border:1px solid var(--line);border-radius:8px;padding:12px 12px 10px;margin:0 0 12px}
+  fieldset.q legend{font-size:.84rem;font-weight:700;padding:0 6px}
+  fieldset.q .opt{display:flex;gap:8px;align-items:flex-start;padding:5px 2px;font-size:.83rem;cursor:pointer}
+  fieldset.q .opt input{margin-top:3px}
+  fieldset.q .opt:focus-within{outline:2px dashed var(--accent);outline-offset:2px;border-radius:6px}
+  .q-result{font-size:.76rem;font-weight:700;margin-top:4px;min-height:1em}
+  .q-result.ok{color:var(--good)}
+  .q-result.no{color:var(--bad)}
+
+  .score{display:flex;align-items:center;justify-content:space-between;font-size:.9rem}
+  .score .num{font-size:1.4rem;font-weight:800;color:var(--accent-deep)}
+  .pill{display:inline-block;font-size:.7rem;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:20px}
+  .pill.pass{background:var(--good-bg);color:var(--good)}
+  .pill.part{background:#fdf3df;color:var(--warn)}
+
+  .submitbar label{display:block;font-size:.8rem;font-weight:700;margin-bottom:5px}
+  .submitbar input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+  .submitbar input[type=text]:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+  .btnrow{display:flex;gap:8px;margin-top:12px}
+  .btn{all:unset;cursor:pointer;text-align:center;font-weight:700;border-radius:8px;padding:11px 14px;font-size:.88rem}
+  .btn.primary{background:var(--accent);color:#04211f;flex:1}
+  .btn.primary:hover{background:var(--accent-deep);color:#fff}
+  .btn.ghost{border:1px solid var(--line);color:var(--ink)}
+  .btn.ghost:hover{background:var(--chip)}
+  .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .btn[aria-disabled="true"]{opacity:.55;pointer-events:none}
+  .status{margin-top:12px;font-size:.83rem;padding:10px 12px;border-radius:8px;display:none}
+  .status.show{display:block}
+  .status.ok{background:var(--good-bg);color:#13663a;border:1px solid #bfe6cd}
+  .status.err{background:var(--bad-bg);color:#8a2a20;border:1px solid #f0c5bf}
+  .status.work{background:#eef4f8;color:#395a6c;border:1px solid #d4e2ea}
+  .status a{font-weight:700}
+  .foot{color:#6f8593;font-size:.72rem;margin-top:18px;text-align:center}
+
+  @media (prefers-reduced-motion: reduce){
+    .switch .track,.switch .thumb{transition:none}
+    *{scroll-behavior:auto}
+  }
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-wireless-ips", "title": "Harden the Wireless Edge \u2014 Wireless Intrusion Prevention Lab", "version": "1.0.0", "objectives": ["N10-009:2.3", "N10-009:4.3", "APNET:2.5"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap">
+  <h1>Harden the Wireless Edge</h1>
+  <p class="sub">Wireless Intrusion Prevention &bull; Ferncliff Outfitters &bull; Halcyon WLC Security Center (simulation)</p>
+
+  <div class="grid">
+    <!-- ================= SIMULATED CONTROLLER ================= -->
+    <main class="sim" id="labArea" aria-label="Wireless controller simulation">
+      <div class="chrome" aria-hidden="true">
+        <div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+        <div class="addr">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2c8f3e" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <span>https://10.20.5.2/security/wips</span>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <nav class="nav" aria-label="Controller sections">
+          <div class="brand">
+            <span class="logo">H</span>
+            <b>Halcyon WLC<small>SECURITY CENTER</small></b>
+          </div>
+          <button type="button">Dashboard</button>
+          <button type="button">Access Points</button>
+          <button type="button" aria-current="true">Intrusion Prevention <span class="dotwarn" title="Action needed"></span></button>
+          <button type="button">Clients</button>
+          <button type="button">Logs</button>
+        </nav>
+
+        <section class="content" aria-labelledby="pgTitle">
+          <div class="page-h">
+            <h2 id="pgTitle">Wireless Intrusion Prevention (WIPS)</h2>
+            <span class="crumb">Security Center / Intrusion Prevention</span>
+          </div>
+          <p class="lead">Controller <b>hwlc-180-a</b> manages 6 access points across the Ferncliff store floor and stockroom. Networks in service: <b>FERN-CORP</b> (staff, WPA3-Enterprise) and <b>FERN-GUEST</b> (isolated guest segment). Apply the protections below, then complete the knowledge check on the right.</p>
+
+          <div class="banner" role="note">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/></svg>
+            Sensors have logged probe-request floods and an unmanaged AP beaconing a familiar SSID. Hardening is recommended.
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="WIPS settings">
+            <button role="tab" id="tab-dos" aria-controls="pane-dos" aria-selected="true">DoS Protection</button>
+            <button role="tab" id="tab-rogue" aria-controls="pane-rogue" aria-selected="false" tabindex="-1">Rogue Detection &amp; Prevention</button>
+            <button role="tab" id="tab-dhcp" aria-controls="pane-dhcp" aria-selected="false" tabindex="-1">Rogue DHCP</button>
+          </div>
+
+          <!-- DoS pane -->
+          <div role="tabpanel" id="pane-dos" aria-labelledby="tab-dos">
+            <div class="field">
+              <div class="meta">
+                <b>Wireless flood protection</b>
+                <p>Rate-limit excessive association and probe requests so a single source cannot exhaust the radios (denial-of-service mitigation).</p>
+              </div>
+              <div class="ctl">
+                <span class="state-txt" id="st-flood">OFF</span>
+                <label class="switch"><input type="checkbox" id="ck-flood" aria-label="Enable wireless flood protection"><span class="track"></span><span class="thumb"></span></label>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="meta">
+                <b>Lock out clients after repeated authentication failures</b>
+                <p>Temporarily quarantine a client MAC after too many failed joins, then auto-release after the lockout window.</p>
+              </div>
+              <div class="ctl">
+                <span class="state-txt" id="st-lock">OFF</span>
+                <label class="switch"><input type="checkbox" id="ck-lock" aria-label="Enable client lockout on repeated authentication failures"><span class="track"></span><span class="thumb"></span></label>
+              </div>
+            </div>
+
+            <div class="field" id="row-secs">
+              <div class="meta">
+                <b>Lockout window</b>
+                <p>How long a flagged client stays quarantined before the controller re-admits it. Required setting for this lab: <b>180 seconds</b>.</p>
+              </div>
+              <div class="ctl">
+                <div class="inline-num">
+                  <input type="number" id="in-secs" min="30" max="600" step="10" placeholder="—" aria-label="Lockout window in seconds" disabled>
+                  <span class="unit">seconds</span>
+                </div>
+                <span class="err" id="err-secs" role="status"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rogue pane -->
+          <div role="tabpanel" id="pane-rogue" aria-labelledby="tab-rogue" hidden>
+            <div class="field">
+              <div class="meta">
+                <b>Rogue device reporting scope</b>
+                <p>Choose which unmanaged radios the controller records. For full visibility during an active incident, report <b>all unmanaged access points</b>.</p>
+              </div>
+              <div class="ctl">
+                <select id="sel-scope" aria-label="Rogue device reporting scope">
+                  <option value=>— select scope —</option>
+                  <option value="none">Do not report</option>
+                  <option value="suspect">Only APs on our wired LAN</option>
+                  <option value="all">All unmanaged access points</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="meta">
+                <b>Auto-contain hostile rogue APs</b>
+                <p>When a rogue is classified as malicious (e.g., an evil-twin luring staff), the controller sends targeted deauthentication frames to keep clients off it until it is removed.</p>
+              </div>
+              <div class="ctl">
+                <span class="state-txt" id="st-contain">OFF</span>
+                <label class="switch"><input type="checkbox" id="ck-contain" aria-label="Enable auto-containment of hostile rogue access points"><span class="track"></span><span class="thumb"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- DHCP pane -->
+          <div role="tabpanel" id="pane-dhcp" aria-labelledby="tab-dhcp" hidden>
+            <div class="field">
+              <div class="meta">
+                <b>Detect unauthorized (rogue) DHCP servers</b>
+                <p>Watch for any device other than <b>hwlc-180-a</b> offering leases on the wireless segments. A rogue DHCP server can hand clients a false gateway/DNS and enable on-path interception.</p>
+              </div>
+              <div class="ctl">
+                <span class="state-txt" id="st-dhcp">OFF</span>
+                <label class="switch"><input type="checkbox" id="ck-dhcp" aria-label="Enable rogue DHCP server detection"><span class="track"></span><span class="thumb"></span></label>
+              </div>
+            </div>
+            <p class="hint">Tip: legitimate DHCP for these SSIDs is served only by the controller’s built-in scope 10.20.40.0/22.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ================= SIDE: TASKS / QUESTIONS / SUBMIT ================= -->
+    <aside class="side" aria-label="Lab progress and submission">
+      <div class="box">
+        <h3>Task checklist</h3>
+        <ul class="checks" id="checklist"></ul>
+      </div>
+
+      <div class="box">
+        <h3>Knowledge check</h3>
+        <div id="quiz"></div>
+      </div>
+
+      <div class="box">
+        <h3>Score</h3>
+        <div class="score">
+          <span>Tasks &amp; questions</span>
+          <span><span class="num" id="scoreNum">0</span><span style="color:var(--ink-soft)"> / <span id="scoreTot">0</span></span></span>
+        </div>
+        <div style="margin-top:8px"><span class="pill part" id="scorePill">In progress</span></div>
+      </div>
+
+      <div class="box submitbar">
+        <h3>Submit completed lab</h3>
+        <label for="handle">Callsign (pseudonym — no real names)</label>
+        <input type="text" id="handle" maxlength="32" autocomplete="off" spellcheck="false" placeholder="e.g. tidewater-fox" />
+        <div class="btnrow">
+          <a class="btn primary" id="submitBtn" role="button" tabindex="0">Submit completed lab</a>
+          <a class="btn ghost" id="resetBtn" role="button" tabindex="0">Reset</a>
+        </div>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </div>
+
+      <p class="foot">© 2026 [AUTHOR / ORG NAME] · Original clean-room lab · Tags: N10-007 4.3/4.4/5.4 · AP Networking 2.5</p>
+    </aside>
+  </div>
+</div>
+
+<!--
+  ============================================================================
+  SCRIPT BLOCK 1 — html2canvas (OPTIONAL, higher-fidelity DOM screenshot)
+  ----------------------------------------------------------------------------
+  This library standard is to inline html2canvas here so the file is fully
+  dependency-free. Paste the MINIFIED html2canvas source between the marker
+  comments below (one-time, library-wide). Source of truth:
+      https://github.com/niklasvh/html2canvas  (dist/html2canvas.min.js)
+  If this block is left empty, the lab still works: it falls back to a built-in
+  canvas "results card" snapshot (see renderSummaryCanvas() in block 2), which
+  needs no third-party code and never taints the canvas because the lab is
+  entirely same-origin, self-drawn markup.
+  ============================================================================
+-->
+<script>/* >>> PASTE MINIFIED html2canvas HERE (optional) <<< */</script>
+
+<!--
+  ============================================================================
+  SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, capture, and direct POST
+  ============================================================================
+-->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------------- PER-LAB CONFIG ------------------------------ */
+  const CONFIG = {
+    assignmentId: "netplus-wireless-ips",
+    title: "Harden the Wireless Edge — Wireless Intrusion Prevention",
+    objectives: ["N10-009:4.3","N10-009:2.3","APNET:2.5"],
+    // Deploy the shared Apps Script web app and paste its /exec URL here:
+    APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+    // Rotate per cohort; must match the Script Property on the server:
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    maxHandle: 32,
+    lockoutTarget: 180
+  };
+
+  /* ----------------------- LAB STATE ----------------------------------- */
+  const state = {
+    flood:false, lock:false, secs:null,
+    scope:contain:false, dhcp:false
+  };
+
+  /* ----------------------- TASKS (pass conditions) --------------------- */
+  const TASKS = [
+    { id:"flood",   label:"Enable wireless flood protection",                       pass:s=>s.flood===true },
+    { id:"lockout", label:"Enable client lockout on repeated auth failures",        pass:s=>s.lock===true },
+    { id:"window",  label:"Set lockout window to "+CONFIG.lockoutTarget+" seconds", pass:s=>s.lock===true && s.secs===CONFIG.lockoutTarget },
+    { id:"scope",   label:"Report all unmanaged access points",                     pass:s=>s.scope==="all" },
+    { id:"contain", label:"Auto-contain hostile rogue APs",                         pass:s=>s.contain===true },
+    { id:"dhcp",    label:"Enable rogue DHCP server detection",                     pass:s=>s.dhcp===true }
+  ];
+
+  /* ----------------------- QUESTIONS + ANSWER KEY ---------------------- */
+  const QUESTIONS = [
+    {
+      id:"q1",
+      prompt:"FERN-CORP logs hundreds of failed joins from random MAC addresses. Locking out clients after repeated authentication failures most directly blunts which attack?",
+      options:[
+        "Credential brute-force / dictionary attack on the WLAN",
+        "Cable attenuation on the uplink",
+        "VLAN hopping between switch ports",
+        "ARP cache timeout on the gateway"
+      ],
+      answer:0
+    },
+    {
+      id:"q2",
+      prompt:"An unmanaged device begins handing out IP, gateway, and DNS settings to wireless clients. What is it, and what does detecting it chiefly protect against?",
+      options:[
+        "An evil twin — protects against weak Wi-Fi passphrases",
+        "A rogue DHCP server — protects against on-path interception and misdirected traffic",
+        "A captive portal — protects against expired certificates",
+        "A range extender — protects against channel overlap"
+      ],
+      answer:1
+    },
+    {
+      id:"q3",
+      prompt:"Sensors flag an AP broadcasting FERN-CORP’s SSID with a stronger signal to lure staff devices. Which term best fits this rogue?",
+      options:[ "Honeypot", "Evil twin", "Repeater", "Default gateway" ],
+      answer:1
+    },
+    {
+      id:"q4",
+      prompt:"When the controller “auto-contains” a hostile rogue AP, what does it actually do?",
+      options:[
+        "Physically powers the rogue off",
+        "Encrypts the rogue’s traffic for safety",
+        "Sends targeted deauthentication frames so clients can’t stay associated to it",
+        "Blocks the rogue’s MAC at the internet provider"
+      ],
+      answer:2
+    }
+  ];
+  QUESTIONS.forEach(q=>{ q.selected=null; q.correct=false; });
+
+  /* ----------------------- DOM HELPERS --------------------------------- */
+  const $=s=>document.querySelector(s);
+  const el=(t,a={},kids=[])=>{const n=document.createElement(t);for(const k in a){if(k==="class")n.className=a[k];else if(k==="text")n.textContent=a[k];else n.setAttribute(k,a[k]);}kids.forEach(c=>n.appendChild(c));return n;};
+
+  /* ----------------------- TABS ---------------------------------------- */
+  const tabs=[...document.querySelectorAll('[role="tab"]')];
+  function selectTab(t){
+    tabs.forEach(tb=>{
+      const on=tb===t;
+      tb.setAttribute('aria-selected',on);
+      tb.tabIndex=on?0:-1;
+      document.getElementById(tb.getAttribute('aria-controls')).hidden=!on;
+    });
+    t.focus();
+  }
+  tabs.forEach((t,i)=>{
+    t.addEventListener('click',()=>selectTab(t));
+    t.addEventListener('keydown',e=>{
+      if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+        e.preventDefault();
+        const d=e.key==='ArrowRight'?1:-1;
+        selectTab(tabs[(i+d+tabs.length)%tabs.length]);
+      }
+    });
+  });
+
+  /* ----------------------- CONTROL WIRING ------------------------------ */
+  const secsInput=$("#in-secs"), errSecs=$("#err-secs");
+
+  function setStateText(id,on){const n=$(id);n.textContent=on?"ON":"OFF";n.classList.toggle("on",on);}
+
+  $("#ck-flood").addEventListener("change",e=>{state.flood=e.target.checked;setStateText("#st-flood",state.flood);render();});
+  $("#ck-contain").addEventListener("change",e=>{state.contain=e.target.checked;setStateText("#st-contain",state.contain);render();});
+  $("#ck-dhcp").addEventListener("change",e=>{state.dhcp=e.target.checked;setStateText("#st-dhcp",state.dhcp);render();});
+  $("#sel-scope").addEventListener("change",e=>{state.scope=e.target.value;render();});
+
+  $("#ck-lock").addEventListener("change",e=>{
+    state.lock=e.target.checked;
+    setStateText("#st-lock",state.lock);
+    secsInput.disabled=!state.lock;
+    if(!state.lock){secsInput.value=;state.secs=null;errSecs.textContent=;}
+    render();
+  });
+
+  secsInput.addEventListener("input",()=>{
+    errSecs.textContent=;
+    const raw=secsInput.value.trim();
+    if(raw===){state.secs=null;render();return;}
+    const v=Number(raw);
+    if(!Number.isInteger(v)){errSecs.textContent="Enter a whole number of seconds.";state.secs=null;}
+    else if(v<30||v>600){errSecs.textContent="Out of range. Valid lockout window is 30–600 seconds.";state.secs=null;}
+    else{state.secs=v;}
+    render();
+  });
+
+  /* ----------------------- BUILD CHECKLIST + QUIZ ---------------------- */
+  const listEl=$("#checklist");
+  TASKS.forEach(t=>{
+    listEl.appendChild(el("li",{id:"task-"+t.id},[
+      el("span",{class:"mark todo","aria-hidden":"true",id:"m-"+t.id,text:"•"}),
+      el("span",{class:"lbl",text:t.label})
+    ]));
+  });
+
+  const quizEl=$("#quiz");
+  QUESTIONS.forEach(q=>{
+    const fs=el("fieldset",{class:"q"});
+    fs.appendChild(el("legend",{text:q.prompt}));
+    q.options.forEach((opt,idx)=>{
+      const id=q.id+"-"+idx;
+      const lab=el("label",{class:"opt",for:id});
+      const inp=el("input",{type:"radio",name:q.id,id:id,value:String(idx)});
+      inp.addEventListener("change",()=>{q.selected=idx;q.correct=(idx===q.answer);render();});
+      lab.appendChild(inp);
+      lab.appendChild(el("span",{text:opt}));
+      fs.appendChild(lab);
+    });
+    fs.appendChild(el("div",{class:"q-result",id:"qr-"+q.id,"aria-live":"polite"}));
+    quizEl.appendChild(fs);
+  });
+
+  /* ----------------------- RENDER / SCORING ---------------------------- */
+  function render(){
+    TASKS.forEach(t=>{
+      const ok=t.pass(state);
+      const li=$("#task-"+t.id), m=$("#m-"+t.id);
+      li.classList.toggle("is-done",ok);
+      m.className="mark "+(ok?"done":"todo");
+      m.textContent=ok?"✓":"•";
+    });
+    QUESTIONS.forEach(q=>{
+      const r=$("#qr-"+q.id);
+      if(q.selected===null){r.textContent=;r.className="q-result";}
+      else if(q.correct){r.textContent="Correct";r.className="q-result ok";}
+      else{r.textContent="Not quite — review and try again.";r.className="q-result no";}
+    });
+    const earned=TASKS.filter(t=>t.pass(state)).length + QUESTIONS.filter(q=>q.correct).length;
+    const total=TASKS.length+QUESTIONS.length;
+    $("#scoreNum").textContent=earned;
+    $("#scoreTot").textContent=total;
+    const pill=$("#scorePill");
+    if(earned===total){pill.textContent="All objectives met";pill.className="pill pass";}
+    else{pill.textContent="In progress";pill.className="pill part";}
+    return {earned,total};
+  }
+
+  /* ----------------------- RESET --------------------------------------- */
+  function resetLab(){
+    Object.assign(state,{flood:false,lock:false,secs:null,scope:contain:false,dhcp:false});
+    ["ck-flood","ck-lock","ck-contain","ck-dhcp"].forEach(id=>{$("#"+id).checked=false;});
+    ["#st-flood","#st-lock","#st-contain","#st-dhcp"].forEach(s=>setStateText(s,false));
+    secsInput.value=;secsInput.disabled=true;errSecs.textContent=;
+    $("#sel-scope").value=;
+    QUESTIONS.forEach(q=>{q.selected=null;q.correct=false;});
+    document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+    setStatus();render();
+  }
+
+  /* ----------------------- SCREENSHOT CAPTURE -------------------------- */
+  // Preferred: inlined html2canvas (block 1). Fallback: self-drawn results card.
+  async function capture(){
+    const area=$("#labArea");
+    if(window.html2canvas){
+      try{
+        const c=await window.html2canvas(area,{backgroundColor:"#ffffff",scale:1,logging:false});
+        return c.toDataURL("image/png");
+      }catch(_){/* fall through to summary card */}
+    }
+    return renderSummaryCanvas();
+  }
+
+  function renderSummaryCanvas(){
+    const W=760, pad=28, lh=24;
+    const rows=[];
+    rows.push(["h",CONFIG.title]);
+    rows.push(["sub","assignmentId: "+CONFIG.assignmentId+"   |   "+CONFIG.objectives.join("  ")]);
+    rows.push(["sub","Callsign: "+($("#handle").value.trim()||"(none)")+"   |   "+new Date().toLocaleString()]);
+    rows.push(["gap",]);
+    rows.push(["sec","Tasks"]);
+    TASKS.forEach(t=>rows.push([t.pass(state)?"ok":"no",t.label]));
+    rows.push(["gap",]);
+    rows.push(["sec","Knowledge check"]);
+    QUESTIONS.forEach((q,i)=>rows.push([q.correct?"ok":"no","Q"+(i+1)+": "+(q.selected===null?"unanswered":(q.correct?"correct":"incorrect"))]));
+    const {earned,total}=render();
+    rows.push(["gap",]);
+    rows.push(["score","Score: "+earned+" / "+total]);
+
+    const H=pad*2+rows.reduce((a,r)=>a+(r[0]==="gap"?12:lh),0);
+    const cv=document.createElement("canvas");cv.width=W;cv.height=H;
+    const x=cv.getContext("2d");
+    x.fillStyle="#ffffff";x.fillRect(0,0,W,H);
+    x.fillStyle="#14a8a0";x.fillRect(0,0,6,H);
+    let y=pad;
+    for(const [type,txt] of rows){
+      if(type==="gap"){y+=12;continue;}
+      x.textBaseline="top";
+      if(type==="h"){x.fillStyle="#10202c";x.font="700 19px system-ui,Segoe UI,Arial";}
+      else if(type==="sub"){x.fillStyle="#4a5b67";x.font="12px system-ui,Segoe UI,Arial";}
+      else if(type==="sec"){x.fillStyle="#0c7f78";x.font="700 14px system-ui,Segoe UI,Arial";}
+      else if(type==="score"){x.fillStyle="#0c7f78";x.font="700 17px system-ui,Segoe UI,Arial";}
+      else{ // ok / no
+        x.font="13px system-ui,Segoe UI,Arial";
+        x.fillStyle=type==="ok"?"#1f9d57":"#c0392b";
+        x.fillText(type==="ok"?"✓":"✗",pad,y);
+        x.fillStyle="#10202c";x.fillText(txt,pad+22,y);y+=lh;continue;
+      }
+      x.fillText(txt,pad,y);y+=lh;
+    }
+    return cv.toDataURL("image/png");
+  }
+
+  /* ----------------------- STATUS UI ----------------------------------- */
+  function setStatus(kind,html){
+    const s=$("#status");
+    if(!kind){s.className="status";s.innerHTML=;return;}
+    s.className="status show "+kind;s.innerHTML=html;
+  }
+
+  /* ----------------------- SUBMISSION ---------------------------------- */
+  let busy=false;
+  async function submit(){
+    if(busy)return;
+    const handle=$("#handle").value.trim().slice(0,CONFIG.maxHandle);
+    if(!handle){setStatus("err","Enter a callsign first (a pseudonym — please don’t use a real name).");$("#handle").focus();return;}
+    if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      setStatus("err","This lab isn’t wired to a server yet: set <code>APPS_SCRIPT_URL</code> in the lab’s CONFIG. Ask your instructor.");
+      return;
+    }
+    busy=true;$("#submitBtn").setAttribute("aria-disabled","true");
+    setStatus("work","Capturing your lab and submitting…");
+
+    const {earned,total}=render();
+    let screenshot=;
+    try{ screenshot=await capture(); }catch(_){ screenshot=; }
+
+    const payload={
+      assignmentId:CONFIG.assignmentId,
+      handle:handle,
+      clientTimestamp:new Date().toISOString(),
+      objectives:CONFIG.objectives,
+      tasks:TASKS.map(t=>({id:t.id,label:t.label,passed:t.pass(state)})),
+      questions:QUESTIONS.map(q=>({id:q.id,prompt:q.prompt,answer:q.selected===null?null:q.options[q.selected],correct:q.correct})),
+      score:{earned,total},
+      screenshot:screenshot,
+      submissionToken:CONFIG.submissionToken
+    };
+
+    try{
+      // Simple request: no custom headers, text/plain body => no CORS preflight.
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+      const out=await res.json();
+      if(out&&out.success){
+        const link=out.docUrl?` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission</a>.`:;
+        setStatus("ok",`Submitted as <b>${handle}</b> — score ${earned}/${total}.${link}`);
+      }else{
+        setStatus("err","Server rejected the submission"+(out&&out.error?`: ${out.error}`:".")+" Check the callsign and token, or contact your instructor.");
+      }
+    }catch(err){
+      // Locked-down contexts: fire-and-forget so the row still lands; can't read docUrl.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+        setStatus("ok",`Submitted as <b>${handle}</b> (score ${earned}/${total}). The confirmation link couldn’t be read in this browser — please confirm receipt with your instructor.`);
+      }catch(e2){
+        setStatus("err","Couldn’t reach the submission server. Check your connection and the lab’s <code>APPS_SCRIPT_URL</code>, then try again.");
+      }
+    }finally{
+      busy=false;$("#submitBtn").removeAttribute("aria-disabled");
+    }
+  }
+
+  /* ----------------------- BIND BUTTONS (click + keyboard) ------------- */
+  function activate(node,fn){
+    node.addEventListener("click",fn);
+    node.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fn();}});
+  }
+  activate($("#submitBtn"),submit);
+  activate($("#resetBtn"),resetLab);
+
+  render();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-poe-priority.html",title:"Lab \u2014 Powering the Makerspace AP: PoE Budget & Priority"}, NEXT={href:"index_netplus-wap-guest.html",title:"Lab \u2014 Dual-SSID Wireless Access Point (Internal + Guest)"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.5";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

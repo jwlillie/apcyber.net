@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lab — Fiber Uplink for a High-Throughput Storage Node</title>
+<!--
+  ============================================================================
+  CompTIA Network+ (N10-009) / AP Networking pilot — Simulation Lab
+  assignmentId: netplus-fiber-link
+  Title: Fiber Uplink for a High-Throughput Storage Node
+  Blueprint tags:
+     N10-009  : 1.5  (Compare and contrast transmission media and transceivers)
+     AP NET   : 2.3.B / EK 2.3.B.5  (Determine appropriate transmission media; fiber)
+     (N10-007 equivalent, per the PDF currently in-project: 2.1 cabling solution)
+  ----------------------------------------------------------------------------
+  Clean-room build. Original scenario, hostnames, IP/port plan, cable
+  inventory, polarity labeling, tasks, and question wording. Not derived from
+  any vendor's lab content.
+
+  © 2026 [AUTHOR NAME / ORG]. Licensed for instructional use within the
+  author's Network+ / AP Networking lab library. Replace this notice with your
+  own copyright/license line before distribution.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0e1320; --panel:#161d2e; --panel-2:#1d2740; --ink:#e8edf7;
+    --muted:#9aa7c2; --line:#2b3852; --accent:#4ea3ff; --accent-ink:#06101f;
+    --ok:#37d399; --warn:#ffcf5c; --bad:#ff6b7a; --chip:#223052;
+    --focus:#ffd166; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    padding:18px;
+  }
+  a{color:var(--accent)}
+  h1{font-size:1.25rem;margin:0 0 2px}
+  h2{font-size:1rem;margin:0 0 10px;color:var(--ink)}
+  .sub{color:var(--muted);font-size:.85rem;margin:0 0 14px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 16px}
+  .tag{background:var(--chip);border:1px solid var(--line);border-radius:999px;
+       padding:3px 10px;font-size:.74rem;color:var(--muted)}
+  .wrap{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+        padding:16px}
+  .card + .card{margin-top:16px}
+
+  /* ---- Simulated rack / cabling canvas ---- */
+  #labArea{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .rack{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+        padding:14px;display:grid;gap:14px}
+  .device{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#10182a}
+  .device .name{font-weight:600;letter-spacing:.2px}
+  .device .meta{color:var(--muted);font-size:.78rem;margin-top:2px}
+  .ports{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
+  .port{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:78px}
+  .jack{width:64px;height:34px;border-radius:6px;border:2px solid var(--line);
+         background:#0b1322;display:flex;align-items:center;justify-content:center;
+         font-size:.66rem;color:var(--muted);position:relative}
+  .jack.rj45{border-style:dashed}
+  .jack.lc{gap:4px}
+  .bore{width:9px;height:9px;border-radius:50%;background:#2a3a59;display:inline-block;margin:0 2px}
+  .bore.lit-tx{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .bore.lit-rx{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .port small{color:var(--muted);font-size:.66rem;text-align:center}
+  .filled{border-color:var(--accent)}
+  .empty{opacity:.85}
+
+  .linkviz{display:flex;align-items:center;gap:10px;justify-content:center;
+           padding:8px;border:1px dashed var(--line);border-radius:8px;background:#0c1426}
+  .strand{height:6px;flex:1;border-radius:6px;background:#243350;transition:background .25s,box-shadow .25s}
+  .strand.up{background:var(--ok);box-shadow:0 0 10px rgba(55,211,153,.5)}
+  @media (prefers-reduced-motion:reduce){.strand{transition:none}}
+
+  /* ---- Parts shelf ---- */
+  .shelf{display:grid;gap:8px}
+  .cable{display:flex;align-items:center;gap:10px;border:1px solid var(--line);
+         border-radius:8px;padding:8px 10px;background:#0f1828;cursor:pointer}
+  .cable:hover{border-color:var(--accent)}
+  .cable input{accent-color:var(--accent)}
+  .cable .swatch{width:26px;height:8px;border-radius:4px;flex:0 0 auto}
+  .cable .ct{font-size:.82rem}
+  .cable .ct b{font-weight:600}
+  .cable .ct span{color:var(--muted)}
+
+  .field{margin:10px 0}
+  label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:4px}
+  select,input[type=text]{
+    width:100%;background:#0c1426;color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:9px 10px;font:inherit}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row > *{flex:1;min-width:160px}
+
+  button{
+    background:var(--panel-2);color:var(--ink);border:1px solid var(--line);
+    border-radius:9px;padding:9px 14px;font:inherit;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+  button.ghost{background:transparent}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .btnbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+  /* ---- Console / log ---- */
+  .console{margin-top:12px;background:#070c16;border:1px solid var(--line);border-radius:8px;
+           padding:10px 12px;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+           color:#c7d3ea;min-height:64px;white-space:pre-wrap;max-height:180px;overflow:auto}
+  .console .ok{color:var(--ok)} .console .bad{color:var(--bad)} .console .warn{color:var(--warn)}
+
+  /* ---- Tasks & questions ---- */
+  ul.tasks{list-style:none;padding:0;margin:0}
+  ul.tasks li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+  ul.tasks li:last-child{border-bottom:0}
+  .mark{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;
+        display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--muted)}
+  .mark.done{background:var(--ok);border-color:var(--ok);color:#06281c}
+  .qitem{padding:10px 0;border-bottom:1px solid var(--line)}
+  .qitem:last-child{border-bottom:0}
+  .qitem .p{font-size:.9rem;margin-bottom:6px}
+  .qstate{font-size:.74rem;margin-top:4px;min-height:1em}
+  .qstate.right{color:var(--ok)} .qstate.wrong{color:var(--bad)}
+
+  /* ---- Submission bar ---- */
+  .submit{margin-top:16px;background:var(--panel-2);border:1px solid var(--line);
+          border-radius:var(--radius);padding:14px}
+  .submit .row2{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+  .submit .row2 .grow{flex:1;min-width:200px}
+  #status{margin-top:10px;font-size:.85rem;min-height:1.2em}
+  #status.ok{color:var(--ok)} #status.bad{color:var(--bad)} #status.busy{color:var(--warn)}
+
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .score-pill{display:inline-block;background:var(--chip);border:1px solid var(--line);
+              border-radius:999px;padding:2px 10px;font-size:.78rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-fiber-link", "title": "Lab — Fiber Uplink for a High-Throughput Storage Node", "version": "1.0.0", "objectives": ["N10-009:1.5", "N10-009:2.4", "N10-009:5.2", "APNET:2.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+
+<header>
+  <h1>Fiber Uplink for a High-Throughput Storage Node</h1>
+  <p class="sub">Tidewater Imaging Co. · ingest-srv-12 → agg-switch-A · Network+ N10-009 simulation lab</p>
+  <div class="tags" aria-label="Blueprint objectives">
+    <span class="tag">N10-009 · 1.5 transmission media &amp; transceivers</span>
+    <span class="tag">AP Networking · 2.3.B fiber media</span>
+    <span class="tag" id="scorePill">Score 0 / 8</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===================== SIM SIDE ===================== -->
+  <section aria-label="Simulation">
+    <div id="labArea">
+      <h2>Cabling bench</h2>
+      <p class="sub" style="margin-top:-4px">
+        ingest-srv-12 captures 4K footage and writes to the iSCSI array. Its 1&nbsp;Gb copper
+        uplink is saturated. Replace it with a 10&nbsp;Gb optical uplink to agg-switch-A,
+        port <b>Te1/0/3</b> (populated with a <b>10GBASE-SR SFP+</b>, LC, 850&nbsp;nm).
+      </p>
+
+      <div class="rack" role="group" aria-label="Devices and link">
+        <!-- Switch -->
+        <div class="device" id="switchDev">
+          <div class="name">agg-switch-A &nbsp;·&nbsp; Te1/0/3</div>
+          <div class="meta">10GBASE-SR SFP+ transceiver · LC duplex · 850&nbsp;nm · multimode-rated</div>
+          <div class="ports">
+            <div class="port">
+              <div class="jack lc" id="sw-rx-jack" aria-label="Switch receive bore">
+                <span class="bore" id="b-sw-rx"></span>
+              </div>
+              <small>SFP+ <b>Rx</b></small>
+            </div>
+            <div class="port">
+              <div class="jack lc" id="sw-tx-jack" aria-label="Switch transmit bore">
+                <span class="bore" id="b-sw-tx"></span>
+              </div>
+              <small>SFP+ <b>Tx</b></small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Link visualizer -->
+        <div class="linkviz" aria-hidden="true">
+          <span style="font-size:.72rem;color:var(--muted)">server</span>
+          <span class="strand" id="strand"></span>
+          <span style="font-size:.72rem;color:var(--muted)">switch</span>
+        </div>
+
+        <!-- Server -->
+        <div class="device" id="serverDev">
+          <div class="name">ingest-srv-12 &nbsp;·&nbsp; back panel</div>
+          <div class="meta">Dual-LC 10G multimode NIC + on-board 1000BASE-T (RJ-45)</div>
+          <div class="ports">
+            <div class="port">
+              <div class="jack lc" aria-label="Server transmit bore">
+                <span class="bore" id="b-srv-tx"></span>
+              </div>
+              <small>Fiber <b>Tx</b></small>
+            </div>
+            <div class="port">
+              <div class="jack lc" aria-label="Server receive bore">
+                <span class="bore" id="b-srv-rx"></span>
+              </div>
+              <small>Fiber <b>Rx</b></small>
+            </div>
+            <div class="port">
+              <div class="jack rj45 filled" id="rj45" aria-label="Copper uplink port">
+                <span id="rj45txt">Cat 6</span>
+              </div>
+              <small>RJ-45 uplink</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parts shelf -->
+      <h2 style="margin-top:16px">Parts shelf — choose one patch cable</h2>
+      <div class="shelf" role="radiogroup" aria-label="Patch cable selection" id="shelf"></div>
+
+      <!-- Polarity mapping -->
+      <h2 style="margin-top:16px">Strand polarity</h2>
+      <div class="row">
+        <div class="field">
+          <label for="txMap">The strand leaving the server <b>Tx</b> bore lands on switch…</label>
+          <select id="txMap">
+            <option value="">— choose —</option>
+            <option value="sw-rx">switch Rx</option>
+            <option value="sw-tx">switch Tx</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rxMap">The strand entering the server <b>Rx</b> bore comes from switch…</label>
+          <select id="rxMap">
+            <option value="">— choose —</option>
+            <option value="sw-tx">switch Tx</option>
+            <option value="sw-rx">switch Rx</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btnbar">
+        <button id="btnUnplug" type="button">Unplug copper uplink → shelf</button>
+        <button id="btnLink" type="button" class="primary">Check link status</button>
+        <button id="btnReset" type="button" class="ghost">Reset bench</button>
+      </div>
+
+      <div class="console" id="console" role="log" aria-live="polite" aria-label="Console output">agg-switch-A# show interface Te1/0/3
+Te1/0/3 is down, line protocol is down (no transceiver light)
+</div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL SIDE ===================== -->
+  <section aria-label="Tasks and questions">
+    <div class="card">
+      <h2>Task checklist</h2>
+      <ul class="tasks" id="taskList"></ul>
+    </div>
+
+    <div class="card">
+      <h2>Check your understanding</h2>
+      <div id="questions"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ===================== SUBMISSION ===================== -->
+<div class="submit" role="group" aria-label="Submit lab">
+  <div class="row2">
+    <div class="grow">
+      <label for="handle">Callsign (no real names — keep it anonymous)</label>
+      <input id="handle" type="text" maxlength="40" autocomplete="off"
+             placeholder="e.g. blue-heron-7" aria-describedby="handleHelp">
+      <div id="handleHelp" class="sub" style="margin:4px 0 0">Used to label your submission. Do not enter your real name, email, or student ID.</div>
+    </div>
+    <div>
+      <button id="btnSubmit" type="button" class="primary">Submit completed lab</button>
+    </div>
+  </div>
+  <div id="status" aria-live="polite"></div>
+</div>
+
+<!-- ============================================================
+     SCRIPT BLOCK 1 — dependency-free DOM screenshot helper.
+     NOTE: The library spec calls for inlined html2canvas here. The real
+     minified source could not be faithfully reproduced in this build
+     environment, so this is a self-contained substitute that captures the
+     self-drawn lab DOM with zero external dependencies and no CDN:
+        clone subtree -> inline computed styles -> SVG <foreignObject> -> canvas -> PNG.
+     To use real html2canvas instead, paste its minified source in place of
+     this block and set CONFIG.useHtml2canvas = true below.
+     ============================================================ -->
+<script>
+(function(){
+  function inlineComputed(srcRoot, dstRoot){
+    const srcNodes = srcRoot.querySelectorAll('*');
+    const dstNodes = dstRoot.querySelectorAll('*');
+    const apply = (s,d)=>{
+      const cs = getComputedStyle(s);
+      let css = '';
+      for(let i=0;i<cs.length;i++){ const p=cs[i]; css += p+':'+cs.getPropertyValue(p)+';'; }
+      d.setAttribute('style', css);
+    };
+    apply(srcRoot, dstRoot);
+    for(let i=0;i<srcNodes.length;i++) apply(srcNodes[i], dstNodes[i]);
+  }
+  // Returns a PNG data URL (or a tiny placeholder on failure).
+  window.captureElement = async function(el){
+    try{
+      const rect = el.getBoundingClientRect();
+      const w = Math.max(1, Math.ceil(rect.width));
+      const h = Math.max(1, Math.ceil(rect.height));
+      const clone = el.cloneNode(true);
+      inlineComputed(el, clone);
+      clone.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+        '<foreignObject x="0" y="0" width="100%" height="100%">'+xml+'</foreignObject></svg>';
+      const url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      const img = new Image();
+      const loaded = new Promise((res,rej)=>{img.onload=res;img.onerror=rej;});
+      img.src = url;
+      await loaded;
+      const scale = Math.min(2, (1400/w)||2);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(w*scale); canvas.height = Math.ceil(h*scale);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0e1320';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      return canvas.toDataURL('image/png');
+    }catch(e){
+      // Non-fatal: submit still proceeds with a placeholder.
+      const c=document.createElement('canvas'); c.width=480;c.height=80;
+      const x=c.getContext('2d'); x.fillStyle='#0e1320';x.fillRect(0,0,480,80);
+      x.fillStyle='#9aa7c2';x.font='14px sans-serif';
+      x.fillText('screenshot unavailable in this browser',16,44);
+      return c.toDataURL('image/png');
+    }
+  };
+})();
+</script>
+
+<!-- ============================================================
+     SCRIPT BLOCK 2 — engine, CONFIG + ANSWER KEY, logic, POST.
+     ============================================================ -->
+<script>
+(function(){
+  'use strict';
+
+  /* -------------------- CONFIG + ANSWER KEY -------------------- */
+  const CONFIG = {
+    assignmentId: 'netplus-fiber-link',
+    objectives: ["N10-009:1.5", "N10-009:2.4", "N10-009:5.2", "APNET:2.4"],
+    // Paste your deployed Apps Script /exec URL here (same across the library):
+    APPS_SCRIPT_URL: 'PASTE_APPS_SCRIPT_EXEC_URL_HERE',
+    submissionToken: 'REPLACE_WITH_COHORT_TOKEN',
+    useHtml2canvas: false  // true only if you paste real html2canvas into block 1
+  };
+
+  const CABLES = [
+    {id:'cab-om4',  swatch:'#27d3c4', name:'OM4 multimode duplex, LC–LC',  meta:'aqua jacket · 850 nm rated', correct:true},
+    {id:'cab-os2',  swatch:'#ffd23f', name:'OS2 single-mode duplex, LC–LC', meta:'yellow jacket · 1310 nm'},
+    {id:'cab-sclc', swatch:'#8a93a8', name:'Multimode duplex, SC–LC hybrid', meta:'connector mismatch on SFP+'},
+    {id:'cab-cat6', swatch:'#4ea3ff', name:'Cat 6 UTP, RJ-45',             meta:'copper · not optical'},
+    {id:'cab-mpo',  swatch:'#b07cff', name:'OM4 MPO/MTP 12-fiber trunk',    meta:'parallel optics · wrong connector'}
+  ];
+  const CORRECT_CABLE = 'cab-om4';
+
+  // Tasks evaluate live sim state.
+  const TASKS = [
+    {id:'pull-copper', label:'Stage the copper uplink on the parts shelf (remove RJ-45)',
+     test:s=>s.copperRemoved},
+    {id:'pick-cable',  label:'Select a patch cable compatible with the LC SFP+ and the SR (multimode) link',
+     test:s=>s.cable===CORRECT_CABLE},
+    {id:'polarity',    label:'Observe correct Tx↔Rx polarity across the duplex pair',
+     test:s=>s.txMap==='sw-rx' && s.rxMap==='sw-tx'},
+    {id:'link-up',     label:'Bring the optical interface to up/up',
+     test:s=>s.linkUp}
+  ];
+
+  // Questions with original wording; key held client-side (formative).
+  const QUESTIONS = [
+    {id:'q1', prompt:'Which connector type terminates the strands on the Te1/0/3 SFP+?',
+     options:['ST','SC','LC','F-type'], answer:'LC'},
+    {id:'q2', prompt:'A 10GBASE-SR transceiver runs at 850 nm. Which fiber does it require?',
+     options:['Single-mode (OS2)','Multimode (OM3/OM4)','Either, interchangeably','Coaxial'],
+     answer:'Multimode (OM3/OM4)'},
+    {id:'q3', prompt:'Across a duplex fiber pair, a device\u2019s transmit (Tx) strand must land on the far device\u2019s…',
+     options:['transmit (Tx) port','receive (Rx) port','management port','ground'],
+     answer:'receive (Rx) port'},
+    {id:'q4', prompt:'Which transceiver form factor delivers 10 Gb over a single lane in an SFP-sized cage?',
+     options:['GBIC','SFP','SFP+','QSFP'], answer:'SFP+'}
+  ];
+
+  /* -------------------- STATE -------------------- */
+  const state = {
+    copperRemoved:false, cable:null, txMap:'', rxMap:'',
+    linkChecked:false, linkUp:false, answers:{}
+  };
+
+  /* -------------------- DOM helpers -------------------- */
+  const $ = id=>document.getElementById(id);
+  const logEl = $('console');
+  function log(line, cls){
+    const span = document.createElement('span');
+    if(cls) span.className = cls;
+    span.textContent = line + '\n';
+    logEl.appendChild(span);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  /* -------------------- Build shelf -------------------- */
+  const shelf = $('shelf');
+  CABLES.forEach(c=>{
+    const lbl = document.createElement('label');
+    lbl.className='cable';
+    lbl.innerHTML =
+      '<input type="radio" name="cable" value="'+c.id+'">'+
+      '<span class="swatch" style="background:'+c.swatch+'"></span>'+
+      '<span class="ct"><b>'+c.name+'</b><br><span>'+c.meta+'</span></span>';
+    lbl.querySelector('input').addEventListener('change', e=>{
+      state.cable = e.target.value;
+      const chosen = CABLES.find(x=>x.id===state.cable);
+      log('bench: selected '+chosen.name+'.');
+      refresh();
+    });
+    shelf.appendChild(lbl);
+  });
+
+  /* -------------------- Build tasks -------------------- */
+  const taskList = $('taskList');
+  TASKS.forEach(t=>{
+    const li=document.createElement('li');
+    li.innerHTML='<span class="mark" id="mark-'+t.id+'" aria-hidden="true"></span>'+
+                 '<span>'+t.label+'</span>';
+    taskList.appendChild(li);
+  });
+
+  /* -------------------- Build questions -------------------- */
+  const qWrap = $('questions');
+  QUESTIONS.forEach(q=>{
+    const div=document.createElement('div'); div.className='qitem';
+    let opts='';
+    q.options.forEach((o,i)=>{
+      const rid=q.id+'-'+i;
+      opts+='<div><label style="display:flex;gap:8px;color:var(--ink);margin:3px 0">'+
+            '<input type="radio" name="'+q.id+'" value="'+o.replace(/"/g,'&quot;')+'"> '+o+'</label></div>';
+    });
+    div.innerHTML='<div class="p">'+q.prompt+'</div>'+opts+
+                  '<div class="qstate" id="qs-'+q.id+'"></div>';
+    qWrap.appendChild(div);
+    div.querySelectorAll('input[name="'+q.id+'"]').forEach(inp=>{
+      inp.addEventListener('change', e=>{
+        state.answers[q.id]=e.target.value;
+        const right = e.target.value===q.answer;
+        const el=$('qs-'+q.id);
+        el.textContent = right ? 'Correct.' : 'Not quite — reconsider the media/transceiver match.';
+        el.className = 'qstate '+(right?'right':'wrong');
+        refresh();
+      });
+    });
+  });
+
+  /* -------------------- Actions -------------------- */
+  $('btnUnplug').addEventListener('click', ()=>{
+    if(state.copperRemoved){ log('bench: no copper uplink connected.','warn'); return; }
+    state.copperRemoved=true;
+    $('rj45').classList.remove('filled'); $('rj45').classList.add('empty');
+    $('rj45txt').textContent='empty';
+    log('bench: 1000BASE-T patch cable removed and staged on shelf.');
+    refresh();
+  });
+
+  $('txMap').addEventListener('change', e=>{ state.txMap=e.target.value; refresh(); });
+  $('rxMap').addEventListener('change', e=>{ state.rxMap=e.target.value; refresh(); });
+
+  $('btnLink').addEventListener('click', ()=>{
+    state.linkChecked=true;
+    log('agg-switch-A# show interface Te1/0/3');
+    // Evaluate physical correctness with realistic diagnostics.
+    if(!state.cable){
+      state.linkUp=false; log('  Te1/0/3 is down — no patch cable seated.','bad');
+    } else if(state.cable==='cab-cat6'){
+      state.linkUp=false;
+      log('  transceiver fault: RJ-45 copper cannot seat in an LC optical cage.','bad');
+    } else if(state.cable==='cab-mpo'){
+      state.linkUp=false;
+      log('  connector mismatch: MPO/MTP trunk will not mate with a duplex LC SFP+.','bad');
+    } else if(state.cable==='cab-sclc'){
+      state.linkUp=false;
+      log('  connector mismatch: SC end will not seat in the LC bore on Te1/0/3.','bad');
+    } else if(state.cable==='cab-os2'){
+      state.linkUp=false;
+      log('  optics mismatch: 10GBASE-SR (850 nm) cannot reliably drive OS2 single-mode strands.','bad');
+    } else if(state.txMap!=='sw-rx' || state.rxMap!=='sw-tx'){
+      state.linkUp=false;
+      log('  Te1/0/3 is down — Rx detects no light. Tx/Rx pair appears crossed.','bad');
+      log('  hint: a device\u2019s Tx strand must land on the partner\u2019s Rx.','warn');
+    } else {
+      state.linkUp=true;
+      log('  Te1/0/3 is up, line protocol is up','ok');
+      log('  10GBASE-SR, link OK, Rx power -3.1 dBm (nominal)','ok');
+    }
+    paintBores();
+    refresh();
+  });
+
+  $('btnReset').addEventListener('click', ()=>{
+    state.copperRemoved=false; state.cable=null; state.txMap=''; state.rxMap='';
+    state.linkChecked=false; state.linkUp=false; state.answers={};
+    document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+    $('txMap').value=''; $('rxMap').value='';
+    $('rj45').classList.add('filled'); $('rj45').classList.remove('empty'); $('rj45txt').textContent='Cat 6';
+    QUESTIONS.forEach(q=>{ const el=$('qs-'+q.id); el.textContent=''; el.className='qstate'; });
+    logEl.textContent='';
+    log('agg-switch-A# show interface Te1/0/3');
+    log('Te1/0/3 is down, line protocol is down (no transceiver light)');
+    paintBores(); refresh();
+  });
+
+  /* -------------------- Visuals -------------------- */
+  function paintBores(){
+    const lit = state.linkUp;
+    $('b-srv-tx').className='bore'+(lit?' lit-tx':'');
+    $('b-sw-rx').className ='bore'+(lit?' lit-tx':'');
+    $('b-sw-tx').className ='bore'+(lit?' lit-rx':'');
+    $('b-srv-rx').className='bore'+(lit?' lit-rx':'');
+    $('strand').className='strand'+(lit?' up':'');
+  }
+
+  function refresh(){
+    let earned=0;
+    TASKS.forEach(t=>{
+      const ok=t.test(state);
+      if(ok) earned++;
+      const m=$('mark-'+t.id);
+      m.className='mark'+(ok?' done':'');
+      m.textContent=ok?'\u2713':'';
+    });
+    let qright=0;
+    QUESTIONS.forEach(q=>{ if(state.answers[q.id]===q.answer) qright++; });
+    const total = TASKS.length + QUESTIONS.length;
+    const score = earned + qright;
+    $('scorePill').textContent = 'Score '+score+' / '+total;
+    return {earned, qright, total, score};
+  }
+
+  /* -------------------- Submission -------------------- */
+  function setStatus(msg, cls){ const s=$('status'); s.textContent=msg; s.className=cls||''; }
+
+  $('btnSubmit').addEventListener('click', async ()=>{
+    const handle = $('handle').value.trim();
+    if(!handle){ setStatus('Enter a callsign first (no real names).','bad'); $('handle').focus(); return; }
+    if(handle.length>40){ setStatus('Callsign too long (40 char max).','bad'); return; }
+
+    const r = refresh();
+    setStatus('Capturing screenshot…','busy');
+    $('btnSubmit').disabled = true;
+
+    let shot;
+    try{
+      shot = (CONFIG.useHtml2canvas && window.html2canvas)
+        ? (await window.html2canvas($('labArea'),{backgroundColor:'#0e1320'})).toDataURL('image/png')
+        : await window.captureElement($('labArea'));
+    }catch(e){ shot = await window.captureElement($('labArea')); }
+
+    const payload = {
+      assignmentId: CONFIG.assignmentId,
+      handle: handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(t=>({id:t.id, label:t.label, passed:!!t.test(state)})),
+      questions: QUESTIONS.map(q=>({
+        id:q.id, prompt:q.prompt,
+        answer: state.answers[q.id]||null,
+        correct: state.answers[q.id]===q.answer
+      })),
+      score: { earned: r.score, total: r.total },
+      screenshot: shot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    setStatus('Submitting…','busy');
+    try{
+      // Simple request: NO custom headers, default text/plain body — avoids CORS preflight.
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+      const out = await res.json();
+      if(out && out.success){
+        setStatus('Submitted ✓  Your report: '+out.docUrl, 'ok');
+      }else{
+        setStatus('Server rejected the submission: '+((out&&out.error)||'unknown error'), 'bad');
+        $('btnSubmit').disabled=false;
+      }
+    }catch(err){
+      // Locked-down fallback: fire-and-forget; cannot read docUrl.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) });
+        setStatus('Submission sent, but the confirmation could not be read in this browser. Confirm receipt with your instructor.','warn');
+      }catch(e2){
+        setStatus('Network error — submission did not send. Check connection and try again.','bad');
+        $('btnSubmit').disabled=false;
+      }
+    }
+  });
+
+  /* -------------------- init -------------------- */
+  paintBores(); refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-fiber-crossconnect.html",title:"Lab \u2014 Campus Fiber Cross-Connect"}, NEXT={href:"index_netplus-patch-panel-termination.html",title:"Cross-Connect: Patch a Riser Closet \u2014 Network+ / AP Networking Lab"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.4";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

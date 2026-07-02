@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Wireless Coverage &amp; Containment — Branch Library Wi-Fi Plan</title>
+<!--
+  ============================================================================
+  Network+ / AP Networking Lab Library
+  Lab: netplus-wireless-coverage-design
+  "Wireless Coverage & Containment: Plan the Maple Hollow Library Wi-Fi"
+
+  Copyright (c) 2026 [AUTHOR NAME / ORG]. All rights reserved.
+  Licensed for use within the author's Network+ / AP Networking lab library.
+  Built clean-room from the public CompTIA Network+ exam objectives and the
+  public College Board AP Networking course framework. No third-party lab's
+  scenario, wording, hostnames, addressing, values, ordering, or screenshots
+  were used. UI is self-rendered SVG/HTML; no captured product images.
+  ============================================================================
+  Blueprint tags (verified against the files in this project):
+    CompTIA Network+ (file in project is N10-007):
+      1.6  Implement the appropriate wireless technologies and configurations
+           (unidirectional/omnidirectional antennas, site surveys, frequencies)
+      5.4  Troubleshoot common wireless connectivity/performance issues
+           (incorrect antenna type, antenna placement, interference)
+    AP Networking (pilot Framework V.1):
+      2.2.D  Roles of network devices (wireless access point / WAP)
+      2.4.A  Evaluate a network design incl. wireless coverage (SOHO/branch)
+    NOTE: This master prompt targets N10-009; the objectives PDF supplied is
+    N10-007. Re-map to the N10-009 wireless objective in labs.json when the
+    009 file is added — it's a manifest data edit, not a rebuild.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0e1726; --panel:#15213a; --panel-2:#1b2a48; --ink:#e7eefb;
+    --muted:#9fb1d1; --line:#2c3e63; --accent:#46b3a6; --accent-2:#5b8cff;
+    --good:#3fb27f; --bad:#e06363; --warn:#e0b35a;
+    --room:#22324f; --target:#2a3c5e; --leak:#3a1f28; --wall:#cdd9f2;
+    --radius:12px; --focus:#ffd166;
+    font-synthesis-weight:none;
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:linear-gradient(180deg,#0b1320,#0e1726 40%);
+    color:var(--ink); font:15px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:18px;
+  }
+  h1{font-size:1.25rem;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:.85rem;margin:0 0 14px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 16px}
+  .tag{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
+    border-radius:999px;padding:2px 10px;font-size:.72rem;letter-spacing:.02em}
+  .wrap{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr);gap:16px;align-items:start}
+  @media (max-width:900px){ .wrap{grid-template-columns:1fr} }
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+  .card h2{font-size:.92rem;margin:0 0 10px;color:var(--accent);letter-spacing:.04em;text-transform:uppercase}
+  .stagewrap{overflow:auto}
+  svg{display:block;max-width:100%;height:auto;background:#0b1220;border:1px solid var(--line);border-radius:10px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.78rem;color:var(--muted)}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .meters{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .meter{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+  .meter .v{font-size:1.3rem;font-weight:700}
+  .meter .l{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .meter.ok .v{color:var(--good)} .meter.no .v{color:var(--bad)}
+  .config{display:grid;gap:10px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .row label{font-size:.78rem;color:var(--muted);min-width:70px}
+  select,button,input[type=text]{
+    font:inherit;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;padding:7px 10px}
+  select:focus-visible,button:focus-visible,input:focus-visible,
+  [tabindex]:focus-visible,.mount:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  button{cursor:pointer;background:var(--accent-2);border-color:transparent;color:#fff;font-weight:600}
+  button.ghost{background:var(--panel-2);color:var(--ink)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .hint{font-size:.78rem;color:var(--muted)}
+  .err{color:var(--bad);font-size:.82rem;min-height:1.1em}
+  ul.tasks,ul.qs{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  ul.tasks li{display:flex;gap:9px;align-items:flex-start;font-size:.86rem}
+  .chk{flex:0 0 auto;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);
+    display:grid;place-items:center;font-size:.7rem;margin-top:1px}
+  .chk.on{background:var(--good);border-color:transparent;color:#06251a}
+  .chk.off{background:transparent;color:transparent}
+  .qs li{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .qs .p{font-size:.85rem;margin-bottom:7px}
+  .qs .fb{font-size:.76rem;margin-top:6px;min-height:1em}
+  .fb.ok{color:var(--good)} .fb.no{color:var(--bad)}
+  .submitbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  .status{font-size:.84rem;min-height:1.2em}
+  .status.ok{color:var(--good)} .status.no{color:var(--bad)} .status.busy{color:var(--warn)}
+  a{color:var(--accent)}
+  .mount{cursor:pointer}
+  .placed-note{font-size:.74rem;color:var(--muted)}
+  footer{margin-top:18px;color:var(--muted);font-size:.72rem;line-height:1.5}
+  .kbd{font:inherit;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-wireless-coverage-design", "title": "Wireless Coverage &amp; Containment \u2014 Branch Library Wi-Fi Plan", "version": "1.0.0", "objectives": ["N10-009:2.3", "APNET:2.2", "APNET:2.4"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<h1>Wireless Coverage &amp; Containment</h1>
+<p class="sub">Plan the Maple Hollow Public Library branch Wi-Fi — full interior coverage, minimal signal spill into the public sidewalk &amp; lot.</p>
+<div class="tags" aria-label="Objective tags">
+  <span class="tag">N10-007 · 1.6 wireless config</span>
+  <span class="tag">N10-007 · 5.4 antenna type/placement</span>
+  <span class="tag">AP NET · 2.2.D WAP role</span>
+  <span class="tag">AP NET · 2.4.A coverage design</span>
+</div>
+
+<div class="wrap">
+  <!-- ================= LAB STAGE (captured) ================= -->
+  <section class="card stagewrap" id="labArea" aria-label="Floor plan simulator">
+    <h2>Branch floor plan</h2>
+    <p class="hint" id="planHint">Click a ceiling mount node (◯) to place a WAP, then set its antenna type, power, and — for directional — its aim. You have a budget of <strong>3</strong> access points.</p>
+    <div id="stageHost"></div>
+    <div class="legend" aria-hidden="true">
+      <span><i style="background:var(--room)"></i>Coverage target room</span>
+      <span><i style="background:var(--leak)"></i>Public area (no spill)</span>
+      <span><i style="background:rgba(63,178,127,.55)"></i>Covered</span>
+      <span><i style="background:rgba(224,99,99,.6)"></i>Leak</span>
+    </div>
+    <div class="meters" role="status" aria-live="polite">
+      <div class="meter" id="mCov"><div class="v" id="covV">0%</div><div class="l">Interior coverage</div></div>
+      <div class="meter" id="mLeak"><div class="v" id="leakV">0</div><div class="l">Leak cells</div></div>
+      <div class="meter" id="mAps"><div class="v" id="apsV">0/3</div><div class="l">WAPs used</div></div>
+    </div>
+  </section>
+
+  <!-- ================= CONTROLS / PANEL ================= -->
+  <div style="display:grid;gap:16px">
+    <section class="card" aria-label="Access point configuration">
+      <h2>Selected mount</h2>
+      <div class="config">
+        <div class="placed-note" id="selNote">No mount selected. Click a ◯ on the plan.</div>
+        <div class="row">
+          <label for="typeSel">Antenna</label>
+          <select id="typeSel" disabled>
+            <option value="none">— empty —</option>
+            <option value="omni">Omnidirectional</option>
+            <option value="dir">Directional</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="powSel">TX power</label>
+          <select id="powSel" disabled>
+            <option value="low">Low</option>
+            <option value="med">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="row" id="aimRow" hidden>
+          <label for="aimSel">Aim</label>
+          <select id="aimSel">
+            <option value="N">North ↑</option>
+            <option value="NE">North-East ↗</option>
+            <option value="E">East →</option>
+            <option value="SE">South-East ↘</option>
+            <option value="S">South ↓</option>
+            <option value="SW">South-West ↙</option>
+            <option value="W">West ←</option>
+            <option value="NW">North-West ↖</option>
+          </select>
+        </div>
+        <div class="row">
+          <button class="ghost" id="resetBtn" type="button">Reset plan</button>
+        </div>
+        <p class="err" id="cfgErr" role="alert"></p>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Tasks">
+      <h2>Tasks</h2>
+      <ul class="tasks" id="taskList"></ul>
+    </section>
+
+    <section class="card" aria-label="Questions">
+      <h2>Check your understanding</h2>
+      <ul class="qs" id="qList"></ul>
+    </section>
+
+    <section class="card" aria-label="Submit">
+      <h2>Submit completed lab</h2>
+      <div class="row">
+        <label for="handle">Callsign</label>
+        <input type="text" id="handle" maxlength="40" placeholder="e.g., copper-finch-12"
+               autocomplete="off" aria-describedby="handleHint" />
+      </div>
+      <p class="hint" id="handleHint">Use a pseudonym — no real names, emails, or student IDs.</p>
+      <div class="submitbar">
+        <button id="submitBtn" type="button">Submit completed lab</button>
+        <button class="ghost" id="previewBtn" type="button">Preview capture</button>
+      </div>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+</div>
+
+<footer>
+  © 2026 [AUTHOR NAME / ORG]. Original clean-room lab for the Network+ / AP Networking
+  library. Client-side scoring is self-reported and inspectable in dev tools — fine for
+  formative work; enable server-side re-scoring in the Apps Script for graded use.
+  No real-name PII is collected by this lab.
+</footer>
+
+<!-- =========================================================================
+     SCRIPT BLOCK 1 — screenshot capture
+     -------------------------------------------------------------------------
+     The master spec calls for inlined html2canvas. This sandbox has no network
+     access, so rather than ship a fabricated/partial copy, this lab uses a
+     dependency-free native capture that paints the plan + results to a canvas.
+     To use real html2canvas instead: paste its minified source here so it
+     defines window.html2canvas; captureScreenshot() will auto-prefer it.
+     ========================================================================= -->
+<script>
+(function(){
+  "use strict";
+
+  // --------- GRID / GEOMETRY MODEL (mirrors the tuned reference model) -------
+  const CELL = 34, COLS = 14, ROWS = 10, PAD = 10;
+  // interior building box: x 2..10, y 2..6
+  function box(x0,x1,y0,y1){const a=[];for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)a.push([x,y]);return a;}
+  const ROOMS = {
+    reading: { cells: box(2,5,2,6), name:"Reading Hall",   color:"var(--room)" },
+    staff:   { cells: box(6,10,2,3), name:"Staff Workroom", color:"var(--room)" },
+    nook:    { cells: box(6,10,4,6), name:"Corner Study Nook", color:"var(--room)" }
+  };
+  const INTERIOR = [...ROOMS.reading.cells, ...ROOMS.staff.cells, ...ROOMS.nook.cells];
+  // monitored public area (sidewalk + lot) just outside the south & east walls
+  const EXTERIOR = [];
+  for(let x=1;x<=11;x++) EXTERIOR.push([x,8]);
+  for(let y=1;y<=7;y++) EXTERIOR.push([12,y]);
+
+  // ceiling mount nodes the learner can use
+  const MOUNTS = [
+    { id:"M1", x:3, y:4, label:"Reading Hall (center)" },
+    { id:"M2", x:8, y:2, label:"Staff Workroom" },
+    { id:"M3", x:10, y:6, label:"Nook SE corner" },
+    { id:"M4", x:6, y:5, label:"Nook (west)" },
+    { id:"M5", x:4, y:3, label:"Reading Hall (north)" },
+    { id:"M6", x:10, y:2, label:"Staff NE corner" }
+  ];
+
+  const R_OMNI = {low:2.4, med:3.2, high:4.2};
+  const R_DIR  = {low:3.4, med:4.4, high:5.6};
+  const DIRV = {N:[0,-1],S:[0,1],E:[1,0],W:[-1,0],
+    NE:[0.7071,-0.7071],NW:[-0.7071,-0.7071],SE:[0.7071,0.7071],SW:[-0.7071,0.7071]};
+
+  // placements: mountId -> {type:'omni'|'dir', pow, aim}
+  const state = { placements:{}, selected:null, qAnswers:{} };
+
+  function roomOf(x,y){
+    for(const k in ROOMS) if(ROOMS[k].cells.some(c=>c[0]===x&&c[1]===y)) return k;
+    return null;
+  }
+  function covers(cell, m, p){
+    const dx=cell[0]-m.x, dy=cell[1]-m.y, dist=Math.hypot(dx,dy);
+    if(p.type==="omni") return dist <= R_OMNI[p.pow];
+    if(dist===0) return true;
+    const v=DIRV[p.aim||"N"];
+    const cosang=(dx*v[0]+dy*v[1])/dist;
+    return dist <= R_DIR[p.pow] && cosang >= 0.40; // ~66° half-angle
+  }
+  function activeWaps(){
+    return Object.entries(state.placements)
+      .filter(([id,p])=>p && p.type && p.type!=="none")
+      .map(([id,p])=>({m:MOUNTS.find(m=>m.id===id),p}));
+  }
+  function evaluate(){
+    const waps=activeWaps();
+    const covSet=new Set(), leakSet=new Set();
+    for(const c of INTERIOR) if(waps.some(w=>covers(c,w.m,w.p))) covSet.add(c[0]+","+c[1]);
+    for(const c of EXTERIOR) if(waps.some(w=>covers(c,w.m,w.p))) leakSet.add(c[0]+","+c[1]);
+    const coverage = covSet.size/INTERIOR.length;
+    const leak = leakSet.size;
+    const used = waps.length;
+    // directional aimed inward, mounted in the nook corner
+    const boundaryDir = waps.some(w=>{
+      const r=roomOf(w.m.x,w.m.y);
+      const inward = ["N","NW","W"].includes(w.p.aim);
+      return w.p.type==="dir" && r==="nook" && inward;
+    });
+    return {coverage, leak, used, boundaryDir, covSet, leakSet};
+  }
+
+  // --------------------------- TASKS ----------------------------------------
+  const TASKS = [
+    { id:"coverage", label:"Cover at least 92% of the three interior rooms.",
+      test:e=>e.coverage>=0.92 },
+    { id:"containment", label:"Keep signal spill into the public sidewalk/lot to 4 cells or fewer.",
+      test:e=>e.leak<=4 },
+    { id:"budget", label:"Use no more than 3 access points.",
+      test:e=>e.used<=3 && e.used>0 },
+    { id:"boundary", label:"Place a directional WAP in the corner nook, aimed inward (N/NW/W).",
+      test:e=>e.boundaryDir }
+  ];
+
+  // --------------------------- QUESTIONS ------------------------------------
+  const QUESTIONS = [
+    { id:"q1", prompt:"To limit Wi-Fi signal beyond an exterior wall while still serving the room, which antenna type fits best?",
+      options:["Omnidirectional","Directional"], answer:"Directional" },
+    { id:"q2", prompt:"Which band generally travels through interior walls with less attenuation (better reach), at the cost of capacity?",
+      options:["2.4 GHz","5 GHz"], answer:"2.4 GHz" },
+    { id:"q3", prompt:"A directional WAP mounted at the building's street-facing corner should be aimed toward the…",
+      options:["Parking lot (outward)","Building interior (inward)"], answer:"Building interior (inward)" },
+    { id:"q4", prompt:"Lowering an access point's transmit power on a boundary wall most directly improves…",
+      options:["Containment (less signal spill)","Total throughput for all clients"], answer:"Containment (less signal spill)" }
+  ];
+
+  // ----------------------------- CONFIG / KEY -------------------------------
+  const CONFIG = {
+    assignmentId: "netplus-wireless-coverage-design",
+    objectives: ["N10-009:2.3","APNET:2.2","APNET:2.4"],
+    // Deployed Apps Script /exec URL — same across the library. Replace before use.
+    APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    passThreshold: "all tasks + all questions correct"
+  };
+
+  // ============================ RENDER: SVG plan ============================
+  const NS="http://www.w3.org/2000/svg";
+  const W = COLS*CELL + PAD*2, H = ROWS*CELL + PAD*2;
+  function px(c){ return PAD + c*CELL; }
+
+  function buildSVG(){
+    const svg=document.createElementNS(NS,"svg");
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    svg.setAttribute("role","group");
+    svg.setAttribute("aria-label","Library floor plan with coverage overlay");
+    svg.id="plan";
+
+    // exterior public band (leak zone)
+    const gExt=g(svg);
+    EXTERIOR.forEach(c=>{
+      const r=rect(c[0],c[1]);
+      r.setAttribute("fill","var(--leak)"); r.setAttribute("data-ext",c[0]+","+c[1]);
+      gExt.appendChild(r);
+    });
+
+    // rooms
+    Object.values(ROOMS).forEach(rm=>{
+      rm.cells.forEach(c=>{
+        const r=rect(c[0],c[1]);
+        r.setAttribute("fill","var(--target)");
+        r.setAttribute("data-int",c[0]+","+c[1]);
+        gExt.appendChild(r);
+      });
+    });
+
+    // coverage overlay layer (drawn above rooms)
+    const gCov=g(svg); gCov.id="covLayer";
+
+    // walls — building outline + room dividers
+    const gWall=g(svg);
+    outline(gWall, 2,10,2,6);                 // building perimeter
+    vline(gWall, 6, 2, 6);                     // reading | (staff/nook)
+    hline(gWall, 6,10, 4);                     // staff / nook divider
+    // thicker exterior (street) walls south & east as emphasis
+    emphLine(gWall, px(2), px(7), px(11), px(7)); // south interior edge
+    emphLine(gWall, px(11), px(2), px(11), px(7)); // east interior edge
+
+    // room labels
+    label(svg, 3.5,4.2,"Reading Hall");
+    label(svg, 8,2.6,"Staff Workroom");
+    label(svg, 8,5.2,"Corner Study Nook");
+    label(svg, 6.4,8.6,"◀ public sidewalk / lot — keep signal out ▶", true);
+
+    // mount nodes
+    const gM=g(svg); gM.id="mountLayer";
+    MOUNTS.forEach(m=>{
+      const node=document.createElementNS(NS,"circle");
+      node.setAttribute("cx",px(m.x)+CELL/2);
+      node.setAttribute("cy",px(m.y)+CELL/2);
+      node.setAttribute("r",10);
+      node.setAttribute("class","mount");
+      node.setAttribute("tabindex","0");
+      node.setAttribute("role","button");
+      node.setAttribute("aria-label","Ceiling mount "+m.label);
+      node.dataset.mount=m.id;
+      node.setAttribute("fill","#0b1220");
+      node.setAttribute("stroke","var(--accent)");
+      node.setAttribute("stroke-width","2");
+      node.addEventListener("click",()=>selectMount(m.id));
+      node.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();selectMount(m.id);} });
+      gM.appendChild(node);
+    });
+
+    return svg;
+
+    function g(parent){const e=document.createElementNS(NS,"g");parent.appendChild(e);return e;}
+    function rect(x,y){const r=document.createElementNS(NS,"rect");
+      r.setAttribute("x",px(x));r.setAttribute("y",px(y));
+      r.setAttribute("width",CELL);r.setAttribute("height",CELL);
+      r.setAttribute("stroke","#0b1220");r.setAttribute("stroke-width","1");return r;}
+    function vline(p,x,y0,y1){line(p,px(x),px(y0),px(x),px(y1+1));}
+    function hline(p,x0,x1,y){line(p,px(x0),px(y+1),px(x1+1),px(y+1));}
+    function line(p,x1,y1,x2,y2){const l=document.createElementNS(NS,"line");
+      l.setAttribute("x1",x1);l.setAttribute("y1",y1);l.setAttribute("x2",x2);l.setAttribute("y2",y2);
+      l.setAttribute("stroke","var(--wall)");l.setAttribute("stroke-width","2");p.appendChild(l);}
+    function emphLine(p,x1,y1,x2,y2){const l=document.createElementNS(NS,"line");
+      l.setAttribute("x1",x1);l.setAttribute("y1",y1);l.setAttribute("x2",x2);l.setAttribute("y2",y2);
+      l.setAttribute("stroke","var(--bad)");l.setAttribute("stroke-width","4");l.setAttribute("opacity",".8");p.appendChild(l);}
+    function outline(p,x0,x1,y0,y1){
+      const r=document.createElementNS(NS,"rect");
+      r.setAttribute("x",px(x0));r.setAttribute("y",px(y0));
+      r.setAttribute("width",(x1-x0+1)*CELL);r.setAttribute("height",(y1-y0+1)*CELL);
+      r.setAttribute("fill","none");r.setAttribute("stroke","var(--wall)");r.setAttribute("stroke-width","3");p.appendChild(r);
+    }
+    function label(parent,x,y,text,muted){
+      const t=document.createElementNS(NS,"text");
+      t.setAttribute("x",px(x)+CELL/2);t.setAttribute("y",px(y)+CELL/2);
+      t.setAttribute("fill",muted?"var(--muted)":"var(--ink)");
+      t.setAttribute("font-size",muted?"11":"12");
+      t.setAttribute("font-family","ui-sans-serif,system-ui,sans-serif");
+      t.setAttribute("text-anchor","middle");t.textContent=text;parent.appendChild(t);
+    }
+  }
+
+  // ============================ STATE / UI ==================================
+  let svgEl;
+  function selectMount(id){
+    state.selected=id;
+    const p=state.placements[id] || {type:"none",pow:"med",aim:"N"};
+    document.getElementById("selNote").textContent =
+      "Mount "+id+" — "+MOUNTS.find(m=>m.id===id).label;
+    const typeSel=document.getElementById("typeSel");
+    const powSel=document.getElementById("powSel");
+    const aimSel=document.getElementById("aimSel");
+    typeSel.disabled=false; powSel.disabled=false;
+    typeSel.value=p.type||"none"; powSel.value=p.pow||"med"; aimSel.value=p.aim||"N";
+    document.getElementById("aimRow").hidden = p.type!=="dir";
+    // highlight selected mount
+    svgEl.querySelectorAll(".mount").forEach(n=>{
+      n.setAttribute("stroke", n.dataset.mount===id ? "var(--focus)" : "var(--accent)");
+      n.setAttribute("stroke-width", n.dataset.mount===id ? "3" : "2");
+    });
+    document.getElementById("cfgErr").textContent=;
+  }
+
+  function applyConfig(){
+    const id=state.selected; if(!id) return;
+    const type=document.getElementById("typeSel").value;
+    const pow=document.getElementById("powSel").value;
+    const aim=document.getElementById("aimSel").value;
+    const err=document.getElementById("cfgErr");
+    err.textContent=;
+
+    if(type==="none"){ delete state.placements[id]; }
+    else {
+      const used=activeWaps().filter(w=>w.m.id!==id).length;
+      if(used>=3){ err.textContent="Budget reached: only 3 WAPs allowed. Empty another mount first."; 
+        document.getElementById("typeSel").value="none"; return; }
+      state.placements[id]={type,pow,aim};
+    }
+    document.getElementById("aimRow").hidden = type!=="dir";
+    refresh();
+  }
+
+  function drawCoverage(e){
+    const layer=svgEl.querySelector("#covLayer");
+    while(layer.firstChild) layer.removeChild(layer.firstChild);
+    const waps=activeWaps();
+    function tint(cell,color){
+      const r=document.createElementNS(NS,"rect");
+      r.setAttribute("x",px(cell[0]));r.setAttribute("y",px(cell[1]));
+      r.setAttribute("width",CELL);r.setAttribute("height",CELL);
+      r.setAttribute("fill",color);r.setAttribute("pointer-events","none");layer.appendChild(r);
+    }
+    INTERIOR.forEach(c=>{ if(waps.some(w=>covers(c,w.m,w.p))) tint(c,"rgba(63,178,127,.45)"); });
+    EXTERIOR.forEach(c=>{ if(waps.some(w=>covers(c,w.m,w.p))) tint(c,"rgba(224,99,99,.6)"); });
+    // draw WAP icons on top
+    waps.forEach(w=>{
+      const cx=px(w.m.x)+CELL/2, cy=px(w.m.y)+CELL/2;
+      const dot=document.createElementNS(NS,"circle");
+      dot.setAttribute("cx",cx);dot.setAttribute("cy",cy);dot.setAttribute("r",7);
+      dot.setAttribute("fill", w.p.type==="dir" ? "var(--accent)" : "var(--accent-2)");
+      dot.setAttribute("stroke","#fff");dot.setAttribute("stroke-width","1.5");
+      dot.setAttribute("pointer-events","none");layer.appendChild(dot);
+      if(w.p.type==="dir"){
+        const v=DIRV[w.p.aim];
+        const arr=document.createElementNS(NS,"line");
+        arr.setAttribute("x1",cx);arr.setAttribute("y1",cy);
+        arr.setAttribute("x2",cx+v[0]*16);arr.setAttribute("y2",cy+v[1]*16);
+        arr.setAttribute("stroke","#fff");arr.setAttribute("stroke-width","2.5");
+        arr.setAttribute("pointer-events","none");layer.appendChild(arr);
+      }
+    });
+  }
+
+  function renderTasks(e){
+    const ul=document.getElementById("taskList"); ul.innerHTML=;
+    let pass=0;
+    TASKS.forEach(t=>{
+      const ok=t.test(e); if(ok) pass++;
+      const li=document.createElement("li");
+      li.innerHTML=`<span class="chk ${ok?'on':'off'}" aria-hidden="true">${ok?'✓':''}</span>
+        <span>${t.label}</span>`;
+      li.querySelector("span:last-child").setAttribute("aria-label",
+        (ok?"Complete: ":"Incomplete: ")+t.label);
+      ul.appendChild(li);
+    });
+    return pass;
+  }
+
+  function renderQuestions(){
+    const ul=document.getElementById("qList"); ul.innerHTML=;
+    QUESTIONS.forEach(q=>{
+      const li=document.createElement("li");
+      const opts=q.options.map((o,i)=>{
+        const checked=state.qAnswers[q.id]===o?"checked":;
+        return `<label style="display:flex;gap:7px;align-items:center;font-size:.82rem;margin:3px 0">
+          <input type="radio" name="${q.id}" value="${o}" ${checked}> ${o}</label>`;
+      }).join();
+      li.innerHTML=`<div class="p">${q.prompt}</div>${opts}<div class="fb" id="fb_${q.id}"></div>`;
+      ul.appendChild(li);
+      li.querySelectorAll("input").forEach(inp=>inp.addEventListener("change",()=>{
+        state.qAnswers[q.id]=inp.value;
+        const fb=document.getElementById("fb_"+q.id);
+        const ok=inp.value===q.answer;
+        fb.textContent= ok ? "Correct." : "Not quite — reconsider.";
+        fb.className="fb "+(ok?"ok":"no");
+      }));
+    });
+  }
+
+  function refresh(){
+    const e=evaluate();
+    drawCoverage(e);
+    document.getElementById("covV").textContent=Math.round(e.coverage*100)+"%";
+    document.getElementById("leakV").textContent=e.leak;
+    document.getElementById("apsV").textContent=e.used+"/3";
+    setMeter("mCov", e.coverage>=0.92);
+    setMeter("mLeak", e.leak<=4);
+    setMeter("mAps", e.used<=3 && e.used>0);
+    renderTasks(e);
+    function setMeter(id,ok){const m=document.getElementById(id);m.classList.toggle("ok",ok);m.classList.toggle("no",!ok);}
+  }
+
+  // ============================ SCREENSHOT ==================================
+  // Native, dependency-free capture: paints the plan + results onto a canvas.
+  // If real html2canvas is inlined above (window.html2canvas), prefer it.
+  async function captureScreenshot(){
+    if(window.html2canvas){
+      try{ const c=await window.html2canvas(document.getElementById("labArea"),{backgroundColor:"#0e1726"});
+        return c.toDataURL("image/png"); }catch(_){}
+    }
+    const e=evaluate();
+    const scale=2, cw=560, ch=560;
+    const cv=document.createElement("canvas"); cv.width=cw*scale; cv.height=ch*scale;
+    const x=cv.getContext("2d"); x.scale(scale,scale);
+    x.fillStyle="#0e1726"; x.fillRect(0,0,cw,ch);
+    x.fillStyle="#e7eefb"; x.font="bold 16px system-ui,sans-serif";
+    x.fillText("Maple Hollow Library — Wi-Fi Coverage Plan",14,24);
+    // plan grid
+    const ox=14, oy=40, cs=30;
+    function cell(cx,cy,fill){ x.fillStyle=fill; x.fillRect(ox+cx*cs,oy+cy*cs,cs-1,cs-1); }
+    EXTERIOR.forEach(c=>cell(c[0],c[1],"#3a1f28"));
+    INTERIOR.forEach(c=>cell(c[0],c[1],"#2a3c5e"));
+    INTERIOR.forEach(c=>{ if(e.covSet.has(c[0]+","+c[1])) cell(c[0],c[1],"rgba(63,178,127,.55)"); });
+    EXTERIOR.forEach(c=>{ if(e.leakSet.has(c[0]+","+c[1])) cell(c[0],c[1],"rgba(224,99,99,.7)"); });
+    activeWaps().forEach(w=>{
+      x.fillStyle = w.p.type==="dir" ? "#46b3a6" : "#5b8cff";
+      x.beginPath();x.arc(ox+w.m.x*cs+cs/2,oy+w.m.y*cs+cs/2,6,0,7);x.fill();
+    });
+    // readout
+    const ry=oy+ROWS*cs+24;
+    x.fillStyle="#9fb1d1"; x.font="13px system-ui,sans-serif";
+    x.fillText("Callsign: "+(document.getElementById("handle").value||"—"),14,ry);
+    x.fillText("Interior coverage: "+Math.round(e.coverage*100)+"%   Leak cells: "+e.leak+"   WAPs: "+e.used+"/3",14,ry+20);
+    const passT=TASKS.filter(t=>t.test(e)).length;
+    const passQ=QUESTIONS.filter(q=>state.qAnswers[q.id]===q.answer).length;
+    x.fillText("Tasks "+passT+"/"+TASKS.length+"   Questions "+passQ+"/"+QUESTIONS.length,14,ry+40);
+    x.fillStyle="#6f81a6"; x.font="11px system-ui,sans-serif";
+    x.fillText("© 2026 [AUTHOR] — netplus-wireless-coverage-design",14,ry+62);
+    return cv.toDataURL("image/png");
+  }
+
+  // ============================ SUBMIT ======================================
+  async function submit(){
+    const status=document.getElementById("status");
+    const handle=(document.getElementById("handle").value||).trim();
+    if(!handle){ status.textContent="Enter a callsign first (a pseudonym — no real names)."; status.className="status no"; return; }
+    if(handle.length>40){ status.textContent="Callsign too long (40 char max)."; status.className="status no"; return; }
+    if(CONFIG.APPS_SCRIPT_URL.startsWith("PASTE_")){ status.textContent="This lab isn't wired to a server yet — ask your instructor to set APPS_SCRIPT_URL."; status.className="status no"; return; }
+
+    status.textContent="Capturing & submitting…"; status.className="status busy";
+    const e=evaluate();
+    const tasks=TASKS.map(t=>({id:t.id,label:t.label,passed:t.test(e)}));
+    const questions=QUESTIONS.map(q=>({id:q.id,prompt:q.prompt,answer:state.qAnswers[q.id]||null,correct:state.qAnswers[q.id]===q.answer}));
+    const earned=tasks.filter(t=>t.passed).length+questions.filter(q=>q.correct).length;
+    const total=tasks.length+questions.length;
+    let screenshot=; try{ screenshot=await captureScreenshot(); }catch(_){}
+
+    const payload={
+      assignmentId: CONFIG.assignmentId,
+      handle, clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks, questions, score:{earned,total},
+      screenshot, submissionToken: CONFIG.submissionToken
+    };
+
+    try{
+      const res=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
+      const out=await res.json();
+      if(out && out.success){
+        status.innerHTML="Submitted ✓ — "+(out.docUrl?`<a href="${out.docUrl}" target="_blank" rel="noopener">view your lab record</a>`:"recorded.")+
+          ` &nbsp;Score ${earned}/${total}.`;
+        status.className="status ok";
+      } else {
+        status.textContent="Server rejected the submission"+(out&&out.error?": "+out.error:".")+" Check the token/assignment with your instructor.";
+        status.className="status no";
+      }
+    }catch(err){
+      // Fallback: fire-and-forget if the response can't be read in a locked-down context.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});
+        status.textContent="Submission sent (couldn't read confirmation). Confirm receipt with your instructor.";
+        status.className="status busy";
+      }catch(e2){
+        status.textContent="Submission failed: "+(err&&err.message?err.message:"network error")+".";
+        status.className="status no";
+      }
+    }
+  }
+
+  async function preview(){
+    const data=await captureScreenshot();
+    const w=window.open(); if(w) w.document.write('<img src="'+data+'" alt="capture preview" style="max-width:100%">');
+  }
+
+  function resetPlan(){
+    state.placements={}; state.selected=null;
+    document.getElementById("typeSel").value="none";
+    document.getElementById("typeSel").disabled=true;
+    document.getElementById("powSel").disabled=true;
+    document.getElementById("aimRow").hidden=true;
+    document.getElementById("selNote").textContent="No mount selected. Click a ◯ on the plan.";
+    svgEl.querySelectorAll(".mount").forEach(n=>{n.setAttribute("stroke","var(--accent)");n.setAttribute("stroke-width","2");});
+    refresh();
+  }
+
+  // ============================ INIT ========================================
+  function init(){
+    svgEl=buildSVG();
+    document.getElementById("stageHost").appendChild(svgEl);
+    document.getElementById("typeSel").addEventListener("change",applyConfig);
+    document.getElementById("powSel").addEventListener("change",applyConfig);
+    document.getElementById("aimSel").addEventListener("change",applyConfig);
+    document.getElementById("resetBtn").addEventListener("click",resetPlan);
+    document.getElementById("submitBtn").addEventListener("click",submit);
+    document.getElementById("previewBtn").addEventListener("click",preview);
+    renderQuestions();
+    refresh();
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init);
+  else init();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-campus-site-links.html",title:"Campus Backbone \u2014 Map How Three Buildings Connect"}, NEXT={href:"index_netplus-arp-poison-detect.html",title:"PacketScope ARP Cache Poisoning: Detect It in a Capture"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.2";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

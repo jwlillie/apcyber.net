@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Guest WLAN for BYOD — AirLoom WLC Lab</title>
+<!--
+  ============================================================================
+  Lab: Stand Up a Guest WLAN for BYOD (clean-room simulation)
+  assignmentId: netplus-guest-wlan-byod
+  Blueprints:   CompTIA Network+ N10-009 (2.3, wireless) | AP Networking 1.4.C, 2.6.B
+  ----------------------------------------------------------------------------
+  © 2026 [AUTHOR NAME / ORG]. All rights reserved.
+  Licensed for use within the [LIBRARY NAME] lab library. Original expression:
+  scenario, hostnames, IP/VLAN plan, SSIDs, task and question wording, and all
+  UI are authored from public exam objectives and the AP Networking framework.
+  Not derived from, and contains no expression copied from, any vendor lab.
+  Replace bracketed fields with your own copyright/license line before release.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* --- AirLoom WLC instrument palette (named tokens) --- */
+    --panel:   #ECE7DD;   /* warm instrument cream  */
+    --panel-2: #F6F2EA;   /* raised surface         */
+    --ink:     #1C2530;   /* slate text             */
+    --ink-2:   #56606C;   /* muted text             */
+    --rail:    #232C38;   /* nav rail               */
+    --rail-ink:#D9DEE6;
+    --amber:   #E08A2B;   /* signal accent          */
+    --teal:    #1E8A7A;   /* link-up / pass         */
+    --alert:   #C2412D;   /* fault / insecure       */
+    --hair:    #CDC4B3;   /* hairline               */
+    --focus:   #2A6DF0;   /* focus ring             */
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 6px;
+  }
+  *{ box-sizing:border-box; }
+  .visually-hidden{ position:absolute!important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #F8F4EC 0%, transparent 60%),
+      var(--panel);
+    line-height:1.45;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:18px clamp(12px,3vw,28px) 64px; }
+
+  /* ---- Masthead ---- */
+  header.mast{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+    border-bottom:2px solid var(--ink); padding-bottom:10px; flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:baseline; gap:12px; }
+  .brand .logo{
+    font-family:var(--mono); font-weight:700; letter-spacing:.04em;
+    background:var(--ink); color:var(--panel); padding:4px 9px; border-radius:4px;
+  }
+  .brand h1{ font-size:clamp(1.05rem,2.4vw,1.4rem); margin:0; letter-spacing:.01em; }
+  .brand .ver{ font-family:var(--mono); color:var(--ink-2); font-size:.78rem; }
+  .tagcluster{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tag{
+    font-family:var(--mono); font-size:.7rem; border:1px solid var(--hair);
+    background:var(--panel-2); padding:2px 7px; border-radius:999px; color:var(--ink-2);
+  }
+  .tag b{ color:var(--ink); font-weight:700; }
+
+  /* ---- Signature: live RF/link readout strip ---- */
+  .readout{
+    margin-top:14px; border:1px solid var(--hair); border-left:4px solid var(--amber);
+    background:linear-gradient(180deg,var(--panel-2),#fff);
+    border-radius:var(--radius); padding:10px 14px; display:flex; gap:22px; flex-wrap:wrap;
+    align-items:center;
+  }
+  .readout .field{ font-family:var(--mono); font-size:.82rem; }
+  .readout .field span{ display:block; font-size:.62rem; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--ink-2); font-family:var(--sans); }
+  .led{ display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--hair);
+    margin-right:6px; vertical-align:middle; box-shadow:0 0 0 2px rgba(0,0,0,.04) inset; }
+  .led.up{ background:var(--teal); box-shadow:0 0 6px var(--teal); }
+  .led.warn{ background:var(--amber); box-shadow:0 0 6px var(--amber); }
+  .led.down{ background:var(--alert); }
+
+  /* ---- Console layout ---- */
+  .console{ display:grid; grid-template-columns:200px 1fr; gap:16px; margin-top:16px; align-items:start; }
+  nav.rail{ background:var(--rail); border-radius:var(--radius); padding:8px; position:sticky; top:10px; }
+  nav.rail button{
+    width:100%; text-align:left; background:transparent; color:var(--rail-ink);
+    border:0; border-radius:5px; padding:9px 11px; font-family:var(--sans);
+    font-size:.9rem; cursor:pointer; display:flex; gap:8px; align-items:center;
+  }
+  nav.rail button .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink-2); }
+  nav.rail button[aria-current="true"]{ background:#10161F; color:#fff; }
+  nav.rail button[aria-current="true"] .dot{ background:var(--amber); }
+  nav.rail button:hover{ background:#1A222C; }
+
+  .pane{ background:var(--panel-2); border:1px solid var(--hair); border-radius:var(--radius); padding:16px clamp(12px,2.4vw,20px); }
+  .pane h2{ margin:0 0 2px; font-size:1.02rem; }
+  .pane .lede{ color:var(--ink-2); font-size:.86rem; margin:0 0 14px; }
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  .field-row{ display:grid; grid-template-columns:170px 1fr; gap:10px 14px; align-items:center; margin:9px 0; }
+  label.flbl{ font-size:.86rem; color:var(--ink); }
+  label.flbl small{ display:block; color:var(--ink-2); font-weight:400; }
+  input[type=text], select{
+    font-family:var(--mono); font-size:.9rem; padding:8px 10px; border:1px solid var(--hair);
+    border-radius:5px; background:#fff; color:var(--ink); width:100%; max-width:320px;
+  }
+  input[type=text]:focus, select:focus, button:focus-visible, [tabindex]:focus-visible{
+    outline:3px solid var(--focus); outline-offset:1px;
+  }
+  .toggle{ display:inline-flex; align-items:center; gap:9px; font-family:var(--mono); font-size:.86rem; cursor:pointer; }
+  .toggle input{ width:18px; height:18px; accent-color:var(--teal); }
+
+  .btn{ font-family:var(--sans); font-size:.88rem; font-weight:600; padding:9px 16px;
+    border-radius:6px; border:1px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  .btn.secondary{ background:transparent; color:var(--ink); }
+  .btn.ghost{ background:#fff; color:var(--ink); border-color:var(--hair); }
+  .btn:hover{ filter:brightness(1.08); }
+  .btnrow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+
+  .msg{ font-family:var(--mono); font-size:.82rem; margin-top:12px; padding:9px 12px; border-radius:5px;
+    border:1px solid var(--hair); background:#fff; white-space:pre-wrap; }
+  .msg.ok{ border-color:var(--teal); color:#0f5e53; background:#EAF6F3; }
+  .msg.err{ border-color:var(--alert); color:#7d2417; background:#FBEDEA; }
+  .msg.warn{ border-color:var(--amber); color:#8a560f; background:#FBF1E2; }
+
+  table.acl{ width:100%; border-collapse:collapse; margin-top:12px; font-family:var(--mono); font-size:.82rem; }
+  table.acl th, table.acl td{ border:1px solid var(--hair); padding:6px 9px; text-align:left; }
+  table.acl th{ background:#fff; font-family:var(--sans); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); }
+  table.acl .deny{ color:var(--alert); font-weight:700; }
+  table.acl .permit{ color:var(--teal); font-weight:700; }
+  .delrule{ background:none; border:0; color:var(--alert); cursor:pointer; font-size:1rem; }
+
+  /* ---- Right column: tasks, questions, submit ---- */
+  .sidecol{ margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  .card{ background:var(--panel-2); border:1px solid var(--hair); border-radius:var(--radius); padding:14px 16px; }
+  .card h3{ margin:0 0 10px; font-size:.95rem; display:flex; justify-content:space-between; align-items:center; }
+  .card h3 .count{ font-family:var(--mono); font-size:.78rem; color:var(--ink-2); }
+  ul.checks{ list-style:none; margin:0; padding:0; }
+  ul.checks li{ display:flex; gap:9px; padding:6px 0; border-bottom:1px dashed var(--hair); font-size:.84rem; }
+  ul.checks li:last-child{ border-bottom:0; }
+  .mark{ flex:0 0 18px; height:18px; border-radius:50%; border:1.5px solid var(--hair); display:grid; place-items:center; font-size:.72rem; font-family:var(--mono); color:transparent; margin-top:1px; }
+  .mark.pass{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .qblock{ margin:0 0 14px; }
+  .qblock p.q{ margin:0 0 7px; font-size:.86rem; font-weight:600; }
+  .qopt{ display:flex; gap:8px; align-items:flex-start; font-family:var(--sans); font-size:.83rem; padding:3px 0; cursor:pointer; }
+  .qopt input{ margin-top:3px; accent-color:var(--ink); }
+
+  .submitbar{ margin-top:18px; background:var(--ink); color:#fff; border-radius:var(--radius); padding:16px clamp(12px,2.4vw,20px); }
+  .submitbar h3{ margin:0 0 4px; font-size:1rem; }
+  .submitbar p{ margin:0 0 12px; color:#C8CFD8; font-size:.84rem; }
+  .submitbar .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .submitbar input[type=text]{ background:#0F151D; color:#fff; border-color:#3a4654; max-width:260px; }
+  .submitbar .score{ font-family:var(--mono); font-size:.9rem; margin-left:auto; }
+  .submitbar .score b{ color:var(--amber); }
+  #submitMsg{ margin-top:12px; }
+  #submitMsg a{ color:#fff; }
+
+  footer.note{ margin-top:26px; color:var(--ink-2); font-size:.74rem; font-family:var(--mono); border-top:1px solid var(--hair); padding-top:12px; }
+
+  @media (max-width:860px){
+    .console{ grid-template-columns:1fr; }
+    nav.rail{ position:static; display:flex; flex-wrap:wrap; gap:6px; }
+    nav.rail button{ width:auto; }
+    .sidecol{ grid-template-columns:1fr; }
+    .field-row{ grid-template-columns:1fr; }
+    .submitbar .score{ margin-left:0; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+    .led.up,.led.warn{ box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-guest-wlan-byod", "title": "Guest WLAN for BYOD \u2014 AirLoom WLC Lab", "version": "1.0.0", "objectives": ["N10-009:2.3", "APNET:1.4", "APNET:2.6"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+<div class="wrap">
+
+  <header class="mast">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">AL</span>
+      <div>
+        <h1>AirLoom Wireless Controller</h1>
+        <div class="ver">WLC OS 3.2 &nbsp;·&nbsp; site: tinkerloft-makerspace &nbsp;·&nbsp; mgmt 10.50.10.5</div>
+      </div>
+    </div>
+    <div class="tagcluster" aria-label="Blueprint coverage">
+      <span class="tag"><b>N10-009</b> 2.3</span>
+      <span class="tag"><b>AP NET</b> 1.4.C</span>
+      <span class="tag"><b>AP NET</b> 2.6.B</span>
+    </div>
+  </header>
+
+  <!-- Scenario -->
+  <section class="pane" style="margin-top:16px">
+    <h2>Work order</h2>
+    <p class="lede" style="margin-bottom:0">
+      Tinkerloft, a community makerspace, is hosting a weekend BYOD workshop. Visitors will bring
+      their own phones, tablets, and laptops and need internet access — but they must stay walled off
+      from the staff network and shop equipment on <b>10.50.0.0/16</b>, and from each other. Stand up a
+      dedicated guest WLAN on the AirLoom controller, secure it, and segment it. Then answer the
+      review questions, enter a callsign, and submit.
+    </p>
+  </section>
+
+  <!-- Signature live readout -->
+  <div class="readout" id="readout" role="status" aria-live="polite">
+    <div class="field"><span>WLAN</span><span id="ro-ssid" style="font-size:.92rem;color:var(--ink)">— not created —</span></div>
+    <div class="field"><span>VLAN</span><span id="ro-vlan" style="font-size:.92rem;color:var(--ink)">—</span></div>
+    <div class="field"><span>Encryption</span><span id="ro-sec" style="font-size:.92rem;color:var(--ink)">—</span></div>
+    <div class="field"><span>Client isolation</span><span id="ro-iso" style="font-size:.92rem;color:var(--ink)">—</span></div>
+    <div class="field"><span>Guest link state</span><span id="ro-link" style="font-size:.92rem;color:var(--ink)"><span class="led down" id="ro-led"></span>down</span></div>
+  </div>
+
+  <!-- Console -->
+  <div class="console">
+    <nav class="rail" aria-label="Controller sections">
+      <button data-screen="wlan" aria-current="true"><span class="dot"></span>WLANs</button>
+      <button data-screen="dhcp"><span class="dot"></span>Guest DHCP</button>
+      <button data-screen="seg"><span class="dot"></span>Segmentation</button>
+    </nav>
+
+    <div>
+      <!-- WLAN screen -->
+      <section class="pane screen active" id="screen-wlan" role="tabpanel" aria-label="WLANs">
+        <h2>Create guest WLAN</h2>
+        <p class="lede">Profile and SSID should read <b>Tinkerloft-Guest</b>. Tag it to the guest VLAN, pick the strongest encryption, turn off WPS, and switch on the captive portal and client isolation.</p>
+
+        <div class="field-row">
+          <label class="flbl" for="f-profile">Profile name</label>
+          <input type="text" id="f-profile" autocomplete="off" placeholder="profile name" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="f-ssid">Broadcast SSID</label>
+          <input type="text" id="f-ssid" autocomplete="off" placeholder="SSID" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="f-vlan">VLAN ID <small>1–4094</small></label>
+          <input type="text" id="f-vlan" autocomplete="off" inputmode="numeric" placeholder="e.g. 80" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="f-sec">Encryption</label>
+          <select id="f-sec">
+            <option value=>— select —</option>
+            <option>Open</option>
+            <option>WEP</option>
+            <option>WPA</option>
+            <option>WPA2-Personal</option>
+            <option>WPA3-Personal</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label class="flbl">WPS</label>
+          <label class="toggle"><input type="checkbox" id="f-wps" checked /> Wi-Fi Protected Setup enabled</label>
+        </div>
+        <div class="field-row">
+          <label class="flbl">Captive portal</label>
+          <label class="toggle"><input type="checkbox" id="f-portal" /> Show terms-of-use splash, then release to internet</label>
+        </div>
+        <div class="field-row">
+          <label class="flbl">Client isolation</label>
+          <label class="toggle"><input type="checkbox" id="f-iso" /> Block station-to-station traffic on this WLAN</label>
+        </div>
+
+        <div class="btnrow">
+          <button class="btn" id="btn-apply-wlan">Apply WLAN</button>
+          <button class="btn ghost" id="btn-clear-wlan" type="button">Clear fields</button>
+        </div>
+        <div class="msg" id="wlan-msg" role="status">No WLAN applied yet.</div>
+      </section>
+
+      <!-- DHCP screen -->
+      <section class="pane screen" id="screen-dhcp" role="tabpanel" aria-label="Guest DHCP" hidden>
+        <h2>Guest DHCP scope</h2>
+        <p class="lede">The guest VLAN needs its own scope. Build it on <b>172.22.80.0/24</b>: gateway <b>.1</b>, hand out <b>.50–.200</b>, DNS <b>9.9.9.9</b>, 8-hour lease.</p>
+
+        <div class="field-row">
+          <label class="flbl" for="d-net">Network / CIDR</label>
+          <input type="text" id="d-net" autocomplete="off" placeholder="172.22.80.0/24" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="d-gw">Default gateway</label>
+          <input type="text" id="d-gw" autocomplete="off" placeholder="172.22.80.1" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="d-start">Pool start</label>
+          <input type="text" id="d-start" autocomplete="off" placeholder="172.22.80.50" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="d-end">Pool end</label>
+          <input type="text" id="d-end" autocomplete="off" placeholder="172.22.80.200" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="d-dns">DNS server</label>
+          <input type="text" id="d-dns" autocomplete="off" placeholder="9.9.9.9" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="d-lease">Lease (hours)</label>
+          <input type="text" id="d-lease" autocomplete="off" inputmode="numeric" placeholder="8" />
+        </div>
+
+        <div class="btnrow">
+          <button class="btn" id="btn-apply-dhcp">Create scope</button>
+          <button class="btn ghost" id="btn-clear-dhcp" type="button">Clear fields</button>
+        </div>
+        <div class="msg" id="dhcp-msg" role="status">No scope created yet.</div>
+      </section>
+
+      <!-- Segmentation screen -->
+      <section class="pane screen" id="screen-seg" role="tabpanel" aria-label="Segmentation" hidden>
+        <h2>Segmentation rules</h2>
+        <p class="lede">Keep guests off the internal network. Add a rule that <b>denies</b> the guest VLAN to <b>10.50.0.0/16</b>. Internet stays permitted by the default rule.</p>
+
+        <div class="field-row">
+          <label class="flbl" for="s-src">Source</label>
+          <select id="s-src">
+            <option value=>— select —</option>
+            <option value="VLAN 80 (Guest)">VLAN 80 (Guest)</option>
+            <option value="VLAN 10 (Staff)">VLAN 10 (Staff)</option>
+            <option value="any">any</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="s-dst">Destination CIDR</label>
+          <input type="text" id="s-dst" autocomplete="off" placeholder="10.50.0.0/16" />
+        </div>
+        <div class="field-row">
+          <label class="flbl" for="s-act">Action</label>
+          <select id="s-act"><option>Permit</option><option>Deny</option></select>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="btn-add-rule">Add rule</button>
+        </div>
+        <div class="msg" id="seg-msg" role="status">Default rule: permit VLAN 80 → 0.0.0.0/0 (internet).</div>
+
+        <table class="acl" aria-label="Active rules">
+          <thead><tr><th>#</th><th>Source</th><th>Destination</th><th>Action</th><th></th></tr></thead>
+          <tbody id="acl-body">
+            <tr><td>0</td><td>VLAN 80 (Guest)</td><td>0.0.0.0/0</td><td class="permit">Permit</td><td><span style="color:var(--ink-2)">default</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+
+  <!-- Tasks + Questions -->
+  <div class="sidecol">
+    <div class="card" id="taskcard">
+      <h3>Lab checklist <span class="count" id="task-count">0 / 7</span></h3>
+      <ul class="checks" id="task-list"></ul>
+    </div>
+
+    <div class="card">
+      <h3>Review questions <span class="count" id="q-count">0 / 4</span></h3>
+      <div id="q-list"></div>
+    </div>
+  </div>
+
+  <!-- Submission -->
+  <div class="submitbar">
+    <h3>Submit completed lab</h3>
+    <p>Enter a <b>callsign</b> (a pseudonym — please don't use your real name). Your screenshot, task results, and review answers go to your instructor's drive.</p>
+    <div class="row">
+      <label for="handle" style="font-size:.84rem">Callsign</label>
+      <input type="text" id="handle" autocomplete="off" maxlength="40" placeholder="e.g. solder-sparrow" />
+      <button class="btn ghost" id="btn-submit">Submit completed lab</button>
+      <button class="btn secondary" id="btn-reset" type="button" style="color:#fff;border-color:#3a4654">Reset lab</button>
+      <div class="score">Score <b><span id="score-now">0</span>/11</b></div>
+    </div>
+    <div class="msg" id="submitMsg" role="status" style="display:none"></div>
+  </div>
+
+  <footer class="note">
+    © 2026 [AUTHOR / ORG] — [LIBRARY NAME]. Clean-room build from public N10-009 objectives and the
+    AP Networking framework. Answer keys are client-side and self-reported; enable server-side
+    re-scoring for graded use. No real names, emails, or IDs are collected.
+  </footer>
+</div>
+
+<!-- ===================================================================== -->
+<!-- SCRIPT BLOCK 1 — html2canvas (inlined, no CDN)                          -->
+<!-- ===================================================================== -->
+<script>
+/* ----------------------------------------------------------------------------
+   PASTE THE MINIFIED html2canvas SOURCE ON THE NEXT LINE (one paste, no CDN).
+   Get it from the html2canvas dist (html2canvas.min.js). When present it sets
+   window.html2canvas and the lab will use a pixel-perfect DOM screenshot.
+   Until then, the dependency-free fallback in block 2 produces a clean summary
+   image so the lab is fully functional standalone.
+   >>> PASTE_HTML2CANVAS_MINIFIED_HERE <<<
+---------------------------------------------------------------------------- */
+</script>
+
+<!-- ===================================================================== -->
+<!-- SCRIPT BLOCK 2 — engine, CONFIG, ANSWER KEY, capture, submit           -->
+<!-- ===================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ====================== PER-LAB CONFIG (edit me) ====================== */
+  var CONFIG = {
+    assignmentId: "netplus-guest-wlan-byod",
+    title: "Stand Up a Guest WLAN for BYOD",
+    objectives: ["N10-009:2.3", "APNET:1.4", "APNET:2.6"],
+    // Same /exec URL across the whole library:
+    APPS_SCRIPT_URL: "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN",
+    passTotal: 11 // 7 tasks + 4 questions
+  };
+
+  /* ====================== ANSWER KEY (clean-room) ======================
+     NOTE: client-side keys are inspectable in dev tools; treat the score as
+     self-reported for formative work, or re-score server-side for graded use. */
+  var EXPECT = {
+    profile: "Tinkerloft-Guest",
+    ssid:    "Tinkerloft-Guest",
+    vlan:    "80",
+    security:"WPA3-Personal",
+    dhcp: { net:"172.22.80.0/24", gw:"172.22.80.1", start:"172.22.80.50",
+            end:"172.22.80.200", dns:"9.9.9.9", lease:"8" },
+    segDst: "10.50.0.0/16",
+    internalNet: "10.50.0.0/16"
+  };
+
+  var QUESTIONS = [
+    { id:"q1",
+      prompt:"On a brand-new wireless deployment, which encryption choice must never be selected?",
+      options:["WPA3-Personal","WPA2-Personal","WEP","None — all four are acceptable"],
+      correctIndex:2 },
+    { id:"q2",
+      prompt:"What does turning on client isolation accomplish on a guest WLAN?",
+      options:["Boosts throughput for each guest device",
+               "Stops guest devices from reaching one another, limiting peer-to-peer attacks",
+               "Hides the SSID from wireless scanners",
+               "Assigns each guest a static IP address"],
+      correctIndex:1 },
+    { id:"q3",
+      prompt:"A visitor on Tinkerloft-Guest can browse the web but cannot open the staff server at 10.50.20.40. Which control explains that?",
+      options:["The captive portal session timed out",
+               "The segmentation rule denying VLAN 80 to 10.50.0.0/16",
+               "WPS was left disabled",
+               "The DHCP lease expired"],
+      correctIndex:1 },
+    { id:"q4",
+      prompt:"How many usable host addresses does the guest subnet 172.22.80.0/24 provide?",
+      options:["256","254","510","64"],
+      correctIndex:1 }
+  ];
+
+  /* ====================== SIM STATE (in-memory only) ==================== */
+  var state = {
+    wlan: { created:false, profile:ssid:vlan:security:wps:true, portal:false, isolation:false },
+    dhcp: { created:false, net:gw:start:end:dns:lease:},
+    acl:  [ { src:"VLAN 80 (Guest)", dst:"0.0.0.0/0", action:"Permit", def:true } ],
+    answers: {} // qid -> selected index
+  };
+
+  /* ====================== TASK DEFINITIONS ============================= */
+  var TASKS = [
+    { id:"create",  label:"Create a WLAN with profile and SSID “Tinkerloft-Guest”",
+      test:function(s){ return s.wlan.created && s.wlan.profile===EXPECT.profile && s.wlan.ssid===EXPECT.ssid; } },
+    { id:"vlan",    label:"Tag the guest WLAN to VLAN 80",
+      test:function(s){ return s.wlan.vlan===EXPECT.vlan; } },
+    { id:"sec",     label:"Set encryption to WPA3-Personal and disable WPS",
+      test:function(s){ return s.wlan.security===EXPECT.security && s.wlan.wps===false; } },
+    { id:"portal",  label:"Enable the captive portal (terms-of-use splash)",
+      test:function(s){ return s.wlan.portal===true; } },
+    { id:"iso",     label:"Enable client isolation on the guest WLAN",
+      test:function(s){ return s.wlan.isolation===true; } },
+    { id:"dhcp",    label:"Create the guest DHCP scope (172.22.80.0/24, gw .1, .50–.200, DNS 9.9.9.9, 8h)",
+      test:function(s){ var d=s.dhcp; return d.created && d.net===EXPECT.dhcp.net && d.gw===EXPECT.dhcp.gw &&
+            d.start===EXPECT.dhcp.start && d.end===EXPECT.dhcp.end && d.dns===EXPECT.dhcp.dns && d.lease===EXPECT.dhcp.lease; } },
+    { id:"segment", label:"Add a rule denying VLAN 80 to 10.50.0.0/16",
+      test:function(s){ return s.acl.some(function(r){ return !r.def && /80/.test(r.src) && r.dst===EXPECT.segDst && r.action==="Deny"; }); } }
+  ];
+
+  /* ====================== helpers ====================================== */
+  var $ = function(id){ return document.getElementById(id); };
+  function isIPv4(v){
+    var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(v.trim());
+    if(!m) return false;
+    for(var i=1;i<=4;i++){ if(+m[i] > 255) return false; }
+    return true;
+  }
+  function isCIDR(v){
+    var p = v.trim().split("/");
+    if(p.length!==2) return false;
+    var pre = +p[1];
+    return isIPv4(p[0]) && pre>=0 && pre<=32;
+  }
+  function ipToInt(ip){ var a=ip.split("."); return ((+a[0])<<24 | (+a[1])<<16 | (+a[2])<<8 | (+a[3]))>>>0; }
+
+  /* ====================== render: readout ============================= */
+  function renderReadout(){
+    var w = state.wlan;
+    $("ro-ssid").textContent = w.created ? w.ssid : "— not created —";
+    $("ro-vlan").textContent = w.vlan ? w.vlan : "—";
+    $("ro-sec").textContent  = w.security ? (w.security + (w.wps ? " · WPS on" : )) : "—";
+    $("ro-iso").textContent  = w.created ? (w.isolation ? "on" : "off") : "—";
+    // link "up" only when securely brought up the intended way
+    var secure = w.created && w.security===EXPECT.security && !w.wps && w.portal && w.isolation && w.vlan===EXPECT.vlan;
+    var led = $("ro-led");
+    if(secure){ led.className="led up"; $("ro-link").lastChild.textContent="up · secured"; }
+    else if(w.created){ led.className="led warn"; $("ro-link").lastChild.textContent="up · review settings"; }
+    else { led.className="led down"; $("ro-link").lastChild.textContent="down"; }
+  }
+
+  /* ====================== render: ACL table =========================== */
+  function renderACL(){
+    var body = $("acl-body"); body.innerHTML=;
+    state.acl.forEach(function(r, i){
+      var tr = document.createElement("tr");
+      var actCls = r.action==="Deny" ? "deny" : "permit";
+      tr.innerHTML = "<td>"+i+"</td><td>"+esc(r.src)+"</td><td>"+esc(r.dst)+"</td>"+
+        "<td class='"+actCls+"'>"+r.action+"</td><td>"+
+        (r.def ? "<span style='color:var(--ink-2)'>default</span>"
+               : "<button class='delrule' data-i='"+i+"' aria-label='Remove rule "+i+"'>✕</button>")+"</td>";
+      body.appendChild(tr);
+    });
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c];}); }
+
+  /* ====================== render: tasks + questions =================== */
+  function renderTasks(){
+    var ul = $("task-list"); ul.innerHTML=; var passed=0;
+    TASKS.forEach(function(t){
+      var ok = t.test(state); if(ok) passed++;
+      var li = document.createElement("li");
+      li.innerHTML = "<span class='mark"+(ok?" pass":)+"' aria-hidden='true'>"+(ok?"✓":)+"</span>"+
+                     "<span><span class='visually-hidden'>"+(ok?"Done: ":"Not done: ")+"</span>"+esc(t.label)+"</span>";
+      ul.appendChild(li);
+    });
+    $("task-count").textContent = passed+" / "+TASKS.length;
+    return passed;
+  }
+  function renderQuestions(){
+    var host = $("q-list"); host.innerHTML=;
+    QUESTIONS.forEach(function(q){
+      var block = document.createElement("fieldset");
+      block.className="qblock"; block.style.border="0"; block.style.padding="0"; block.style.margin="0 0 14px";
+      var legend = document.createElement("legend"); legend.className="q"; legend.style.padding="0";
+      legend.textContent = q.prompt; block.appendChild(legend);
+      q.options.forEach(function(opt, idx){
+        var id = q.id+"_"+idx;
+        var lab = document.createElement("label"); lab.className="qopt"; lab.setAttribute("for",id);
+        var input = document.createElement("input");
+        input.type="radio"; input.name=q.id; input.id=id; input.value=idx;
+        input.addEventListener("change", function(){ state.answers[q.id]=idx; refresh(); });
+        lab.appendChild(input);
+        var span = document.createElement("span"); span.textContent=opt; lab.appendChild(span);
+        block.appendChild(lab);
+      });
+      host.appendChild(block);
+    });
+  }
+  function questionsCorrect(){
+    var n=0; QUESTIONS.forEach(function(q){ if(state.answers[q.id]===q.correctIndex) n++; }); return n;
+  }
+
+  /* ====================== refresh everything ========================== */
+  function refresh(){
+    renderReadout();
+    var tp = renderTasks();
+    var qc = questionsCorrect();
+    $("q-count").textContent = qc+" / "+QUESTIONS.length;
+    $("score-now").textContent = (tp+qc);
+  }
+
+  /* ====================== WLAN apply =================================== */
+  $("btn-apply-wlan").addEventListener("click", function(){
+    var profile = $("f-profile").value.trim();
+    var ssid    = $("f-ssid").value.trim();
+    var vlan    = $("f-vlan").value.trim();
+    var sec     = $("f-sec").value;
+    var m = $("wlan-msg");
+
+    if(!profile || !ssid){ setMsg(m,"err","Profile name and SSID are both required."); return; }
+    if(!/^\d+$/.test(vlan) || +vlan<1 || +vlan>4094){
+      setMsg(m,"err","VLAN ID must be a whole number from 1 to 4094. You entered: "+(vlan||"(blank)")); return; }
+    if(!sec){ setMsg(m,"err","Choose an encryption option before applying."); return; }
+
+    state.wlan.created   = true;
+    state.wlan.profile   = profile;
+    state.wlan.ssid      = ssid;
+    state.wlan.vlan      = vlan;
+    state.wlan.security  = sec;
+    state.wlan.wps       = $("f-wps").checked;
+    state.wlan.portal    = $("f-portal").checked;
+    state.wlan.isolation = $("f-iso").checked;
+
+    var notes=[];
+    if(sec==="Open"||sec==="WEP"||sec==="WPA")
+      notes.push("⚠ "+sec+" is not safe for a new deployment — WPA3 is recommended, WPA2 is the floor.");
+    if(state.wlan.wps) notes.push("⚠ WPS is still enabled; best practice is to turn it off.");
+    if(!state.wlan.portal) notes.push("• Captive portal is off — guests won't see a terms-of-use splash.");
+    if(!state.wlan.isolation) notes.push("• Client isolation is off — guest devices can reach each other.");
+
+    setMsg(m, notes.length?"warn":"ok",
+      "WLAN “"+ssid+"” applied on VLAN "+vlan+" with "+sec+".\n"+(notes.join("\n")||"Looks good."));
+    refresh();
+  });
+  $("btn-clear-wlan").addEventListener("click", function(){
+    ["f-profile","f-ssid","f-vlan"].forEach(function(id){ $(id).value=; });
+    $("f-sec").value=; $("f-wps").checked=true; $("f-portal").checked=false; $("f-iso").checked=false;
+    setMsg($("wlan-msg"),"Fields cleared (applied WLAN unchanged).");
+  });
+
+  /* ====================== DHCP apply ================================== */
+  $("btn-apply-dhcp").addEventListener("click", function(){
+    var net=$("d-net").value.trim(), gw=$("d-gw").value.trim(),
+        st=$("d-start").value.trim(), en=$("d-end").value.trim(),
+        dns=$("d-dns").value.trim(), lease=$("d-lease").value.trim();
+    var m=$("dhcp-msg");
+
+    if(!isCIDR(net)){ setMsg(m,"err","Network must be CIDR, e.g. 172.22.80.0/24. You entered: "+(net||"(blank)")); return; }
+    if(!isIPv4(gw)){ setMsg(m,"err","Gateway must be a valid IPv4 address."); return; }
+    if(!isIPv4(st)||!isIPv4(en)){ setMsg(m,"err","Pool start and end must be valid IPv4 addresses."); return; }
+    if(ipToInt(st)>ipToInt(en)){ setMsg(m,"err","Pool start is higher than pool end — swap them."); return; }
+    if(!isIPv4(dns)){ setMsg(m,"err","DNS server must be a valid IPv4 address."); return; }
+    if(!/^\d+$/.test(lease)||+lease<1){ setMsg(m,"err","Lease must be a whole number of hours."); return; }
+
+    state.dhcp = { created:true, net:net, gw:gw, start:st, end:en, dns:dns, lease:lease };
+    var count = ipToInt(en)-ipToInt(st)+1;
+    setMsg(m,"ok","Scope created on "+net+": "+st+" – "+en+" ("+count+" addresses), gw "+gw+", DNS "+dns+", "+lease+"h lease.");
+    refresh();
+  });
+  $("btn-clear-dhcp").addEventListener("click", function(){
+    ["d-net","d-gw","d-start","d-end","d-dns","d-lease"].forEach(function(id){ $(id).value=; });
+    setMsg($("dhcp-msg"),"Fields cleared (scope unchanged).");
+  });
+
+  /* ====================== Segmentation add/del ======================== */
+  $("btn-add-rule").addEventListener("click", function(){
+    var src=$("s-src").value, dst=$("s-dst").value.trim(), act=$("s-act").value, m=$("seg-msg");
+    if(!src){ setMsg(m,"err","Pick a source for the rule."); return; }
+    if(!isCIDR(dst)){ setMsg(m,"err","Destination must be CIDR, e.g. 10.50.0.0/16. You entered: "+(dst||"(blank)")); return; }
+    state.acl.push({ src:src, dst:dst, action:act, def:false });
+    setMsg(m, act==="Deny"?"ok":"warn", "Rule added: "+act+" "+src+" → "+dst+".");
+    $("s-dst").value=;
+    renderACL(); refresh();
+  });
+  $("acl-body").addEventListener("click", function(e){
+    var b = e.target.closest(".delrule"); if(!b) return;
+    var i = +b.getAttribute("data-i");
+    state.acl.splice(i,1);
+    renderACL(); refresh();
+  });
+
+  /* ====================== nav tabs ==================================== */
+  Array.prototype.forEach.call(document.querySelectorAll("nav.rail button"), function(btn){
+    btn.addEventListener("click", function(){
+      var target = btn.getAttribute("data-screen");
+      Array.prototype.forEach.call(document.querySelectorAll("nav.rail button"), function(b){
+        b.setAttribute("aria-current", b===btn ? "true" : "false"); });
+      Array.prototype.forEach.call(document.querySelectorAll(".screen"), function(sc){
+        var on = sc.id==="screen-"+target;
+        sc.classList.toggle("active", on); sc.hidden=!on;
+      });
+    });
+  });
+
+  function setMsg(el, kind, text){
+    el.className = "msg" + (kind?(" "+kind):);
+    el.textContent = text;
+  }
+
+  /* ====================== screenshot capture ========================== */
+  // Prefer real html2canvas if it was pasted into block 1; otherwise draw a
+  // clean dependency-free summary canvas so the lab works standalone.
+  function captureLabImage(){
+    if (typeof window.html2canvas === "function"){
+      return window.html2canvas(document.querySelector(".wrap"), {backgroundColor:"#ECE7DD", scale:1})
+        .then(function(c){ return c.toDataURL("image/png"); });
+    }
+    return Promise.resolve(fallbackImage());
+  }
+  function fallbackImage(){
+    var W=720, H=900, c=document.createElement("canvas"); c.width=W; c.height=H;
+    var x=c.getContext("2d");
+    x.fillStyle="#ECE7DD"; x.fillRect(0,0,W,H);
+    x.fillStyle="#1C2530"; x.fillRect(0,0,W,58);
+    x.fillStyle="#ECE7DD"; x.font="700 22px ui-monospace,Menlo,Consolas,monospace";
+    x.fillText("AirLoom WLC — lab submission", 24, 37);
+    x.fillStyle="#1C2530"; x.font="13px ui-sans-serif,Arial,sans-serif";
+    var y=90;
+    function line(label, val, color){
+      x.fillStyle="#56606C"; x.font="11px ui-sans-serif,Arial,sans-serif";
+      x.fillText(label.toUpperCase(), 24, y);
+      x.fillStyle=color||"#1C2530"; x.font="14px ui-monospace,Menlo,Consolas,monospace";
+      x.fillText(val, 24, y+18); y+=46;
+    }
+    var w=state.wlan;
+    line("Callsign", ($("handle").value.trim()||"(none)"));
+    line("WLAN / SSID", (w.created? w.ssid : "not created"));
+    line("VLAN / Encryption", (w.vlan||"-")+"  /  "+(w.security||"-")+(w.wps?"  (WPS on)":));
+    line("Portal / Isolation", (w.portal?"portal:on":"portal:off")+"  "+(w.isolation?"isolation:on":"isolation:off"));
+    line("DHCP scope", state.dhcp.created? (state.dhcp.net+"  "+state.dhcp.start+"-"+state.dhcp.end) : "none");
+    // tasks
+    y+=4; x.fillStyle="#1C2530"; x.font="700 14px ui-sans-serif,Arial,sans-serif"; x.fillText("Tasks", 24, y); y+=22;
+    TASKS.forEach(function(t){
+      var ok=t.test(state);
+      x.fillStyle= ok? "#1E8A7A" : "#C2412D"; x.font="13px ui-monospace,Menlo,Consolas,monospace";
+      x.fillText((ok?"[x] ":"[ ] ")+t.label.substring(0,72), 24, y); y+=22;
+    });
+    y+=8; x.fillStyle="#1C2530"; x.font="700 14px ui-sans-serif,Arial,sans-serif"; x.fillText("Review questions", 24, y); y+=22;
+    QUESTIONS.forEach(function(q,i){
+      var ok=state.answers[q.id]===q.correctIndex;
+      x.fillStyle= ok? "#1E8A7A" : "#C2412D"; x.font="13px ui-monospace,Menlo,Consolas,monospace";
+      x.fillText((ok?"[x] ":"[ ] ")+"Q"+(i+1)+(state.answers[q.id]!=null?(" answered"):" (blank)"), 24, y); y+=22;
+    });
+    var score=renderTasks()+questionsCorrect();
+    y+=10; x.fillStyle="#1C2530"; x.font="700 16px ui-monospace,Menlo,Consolas,monospace";
+    x.fillText("Score: "+score+" / "+CONFIG.passTotal, 24, y); y+=26;
+    x.fillStyle="#56606C"; x.font="11px ui-monospace,Menlo,Consolas,monospace";
+    x.fillText("client time: "+new Date().toISOString(), 24, y);
+    x.fillStyle="#56606C"; x.fillText("(summary capture — paste html2canvas for a full screenshot)", 24, y+18);
+    return c.toDataURL("image/png");
+  }
+
+  /* ====================== submit ====================================== */
+  $("btn-submit").addEventListener("click", function(){
+    var handle = $("handle").value.trim();
+    var sm = $("submitMsg"); sm.style.display="block";
+    if(!handle){ setMsg(sm,"err","Enter a callsign before submitting."); $("handle").focus(); return; }
+    if(handle.length>40){ setMsg(sm,"err","Callsign is too long (40 characters max)."); return; }
+    if(CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      setMsg(sm,"err","This lab isn't wired up yet: the instructor needs to set APPS_SCRIPT_URL. See INSTRUCTOR_SETUP.md."); return;
+    }
+
+    var tp = renderTasks(), qc = questionsCorrect(), earned = tp+qc;
+    if(earned < CONFIG.passTotal){
+      if(!confirm("Only "+earned+" of "+CONFIG.passTotal+" checks pass. Submit anyway?")) return;
+    }
+    setMsg(sm,"warn","Capturing screenshot and submitting…");
+
+    captureLabImage().then(function(png){
+      var payload = {
+        assignmentId: CONFIG.assignmentId,
+        handle: handle,
+        clientTimestamp: new Date().toISOString(),
+        objectives: CONFIG.objectives,
+        tasks: TASKS.map(function(t){ return { id:t.id, label:t.label, passed:!!t.test(state) }; }),
+        questions: QUESTIONS.map(function(q){
+          var sel = state.answers[q.id];
+          return { id:q.id, prompt:q.prompt,
+                   answer: (sel!=null ? q.options[sel] : null),
+                   correct: sel===q.correctIndex };
+        }),
+        score: { earned: earned, total: CONFIG.passTotal },
+        screenshot: png,
+        submissionToken: CONFIG.submissionToken
+      };
+
+      // Simple request: NO custom headers, text/plain body — avoids CORS preflight.
+      return fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) })
+        .then(function(res){ return res.json(); })
+        .then(function(out){
+          if(out && out.success){
+            setMsg(sm,"ok","Submitted. Score "+earned+"/"+CONFIG.passTotal+".");
+            if(out.docUrl){
+              var a=document.createElement("a"); a.href=out.docUrl; a.textContent="Open your submission record"; a.target="_blank"; a.rel="noopener";
+              sm.appendChild(document.createTextNode("  ")); sm.appendChild(a);
+            }
+          } else {
+            setMsg(sm,"err","Server rejected the submission: "+((out&&out.error)||"unknown error")+".");
+          }
+        })
+        .catch(function(){
+          // Fallback: fire-and-forget (can't read docUrl in locked-down contexts).
+          return fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) })
+            .then(function(){ setMsg(sm,"warn","Submission sent, but the confirmation couldn't be read. Check with your instructor that it arrived."); })
+            .catch(function(){ setMsg(sm,"err","Couldn't reach the submission server. Check your connection and try again."); });
+        });
+    });
+  });
+
+  /* ====================== reset ======================================= */
+  $("btn-reset").addEventListener("click", function(){
+    if(!confirm("Reset the whole lab? All configuration and answers will be cleared.")) return;
+    state.wlan = { created:false, profile:ssid:vlan:security:wps:true, portal:false, isolation:false };
+    state.dhcp = { created:false, net:gw:start:end:dns:lease:};
+    state.acl  = [ { src:"VLAN 80 (Guest)", dst:"0.0.0.0/0", action:"Permit", def:true } ];
+    state.answers = {};
+    ["f-profile","f-ssid","f-vlan","d-net","d-gw","d-start","d-end","d-dns","d-lease","s-dst","handle"].forEach(function(id){ $(id).value=; });
+    $("f-sec").value=; $("f-wps").checked=true; $("f-portal").checked=false; $("f-iso").checked=false;
+    $("s-src").value=; $("s-act").value="Permit";
+    Array.prototype.forEach.call(document.querySelectorAll("input[type=radio]"), function(r){ r.checked=false; });
+    setMsg($("wlan-msg"),"No WLAN applied yet.");
+    setMsg($("dhcp-msg"),"No scope created yet.");
+    setMsg($("seg-msg"),"Default rule: permit VLAN 80 → 0.0.0.0/0 (internet).");
+    $("submitMsg").style.display="none";
+    renderACL(); renderQuestions(); refresh();
+  });
+
+  /* ====================== init ======================================== */
+  renderQuestions();
+  renderACL();
+  refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-secure-switch-access.html",title:"Lab \u2014 Harden Initial Switch Management Access"}, NEXT={href:"index_netplus-vpn-client.html",title:"Connect a Tablet to the Staff VPN"}, CRUMB="All Labs \u203a Unit 1 \u2014 Managing My Connections \u203a Topic 1.4";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

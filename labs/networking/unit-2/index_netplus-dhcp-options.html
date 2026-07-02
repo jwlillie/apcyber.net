@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Lab: Global vs. Scope DHCP Options — Cedar Ridge</title>
+<!--
+  ============================================================================
+  Network+ (N10-009) / AP Networking simulation lab
+  assignmentId: netplus-dhcp-options
+  objectives:   N10-009:1.6 (network services / DHCP scope options)
+                APNET:3.3.A (configure IP/DHCP and verify)
+  ----------------------------------------------------------------------------
+  © 2026 <AUTHOR / ORGANIZATION>.  All rights reserved.
+  Licensed for use within this lab library. Replace this notice with your own.
+  Clean-room original: scenario, hostnames, domain, IP plan, task wording and
+  UI are original expression. DHCP option codes (003/006/015) are RFC 2132
+  public standards. Not derived from any vendor's lab.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#eef1f4; --surface:#ffffff; --ink:#1d2630; --ink-soft:#566173;
+    --line:#d3dae3; --line-soft:#e6ebf1;
+    --rail:#1f2d3d; --rail-ink:#cdd6e2; --rail-ink-dim:#8795a8; --rail-sel:#2a7d6f;
+    --accent:#0e7c66; --accent-ink:#ffffff; --accent-soft:#dff1ec;
+    --warn-bg:#fdeceb; --warn-ink:#9b2c25; --warn-line:#f3c4c0;
+    --ok-bg:#e6f4ee; --ok-ink:#13694f; --ok-line:#bfe2d4;
+    --pend:#b7c0cc;
+    --focus:#1763c7;
+    --font:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --radius:7px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--font);
+    font-size:15px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:18px 16px 60px}
+  header.page{margin-bottom:14px}
+  header.page h1{font-size:20px; margin:0 0 4px; letter-spacing:-0.01em}
+  header.page p{margin:0; color:var(--ink-soft); font-size:13.5px}
+  .tags{margin-top:8px; display:flex; gap:6px; flex-wrap:wrap}
+  .tag{font:600 11px var(--mono); background:var(--accent-soft); color:var(--accent);
+       border:1px solid var(--accent); border-radius:999px; padding:2px 9px}
+
+  .grid{display:grid; grid-template-columns:minmax(0,1.55fr) minmax(280px,1fr); gap:16px}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+        overflow:hidden}
+  .card > .bar{background:#f6f8fa; border-bottom:1px solid var(--line);
+        padding:9px 13px; font-weight:600; font-size:13px; display:flex;
+        align-items:center; gap:8px; justify-content:space-between}
+  .bar .hostname{font:600 12px var(--mono); color:var(--ink-soft)}
+
+  /* ---- console ---- */
+  .console{display:grid; grid-template-columns:236px minmax(0,1fr); min-height:430px}
+  @media (max-width:560px){ .console{grid-template-columns:1fr} }
+  .rail{background:var(--rail); color:var(--rail-ink); padding:10px 8px; font-size:13px}
+  .rail .roothead{font:600 11px var(--mono); color:var(--rail-ink-dim);
+        letter-spacing:.06em; text-transform:uppercase; padding:4px 8px 8px}
+  .tree{list-style:none; margin:0; padding:0}
+  .tree li{margin:0}
+  .node{display:flex; align-items:center; gap:7px; width:100%; text-align:left;
+        background:none; border:0; color:var(--rail-ink); cursor:pointer;
+        font:inherit; padding:6px 8px; border-radius:5px}
+  .node:hover{background:rgba(255,255,255,.06)}
+  .node[aria-current="true"]{background:var(--rail-sel); color:#fff; font-weight:600}
+  .node .ico{flex:0 0 16px; height:16px; opacity:.85}
+  .node[aria-current="true"] .ico{opacity:1}
+  .tree .indent{padding-left:18px}
+  .tree .indent2{padding-left:30px}
+  .node .meta{margin-left:auto; font:600 10px var(--mono); color:var(--rail-ink-dim)}
+  .node[aria-current="true"] .meta{color:#d6efe9}
+
+  .stage{padding:16px 18px; min-width:0}
+  .stage h2{font-size:15px; margin:0 0 2px}
+  .stage .sub{color:var(--ink-soft); font-size:12.5px; margin:0 0 14px}
+  .stage .sub code{font:600 12px var(--mono); color:var(--ink)}
+
+  .opt-table{width:100%; border-collapse:collapse; font-size:13.5px; margin-bottom:12px}
+  .opt-table caption{text-align:left; font-weight:600; font-size:12px; color:var(--ink-soft);
+        padding:0 0 6px}
+  .opt-table th, .opt-table td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line-soft); vertical-align:top}
+  .opt-table th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); font-weight:700}
+  .opt-table td.code{font:600 13px var(--mono); white-space:nowrap}
+  .opt-table td.val{font:13px var(--mono)}
+  .opt-table .ordmark{color:var(--ink-soft); font-size:11px; margin-right:5px}
+  .opt-table .src{font-size:11px; color:var(--accent); font-weight:600}
+  .opt-table .empty td{color:var(--ink-soft); font-style:italic; text-align:center; padding:18px}
+  .opt-table tr.inherited td{background:#f4f9f7}
+
+  .row-actions{display:flex; gap:8px; flex-wrap:wrap}
+  button.btn{font:600 13px var(--font); border-radius:6px; padding:8px 14px; cursor:pointer; border:1px solid var(--line)}
+  button.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+  button.btn.primary:hover{filter:brightness(1.06)}
+  button.btn.ghost{background:#fff; color:var(--ink)}
+  button.btn.ghost:hover{background:#f4f7f9}
+  button.btn:disabled{opacity:.5; cursor:not-allowed}
+  button.linkish{background:none;border:0;color:var(--accent);font:600 12px var(--font);cursor:pointer;padding:2px 4px;text-decoration:underline}
+
+  /* ---- dialog ---- */
+  .scrim{position:fixed; inset:0; background:rgba(18,24,33,.46); display:none;
+        align-items:center; justify-content:center; padding:16px; z-index:40}
+  .scrim.open{display:flex}
+  .dialog{background:#fff; border-radius:10px; width:min(440px,100%); border:1px solid var(--line);
+        box-shadow:0 18px 50px rgba(20,30,45,.28)}
+  .dialog h3{margin:0; padding:14px 16px; font-size:15px; border-bottom:1px solid var(--line)}
+  .dialog .body{padding:14px 16px}
+  .field{margin-bottom:13px}
+  .field label{display:block; font-size:12.5px; font-weight:600; margin-bottom:4px}
+  .field .hint{font-size:11.5px; color:var(--ink-soft); margin-top:3px}
+  select, input[type=text]{width:100%; font:14px var(--font); padding:8px 10px; border:1px solid var(--line);
+        border-radius:6px; background:#fff; color:var(--ink)}
+  input.mono{font-family:var(--mono); font-size:13px}
+  .iprows{display:flex; flex-direction:column; gap:6px}
+  .iprow{display:flex; gap:6px; align-items:center}
+  .iprow input{flex:1}
+  .iprow .ord{font:600 11px var(--mono); color:var(--ink-soft); width:18px; text-align:right}
+  .iprow button{flex:0 0 auto}
+  .dialog .foot{display:flex; justify-content:flex-end; gap:8px; padding:12px 16px; border-top:1px solid var(--line)}
+  .err{display:none; background:var(--warn-bg); border:1px solid var(--warn-line); color:var(--warn-ink);
+        font-size:12.5px; border-radius:6px; padding:8px 10px; margin-top:4px}
+  .err.show{display:block}
+
+  /* ---- task / question panel ---- */
+  .panel-body{padding:14px}
+  .checklist{list-style:none; margin:0 0 6px; padding:0}
+  .checklist li{display:flex; gap:9px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line-soft)}
+  .checklist li:last-child{border-bottom:0}
+  .mark{flex:0 0 18px; height:18px; border-radius:50%; border:2px solid var(--pend); margin-top:1px;
+        display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff}
+  .checklist li.done .mark{background:var(--accent); border-color:var(--accent)}
+  .ck-text{font-size:13.5px}
+  .ck-text .lead{font-weight:600}
+  .ck-text .det{color:var(--ink-soft); font-size:12px; display:block; margin-top:1px}
+
+  .q{border-top:1px solid var(--line); padding-top:12px; margin-top:6px}
+  .q h4{font-size:13px; margin:0 0 7px}
+  .q .opts{display:flex; flex-direction:column; gap:6px}
+  .q .opts label{display:flex; gap:8px; align-items:flex-start; font-size:13px; cursor:pointer;
+        border:1px solid var(--line); border-radius:6px; padding:8px 10px}
+  .q .opts label:hover{background:#f6f8fa}
+  .q .opts input{margin-top:2px}
+  .q .verdict{font-size:12px; margin-top:6px; font-weight:600; min-height:1em}
+  .q .verdict.ok{color:var(--ok-ink)} .q .verdict.no{color:var(--warn-ink)}
+
+  .progress{font:600 12px var(--mono); color:var(--ink-soft); margin:10px 0 0; text-align:right}
+
+  /* ---- submission bar ---- */
+  .submit-card{margin-top:16px}
+  .submit-inner{padding:14px; display:grid; grid-template-columns:minmax(160px,240px) auto 1fr; gap:12px; align-items:end}
+  @media (max-width:680px){ .submit-inner{grid-template-columns:1fr} }
+  .submit-inner .field{margin:0}
+  .status{font-size:13px; min-height:1.2em}
+  .status.ok{color:var(--ok-ink)} .status.no{color:var(--warn-ink)} .status.busy{color:var(--ink-soft)}
+  .status a{color:var(--accent); font-weight:600}
+  .reset-row{margin-top:10px}
+
+  .note{font-size:11.5px; color:var(--ink-soft); margin-top:18px; line-height:1.5}
+  .note code{font-family:var(--mono)}
+
+  /* accessibility */
+  :focus-visible{outline:3px solid var(--focus); outline-offset:2px; border-radius:4px}
+  .visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important} }
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-dhcp-options", "title": "Lab: Global vs. Scope DHCP Options — Cedar Ridge", "version": "1.0.0", "objectives": ["N10-009:3.4", "APNET:2.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="page">
+    <h1>DHCP Options Workshop — Cedar Ridge Community Library</h1>
+    <p>You are the junior network admin standing up the new <strong>Branch</strong> network on the
+       <code style="font:600 12px var(--mono)">dhcp-edge01</code> server. A scope already hands out
+       addresses — now the clients need DNS and a gateway. Decide which options belong to the
+       <em>whole server</em> and which belong to a <em>single scope</em>.</p>
+    <div class="tags">
+      <span class="tag">N10-009 · 1.6</span>
+      <span class="tag">APNET · 3.3.A</span>
+      <span class="tag">netplus-dhcp-options</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- =================== SIMULATED CONSOLE =================== -->
+    <section class="card" id="lab-capture" aria-label="DHCP management console">
+      <div class="bar">
+        <span>DHCP Manager</span>
+        <span class="hostname">dhcp-edge01.cedarridge.lan</span>
+      </div>
+
+      <div class="console">
+        <nav class="rail" aria-label="Console tree">
+          <div class="roothead">dhcp-edge01</div>
+          <ul class="tree" id="tree">
+            <li>
+              <button class="node" id="n-server" data-node="server" aria-current="false">
+                <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2" width="13" height="4.5" rx="1" fill="none" stroke="currentColor"/><rect x="1.5" y="8" width="13" height="4.5" rx="1" fill="none" stroke="currentColor"/><circle cx="4" cy="4.25" r=".8" fill="currentColor"/><circle cx="4" cy="10.25" r=".8" fill="currentColor"/></svg>
+                Server Options
+                <span class="meta" id="m-server">0</span>
+              </button>
+            </li>
+            <li>
+              <div class="node" aria-disabled="true" style="cursor:default" tabindex="-1">
+                <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5l1.5-1.5H7L8.5 5H14v8H2z" fill="none" stroke="currentColor"/></svg>
+                Scopes
+              </div>
+            </li>
+            <li>
+              <button class="node indent" id="n-scope" data-node="scope" aria-current="false">
+                <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor"/><path d="M2 6.5h12" stroke="currentColor"/></svg>
+                [10.40.1.0] Branch-Staff
+              </button>
+            </li>
+            <li>
+              <button class="node indent2" id="n-scopeopts" data-node="scopeopts" aria-current="false">
+                <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l1.6 3.4 3.7.4-2.8 2.5.8 3.7L8 12l-3.3 1.9.8-3.7L2.7 5.7l3.7-.4z" fill="none" stroke="currentColor"/></svg>
+                Scope Options
+                <span class="meta" id="m-scope">0</span>
+              </button>
+            </li>
+          </ul>
+        </nav>
+
+        <div class="stage" id="stage" role="region" aria-live="polite" aria-label="Option detail">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== TASK / QUESTION PANEL =================== -->
+    <section class="card" aria-label="Lab tasks and questions">
+      <div class="bar"><span>Lab checklist</span><span class="hostname" id="prog-mini">0 / 6</span></div>
+      <div class="panel-body">
+        <ul class="checklist" id="checklist"></ul>
+
+        <div class="q" id="q1box">
+          <h4>Q1. The <code>003 Router</code> option was set on the <strong>scope</strong>, not on the server. Why?</h4>
+          <div class="opts" role="radiogroup" aria-labelledby="q1box">
+            <label><input type="radio" name="q1" value="a"> Server options can't hold IP addresses.</label>
+            <label><input type="radio" name="q1" value="b"> Each scope serves its own subnet, and every subnet reaches other networks through its own gateway.</label>
+            <label><input type="radio" name="q1" value="c"> Option 003 is only valid inside a single scope by rule.</label>
+            <label><input type="radio" name="q1" value="d"> DNS must always be configured before any gateway.</label>
+          </div>
+          <div class="verdict" id="q1v" role="status"></div>
+        </div>
+
+        <div class="q" id="q2box">
+          <h4>Q2. A staff laptop in Branch-Staff resolves a hostname. Which DNS server does it try <em>first</em>?</h4>
+          <div class="opts" role="radiogroup" aria-labelledby="q2box">
+            <label><input type="radio" name="q2" value="a"> 10.40.8.10</label>
+            <label><input type="radio" name="q2" value="b"> 10.40.1.10</label>
+            <label><input type="radio" name="q2" value="c"> 10.40.1.1</label>
+            <label><input type="radio" name="q2" value="d"> Whichever responds fastest — order is ignored.</label>
+          </div>
+          <div class="verdict" id="q2v" role="status"></div>
+        </div>
+
+        <p class="progress" id="prog">0 / 6 complete</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- =================== SUBMISSION BAR =================== -->
+  <section class="card submit-card" aria-label="Submit lab">
+    <div class="bar"><span>Submit completed lab</span></div>
+    <div class="submit-inner">
+      <div class="field">
+        <label for="handle">Callsign (no real names)</label>
+        <input type="text" id="handle" maxlength="32" autocomplete="off" placeholder="e.g. cedar-fox-12">
+        <div class="hint">A pseudonym only. Your instructor maps callsigns to names on a separate roster.</div>
+      </div>
+      <div class="field" style="align-self:end">
+        <button class="btn primary" id="submitBtn" type="button">Submit completed lab</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+    <div class="reset-row" style="padding:0 14px 14px">
+      <button class="btn ghost" id="resetBtn" type="button">Reset lab</button>
+    </div>
+  </section>
+
+  <p class="note">
+    Self-paced formative lab. The checklist and score are computed in your browser and are
+    self-reported — your instructor's grading script records the server's own timestamp and can
+    re-check answers. No real names, emails, or IDs are collected. DHCP option codes shown
+    (<code>003</code>, <code>006</code>, <code>015</code>) follow the public RFC&nbsp;2132 standard.
+    <br>© 2026 &lt;AUTHOR / ORGANIZATION&gt; — replace with your own copyright/license line.
+  </p>
+
+</div>
+
+<!-- =================== ADD-OPTION DIALOG =================== -->
+<div class="scrim" id="scrim">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" id="dialog">
+    <h3 id="dlgTitle">Add option to Server</h3>
+    <div class="body">
+      <div class="field">
+        <label for="optSelect">Option</label>
+        <select id="optSelect">
+          <option value="">— choose an option —</option>
+          <option value="3">003 Router (default gateway)</option>
+          <option value="6">006 DNS Servers</option>
+          <option value="15">015 DNS Domain Name</option>
+        </select>
+      </div>
+      <div class="field" id="valueArea" hidden>
+        <label id="valueLabel" for="valueInput">Value</label>
+        <div id="ipArea" class="iprows" hidden></div>
+        <input type="text" id="valueInput" class="mono" hidden autocomplete="off">
+        <div class="hint" id="valueHint"></div>
+        <div class="err" id="dlgErr" role="alert"></div>
+      </div>
+    </div>
+    <div class="foot">
+      <button class="btn ghost" id="dlgCancel" type="button">Cancel</button>
+      <button class="btn primary" id="dlgAdd" type="button" disabled>Add option</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================================
+     html2canvas inline slot (OPTIONAL).
+     For pixel-perfect capture, paste the minified html2canvas (MIT) source
+     between the two markers below. If left empty, the lab uses a built-in,
+     dependency-free SVG capture (works in Chromium/Firefox; Safari may vary).
+     ==================================================================== -->
+<script>/* __HTML2CANVAS_START__ */ /* paste here */ /* __HTML2CANVAS_END__ */</script>
+
+<!-- =================== ENGINE + CONFIG =================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- PER-LAB CONFIG ---------------- */
+  const CONFIG = {
+    assignmentId: "netplus-dhcp-options",
+    objectives: ["N10-009:3.4", "APNET:2.3"],
+    // Deploy your shared Apps Script web app and paste its /exec URL here:
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+    passThreshold: "all tasks + all questions",
+    // Answer key (client-side, inspectable — fine for formative work):
+    KEY: {
+      serverDNS:       ["10.40.1.10", "10.40.8.10"],   // 006, ordered
+      serverDomain:    "cedarridge.lan",                // 015
+      scopeGateway:    ["10.40.1.1"],                   // 003 on Branch-Staff
+      q1: "b",
+      q2: "b"
+    }
+  };
+
+  /* Option catalogue — original UI labels over standard codes */
+  const OPTDEF = {
+    3:  { code:"003", name:"Router",          kind:"iplist", hint:"One or more gateway IPs for this subnet (first is preferred)." },
+    6:  { code:"006", name:"DNS Servers",     kind:"iplist", hint:"DNS server IPs in the order clients should try them." },
+    15: { code:"015", name:"DNS Domain Name", kind:"text",   hint:"The connection-specific DNS suffix, e.g. example.lan" }
+  };
+
+  /* ---------------- STATE (in-memory only) ---------------- */
+  const state = {
+    server: {},        // code -> {values:[...] } or {value:"..."}
+    scope:  {},        // code -> ...
+    selected: "server",
+    effectiveViewed: false,
+    questions: { q1:null, q2:null }
+  };
+
+  /* ---------------- helpers ---------------- */
+  const $  = (s,r)=> (r||document).querySelector(s);
+  const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
+  function isIPv4(s){
+    if(typeof s!=="string") return false;
+    const m = s.trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if(!m) return false;
+    return m.slice(1).every(o=> o.length<=3 && +o>=0 && +o<=255 && String(+o)===o.replace(/^0+(?=\d)/,''));
+  }
+  function isDomain(s){
+    return typeof s==="string" && /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i.test(s.trim());
+  }
+  function arrEq(a,b){ return Array.isArray(a)&&Array.isArray(b)&&a.length===b.length&&a.every((x,i)=>x===b[i]); }
+
+  /* ---------------- TREE / STAGE rendering ---------------- */
+  const stage = $("#stage");
+
+  function select(node){
+    state.selected = node;
+    if(node==="scopeopts" || node==="scope") state.effectiveViewed = true;
+    $$(".node[data-node]").forEach(b=> b.setAttribute("aria-current", b.dataset.node===node ? "true":"false"));
+    renderStage();
+    evaluate();
+  }
+
+  function optRows(store, opts){
+    const codes = Object.keys(store).map(Number).sort((a,b)=>a-b);
+    if(codes.length===0){
+      return `<tr class="empty"><td colspan="3">No options configured yet.</td></tr>`;
+    }
+    return codes.map(code=>{
+      const def = OPTDEF[code], rec = store[code];
+      let val;
+      if(def.kind==="iplist"){
+        val = rec.values.map((ip,i)=> `<span class="ordmark">${i+1}.</span>${ip}`).join("<br>");
+      } else { val = rec.value; }
+      const src = opts && opts.inheritedCodes && opts.inheritedCodes.includes(code)
+        ? `<span class="src">inherited from server</span>` : "";
+      const cls = opts && opts.inheritedCodes && opts.inheritedCodes.includes(code) ? "inherited":"";
+      return `<tr class="${cls}"><td class="code">${def.code}</td><td>${def.name} ${src}</td><td class="val">${val}</td></tr>`;
+    }).join("");
+  }
+
+  function renderStage(){
+    const sel = state.selected;
+    if(sel==="server"){
+      stage.innerHTML = `
+        <h2>Server Options</h2>
+        <p class="sub">Applied to <strong>every</strong> scope on <code>dhcp-edge01</code> unless a scope overrides them. Good place for settings shared library-wide.</p>
+        <table class="opt-table"><caption>Configured server options</caption>
+          <thead><tr><th>Code</th><th>Option</th><th>Value</th></tr></thead>
+          <tbody>${optRows(state.server)}</tbody>
+        </table>
+        <div class="row-actions"><button class="btn primary" id="addBtn" type="button">Add server option…</button></div>`;
+      $("#addBtn").addEventListener("click", ()=> openDialog("server"));
+    } else if(sel==="scope"){
+      stage.innerHTML = `
+        <h2>Scope: [10.40.1.0] Branch-Staff</h2>
+        <p class="sub">Address pool <code>10.40.1.50 – 10.40.1.200</code>, mask <code>/24</code>. This scope serves the staff subnet. Open <strong>Scope Options</strong> to see what its clients receive.</p>
+        <table class="opt-table"><caption>Effective options handed to Branch-Staff clients</caption>
+          <thead><tr><th>Code</th><th>Option</th><th>Value</th></tr></thead>
+          <tbody>${effectiveRows()}</tbody>
+        </table>
+        <div class="row-actions"><button class="btn ghost" id="goScopeOpts" type="button">Edit scope options…</button></div>`;
+      $("#goScopeOpts").addEventListener("click", ()=> select("scopeopts"));
+    } else { // scopeopts
+      stage.innerHTML = `
+        <h2>Scope Options — Branch-Staff</h2>
+        <p class="sub">Options set <strong>here</strong> apply only to this scope and override server options with the same code.</p>
+        <table class="opt-table"><caption>Options set on this scope</caption>
+          <thead><tr><th>Code</th><th>Option</th><th>Value</th></tr></thead>
+          <tbody>${optRows(state.scope)}</tbody>
+        </table>
+        <div class="row-actions"><button class="btn primary" id="addBtn" type="button">Add scope option…</button>
+          <button class="btn ghost" id="viewEff" type="button">View effective options ▸</button></div>`;
+      $("#addBtn").addEventListener("click", ()=> openDialog("scope"));
+      $("#viewEff").addEventListener("click", ()=> select("scope"));
+    }
+    $("#m-server").textContent = Object.keys(state.server).length;
+    $("#m-scope").textContent  = Object.keys(state.scope).length;
+  }
+
+  function effectiveRows(){
+    // merge server + scope; scope wins on conflict
+    const merged = {}; const inheritedCodes = [];
+    Object.keys(state.server).forEach(c=>{ merged[c]=state.server[c]; inheritedCodes.push(+c); });
+    Object.keys(state.scope).forEach(c=>{
+      merged[c]=state.scope[c];
+      const i=inheritedCodes.indexOf(+c); if(i>=0) inheritedCodes.splice(i,1);
+    });
+    return optRows(merged, {inheritedCodes});
+  }
+
+  /* ---------------- DIALOG ---------------- */
+  const scrim=$("#scrim"), dlg=$("#dialog");
+  let dlgTarget="server", lastFocus=null;
+
+  function openDialog(target){
+    dlgTarget=target; lastFocus=document.activeElement;
+    $("#dlgTitle").textContent = "Add option to " + (target==="server"?"Server":"Branch-Staff scope");
+    $("#optSelect").value="";
+    $("#valueArea").hidden=true; $("#dlgErr").classList.remove("show"); $("#dlgAdd").disabled=true;
+    var stale=document.getElementById("addIpBtn"); if(stale) stale.remove();
+    scrim.classList.add("open");
+    setTimeout(()=> $("#optSelect").focus(), 0);
+  }
+  function closeDialog(){
+    scrim.classList.remove("open");
+    if(lastFocus) lastFocus.focus();
+  }
+
+  $("#optSelect").addEventListener("change", function(){
+    const code=this.value, area=$("#valueArea"), ipArea=$("#ipArea"), input=$("#valueInput");
+    $("#dlgErr").classList.remove("show");
+    if(!code){ area.hidden=true; $("#dlgAdd").disabled=true; return; }
+    const def=OPTDEF[code]; area.hidden=false;
+    $("#valueLabel").textContent = def.name + " value";
+    $("#valueHint").textContent  = def.hint;
+    if(def.kind==="iplist"){
+      input.hidden=true; ipArea.hidden=false; ipArea.innerHTML="";
+      var stale=document.getElementById("addIpBtn"); if(stale) stale.remove();
+      addIpRow(); addIpRow();
+    } else {
+      ipArea.hidden=true; input.hidden=false; input.value=""; input.placeholder="example.lan";
+      var stale2=document.getElementById("addIpBtn"); if(stale2) stale2.remove();
+      setTimeout(()=> input.focus(),0);
+    }
+    $("#dlgAdd").disabled=false;
+  });
+
+  function addIpRow(){
+    const wrap=$("#ipArea");
+    const idx=wrap.children.length+1;
+    const row=document.createElement("div"); row.className="iprow";
+    row.innerHTML = `<span class="ord">${idx}</span>
+      <input type="text" class="mono ipv" inputmode="decimal" placeholder="0.0.0.0" autocomplete="off">
+      <button class="btn ghost" type="button" title="Remove" aria-label="Remove this entry">✕</button>`;
+    row.querySelector("button").addEventListener("click", ()=>{
+      if(wrap.children.length<=1) return;
+      row.remove(); reindexIp();
+    });
+    wrap.appendChild(row);
+    const more = document.getElementById("addIpBtn");
+    if(!more){
+      const b=document.createElement("button");
+      b.id="addIpBtn"; b.type="button"; b.className="linkish"; b.textContent="+ add another";
+      b.addEventListener("click", addIpRow);
+      wrap.after(b);
+    }
+  }
+  function reindexIp(){ $$("#ipArea .iprow .ord").forEach((s,i)=> s.textContent=i+1); }
+
+  $("#dlgAdd").addEventListener("click", function(){
+    const code=$("#optSelect").value; if(!code) return;
+    const def=OPTDEF[code], err=$("#dlgErr");
+    if(def.kind==="iplist"){
+      const vals = $$("#ipArea .ipv").map(i=> i.value.trim()).filter(v=> v.length>0);
+      if(vals.length===0){ return showErr("Enter at least one IPv4 address."); }
+      const bad = vals.find(v=> !isIPv4(v));
+      if(bad){ return showErr(`"${bad}" is not a valid IPv4 address. Use n.n.n.n with each part 0–255.`); }
+      commit(code, {values:vals});
+    } else {
+      const v=$("#valueInput").value.trim();
+      if(!v){ return showErr("Enter a domain name."); }
+      if(/\s/.test(v)){ return showErr("Domain names can't contain spaces."); }
+      if(!isDomain(v)){ return showErr(`"${v}" is not a valid domain name. Try something like example.lan`); }
+      commit(code, {value:v});
+    }
+    closeDialog();
+  });
+  function showErr(msg){ const e=$("#dlgErr"); e.textContent=msg; e.classList.add("show"); }
+
+  function commit(code, rec){
+    const store = dlgTarget==="server" ? state.server : state.scope;
+    store[code]=rec;
+    renderStage(); evaluate();
+  }
+
+  $("#dlgCancel").addEventListener("click", closeDialog);
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) closeDialog(); });
+  document.addEventListener("keydown", e=>{
+    if(e.key==="Escape" && scrim.classList.contains("open")) closeDialog();
+    if(e.key==="Tab" && scrim.classList.contains("open")){
+      const f=$$('button, select, input, [tabindex]:not([tabindex="-1"])', dlg).filter(el=>!el.disabled&&el.offsetParent!==null);
+      if(!f.length) return;
+      const first=f[0], last=f[f.length-1];
+      if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+    }
+  });
+
+  /* ---------------- TASKS / QUESTIONS ---------------- */
+  const TASKS = [
+    { id:"dns6",  lead:"Add server option 006 (DNS Servers)",
+      det:"Two servers, in order: 10.40.1.10 then 10.40.8.10.",
+      test:()=> state.server[6] && arrEq(state.server[6].values, CONFIG.KEY.serverDNS) },
+    { id:"dom15", lead:"Add server option 015 (DNS Domain Name)",
+      det:"Set the DNS suffix to cedarridge.lan.",
+      test:()=> state.server[15] && state.server[15].value===CONFIG.KEY.serverDomain },
+    { id:"gw3",   lead:"Add scope option 003 (Router) to Branch-Staff",
+      det:"Gateway 10.40.1.1 — on the scope, not the server.",
+      test:()=> state.scope[3] && arrEq(state.scope[3].values, CONFIG.KEY.scopeGateway) },
+    { id:"verify",lead:"Confirm Branch-Staff inherits the server's DNS options",
+      det:"Open the scope's effective-options view after the options above are set.",
+      test:()=> state.effectiveViewed && state.server[6] && state.server[15] && state.scope[3] }
+  ];
+
+  function taskState(){ return TASKS.map(t=> ({id:t.id,label:t.lead,passed:!!t.test()})); }
+  function questionState(){
+    return [
+      {id:"q1", prompt:"Why is 003 Router set per-scope?", answer:state.questions.q1, correct: state.questions.q1===CONFIG.KEY.q1},
+      {id:"q2", prompt:"First DNS server tried", answer:state.questions.q2, correct: state.questions.q2===CONFIG.KEY.q2}
+    ];
+  }
+
+  function renderChecklist(){
+    const ul=$("#checklist");
+    ul.innerHTML = TASKS.map(t=>{
+      const done=!!t.test();
+      return `<li class="${done?'done':''}"><span class="mark" aria-hidden="true">${done?'✓':''}</span>
+        <span class="ck-text"><span class="lead">${t.lead}</span><span class="det">${t.det}</span></span>
+        <span class="visually-hidden">${done?'completed':'not completed'}</span></li>`;
+    }).join("");
+  }
+
+  function evaluate(){
+    renderChecklist();
+    const tasks=taskState(), qs=questionState();
+    const earned = tasks.filter(t=>t.passed).length + qs.filter(q=>q.correct).length;
+    const total  = tasks.length + qs.length;
+    $("#prog").textContent = `${earned} / ${total} complete`;
+    $("#prog-mini").textContent = `${earned} / ${total}`;
+    return {earned,total,tasks,qs};
+  }
+
+  // question handlers
+  $$('input[name="q1"]').forEach(r=> r.addEventListener("change", ()=>{
+    state.questions.q1=r.value;
+    const ok=r.value===CONFIG.KEY.q1, v=$("#q1v");
+    v.textContent = ok ? "Correct — gateways are subnet-specific, so 003 lives on the scope." : "Not quite — think about what differs between subnets.";
+    v.className = "verdict "+(ok?"ok":"no"); evaluate();
+  }));
+  $$('input[name="q2"]').forEach(r=> r.addEventListener("change", ()=>{
+    state.questions.q2=r.value;
+    const ok=r.value===CONFIG.KEY.q2, v=$("#q2v");
+    v.textContent = ok ? "Correct — 006 lists servers in priority order; the first is tried first." : "Not quite — option 006's order is the priority order.";
+    v.className = "verdict "+(ok?"ok":"no"); evaluate();
+  }));
+
+  // tree wiring
+  $("#n-server").addEventListener("click", ()=> select("server"));
+  $("#n-scope").addEventListener("click", ()=> select("scope"));
+  $("#n-scopeopts").addEventListener("click", ()=> select("scopeopts"));
+
+  /* ---------------- SCREENSHOT (built-in fallback) ---------------- */
+  async function capturePng(node){
+    if(window.html2canvas){
+      const canvas = await window.html2canvas(node, {scale:1, backgroundColor:"#ffffff", logging:false});
+      return canvas.toDataURL("image/png");
+    }
+    return builtinCapture(node);
+  }
+  async function builtinCapture(node){
+    const rect=node.getBoundingClientRect();
+    const w=Math.min(Math.ceil(rect.width), 1100), h=Math.ceil(rect.height);
+    const clone=node.cloneNode(true);
+    inlineStyles(node, clone);
+    clone.style.margin="0"; clone.style.width=w+"px";
+    const xml=new XMLSerializer().serializeToString(clone);
+    const svg='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+      `<foreignObject x="0" y="0" width="100%" height="100%">`+
+      `<div xmlns="http://www.w3.org/1999/xhtml">${xml}</div></foreignObject></svg>`);
+    return new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.onload=()=>{
+        const scale=Math.min(1, 900/w);
+        const c=document.createElement("canvas"); c.width=Math.round(w*scale); c.height=Math.round(h*scale);
+        const ctx=c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height);
+        ctx.drawImage(img,0,0,c.width,c.height);
+        try{ resolve(c.toDataURL("image/png")); }catch(err){ reject(err); }
+      };
+      img.onerror=()=> reject(new Error("capture-failed"));
+      img.src=svg;
+    });
+  }
+  function inlineStyles(src, dst){
+    const ss=src.querySelectorAll("*"), ds=dst.querySelectorAll("*");
+    copyComputed(src,dst);
+    for(let i=0;i<ss.length;i++) copyComputed(ss[i], ds[i]);
+  }
+  function copyComputed(s,d){
+    const cs=getComputedStyle(s); let css="";
+    for(let i=0;i<cs.length;i++){ const p=cs[i]; css+=p+":"+cs.getPropertyValue(p)+";"; }
+    d.style.cssText=css;
+  }
+
+  /* ---------------- SUBMIT ---------------- */
+  const statusEl=$("#status");
+  function setStatus(msg, kind){ statusEl.innerHTML=msg; statusEl.className="status "+(kind||""); }
+
+  $("#submitBtn").addEventListener("click", async ()=>{
+    const handle=$("#handle").value.trim();
+    if(!handle){ setStatus("Enter a callsign before submitting.","no"); $("#handle").focus(); return; }
+    if(handle.length>32){ setStatus("Callsign too long (32 characters max).","no"); return; }
+
+    const res=evaluate();
+    const allPass = res.tasks.every(t=>t.passed) && res.qs.every(q=>q.correct);
+    if(!allPass){
+      setStatus(`Not all items complete (${res.earned}/${res.total}). Finish the checklist and both questions, then submit.`,"no");
+      return;
+    }
+
+    const btn=$("#submitBtn"); btn.disabled=true;
+    setStatus("Capturing and submitting…","busy");
+
+    let screenshot="";
+    try{ screenshot=await capturePng($("#lab-capture")); }
+    catch(e){ screenshot=""; /* proceed without image rather than block submission */ }
+
+    const payload={
+      assignmentId: CONFIG.assignmentId,
+      handle: handle,
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: res.tasks,
+      questions: res.qs,
+      score: {earned:res.earned, total:res.total},
+      screenshot: screenshot,
+      submissionToken: CONFIG.submissionToken
+    };
+
+    if(!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_")===0){
+      setStatus("Lab not yet wired to a server — ask your instructor to set the submission URL.","no");
+      btn.disabled=false; return;
+    }
+
+    try{
+      // Simple request: NO custom headers, text/plain body → no CORS preflight.
+      const r=await fetch(CONFIG.APPS_SCRIPT_URL, {method:"POST", body:JSON.stringify(payload)});
+      const out=await r.json();
+      if(out && out.success){
+        const link = out.docUrl ? ` <a href="${out.docUrl}" target="_blank" rel="noopener">Open your submission ▸</a>` : "";
+        setStatus("Submitted ✓ — recorded by the grading server."+link,"ok");
+      } else {
+        setStatus("Server rejected the submission: "+((out&&out.error)||"unknown error")+". Tell your instructor.","no");
+        btn.disabled=false;
+      }
+    }catch(err){
+      // Locked-down fallback: fire-and-forget; can't read docUrl.
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, {method:"POST", mode:"no-cors", body:JSON.stringify(payload)});
+        setStatus("Submitted, but the response couldn't be read. Confirm with your instructor that it arrived.","ok");
+      }catch(e2){
+        setStatus("Submission failed (network). Check your connection and try again.","no");
+        btn.disabled=false;
+      }
+    }
+  });
+
+  /* ---------------- RESET ---------------- */
+  $("#resetBtn").addEventListener("click", ()=>{
+    state.server={}; state.scope={}; state.effectiveViewed=false; state.questions={q1:null,q2:null};
+    $$('input[name="q1"],input[name="q2"]').forEach(r=> r.checked=false);
+    $("#q1v").textContent=""; $("#q1v").className="verdict";
+    $("#q2v").textContent=""; $("#q2v").className="verdict";
+    $("#handle").value=""; setStatus("","");
+    $("#submitBtn").disabled=false;
+    select("server");
+  });
+
+  /* ---------------- INIT ---------------- */
+  select("server");
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-dns-zones.html",title:"Lab \u2014 Authoritative DNS: Primary & Secondary Forward Zones"}, NEXT={href:"index_netplus-dhcp-exclusion.html",title:"Lights-Out Network \u2014 Add a DHCP Exclusion Range"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

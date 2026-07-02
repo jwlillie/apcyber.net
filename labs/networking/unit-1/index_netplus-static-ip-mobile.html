@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>Lab — Hand-Configuring a Tablet When DHCP Is Down</title>
+<!--
+  ============================================================================
+  CLEAN-ROOM SIMULATION LAB  ·  Network+ (N10-007 obj. 1.4) / AP Networking
+  assignmentId: netplus-static-ip-mobile
+
+  © 2026 <AUTHOR / ORG NAME HERE>.  All original expression.
+  Licensed for classroom use by the purchasing institution.
+  Scenario, persona, hostnames, IP plan, SSID, passwords, task and question
+  wording are original works authored for this library. No third-party lab
+  content (TestOut, Cisco NetAcad/Packet Tracer, or any vendor) is reproduced.
+  Replace <AUTHOR / ORG NAME HERE> with your name/organization before shipping.
+  ============================================================================
+-->
+<style>
+  /* ---- Design tokens -----------------------------------------------------
+     Subject: a café point-of-sale tablet being hand-configured by a new IT
+     helper. Palette pulls from roasted-coffee + steam, not the cream/terracotta
+     default: deep espresso ground, warm copper signal, cool "steam" teal for
+     interactive state, parchment surfaces.                                    */
+  :root{
+    --ground:#1d1714;        /* espresso background        */
+    --ground-2:#272019;      /* raised panel               */
+    --surface:#f6f1e9;       /* parchment app surface      */
+    --surface-2:#ece3d5;     /* inset rows                 */
+    --ink:#241c16;           /* primary text on surface    */
+    --ink-soft:#6b5d4f;      /* secondary text             */
+    --line:#d8cab4;          /* hairline on surface        */
+    --copper:#b4632b;        /* primary accent / brand     */
+    --copper-deep:#8f4a1d;
+    --steam:#1f7a6d;         /* interactive / connected    */
+    --steam-soft:#d7ece8;
+    --ok:#1f7a4a;
+    --ok-soft:#dcefe1;
+    --bad:#a02a2a;
+    --bad-soft:#f5dede;
+    --warn:#9a6a12;
+    --warn-soft:#f6ecd2;
+    --focus:#0e63c4;
+    --radius:14px;
+    --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans);
+    color:var(--surface);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #2c241c 0%, transparent 60%),
+      var(--ground);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:24px 16px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* ---- Header ----------------------------------------------------------- */
+  header.lab-head{margin-bottom:20px}
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--copper);margin:0 0 6px;
+  }
+  h1{
+    font-size:clamp(22px,3.4vw,32px);line-height:1.15;margin:0 0 10px;
+    font-weight:760;letter-spacing:-.01em;color:#fbf6ee;
+  }
+  .lead{max-width:62ch;color:#cdbfae;margin:0 0 14px;font-size:15px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;
+    background:var(--ground-2);border:1px solid #3a2f25;color:#e7d8c4;
+    padding:4px 9px;border-radius:999px;
+  }
+  .chip b{color:var(--copper);font-weight:600}
+
+  /* ---- Layout ----------------------------------------------------------- */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{
+    background:var(--surface);color:var(--ink);border-radius:var(--radius);
+    border:1px solid var(--line);overflow:hidden;
+    box-shadow:0 1px 0 #00000022, 0 18px 40px -28px #000000aa;
+  }
+  .card > .card-h{
+    padding:12px 16px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;background:var(--surface-2);
+  }
+  .card-h h2{font-size:14px;margin:0;letter-spacing:.01em}
+  .card-h .dot{width:9px;height:9px;border-radius:50%;background:var(--copper)}
+  .card-b{padding:16px}
+
+  /* ---- Device (the "AuroraTab") ---------------------------------------- */
+  .device{
+    background:#0e0c0b;border-radius:26px;padding:14px;
+    border:1px solid #000;box-shadow:inset 0 0 0 2px #2a2420, 0 10px 30px -18px #000;
+  }
+  .device-screen{
+    background:#fbfaf7;border-radius:14px;overflow:hidden;color:#1c1a18;
+    min-height:430px;display:flex;flex-direction:column;
+  }
+  .statusbar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:6px 12px;font-size:12px;font-family:var(--mono);
+    background:#efeae1;color:#544a3d;border-bottom:1px solid #e0d8cb;
+  }
+  .statusbar .right{display:flex;gap:10px;align-items:center}
+  .wifi-glyph{display:inline-flex;align-items:center;gap:5px}
+  .wifi-glyph .bars{width:15px;height:11px;display:inline-block}
+  .settings-title{
+    padding:12px 16px 4px;font-size:17px;font-weight:700;letter-spacing:-.01em;
+  }
+  .settings-sub{padding:0 16px 10px;font-size:12.5px;color:var(--ink-soft)}
+  .scroll{padding:4px 16px 16px;overflow:auto}
+
+  .section-label{
+    font-size:11px;font-family:var(--mono);letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink-soft);margin:14px 0 6px;
+  }
+  .row{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin-bottom:8px;
+  }
+  .row .label{font-size:14px}
+  .row .sub{font-size:12px;color:var(--ink-soft)}
+
+  /* network list */
+  .net{cursor:pointer}
+  .net:hover{border-color:#c8b89e}
+  .net .name{font-weight:600;font-size:14px}
+  .net .meta{font-size:11.5px;color:var(--ink-soft);font-family:var(--mono)}
+  .net[aria-pressed="true"]{border-color:var(--steam);background:var(--steam-soft)}
+  .net .state{font-family:var(--mono);font-size:11.5px;color:var(--steam);font-weight:600}
+
+  /* toggle */
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+  .seg button{
+    appearance:none;border:0;background:transparent;cursor:pointer;
+    font:inherit;font-size:12.5px;padding:6px 12px;color:var(--ink-soft);
+  }
+  .seg button[aria-pressed="true"]{background:var(--steam);color:#fff;font-weight:600}
+
+  /* manual fields */
+  .fields{display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;color:var(--ink-soft);font-family:var(--mono);letter-spacing:.03em}
+  .field input{
+    font:inherit;font-family:var(--mono);font-size:14px;
+    padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);
+  }
+  .field input[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-soft)}
+
+  .pwd-wrap{display:flex;gap:8px;margin-top:8px}
+  .pwd-wrap input{flex:1}
+
+  /* buttons */
+  .btn{
+    appearance:none;cursor:pointer;font:inherit;font-weight:600;font-size:13.5px;
+    border-radius:9px;padding:9px 14px;border:1px solid transparent;
+  }
+  .btn-primary{background:var(--copper);color:#fff}
+  .btn-primary:hover{background:var(--copper-deep)}
+  .btn-ghost{background:#fff;border-color:var(--line);color:var(--ink)}
+  .btn-ghost:hover{border-color:#c8b89e}
+  .btn-steam{background:var(--steam);color:#fff}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  .inline-msg{
+    margin-top:8px;font-size:12.5px;border-radius:8px;padding:8px 10px;display:none;
+  }
+  .inline-msg.show{display:block}
+  .inline-msg.err{background:var(--bad-soft);color:var(--bad);border:1px solid #e6b9b9}
+  .inline-msg.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #b6dcc2}
+
+  /* ---- Task / question panel ------------------------------------------- */
+  .checklist{list-style:none;margin:0;padding:0}
+  .checklist li{
+    display:flex;gap:10px;align-items:flex-start;padding:9px 0;
+    border-bottom:1px solid var(--line);font-size:13.5px;
+  }
+  .checklist li:last-child{border-bottom:0}
+  .mark{
+    flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
+    font-size:12px;font-weight:700;border:1.5px solid var(--line);color:var(--ink-soft);background:#fff;
+    margin-top:1px;
+  }
+  .mark.done{background:var(--ok);border-color:var(--ok);color:#fff}
+  .task-txt .t{font-weight:600}
+  .task-txt .d{color:var(--ink-soft);font-size:12.5px}
+
+  fieldset.q{border:1px solid var(--line);border-radius:10px;margin:0 0 12px;padding:12px}
+  fieldset.q legend{font-size:13.5px;font-weight:600;padding:0 6px}
+  .opts{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .opt{display:flex;gap:9px;align-items:flex-start;font-size:13px;cursor:pointer;
+       padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .opt:hover{border-color:#c8b89e}
+  .opt input{margin-top:3px}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.incorrect{border-color:var(--bad);background:var(--bad-soft)}
+  .q-fb{font-size:12px;margin-top:7px;min-height:1em;font-family:var(--mono)}
+  .q-fb.ok{color:var(--ok)} .q-fb.bad{color:var(--bad)}
+
+  /* ---- Submission bar --------------------------------------------------- */
+  .submit-card{margin-top:18px}
+  .scoreline{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .score-pill{
+    font-family:var(--mono);font-size:13px;background:var(--ground);color:#f4e9da;
+    border:1px solid #3a2f25;border-radius:999px;padding:6px 12px;
+  }
+  .score-pill b{color:var(--copper)}
+  .pass-pill{font-family:var(--mono);font-size:12px;padding:4px 10px;border-radius:999px}
+  .pass-pill.yes{background:var(--ok-soft);color:var(--ok);border:1px solid #b6dcc2}
+  .pass-pill.no{background:var(--warn-soft);color:var(--warn);border:1px solid #e6d3a0}
+
+  .submit-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .callsign{display:flex;flex-direction:column;gap:5px;min-width:220px;flex:1}
+  .callsign label{font-size:12px;color:var(--ink-soft);font-family:var(--mono);letter-spacing:.03em}
+  .callsign input{
+    font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);
+    border-radius:9px;background:#fff;color:var(--ink);
+  }
+  .status{font-size:13px;margin-top:12px;min-height:1.2em}
+  .status a{color:var(--copper-deep);font-weight:600}
+  .priv{font-size:11.5px;color:var(--ink-soft);margin-top:10px;max-width:70ch}
+
+  /* focus visibility (quality floor) */
+  a:focus-visible,button:focus-visible,input:focus-visible,
+  .net:focus-visible,.opt:focus-visible,.seg button:focus-visible{
+    outline:3px solid var(--focus);outline-offset:2px;border-radius:7px;
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+           clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  footer.legal{margin-top:26px;font-size:11px;color:#7d6e5e;text-align:center}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-static-ip-mobile", "title": "Lab — Hand-Configuring a Tablet When DHCP Is Down", "version": "1.0.0", "objectives": ["N10-009:1.7", "APNET:1.2"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+
+  <header class="lab-head">
+    <p class="eyebrow">Network+ Lab · IP addressing</p>
+    <h1>Hand-Configuring a Tablet When DHCP Is Down</h1>
+    <p class="lead">
+      You just started as the IT helper at <strong>Driftwood Coffee Roasters</strong>.
+      The new countertop tablet at the register — staff call it the <em>AuroraTab</em> —
+      came up with no network access. The back-office DHCP server is offline for maintenance,
+      so the tablet can't lease an address automatically. Set its IP configuration by hand so the
+      point-of-sale app can reach the register server, then join it to the staff Wi-Fi.
+    </p>
+    <div class="chips" aria-label="Objective coverage">
+      <span class="chip"><b>N10-007</b> 1.4 — configure IP addressing components</span>
+      <span class="chip"><b>AP NET</b> 2.3.C — static vs. dynamic addressing</span>
+      <span class="chip"><b>AP NET</b> 1.2.A — secure wireless connectivity</span>
+    </div>
+  </header>
+
+  <!-- everything inside #capture-area is what the screenshot grabs -->
+  <div id="capture-area">
+  <div class="grid">
+
+    <!-- ============== DEVICE SIMULATION ============== -->
+    <section class="card" aria-label="AuroraTab device">
+      <div class="card-h"><span class="dot"></span><h2>AuroraTab — Settings</h2></div>
+      <div class="card-b">
+        <div class="device">
+          <div class="device-screen">
+            <div class="statusbar" aria-hidden="true">
+              <span>9:41</span>
+              <span class="right">
+                <span class="wifi-glyph"><span id="sb-net" class="bars">no service</span></span>
+                <span>84%</span>
+              </span>
+            </div>
+            <div class="settings-title">Network &amp; Internet</div>
+            <div class="settings-sub" id="conn-summary">Not connected — no IP address assigned.</div>
+
+            <div class="scroll">
+
+              <!-- Wi-Fi list -->
+              <div class="section-label">Available networks</div>
+              <div class="row net" id="net-roast" role="button" tabindex="0" aria-pressed="false"
+                   aria-label="RoastNet-Staff, WPA3 secured network">
+                <span>
+                  <span class="name">RoastNet-Staff</span><br>
+                  <span class="meta">WPA3 · 5 GHz · secured</span>
+                </span>
+                <span class="state" id="roast-state">Tap to join</span>
+              </div>
+              <div class="row net" id="net-guest" role="button" tabindex="0" aria-pressed="false"
+                   aria-label="RoastNet-Guest, open network">
+                <span>
+                  <span class="name">RoastNet-Guest</span><br>
+                  <span class="meta">Open · captive portal</span>
+                </span>
+                <span class="state" style="color:var(--ink-soft)">Tap to join</span>
+              </div>
+
+              <!-- password entry (revealed on tapping the secured net) -->
+              <div id="pwd-block" hidden>
+                <label class="field" for="wifi-pass" style="margin-top:6px">
+                  <span style="font-size:12px;color:var(--ink-soft);font-family:var(--mono)">
+                    Password for RoastNet-Staff</span>
+                </label>
+                <div class="pwd-wrap">
+                  <input id="wifi-pass" type="password" autocomplete="off" inputmode="text"
+                         aria-label="Wi-Fi password for RoastNet-Staff" placeholder="Enter network password">
+                  <button class="btn btn-steam" id="wifi-connect" type="button">Connect</button>
+                </div>
+                <div class="inline-msg" id="wifi-msg" role="alert" aria-live="assertive"></div>
+              </div>
+
+              <!-- IP settings -->
+              <div class="section-label">IP settings</div>
+              <div class="row">
+                <span class="label">Address assignment</span>
+                <span class="seg" role="group" aria-label="Address assignment mode">
+                  <button id="mode-auto" type="button" aria-pressed="true">Automatic (DHCP)</button>
+                  <button id="mode-manual" type="button" aria-pressed="false">Manual</button>
+                </span>
+              </div>
+
+              <div id="auto-note" class="inline-msg err show" role="status" style="margin-top:0">
+                DHCP request timed out — no server answered. Switch to <strong>Manual</strong> to enter
+                an address by hand.
+              </div>
+
+              <div id="manual-block" hidden>
+                <div class="fields">
+                  <div class="field">
+                    <label for="f-ip">IPv4 address</label>
+                    <input id="f-ip" inputmode="decimal" autocomplete="off" placeholder="e.g. 10.0.0.20">
+                  </div>
+                  <div class="field">
+                    <label for="f-mask">Subnet mask</label>
+                    <input id="f-mask" inputmode="decimal" autocomplete="off" placeholder="e.g. 255.255.255.0">
+                  </div>
+                  <div class="field">
+                    <label for="f-gw">Default gateway</label>
+                    <input id="f-gw" inputmode="decimal" autocomplete="off" placeholder="e.g. 10.0.0.1">
+                  </div>
+                  <div class="field">
+                    <label for="f-dns">DNS server</label>
+                    <input id="f-dns" inputmode="decimal" autocomplete="off" placeholder="e.g. 10.0.0.9">
+                  </div>
+                </div>
+                <div class="btn-row">
+                  <button class="btn btn-primary" id="apply-ip" type="button">Save IP configuration</button>
+                  <button class="btn btn-ghost" id="clear-ip" type="button">Clear</button>
+                </div>
+                <div class="inline-msg" id="ip-msg" role="alert" aria-live="assertive"></div>
+              </div>
+
+            </div><!-- /scroll -->
+          </div><!-- /device-screen -->
+        </div><!-- /device -->
+      </div>
+    </section>
+
+    <!-- ============== TASK + QUESTION PANEL ============== -->
+    <section class="card" aria-label="Lab tasks and questions">
+      <div class="card-h"><span class="dot"></span><h2>Your tasks</h2></div>
+      <div class="card-b">
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px">
+          The work order from the office: bring the AuroraTab onto the
+          <strong>10.40.12.0/24</strong> register network and connect it to staff Wi-Fi.
+          Items check off automatically as you go.
+        </p>
+
+        <ul class="checklist" id="checklist"></ul>
+
+        <h2 style="font-size:14px;margin:18px 0 8px">Check your understanding</h2>
+
+        <fieldset class="q" id="q1">
+          <legend>1. The back-office DHCP server is offline for maintenance. Why does that stop the tablet from getting on the network on its own?</legend>
+          <div class="opts">
+            <label class="opt"><input type="radio" name="q1" value="a"><span>The tablet's Wi-Fi radio shuts off whenever DHCP is unavailable.</span></label>
+            <label class="opt"><input type="radio" name="q1" value="b"><span>With no DHCP server to lease it an address, the tablet has no IP configuration to talk on the network — so an address must be entered by hand.</span></label>
+            <label class="opt"><input type="radio" name="q1" value="c"><span>DHCP encrypts traffic, so without it the firewall blocks the tablet.</span></label>
+            <label class="opt"><input type="radio" name="q1" value="d"><span>The router stops forwarding all packets until DHCP comes back online.</span></label>
+          </div>
+          <div class="q-fb" id="fb-q1" aria-live="polite"></div>
+        </fieldset>
+
+        <fieldset class="q" id="q2">
+          <legend>2. You set the mask to 255.255.255.0 on the 10.40.12.0 network. How many addresses can actually be assigned to devices (hosts) on it?</legend>
+          <div class="opts">
+            <label class="opt"><input type="radio" name="q2" value="a"><span>256</span></label>
+            <label class="opt"><input type="radio" name="q2" value="b"><span>255</span></label>
+            <label class="opt"><input type="radio" name="q2" value="c"><span>254 — the network and broadcast addresses can't be assigned to hosts.</span></label>
+            <label class="opt"><input type="radio" name="q2" value="d"><span>512</span></label>
+          </div>
+          <div class="q-fb" id="fb-q2" aria-live="polite"></div>
+        </fieldset>
+
+        <fieldset class="q" id="q3">
+          <legend>3. Which value you entered tells the tablet where to send traffic bound for a different network, like a cloud payment service on the internet?</legend>
+          <div class="opts">
+            <label class="opt"><input type="radio" name="q3" value="a"><span>Subnet mask</span></label>
+            <label class="opt"><input type="radio" name="q3" value="b"><span>Default gateway</span></label>
+            <label class="opt"><input type="radio" name="q3" value="c"><span>DNS server</span></label>
+            <label class="opt"><input type="radio" name="q3" value="d"><span>The static IPv4 address itself</span></label>
+          </div>
+          <div class="q-fb" id="fb-q3" aria-live="polite"></div>
+        </fieldset>
+
+        <fieldset class="q" id="q4">
+          <legend>4. Suppose you'd forgotten to set a static address and DHCP was still down. Many devices then self-assign a link-local address. Which range is that?</legend>
+          <div class="opts">
+            <label class="opt"><input type="radio" name="q4" value="a"><span>10.0.0.0 – 10.255.255.255</span></label>
+            <label class="opt"><input type="radio" name="q4" value="b"><span>169.254.0.0 – 169.254.255.255 (APIPA / link-local)</span></label>
+            <label class="opt"><input type="radio" name="q4" value="c"><span>192.168.0.0 – 192.168.255.255</span></label>
+            <label class="opt"><input type="radio" name="q4" value="d"><span>172.16.0.0 – 172.31.255.255</span></label>
+          </div>
+          <div class="q-fb" id="fb-q4" aria-live="polite"></div>
+        </fieldset>
+      </div>
+    </section>
+
+  </div><!-- /grid -->
+  </div><!-- /capture-area -->
+
+  <!-- ============== SUBMISSION ============== -->
+  <section class="card submit-card" aria-label="Submit lab">
+    <div class="card-h"><span class="dot"></span><h2>Submit completed lab</h2></div>
+    <div class="card-b">
+      <div class="scoreline">
+        <span class="score-pill">Tasks <b id="score-tasks">0/7</b></span>
+        <span class="score-pill">Questions <b id="score-q">0/4</b></span>
+        <span class="pass-pill no" id="pass-pill">Not yet passing</span>
+        <button class="btn btn-ghost" id="reset" type="button" style="margin-left:auto">Reset lab</button>
+      </div>
+
+      <div class="submit-row">
+        <div class="callsign">
+          <label for="callsign">Your callsign (a nickname — no real names)</label>
+          <input id="callsign" maxlength="32" autocomplete="off" placeholder="e.g. north-pour-7">
+        </div>
+        <button class="btn btn-primary" id="submit" type="button" style="padding:12px 18px">Submit completed lab</button>
+      </div>
+
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+      <p class="priv">
+        Privacy: enter a callsign, never your real name, student ID, or email. This lab keeps no
+        personal information. On submit it sends your callsign, your task/question results, the
+        objective tags, and a picture of this lab page to your instructor's grading folder.
+      </p>
+    </div>
+  </section>
+
+  <footer class="legal">
+    © 2026 &lt;AUTHOR / ORG NAME HERE&gt; · Clean-room lab for Network+ (N10-007 1.4) and
+    AP Networking (2.3.C, 1.2.A) · Original work, licensed for classroom use.
+  </footer>
+</div>
+
+<!-- ========================================================================
+     SCRIPT 1 — screenshot capture (dependency-free).
+     Captures the simulated DOM via SVG <foreignObject>. If real html2canvas
+     is pasted into the slot below (window.html2canvas), it is used instead
+     for pixel-perfect capture — no other code changes needed.
+     ===  PASTE MINIFIED html2canvas HERE (optional upgrade)  ===============
+     ======================================================================== -->
+<script>
+/* Native DOM -> PNG. No external libraries, no network. */
+async function captureScreenshot(node){
+  try{
+    if (window.html2canvas){
+      const c = await window.html2canvas(node, {backgroundColor:'#1d1714', scale:1});
+      return c.toDataURL('image/png');
+    }
+    const rect = node.getBoundingClientRect();
+    const w = Math.max(1, Math.ceil(rect.width));
+    const h = Math.max(1, Math.ceil(rect.height));
+
+    // clone and bake current form values into attributes (so they serialize)
+    const clone = node.cloneNode(true);
+    const src = node.querySelectorAll('input,select,textarea');
+    const dst = clone.querySelectorAll('input,select,textarea');
+    src.forEach((s,i)=>{
+      const d = dst[i]; if(!d) return;
+      if (s.type==='checkbox' || s.type==='radio'){
+        if (s.checked) d.setAttribute('checked',''); else d.removeAttribute('checked');
+      } else if (s.tagName==='SELECT'){
+        const opts = d.querySelectorAll('option');
+        opts.forEach(o=>o.removeAttribute('selected'));
+        if (opts[s.selectedIndex]) opts[s.selectedIndex].setAttribute('selected','');
+      } else {
+        // mask password content in the screenshot
+        d.setAttribute('value', s.type==='password' ? '••••••••' : (s.value||''));
+      }
+    });
+
+    // gather all page CSS so the clone renders styled inside the SVG
+    let css = '';
+    document.querySelectorAll('style').forEach(s=>{ css += s.textContent + '\n'; });
+
+    const xml = new XMLSerializer().serializeToString(clone);
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'+
+        '<foreignObject width="100%" height="100%">'+
+          '<div xmlns="http://www.w3.org/1999/xhtml" '+
+               'style="width:'+w+'px;background:#1d1714;padding:0;">'+
+            '<style>'+css+'</style>'+ xml +
+          '</div>'+
+        '</foreignObject>'+
+      '</svg>';
+
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    const img = await new Promise((res,rej)=>{
+      const im = new Image();
+      im.onload = ()=>res(im);
+      im.onerror = ()=>rej(new Error('render failed'));
+      im.src = url;
+    });
+
+    // cap output width to keep payload small
+    const maxW = 1000;
+    const scale = Math.min(1, maxW / w);
+    const cw = Math.round(w*scale), ch = Math.round(h*scale);
+    const cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#1d1714'; ctx.fillRect(0,0,cw,ch);
+    ctx.drawImage(img, 0, 0, cw, ch);
+    return cv.toDataURL('image/png');
+  }catch(e){
+    // last-resort 1x1 so submission still goes through
+    const cv = document.createElement('canvas'); cv.width=cv.height=1;
+    return cv.toDataURL('image/png');
+  }
+}
+</script>
+
+<!-- ========================================================================
+     SCRIPT 2 — engine: CONFIG, ANSWER KEY, sim logic, scoring, POST.
+     PER-LAB EDITS LIVE ONLY IN THE CONFIG + KEY BLOCKS BELOW.
+     ======================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ----------------------------- CONFIG --------------------------------- */
+  const CONFIG = {
+    assignmentId: "netplus-static-ip-mobile",
+    title: "Hand-Configuring a Tablet When DHCP Is Down",
+    // Both blueprints, prefixed so the gradebook can tell them apart.
+    // NOTE: uploaded objectives file is N10-007. Swap to the N10-009 code here
+    // (and in labs.json) once that PDF is added — it's a data edit, not a rebuild.
+    objectives: ["N10-009:1.7", "APNET:1.2"],
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "REPLACE_WITH_PER_COHORT_TOKEN"
+  };
+
+  /* --------------------------- ANSWER KEY ------------------------------- */
+  const KEY = {
+    ip:   "10.40.12.66",
+    mask: "255.255.255.0",
+    gw:   "10.40.12.1",
+    dns:  "10.40.12.9",
+    network: "10.40.12.0",
+    cidr: 24,                 // /24 -> 255.255.255.0
+    ssid: "RoastNet-Staff",
+    wifiPass: "Br3wMor3Be4ns!2026",
+    questions: { q1:"b", q2:"c", q3:"b", q4:"b" }
+  };
+
+  /* --------------------------- LAB STATE -------------------------------- */
+  const state = {
+    ipMode: "auto",          // "auto" | "manual"
+    applied: null,           // {ip,mask,gw,dns} once a VALID manual config is saved
+    wifi: { connected:false, ssid:null },
+    answers: { q1:null, q2:null, q3:null, q4:null }
+  };
+
+  /* ------------------------- IPv4 helpers ------------------------------- */
+  function parseOctets(s){
+    if (typeof s !== "string") return null;
+    const m = s.trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (!m) return null;
+    const o = m.slice(1,5).map(Number);
+    if (o.some(n => n>255)) return null;
+    if (m.slice(1,5).some(p => p.length>1 && p[0]==="0")) return null; // no leading zeros
+    return o;
+  }
+  const toInt = o => ((o[0]<<24)>>>0) + (o[1]<<16) + (o[2]<<8) + o[3];
+  function maskToCidr(o){               // returns prefix length or -1 if not a valid mask
+    const bits = o.map(n=>n.toString(2).padStart(8,"0")).join("");
+    if (!/^1*0*$/.test(bits)) return -1;
+    return bits.indexOf("0") === -1 ? 32 : bits.indexOf("0");
+  }
+  function sameSubnet(aOct, bOct, maskOct){
+    const m = toInt(maskOct);
+    return ((toInt(aOct) & m) >>> 0) === ((toInt(bOct) & m) >>> 0);
+  }
+  function isNetworkOrBroadcast(ipOct, maskOct){
+    const m = toInt(maskOct), ip = toInt(ipOct);
+    const net = (ip & m) >>> 0;
+    const bcast = (net | (~m >>> 0)) >>> 0;
+    return ip === net || ip === bcast;
+  }
+
+  /* --------------------------- DOM refs --------------------------------- */
+  const $ = id => document.getElementById(id);
+  const modeAuto=$("mode-auto"), modeManual=$("mode-manual");
+  const manualBlock=$("manual-block"), autoNote=$("auto-note");
+  const fIp=$("f-ip"), fMask=$("f-mask"), fGw=$("f-gw"), fDns=$("f-dns");
+  const ipMsg=$("ip-msg"), connSummary=$("conn-summary"), sbNet=$("sb-net");
+  const netRoast=$("net-roast"), roastState=$("roast-state");
+  const pwdBlock=$("pwd-block"), wifiPass=$("wifi-pass"),
+        wifiConnect=$("wifi-connect"), wifiMsg=$("wifi-msg");
+
+  /* ----------------------- mode switching ------------------------------- */
+  function setMode(mode){
+    state.ipMode = mode;
+    const manual = mode === "manual";
+    modeManual.setAttribute("aria-pressed", String(manual));
+    modeAuto.setAttribute("aria-pressed", String(!manual));
+    manualBlock.hidden = !manual;
+    autoNote.classList.toggle("show", !manual);
+    render();
+  }
+  modeAuto.addEventListener("click", ()=>setMode("auto"));
+  modeManual.addEventListener("click", ()=>setMode("manual"));
+
+  /* ----------------------- apply IP config ------------------------------ */
+  function showIpMsg(text, ok){
+    ipMsg.textContent = text;
+    ipMsg.className = "inline-msg show " + (ok ? "ok" : "err");
+  }
+  [fIp,fMask,fGw,fDns].forEach(el=>{
+    el.addEventListener("input", ()=>el.setAttribute("aria-invalid","false"));
+  });
+
+  $("apply-ip").addEventListener("click", ()=>{
+    const ipO=parseOctets(fIp.value), maskO=parseOctets(fMask.value),
+          gwO=parseOctets(fGw.value), dnsO=parseOctets(fDns.value);
+
+    // realistic, specific validation errors — the errors ARE the learning
+    if (!ipO){ fIp.setAttribute("aria-invalid","true");
+      return showIpMsg('"'+fIp.value+'" is not a valid IPv4 address. Use four numbers 0–255, like 10.40.12.20.', false); }
+    if (!maskO || maskToCidr(maskO) === -1){ fMask.setAttribute("aria-invalid","true");
+      return showIpMsg('"'+fMask.value+'" is not a valid subnet mask.', false); }
+    if (!gwO){ fGw.setAttribute("aria-invalid","true");
+      return showIpMsg('"'+fGw.value+'" is not a valid IPv4 address for the gateway.', false); }
+    if (!dnsO){ fDns.setAttribute("aria-invalid","true");
+      return showIpMsg('"'+fDns.value+'" is not a valid IPv4 address for DNS.', false); }
+
+    const cidr = maskToCidr(maskO);
+    if (isNetworkOrBroadcast(ipO, maskO)){ fIp.setAttribute("aria-invalid","true");
+      return showIpMsg("That address is the network or broadcast address for this subnet — pick a usable host address.", false); }
+    if (!sameSubnet(ipO, gwO, maskO)){ fGw.setAttribute("aria-invalid","true");
+      return showIpMsg("Gateway "+fGw.value+" isn't on the same subnet as "+fIp.value+"/"+cidr+", so the tablet can't reach it.", false); }
+
+    // valid config saved (may still be the WRONG values for the work order — that's graded)
+    state.applied = { ip:fIp.value.trim(), mask:fMask.value.trim(),
+                      gw:fGw.value.trim(), dns:fDns.value.trim() };
+    showIpMsg("IP configuration saved. Address "+state.applied.ip+"/"+cidr+" applied.", true);
+    render();
+  });
+
+  $("clear-ip").addEventListener("click", ()=>{
+    fIp.value=fMask.value=fGw.value=fDns.value="";
+    [fIp,fMask,fGw,fDns].forEach(el=>el.setAttribute("aria-invalid","false"));
+    state.applied=null; ipMsg.className="inline-msg"; render();
+  });
+
+  /* ----------------------- Wi-Fi join ----------------------------------- */
+  function openRoast(){
+    pwdBlock.hidden=false; netRoast.setAttribute("aria-pressed","true");
+    wifiPass.focus();
+  }
+  netRoast.addEventListener("click", openRoast);
+  netRoast.addEventListener("keydown", e=>{
+    if (e.key==="Enter"||e.key===" "){ e.preventDefault(); openRoast(); }
+  });
+  $("net-guest").addEventListener("click", ()=>{
+    // plausible distractor: guest net is the wrong network for the POS
+    state.wifi={connected:false,ssid:null};
+    roastState.textContent="Tap to join"; netRoast.setAttribute("aria-pressed","false");
+    showWifi("RoastNet-Guest needs a captive-portal sign-in and is isolated from the register network. Join RoastNet-Staff instead.", false);
+    pwdBlock.hidden=true; render();
+  });
+  function showWifi(t, ok){ wifiMsg.textContent=t; wifiMsg.className="inline-msg show "+(ok?"ok":"err"); }
+
+  wifiConnect.addEventListener("click", ()=>{
+    if (wifiPass.value === KEY.wifiPass){
+      state.wifi={connected:true, ssid:KEY.ssid};
+      roastState.textContent="Connected";
+      showWifi("Connected to RoastNet-Staff.", true);
+    } else {
+      state.wifi={connected:false, ssid:null};
+      roastState.textContent="Tap to join";
+      showWifi("Incorrect password for RoastNet-Staff. Check with the shift lead and try again.", false);
+    }
+    render();
+  });
+
+  /* --------------------------- TASKS ------------------------------------ */
+  const a = () => state.applied;             // shorthand
+  const TASKS = [
+    { id:"mode",   t:"Switch address assignment to Manual",
+      d:"DHCP can't help right now — you set the address yourself.",
+      pass:()=> state.ipMode==="manual" },
+    { id:"saved",  t:"Save a valid IP configuration",
+      d:"Apply the four fields with no validation errors.",
+      pass:()=> !!a() },
+    { id:"ip",     t:"Static IPv4 address = 10.40.12.66",
+      d:"A free host address on the register network.",
+      pass:()=> a() && a().ip===KEY.ip },
+    { id:"mask",   t:"Subnet mask = 255.255.255.0",
+      d:"A /24 for the 10.40.12.0 network.",
+      pass:()=> a() && a().mask===KEY.mask },
+    { id:"gw",     t:"Default gateway = 10.40.12.1",
+      d:"The register network's router.",
+      pass:()=> a() && a().gw===KEY.gw },
+    { id:"dns",    t:"DNS server = 10.40.12.9",
+      d:"The shop's internal name resolver.",
+      pass:()=> a() && a().dns===KEY.dns },
+    { id:"wifi",   t:"Join Wi-Fi RoastNet-Staff",
+      d:"Connect with the correct staff password.",
+      pass:()=> state.wifi.connected && state.wifi.ssid===KEY.ssid }
+  ];
+
+  /* --------------------------- QUESTIONS -------------------------------- */
+  ["q1","q2","q3","q4"].forEach(qid=>{
+    document.querySelectorAll('input[name="'+qid+'"]').forEach(radio=>{
+      radio.addEventListener("change", ()=>{
+        state.answers[qid]=radio.value;
+        const fb=$("fb-"+qid), correct=radio.value===KEY.questions[qid];
+        // clear option styling, then mark the chosen one
+        document.querySelectorAll('#'+qid+' .opt').forEach(o=>o.classList.remove("correct","incorrect"));
+        radio.closest(".opt").classList.add(correct?"correct":"incorrect");
+        fb.textContent = correct ? "✓ Correct." : "Not quite — review and try again.";
+        fb.className = "q-fb " + (correct?"ok":"bad");
+        render();
+      });
+    });
+  });
+
+  /* --------------------------- RENDER ----------------------------------- */
+  function tasksPassed(){ return TASKS.filter(t=>t.pass()).length; }
+  function questionsCorrect(){
+    return Object.keys(KEY.questions).filter(q=>state.answers[q]===KEY.questions[q]).length;
+  }
+  function render(){
+    // connection summary on the device
+    if (a()){
+      connSummary.textContent = "IPv4 "+a().ip+" · GW "+a().gw+" · DNS "+a().dns;
+    } else {
+      connSummary.textContent = "Not connected — no IP address assigned.";
+    }
+    sbNet.textContent = state.wifi.connected ? "RoastNet-Staff" : "no service";
+
+    // checklist
+    const cl=$("checklist"); cl.innerHTML="";
+    TASKS.forEach(t=>{
+      const done=t.pass();
+      const li=document.createElement("li");
+      li.innerHTML =
+        '<span class="mark '+(done?"done":"")+'" aria-hidden="true">'+(done?"✓":"")+'</span>'+
+        '<span class="task-txt"><span class="t">'+t.t+'</span><br>'+
+        '<span class="d">'+t.d+'</span></span>';
+      li.setAttribute("aria-label",(done?"Done: ":"Not done: ")+t.t);
+      cl.appendChild(li);
+    });
+
+    const tp=tasksPassed(), qc=questionsCorrect();
+    $("score-tasks").textContent = tp+"/"+TASKS.length;
+    $("score-q").textContent = qc+"/4";
+    const passing = tp===TASKS.length && qc===4;
+    const pill=$("pass-pill");
+    pill.textContent = passing ? "All tasks & questions complete" : "Not yet passing";
+    pill.className = "pass-pill " + (passing?"yes":"no");
+  }
+
+  /* ----------------------------- RESET ---------------------------------- */
+  $("reset").addEventListener("click", ()=>{
+    state.ipMode="auto"; state.applied=null;
+    state.wifi={connected:false,ssid:null};
+    state.answers={q1:null,q2:null,q3:null,q4:null};
+    fIp.value=fMask.value=fGw.value=fDns.value=""; wifiPass.value="";
+    [fIp,fMask,fGw,fDns].forEach(el=>el.setAttribute("aria-invalid","false"));
+    ipMsg.className="inline-msg"; wifiMsg.className="inline-msg";
+    pwdBlock.hidden=true; netRoast.setAttribute("aria-pressed","false");
+    roastState.textContent="Tap to join";
+    document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+    document.querySelectorAll(".opt").forEach(o=>o.classList.remove("correct","incorrect"));
+    document.querySelectorAll(".q-fb").forEach(f=>{f.textContent="";f.className="q-fb";});
+    setMode("auto");
+    $("status").textContent="";
+  });
+
+  /* --------------------------- SUBMIT ----------------------------------- */
+  function buildPayload(){
+    return {
+      assignmentId: CONFIG.assignmentId,
+      handle: ($("callsign").value || "").trim().slice(0,32),
+      clientTimestamp: new Date().toISOString(),
+      objectives: CONFIG.objectives,
+      tasks: TASKS.map(t=>({ id:t.id, label:t.t, passed:t.pass() })),
+      questions: Object.keys(KEY.questions).map(q=>({
+        id:q,
+        prompt:document.querySelector('#'+q+' legend').textContent.trim(),
+        answer:state.answers[q],
+        correct:state.answers[q]===KEY.questions[q]
+      })),
+      score: { earned: tasksPassed()+questionsCorrect(), total: TASKS.length+4 },
+      submissionToken: CONFIG.submissionToken
+    };
+  }
+
+  $("submit").addEventListener("click", async ()=>{
+    const status=$("status");
+    const handle=($("callsign").value||"").trim();
+    if (!handle){ status.textContent="Enter a callsign first (a nickname — never your real name)."; return; }
+
+    if (CONFIG.APPS_SCRIPT_URL.indexOf("PASTE_YOUR") === 0){
+      status.textContent="This lab hasn't been wired to a grading endpoint yet. Ask your instructor to add the Apps Script URL.";
+      return;
+    }
+
+    status.textContent="Capturing your work and submitting…";
+    const payload = buildPayload();
+    payload.screenshot = await captureScreenshot($("capture-area"));
+
+    try{
+      // SIMPLE request only: no custom headers, default text/plain body -> no CORS preflight
+      const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+      const out = await res.json();
+      if (out && out.success){
+        status.innerHTML = "Submitted. Your instructor received it." +
+          (out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">View your submission &rarr;</a>' : "");
+      } else {
+        status.textContent = "The server rejected the submission" + (out && out.error ? (": "+out.error) : ".") +
+          " Try again, or tell your instructor.";
+      }
+    }catch(err){
+      // locked-down fallback: fire-and-forget (can't read the Doc link back)
+      try{
+        await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+        status.textContent = "Submission sent, but the confirmation couldn't be read back. Confirm receipt with your instructor.";
+      }catch(e2){
+        status.textContent = "Couldn't reach the grading server. Check your connection and try again.";
+      }
+    }
+  });
+
+  /* ----------------------------- INIT ----------------------------------- */
+  setMode("auto");
+  render();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-soho-wifi-setup.html",title:"Set Up the Home-Office Wi-Fi (Willowbrook Lane)"}, NEXT={href:"index_netplus-ip-config.html",title:"Lab \u2014 Static IPv4 on a Dual-Homed Workstation \u00b7 Marsh & Pike"}, CRUMB="All Labs \u203a Unit 1 \u2014 Managing My Connections \u203a Topic 1.2";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>

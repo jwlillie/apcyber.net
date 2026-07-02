@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex">
+<title>DHCP Reservations Lab — Riverside Maker Collective</title>
+<!--
+  ============================================================================
+  CompTIA Network+ / AP Networking simulation lab
+  assignmentId: netplus-dhcp-reservations
+  Title: "Pin the Gear: DHCP Reservations at Riverside Maker Collective"
+  Objectives: N10-007:1.8, N10-007:1.4, APNET:2.3 (2.3.C.1-C.4)
+  (Re-tag 1.8/1.4 to the matching N10-009 codes when that blueprint is loaded.)
+
+  Copyright (c) 2026 <AUTHOR NAME / LIBRARY NAME>. All rights reserved.
+  Licensed for use within the <LIBRARY NAME> Network+/AP Networking lab library.
+  This is an original, clean-room work built from the public N10-007 objectives
+  and the public AP Networking course framework. It is not derived from, and
+  reproduces no expression (scenario, hostnames, addressing, command wording,
+  question phrasing, ordering, or screenshots) of, any third-party lab product.
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0f1620; --panel:#16212e; --panel-2:#1d2a3a; --ink:#e8eef5;
+    --muted:#9fb0c3; --line:#2b3a4d; --accent:#46c08d; --accent-ink:#06281c;
+    --warn:#e7b14c; --err:#ef6f6f; --ok:#46c08d; --focus:#7fb2ff;
+    --term-bg:#0a1119; --term-ink:#cfe6db; --term-prompt:#6fd6a6;
+    --radius:10px; --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       line-height:1.5;padding:18px;}
+  h1{font-size:1.2rem;margin:0 0 2px}
+  h2{font-size:.95rem;margin:0 0 8px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
+  .sub{color:var(--muted);font-size:.85rem;margin:0 0 14px}
+  .tag{display:inline-block;font:600 .7rem/1 var(--mono);background:var(--panel-2);
+       color:var(--muted);border:1px solid var(--line);border-radius:999px;
+       padding:4px 8px;margin:0 6px 6px 0}
+  .wrap{max-width:1080px;margin:0 auto}
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
+  @media (max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+        padding:14px}
+  /* terminal */
+  .term{background:var(--term-bg);border:1px solid var(--line);border-radius:8px;
+        font-family:var(--mono);font-size:.86rem;color:var(--term-ink);
+        display:flex;flex-direction:column;min-height:340px;max-height:460px}
+  .term-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);color:var(--muted)}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .dot.r{background:#e06b6b}.dot.y{background:#e7b14c}.dot.g{background:#5fc98f}
+  .term-out{flex:1;overflow-y:auto;padding:10px;white-space:pre-wrap;word-break:break-word}
+  .term-out .line{margin:0}
+  .term-out .pl{color:var(--term-prompt)}
+  .term-out .e{color:var(--err)}.term-out .w{color:var(--warn)}.term-out .o{color:var(--ok)}
+  .term-out .dim{color:var(--muted)}
+  .term-in{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding:8px 10px}
+  .term-in .pl{color:var(--term-prompt)}
+  .term-in input{flex:1;background:transparent;border:0;color:var(--term-ink);
+       font-family:var(--mono);font-size:.86rem;outline:none}
+  /* checklist */
+  ul.checks{list-style:none;margin:0;padding:0}
+  ul.checks li{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--line);font-size:.86rem}
+  ul.checks li:last-child{border-bottom:0}
+  .box{flex:0 0 18px;width:18px;height:18px;border:2px solid var(--line);border-radius:5px;
+       margin-top:1px;display:grid;place-items:center;font-size:.8rem;color:var(--accent-ink);background:transparent}
+  li.done .box{background:var(--ok);border-color:var(--ok)}
+  li.done .lab{color:var(--muted);text-decoration:line-through}
+  .lab small{display:block;color:var(--muted);font-size:.78rem;text-decoration:none}
+  /* questions */
+  .q{padding:10px 0;border-bottom:1px dashed var(--line)}
+  .q:last-of-type{border-bottom:0}
+  .q p.prompt{margin:0 0 6px;font-size:.88rem;font-weight:600}
+  .q label{display:flex;gap:8px;align-items:flex-start;font-size:.84rem;padding:4px 0;cursor:pointer}
+  .q label input{margin-top:3px}
+  .q .verdict{font-size:.78rem;margin-top:4px;min-height:1em}
+  .q.correct .verdict{color:var(--ok)} .q.wrong .verdict{color:var(--err)}
+  /* submit bar */
+  .subbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px;
+          background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+  .subbar label{font-size:.82rem;color:var(--muted)}
+  .subbar input[type=text]{background:var(--term-bg);border:1px solid var(--line);color:var(--ink);
+       border-radius:8px;padding:8px 10px;font:inherit;min-width:180px}
+  button{font:600 .85rem var(--sans);border-radius:8px;border:1px solid var(--line);
+         background:var(--panel-2);color:var(--ink);padding:9px 14px;cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .status{font-size:.84rem;min-height:1.2em}
+  .status a{color:var(--focus)}
+  .scorepill{margin-left:auto;font:700 .85rem var(--mono);background:var(--panel-2);
+       border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+  .legend{font-size:.78rem;color:var(--muted);margin-top:8px}
+  code.k{font-family:var(--mono);background:var(--term-bg);border:1px solid var(--line);
+       border-radius:5px;padding:1px 5px;font-size:.8rem}
+  footer{color:var(--muted);font-size:.72rem;margin-top:18px;text-align:center}
+  @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto !important;transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="lab-meta">
+{"assignmentId": "netplus-dhcp-reservations", "title": "DHCP Reservations Lab — Riverside Maker Collective", "version": "1.0.0", "objectives": ["N10-009:3.4", "APNET:2.3"], "appsScriptUrl": "PASTE_APPS_SCRIPT_EXEC_URL_HERE"}
+</script>
+
+<div class="wrap">
+  <header>
+    <h1>Pin the Gear — DHCP Reservations</h1>
+    <p class="sub">Riverside Maker Collective · network operations console</p>
+    <span class="tag">N10-007 · 1.8</span><span class="tag">N10-007 · 1.4</span><span class="tag">AP NET · 2.3</span>
+  </header>
+
+  <!-- everything inside #labArea is what gets screenshotted -->
+  <div id="labArea">
+  <div class="grid">
+
+    <!-- LEFT: simulated DHCP admin CLI -->
+    <section class="card" aria-labelledby="cli-h">
+      <h2 id="cli-h">DHCP admin console — rmc-dhcp01</h2>
+      <div class="term" role="group" aria-label="DHCP command line interface">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span>rmc-dhcp01 · scope 172.22.10.0/24</span></div>
+        <div class="term-out" id="out" role="log" aria-live="polite" aria-label="Console output"></div>
+        <form class="term-in" id="cliForm" autocomplete="off">
+          <span class="pl" aria-hidden="true">dhcp&gt;</span>
+          <label class="sr-only" for="cli" style="position:absolute;left:-9999px">DHCP command</label>
+          <input id="cli" name="cli" type="text" spellcheck="false"
+                 placeholder="type a command — try: help" />
+        </form>
+      </div>
+      <p class="legend">Type <code class="k">help</code> for the command list. The console gives real
+        error text on bad syntax — reading the error <em>is</em> the lab. Use <strong>Reset</strong> to start over.</p>
+      <button type="button" id="resetBtn">Reset console</button>
+    </section>
+
+    <!-- RIGHT: task checklist + questions -->
+    <aside class="card" aria-labelledby="task-h">
+      <h2 id="task-h">Work order</h2>
+      <p class="sub">Four shared devices need to land on the same address every time. Build the scope
+        options, then add a reservation for each device. Items tick off automatically.</p>
+      <ul class="checks" id="checks"></ul>
+
+      <h2 style="margin-top:16px">Check your understanding</h2>
+      <div id="questions"></div>
+    </aside>
+  </div>
+  </div><!-- /#labArea -->
+
+  <!-- SUBMISSION BAR -->
+  <div class="subbar">
+    <label for="handle">Callsign</label>
+    <input id="handle" type="text" maxlength="32" placeholder="e.g. solder-sparrow"
+           aria-describedby="handleHelp" />
+    <button class="primary" id="submitBtn" type="button">Submit completed lab</button>
+    <span class="scorepill" id="scorePill" aria-live="polite">0 / 0</span>
+    <p id="handleHelp" class="legend" style="flex-basis:100%">
+      Use a made-up callsign, not your real name — no personal info is collected or sent.</p>
+    <p class="status" id="status" aria-live="polite" style="flex-basis:100%"></p>
+  </div>
+
+  <footer>
+    © 2026 &lt;AUTHOR / LIBRARY&gt; · Original clean-room lab · N10-007 1.8/1.4 · AP Networking 2.3 ·
+    assignmentId <code class="k">netplus-dhcp-reservations</code>
+  </footer>
+</div>
+
+<!-- ===========================================================================
+     SCRIPT BLOCK 1 — inlined html2canvas
+     Paste the SAME html2canvas v1.4.1 minified source you already inline in the
+     Security+ library here (single dependency-free file = the whole design).
+     The capture code below is defensive: if html2canvas is not present yet, the
+     lab still submits with a small self-drawn placeholder image, so the file is
+     testable before you paste the library.
+     -----------------------------------------------------------------------
+     /* >>> PASTE html2canvas v1.4.1 MINIFIED SOURCE BELOW THIS LINE <<< */
+
+     /* >>> END html2canvas <<< */
+=========================================================================== -->
+
+<!-- ===========================================================================
+     SCRIPT BLOCK 2 — engine + CONFIG + ANSWER KEY + submit
+=========================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- CONFIG (per-lab) ------------------------------------------ */
+  var CONFIG = {
+    assignmentId: "netplus-dhcp-reservations",
+    objectives: ["N10-009:3.4", "APNET:2.3"],
+    // Deployment values — fill these from INSTRUCTOR_SETUP:
+    APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_EXEC_URL_HERE",
+    submissionToken: "PASTE_PER_COHORT_TOKEN_HERE",
+
+    subnet: { net:"172.22.10.0", cidr:24, base:"172.22.10", gw:"172.22.10.1" },
+    pool:   { startN:100, endN:200 },          // dynamic pool, last octet
+    // ANSWER KEY for tasks (sim-state targets):
+    target: {
+      range:{start:"172.22.10.100", end:"172.22.10.200"},
+      gateway:"172.22.10.1",
+      dns:"172.22.10.4",
+      lease:86400,                              // 24h in seconds
+      reservations:[
+        {host:"lasercut-ctrl", mac:"B4:7C:9A:10:42:0E", ip:"172.22.10.21"},
+        {host:"printfarm-a",   mac:"00:1B:44:11:3A:B7", ip:"172.22.10.22"},
+        {host:"badge-reader-n",mac:"5C:F9:DD:7E:21:90", ip:"172.22.10.23"},
+        {host:"signage-lobby", mac:"A8:5E:45:CC:08:1F", ip:"172.22.10.24"}
+      ]
+    }
+  };
+
+  /* ---------- TASK + QUESTION DEFINITIONS -------------------------------- */
+  var TASKS = [
+    {id:"range",   label:"Set dynamic pool 172.22.10.100–200",
+       hint:"scope set range 172.22.10.100 172.22.10.200",
+       test:function(s){return s.range.start===CONFIG.target.range.start && s.range.end===CONFIG.target.range.end;}},
+    {id:"gateway", label:"Set default gateway option",
+       hint:"scope set option gateway 172.22.10.1",
+       test:function(s){return s.options.gateway===CONFIG.target.gateway;}},
+    {id:"dns",     label:"Set DNS server option",
+       hint:"scope set option dns 172.22.10.4",
+       test:function(s){return s.options.dns===CONFIG.target.dns;}},
+    {id:"lease",   label:"Set lease time to 24h (86400s)",
+       hint:"scope set option lease 86400",
+       test:function(s){return s.options.lease===CONFIG.target.lease;}},
+    {id:"res-laser",   label:"Reserve lasercut-ctrl → .21", res:0},
+    {id:"res-print",   label:"Reserve printfarm-a → .22",   res:1},
+    {id:"res-badge",   label:"Reserve badge-reader-n → .23", res:2},
+    {id:"res-signage", label:"Reserve signage-lobby → .24",  res:3},
+    {id:"commit",  label:"Commit the configuration",
+       hint:"commit  (all options + reservations must be set first)",
+       test:function(s){return s.committed===true;}}
+  ];
+  // reservation tasks share one tester
+  TASKS.forEach(function(t){
+    if(typeof t.res==="number"){
+      var want=CONFIG.target.reservations[t.res];
+      t.hint="reservation add "+want.host+" "+want.mac+" "+want.ip;
+      t.test=function(s){
+        return s.reservations.some(function(r){
+          return r.host===want.host && r.mac===want.mac.toUpperCase() && r.ip===want.ip;
+        });
+      };
+    }
+  });
+
+  var QUESTIONS = [
+    {id:"q1", prompt:"A DHCP reservation differs from a static IP set on the device itself because the reservation…",
+     options:[
+       "stops the device from using DHCP at all",
+       "keeps the device on DHCP but always hands it the same address from the server",
+       "gives the device a brand-new random address on every lease",
+       "only works for wireless clients"],
+     answer:1},
+    {id:"q2", prompt:"A reservation binds a fixed IP address to which device identifier?",
+     options:["The hostname only","The device's MAC address","The default gateway","The DNS suffix"],
+     answer:1},
+    {id:"q3", prompt:"Which device is the BEST candidate for a reservation rather than a plain dynamic lease?",
+     options:["A guest's phone visiting for an afternoon",
+       "An always-on shared label printer other members must reach by address",
+       "A laptop that roams between several sites",
+       "A one-time demo tablet"],
+     answer:1},
+    {id:"q4", prompt:"Why place reserved addresses OUTSIDE the dynamic pool range?",
+     options:[
+       "Reservations are not allowed inside any subnet",
+       "So the same address isn't also handed out as a dynamic lease, causing a conflict",
+       "It makes the lease time shorter",
+       "DNS will not resolve addresses inside the pool"],
+     answer:1}
+  ];
+
+  /* ---------- SIM STATE -------------------------------------------------- */
+  function freshState(){
+    return { range:{start:null,end:null},
+             options:{gateway:null,dns:null,lease:null},
+             reservations:[], committed:false };
+  }
+  var state = freshState();
+
+  /* ---------- VALIDATION HELPERS ---------------------------------------- */
+  function isIp(v){ return /^\d{1,3}(\.\d{1,3}){3}$/.test(v) &&
+      v.split(".").every(function(o){return +o>=0 && +o<=255;}); }
+  function inSubnet(ip){
+    return ip.indexOf(CONFIG.subnet.base+".")===0 &&
+      (function(){var o=+ip.split(".")[3];return o>=1 && o<=254;})();
+  }
+  function octet(ip){ return +ip.split(".")[3]; }
+  function inPool(ip){ var o=octet(ip); return o>=CONFIG.pool.startN && o<=CONFIG.pool.endN; }
+  function normMac(m){
+    var x=m.toUpperCase().replace(/-/g,":");
+    return /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(x) ? x : null;
+  }
+
+  /* ---------- TERMINAL I/O ---------------------------------------------- */
+  var out = document.getElementById("out");
+  function print(text, cls){
+    var p=document.createElement("p"); p.className="line"+(cls?(" "+cls):"");
+    p.textContent=text; out.appendChild(p); out.scrollTop=out.scrollHeight;
+  }
+  function echo(cmd){ var p=document.createElement("p"); p.className="line";
+    p.innerHTML='<span class="pl">dhcp&gt;</span> '+escapeHtml(cmd); out.appendChild(p); }
+  function escapeHtml(s){return s.replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+  function banner(){
+    print("rmc-dhcp01 DHCP service · scope "+CONFIG.subnet.net+"/"+CONFIG.subnet.cidr,"dim");
+    print("Reserved devices must land on fixed addresses. Build the scope, add reservations, commit.","dim");
+    print('Type "help" to list commands.',"dim");
+  }
+
+  /* ---------- COMMAND PARSER -------------------------------------------- */
+  function run(raw){
+    var cmd = raw.trim().replace(/\s+/g," ");
+    if(!cmd){ return; }
+    echo(cmd);
+    var a = cmd.split(" ");
+    var v = a[0].toLowerCase();
+
+    try{
+      if(v==="help"){ return help(); }
+      if(v==="scope"){ return scopeCmd(a); }
+      if(v==="reservation" || v==="res"){ return resCmd(a); }
+      if(v==="commit"){ return commit(); }
+      if(v==="clear"){ out.innerHTML=""; return; }
+      print('error: unknown command "'+a[0]+'". Type "help".',"e");
+    }catch(err){ print("error: "+err.message,"e"); }
+    finally{ refresh(); }
+  }
+
+  function help(){
+    print("commands:","dim");
+    print("  scope show","dim");
+    print("  scope set range <startIP> <endIP>","dim");
+    print("  scope set option gateway <IP>","dim");
+    print("  scope set option dns <IP>","dim");
+    print("  scope set option lease <seconds>","dim");
+    print("  reservation add <hostname> <MAC> <IP>","dim");
+    print("  reservation remove <hostname>","dim");
+    print("  reservation show","dim");
+    print("  commit","dim");
+    print("  clear","dim");
+  }
+
+  function scopeCmd(a){
+    if(a[1]==="show"){
+      print("scope "+CONFIG.subnet.net+"/"+CONFIG.subnet.cidr,"o");
+      print("  range   : "+(state.range.start?state.range.start+" – "+state.range.end:"(unset)"));
+      print("  gateway : "+(state.options.gateway||"(unset)"));
+      print("  dns     : "+(state.options.dns||"(unset)"));
+      print("  lease   : "+(state.options.lease?state.options.lease+"s":"(unset)"));
+      print("  status  : "+(state.committed?"committed":"draft"));
+      return;
+    }
+    if(a[1]==="set" && a[2]==="range"){
+      var s=a[3], e=a[4];
+      if(!s||!e) throw new Error("usage: scope set range <startIP> <endIP>");
+      if(!isIp(s)||!isIp(e)) throw new Error("range endpoints must be valid IPv4 addresses");
+      if(!inSubnet(s)||!inSubnet(e)) throw new Error(s+"/"+e+" must be inside "+CONFIG.subnet.net+"/"+CONFIG.subnet.cidr);
+      if(octet(s)>octet(e)) throw new Error("start address must be lower than end address");
+      state.range.start=s; state.range.end=e; state.committed=false;
+      print("ok: dynamic pool set "+s+" – "+e,"o"); return;
+    }
+    if(a[1]==="set" && a[2]==="option"){
+      var opt=a[3], val=a[4];
+      if(opt==="gateway"||opt==="dns"){
+        if(!val||!isIp(val)) throw new Error(opt+" requires a valid IPv4 address");
+        if(!inSubnet(val)) throw new Error(val+" is not inside the scope subnet "+CONFIG.subnet.net+"/"+CONFIG.subnet.cidr);
+        state.options[opt]=val; state.committed=false;
+        print("ok: option "+opt+" = "+val,"o"); return;
+      }
+      if(opt==="lease"){
+        if(!/^\d+$/.test(val||"")) throw new Error("lease requires a whole number of seconds (e.g. 86400 = 24h)");
+        state.options.lease=+val; state.committed=false;
+        print("ok: option lease = "+val+"s","o"); return;
+      }
+      throw new Error('unknown option "'+opt+'". Try gateway | dns | lease');
+    }
+    throw new Error('usage: scope show | scope set range … | scope set option …');
+  }
+
+  function resCmd(a){
+    if(a[1]==="show"){
+      if(!state.reservations.length){ print("(no reservations)","dim"); return; }
+      print("reservations:","o");
+      state.reservations.forEach(function(r){
+        print("  "+pad(r.host,16)+" "+r.mac+"  →  "+r.ip);});
+      return;
+    }
+    if(a[1]==="remove"){
+      var h=a[2];
+      var before=state.reservations.length;
+      state.reservations=state.reservations.filter(function(r){return r.host!==h;});
+      if(state.reservations.length===before) throw new Error('no reservation named "'+h+'"');
+      state.committed=false; print("ok: removed "+h,"o"); return;
+    }
+    if(a[1]==="add"){
+      var host=a[2], macRaw=a[3], ip=a[4];
+      if(!host||!macRaw||!ip) throw new Error("usage: reservation add <hostname> <MAC> <IP>");
+      var mac=normMac(macRaw);
+      if(!mac) throw new Error('"'+macRaw+'" is not a valid MAC (expect 6 hex octets, e.g. 00:1B:44:11:3A:B7)');
+      if(!isIp(ip)) throw new Error('"'+ip+'" is not a valid IPv4 address');
+      if(!inSubnet(ip)) throw new Error(ip+" is not inside the scope subnet "+CONFIG.subnet.net+"/"+CONFIG.subnet.cidr);
+      var dupIp=state.reservations.filter(function(r){return r.ip===ip;})[0];
+      if(dupIp) throw new Error(ip+" is already reserved for "+dupIp.host);
+      var dupHost=state.reservations.filter(function(r){return r.host===host;})[0];
+      if(dupHost) throw new Error('host "'+host+'" already has a reservation ('+dupHost.ip+"); remove it first");
+      state.reservations.push({host:host,mac:mac,ip:ip}); state.committed=false;
+      print("ok: reserved "+ip+" for "+host+" ("+mac+")","o");
+      if(inPool(ip)) print("warning: "+ip+" sits inside the dynamic pool ("+CONFIG.pool.startN+"–"+
+        CONFIG.pool.endN+"); reserved addresses should be outside the pool to avoid a lease conflict","w");
+      return;
+    }
+    throw new Error("usage: reservation add | remove | show");
+  }
+
+  function commit(){
+    var missing=[];
+    if(!(state.range.start&&state.range.end)) missing.push("dynamic range");
+    if(!state.options.gateway) missing.push("gateway option");
+    if(!state.options.dns) missing.push("dns option");
+    if(!state.options.lease) missing.push("lease option");
+    if(state.reservations.length<CONFIG.target.reservations.length)
+      missing.push("all "+CONFIG.target.reservations.length+" reservations");
+    if(missing.length) throw new Error("cannot commit — still missing: "+missing.join(", "));
+    var poolClash=state.reservations.filter(function(r){return inPool(r.ip);});
+    if(poolClash.length) throw new Error("cannot commit — "+poolClash.length+
+      " reservation(s) overlap the dynamic pool; move them outside "+
+      CONFIG.pool.startN+"–"+CONFIG.pool.endN);
+    state.committed=true;
+    print("ok: configuration committed. "+state.reservations.length+" reservations active.","o");
+  }
+
+  function pad(s,n){ s=String(s); while(s.length<n)s+=" "; return s; }
+
+  /* ---------- CHECKLIST + QUESTIONS RENDER ------------------------------ */
+  var checksEl=document.getElementById("checks");
+  TASKS.forEach(function(t){
+    var li=document.createElement("li"); li.id="chk-"+t.id;
+    li.innerHTML='<span class="box" aria-hidden="true">✓</span>'+
+      '<span class="lab">'+escapeHtml(t.label)+
+      '<small>'+escapeHtml(t.hint||"")+'</small></span>';
+    checksEl.appendChild(li);
+  });
+
+  var qEl=document.getElementById("questions");
+  QUESTIONS.forEach(function(q,qi){
+    var div=document.createElement("div"); div.className="q"; div.id="q-"+q.id;
+    var html='<p class="prompt">'+(qi+1)+". "+escapeHtml(q.prompt)+'</p>';
+    q.options.forEach(function(opt,oi){
+      html+='<label><input type="radio" name="'+q.id+'" value="'+oi+'"> <span>'+
+        escapeHtml(opt)+'</span></label>';
+    });
+    html+='<p class="verdict" aria-live="polite"></p>';
+    div.innerHTML=html; qEl.appendChild(div);
+    div.addEventListener("change",function(){ gradeQuestion(q); refresh(); });
+  });
+
+  function gradeQuestion(q){
+    var sel=document.querySelector('input[name="'+q.id+'"]:checked');
+    var div=document.getElementById("q-"+q.id);
+    var verdict=div.querySelector(".verdict");
+    if(!sel){ div.className="q"; verdict.textContent=""; return false; }
+    var ok = (+sel.value===q.answer);
+    div.className="q "+(ok?"correct":"wrong");
+    verdict.textContent = ok ? "Correct." : "Not quite — reconsider how reservations work.";
+    return ok;
+  }
+
+  /* ---------- SCORING + REFRESH ----------------------------------------- */
+  function evalTasks(){
+    return TASKS.map(function(t){ return {id:t.id,label:t.label,passed:!!t.test(state)}; });
+  }
+  function evalQuestions(){
+    return QUESTIONS.map(function(q){
+      var sel=document.querySelector('input[name="'+q.id+'"]:checked');
+      var answer = sel? q.options[+sel.value] : null;
+      var correct = sel? (+sel.value===q.answer) : false;
+      return {id:q.id, prompt:q.prompt, answer:answer, correct:correct};
+    });
+  }
+  function refresh(){
+    var tr=evalTasks();
+    tr.forEach(function(r){ document.getElementById("chk-"+r.id).classList.toggle("done",r.passed); });
+    var qr=evalQuestions();
+    var earned = tr.filter(function(r){return r.passed;}).length +
+                 qr.filter(function(r){return r.correct;}).length;
+    var total  = TASKS.length + QUESTIONS.length;
+    document.getElementById("scorePill").textContent = earned+" / "+total;
+    return {tasks:tr, questions:qr, earned:earned, total:total};
+  }
+
+  /* ---------- SCREENSHOT ------------------------------------------------- */
+  function placeholderPng(msg){
+    var c=document.createElement("canvas"); c.width=480; c.height=120;
+    var x=c.getContext("2d");
+    x.fillStyle="#16212e"; x.fillRect(0,0,480,120);
+    x.fillStyle="#9fb0c3"; x.font="14px sans-serif";
+    x.fillText("netplus-dhcp-reservations", 16, 32);
+    x.fillText(msg||"screenshot library not loaded", 16, 60);
+    return c.toDataURL("image/png");
+  }
+  function capture(){
+    var node=document.getElementById("labArea");
+    if(typeof html2canvas==="function"){
+      return html2canvas(node,{backgroundColor:"#0f1620",scale:1,logging:false})
+        .then(function(cv){ return cv.toDataURL("image/png"); })
+        .catch(function(){ return placeholderPng("capture failed — proceeding"); });
+    }
+    return Promise.resolve(placeholderPng("paste html2canvas to enable screenshots"));
+  }
+
+  /* ---------- SUBMIT ----------------------------------------------------- */
+  var statusEl=document.getElementById("status");
+  var submitBtn=document.getElementById("submitBtn");
+
+  function setStatus(msg,kind){
+    statusEl.innerHTML=msg;
+    statusEl.style.color = kind==="err"?"var(--err)":kind==="ok"?"var(--ok)":"var(--muted)";
+  }
+
+  submitBtn.addEventListener("click", function(){
+    var handle=(document.getElementById("handle").value||"").trim();
+    if(!handle){ setStatus("Enter a callsign first (made-up name, no PII).","err");
+      document.getElementById("handle").focus(); return; }
+    if(handle.length>32){ setStatus("Callsign too long (32 char max).","err"); return; }
+
+    var snap=refresh();
+    var allPass = snap.earned===snap.total;
+    if(!allPass){
+      var remTasks=snap.tasks.filter(function(t){return !t.passed;}).length;
+      var remQ=snap.questions.filter(function(q){return !q.correct;}).length;
+      setStatus("You can submit, but "+remTasks+" task(s) and "+remQ+
+        " question(s) are still open. Submitting anyway in 1.5s — click Reset to keep working.","");
+    }
+
+    submitBtn.disabled=true; setStatus("Capturing and submitting…","");
+    capture().then(function(png){
+      // size cap on PNG (~1.4MB of base64)
+      if(png.length>1900000){ png=placeholderPng("screenshot too large — trimmed"); }
+      var payload={
+        assignmentId: CONFIG.assignmentId,
+        handle: handle,
+        clientTimestamp: new Date().toISOString(),
+        objectives: CONFIG.objectives,
+        tasks: snap.tasks,
+        questions: snap.questions,
+        score: { earned: snap.earned, total: snap.total },
+        screenshot: png,
+        submissionToken: CONFIG.submissionToken
+      };
+      return fetch(CONFIG.APPS_SCRIPT_URL, {
+        method:"POST",
+        body: JSON.stringify(payload)   // no headers → simple request, no CORS preflight
+      }).then(function(res){ return res.json(); })
+        .then(function(out){
+          if(out && out.success){
+            var link = out.docUrl ? ' <a href="'+out.docUrl+'" target="_blank" rel="noopener">Open your submission Doc</a>' : "";
+            setStatus("Submitted ✓ ("+snap.earned+"/"+snap.total+")."+link, "ok");
+          }else{
+            setStatus("Server rejected the submission"+(out&&out.error?": "+escapeHtml(out.error):". Ask your instructor to check the assignment ID / token."),"err");
+          }
+        });
+    }).catch(function(){
+      // locked-down context fallback: fire-and-forget, can't read docUrl
+      try{
+        fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",
+          body:JSON.stringify({assignmentId:CONFIG.assignmentId,handle:handle,
+            clientTimestamp:new Date().toISOString(),objectives:CONFIG.objectives,
+            tasks:snap.tasks,questions:snap.questions,
+            score:{earned:snap.earned,total:snap.total},
+            screenshot:placeholderPng("no-cors fallback"),submissionToken:CONFIG.submissionToken})});
+        setStatus("Sent in compatibility mode — your browser couldn't read the reply. Confirm with your instructor that it arrived.","");
+      }catch(e){
+        setStatus("Submission failed. Check your connection and the Apps Script URL with your instructor.","err");
+      }
+    }).finally(function(){ submitBtn.disabled=false; });
+  });
+
+  /* ---------- WIRE UP CLI + RESET --------------------------------------- */
+  document.getElementById("cliForm").addEventListener("submit",function(e){
+    e.preventDefault();
+    var inp=document.getElementById("cli");
+    run(inp.value); inp.value=""; inp.focus();
+  });
+  document.getElementById("resetBtn").addEventListener("click",function(){
+    state=freshState(); out.innerHTML=""; banner();
+    QUESTIONS.forEach(function(q){
+      var sel=document.querySelector('input[name="'+q.id+'"]:checked'); if(sel)sel.checked=false;
+      var d=document.getElementById("q-"+q.id); d.className="q"; d.querySelector(".verdict").textContent="";
+    });
+    setStatus(""); refresh(); document.getElementById("cli").focus();
+  });
+
+  /* ---------- INIT ------------------------------------------------------- */
+  banner(); refresh();
+})();
+</script>
+
+<script id="apcyber-labnav-script">(function(){
+  var PREV={href:"index_netplus-soho-topology.html",title:"Wire the Studio \u2014 SOHO Network Lab"}, NEXT={href:"index_netplus-cname-records.html",title:"DNS Alias Records \u00b7 Kelp Bay Field Station"}, CRUMB="All Labs \u203a Unit 2 \u2014 Managing My Shared Connections \u203a Topic 2.3";
+  function mk(t,c,x){var e=document.createElement(t);if(c)e.style.cssText=c;if(x!=null)e.textContent=x;return e;}
+  var Z=2147483647;
+  var bar=mk("nav","");bar.id="apcyber-labnav";
+  bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:"+Z+";display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:6px 12px;box-sizing:border-box;height:40px;overflow:hidden;font:600 13px/1.3 system-ui,Segoe UI,Roboto,sans-serif;background:#0b1628;border-bottom:2px solid #00d4c8;box-shadow:0 2px 12px rgba(0,0,0,.45)";
+  function solidBtn(label,href,id){var a=mk("a","");a.textContent=label;a.href=href;if(id)a.id=id;a.style.cssText="display:inline-flex;align-items:center;gap:.3em;background:#00d4c8;color:#0b1628;text-decoration:none;font-weight:700;white-space:nowrap;flex:0 0 auto;padding:5px 12px;border-radius:7px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.3)";return a;}
+  bar.appendChild(solidBtn("\u2190 All Labs","../index.html","apcyber-alllabs-link"));
+  bar.appendChild(solidBtn("\u2302 Home","../../../index.html","apcyber-mainsite-link"));
+  var crumb=mk("span","color:#8899bb;font-weight:400;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px",CRUMB);bar.appendChild(crumb);
+  function navbtn(item,label){
+    if(!item){return mk("span","color:#48536b;white-space:nowrap;font-weight:400;flex:0 0 auto;font-size:12px",label);}
+    var a=mk("a","color:#00d4c8;text-decoration:none;white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px",label);
+    a.href=item.href;a.title=item.title;return a;}
+  bar.appendChild(navbtn(PREV,"\u2039 Prev"));bar.appendChild(navbtn(NEXT,"Next \u203a"));
+  function place(){
+    if(document.getElementById("apcyber-labnav"))return;
+    document.body.appendChild(bar);
+    var cur=parseInt(getComputedStyle(document.body).paddingTop)||0;
+    if(cur<40)document.body.style.paddingTop=(cur+40)+"px";
+  }
+  if(document.body){place();}else{document.addEventListener("DOMContentLoaded",place);}
+  window.addEventListener("load",place);
+})();</script>
+</body>
+</html>
