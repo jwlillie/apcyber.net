@@ -2,7 +2,6 @@
 <!-- © 2026 [AUTHOR / INSTITUTION] · apcyber.net -->
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Simulation Labs — AP Cybersecurity</title>
-<meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#0b1628;--navy-mid:#132040;--cyan:#00d4c8;--white:#f2f5fb;--muted:#8899bb;--card-bg:#111e38;--border:rgba(0,212,200,.15);--line:rgba(255,255,255,.08)}
@@ -19,190 +18,87 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);
 .nav-links a:hover{color:var(--white);background:rgba(255,255,255,.06)}
 .nav-links a.active{color:var(--cyan)}
 .nav-cta{background:var(--cyan)!important;color:var(--navy)!important;font-weight:700!important}
+/* Simulations dropdown */
+.nav-links li.has-drop{position:relative}
+.nav-links .drop-toggle{color:var(--muted);font-size:.85rem;font-weight:500;padding:.35rem .75rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;transition:color .18s,background .18s;user-select:none}
+.nav-links .drop-toggle.active{color:var(--cyan)}
+.nav-links li.has-drop:hover .drop-toggle,.nav-links li.has-drop:focus-within .drop-toggle{color:var(--white);background:rgba(255,255,255,.06)}
+.nav-links .drop{position:absolute;top:calc(100% + 6px);left:0;list-style:none;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:190px;display:none;flex-direction:column;gap:2px;box-shadow:0 12px 32px rgba(0,0,0,.45)}
+.nav-links li.has-drop:hover .drop,.nav-links li.has-drop:focus-within .drop{display:flex}
+.nav-links .drop a{white-space:nowrap;display:block}
 @media(max-width:860px){.nav-links{display:none}}
-header{max-width:1040px;margin:0 auto;padding:38px 18px 4px}
+header{max-width:1040px;margin:0 auto;padding:44px 18px 4px}
 h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,4vw,2.7rem);margin-bottom:.4rem}
 .lede{color:var(--muted);font-weight:300;max-width:640px}
-.bar{max-width:1040px;margin:16px auto 0;padding:0 18px;display:flex;gap:10px;flex-wrap:wrap}
-.bar a{display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1.1rem;border:1px solid var(--cyan);border-radius:9px;color:var(--cyan);text-decoration:none;font-weight:600;font-size:.85rem;transition:.18s}
-.bar a:hover{background:var(--cyan);color:var(--navy)}
 main{max-width:1040px;margin:0 auto;padding:0 18px}
-h2{font-family:'DM Serif Display',serif;margin:36px 0 6px;font-size:1.4rem;border-bottom:1px solid var(--border);padding-bottom:8px}
-.ct{color:var(--muted);font-weight:400;font-size:.8rem;margin-left:8px;font-family:'DM Sans',sans-serif}
-h3.topic{margin:22px 0 10px;font-size:.92rem;color:var(--cyan);font-weight:700;letter-spacing:.01em}
-h3.topic .tc{color:var(--muted);font-weight:400;font-size:.78rem;margin-left:6px}
-h3.topic.empty{color:var(--muted);border:1px dashed var(--border);border-radius:9px;padding:10px 13px;background:rgba(255,255,255,.02);font-weight:600}
-h3.topic.empty .soon{font-size:.72rem;color:#f5a623;font-weight:700;margin-left:6px;text-transform:uppercase;letter-spacing:.04em}
-.grid{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px;margin-bottom:6px}
-.grid a{display:block;padding:13px 15px;background:var(--card-bg);border:1px solid var(--border);border-radius:11px;text-decoration:none;color:inherit;transition:.15s}
-.grid a:hover{border-color:var(--cyan);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
-.t{display:block;font-weight:600;margin-bottom:4px;color:var(--white)}
-.m{display:block;color:var(--muted);font-size:.78rem}
-.dual{color:var(--cyan);font-weight:500;font-size:.78rem}
-footer{max-width:1040px;margin:40px auto 0;padding:18px;color:var(--muted);font-size:.78rem;border-top:1px solid var(--line)}
+.tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-top:30px}
+a.track{display:flex;flex-direction:column;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:28px;text-decoration:none;color:inherit;transition:border-color .18s,transform .18s,box-shadow .18s}
+a.track:hover{border-color:var(--cyan);transform:translateY(-3px);box-shadow:0 14px 36px rgba(0,0,0,.4)}
+.track .eyebrow{color:var(--cyan);font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
+.track h2{font-family:'DM Serif Display',serif;font-size:1.55rem;margin:8px 0 4px;color:var(--white)}
+.track .count{color:var(--cyan);font-weight:600;font-size:.9rem;margin-bottom:14px}
+.track p{color:var(--muted);font-size:.9rem;margin-bottom:16px}
+.track ul.units{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.track ul.units li{font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:999px;padding:4px 11px}
+.track .go{margin-top:auto;display:inline-flex;align-items:center;gap:.4rem;color:var(--cyan);font-weight:700;font-size:.9rem}
+a.track:hover .go{gap:.7rem}
+footer{max-width:1040px;margin:44px auto 0;padding:18px;color:var(--muted);font-size:.78rem;border-top:1px solid var(--line)}
 </style></head><body>
 <nav class="site-nav">
-  <a href="../index.html" class="nav-brand">
+  <a href="/" class="nav-brand">
     <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0b1628" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
     <span class="nav-title">AP <span>Cybersecurity</span></span>
   </a>
   <ul class="nav-links">
-    <li><a href="../index.html">Home</a></li>
-    <li><a href="../socratic-anchors.html">Socratic Guides</a></li>
-    <li><a href="../tools.html">Student Tools</a></li>
-    <li><a href="index.html" class="active">Labs</a></li>
-    <li><a href="../legal.html">Legal</a></li>
-    <li><a href="../edtech-tool.html">EdTech Privacy</a></li>
-    <li><a href="https://apcentral.collegeboard.org" target="_blank" class="nav-cta">AP Central &#x2197;</a></li>
+    <li><a href="/">Home</a></li>
+    <li><a href="/socratic-anchors">Socratic Guides</a></li>
+    <li><a href="/tools">Student Tools</a></li>
+    <li class="has-drop">
+      <span class="drop-toggle active" tabindex="0" role="button" aria-haspopup="true">Simulations &#x25BE;</span>
+      <ul class="drop">
+        <li><a href="/labs/cyber/">AP Cyber</a></li>
+        <li><a href="/labs/networking/">AP Networking</a></li>
+      </ul>
+    </li>
+    <li><a href="/legal">Legal</a></li>
+    <li><a href="/edtech-tool">EdTech Privacy</a></li>
+    <li><a href="https://apcentral.collegeboard.org" target="_blank" rel="noopener" class="nav-cta">AP Central &#x2197;</a></li>
   </ul>
 </nav>
-<header><h1>Simulation Labs</h1>
-<p class="lede">81 hands-on, browser-based simulation labs aligned to AP Cybersecurity (CED) and CompTIA Security+ SY0-701. No installs, no logins — each lab runs entirely in the browser.</p></header>
-<div class="bar"><a href="teacher-guide.html">📘 Teacher Guide &amp; Coverage Map</a></div>
+<header>
+  <h1>Simulation Labs</h1>
+  <p class="lede">Two hands-on lab tracks, each running entirely in your browser — no installs, no logins. Pick a course below to open its full lab catalog.</p>
+</header>
 <main>
-<section><h2>Unit 1 — Introduction to Security <span class="ct">2 labs</span></h2>
-<h3 class="topic">1.1 Understanding Social Engineering <span class="tc">1 lab</span></h3>
-<ul class="grid">
-<li><a href="unit-1/splus-identify-social-engineering.html"><span class="t">Mail Triage Lab — Identify Social Engineering | Security+ SY0-701</span><span class="m">1.1 Understanding Social Engineering · Sec+ 2.2, 5.6</span></a></li>
-</ul>
-<h3 class="topic">1.2 Suspicious Website Logins <span class="tc">1 lab</span></h3>
-<ul class="grid">
-<li><a href="unit-1/splus-mail-safelist-filters.html"><span class="t">Larkspur Mail — Safety Center | Security+ Lab</span><span class="m">1.2 Suspicious Website Logins · Sec+ 4.5, 2.4, 5.6</span></a></li>
-</ul>
-</section>
-<section><h2>Unit 2 — Securing Spaces <span class="ct">2 labs</span></h2>
-<h3 class="topic empty">2.1 Securing Spaces — Foundations <span class="soon">coming soon · 0 labs</span></h3>
-<h3 class="topic empty">2.2 Securing Spaces — Controls <span class="soon">coming soon · 0 labs</span></h3>
-<h3 class="topic">2.3 Protecting Physical Spaces <span class="tc">2 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-2/splus-physical-security-plan.html"><span class="t">Site Survey — Physical Security Deployment (SY0-701 1.2.6)</span><span class="m">2.3 Protecting Physical Spaces · Sec+ 1.1, 1.2</span></a></li>
-<li><a href="unit-2/splus-physical-access-vestibule.html"><span class="t">Secure a Research Wing with Physical Access Controls <span class="dual">(also covers 2.4)</span></span><span class="m">2.3 Protecting Physical Spaces · Sec+ 1.2, 2.4, 4.6</span></a></li>
-</ul>
-</section>
-<section><h2>Unit 3 — Securing Networks <span class="ct">29 labs</span></h2>
-<h3 class="topic">3.1 Network Vulnerabilities and Attacks <span class="tc">6 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-3/splus-cleartext-scan.html"><span class="t">Lab 7.2.6-CR — Scan an Asset for Cleartext-Transport Vulnerabilities</span><span class="m">3.1 Network Vulnerabilities and Attacks · Sec+ 2.2, 3.3, 4.3, 4.4</span></a></li>
-<li><a href="unit-3/splus-ftp-vuln-scan.html"><span class="t">Lab — Scan an FTP Server for Vulnerabilities | VANTAGE VM</span><span class="m">3.1 Network Vulnerabilities and Attacks · Sec+ 2.2, 4.3, 4.4, 4.9</span></a></li>
-<li><a href="unit-3/splus-win-vuln-scan.html"><span class="t">Lab — Scan and Remediate Windows Host Vulnerabilities (SY0-701 5.2.3)</span><span class="m">3.1 Network Vulnerabilities and Attacks · Sec+ 4.3, 5.2</span></a></li>
-<li><a href="unit-3/splus-linux-vuln-scan.html"><span class="t">ScanForge Lab — Scan a Linux Network for Vulnerabilities</span><span class="m">3.1 Network Vulnerabilities and Attacks · Sec+ 4.3</span></a></li>
-<li><a href="unit-3/splus-dc-vuln-scan.html"><span class="t">SentryScope Lab — Domain Controller Vulnerability Scan</span><span class="m">3.1 Network Vulnerabilities and Attacks · Sec+ 4.3</span></a></li>
-<li><a href="unit-3/splus-tls-vuln-scan.html"><span class="t">TLS Vulnerability Scan — Security+ Lab</span><span class="m">3.1 Network Vulnerabilities and Attacks · Sec+ 4.3, 4.4</span></a></li>
-</ul>
-<h3 class="topic">3.2 Protecting Networks: Managerial Controls and Wireless Security <span class="tc">10 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-3/splus-appliance-access.html"><span class="t">Lab — Secure Management Access on a Network Firewall Appliance</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 1.2, 4.1, 4.6</span></a></li>
-<li><a href="unit-3/splus-wifi-controller-hardening.html"><span class="t">Harden a Wireless Network — Lab Simulation</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 2.2, 2.5, 4.1</span></a></li>
-<li><a href="unit-3/splus-switch-hardening.html"><span class="t">Lab — Harden a Factory-Default Access Switch</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 2.2, 2.5, 4.1, 4.6</span></a></li>
-<li><a href="unit-3/splus-switch-port-hardening.html"><span class="t">Lab: Switch Port Hardening</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 2.5, 3.2, 4.1</span></a></li>
-<li><a href="unit-3/splus-mac-acl-switch.html"><span class="t">Restrict Devices with a MAC-Based ACL</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 2.5, 3.2, 4.1</span></a></li>
-<li><a href="unit-3/splus-router-vty-acl.html"><span class="t">Restrict VTY (Telnet/SSH) Access</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 2.5, 4.5</span></a></li>
-<li><a href="unit-3/splus-switch-secure-access.html"><span class="t">Secure Switch Access (Hardening)</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 2.5, 4.1, 4.6</span></a></li>
-<li><a href="unit-3/splus-ipsec-vpn-ipados.html"><span class="t">Lab — Configure an IPSec VPN (iPadOS)</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 3.2</span></a></li>
-<li><a href="unit-3/splus-ra-vpn-pfsense.html"><span class="t">Stand Up a Remote-Access VPN — Tidewater Edge Console</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 3.2</span></a></li>
-<li><a href="unit-3/splus-wlan-wpa2-personal.html"><span class="t">Configure a WPA2-Personal Wireless Network</span><span class="m">3.2 Protecting Networks: Managerial Controls and Wireless Security · Sec+ 4.1</span></a></li>
-</ul>
-<h3 class="topic">3.3 Protecting Networks: Segmentation <span class="tc">2 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-3/splus-guest-byod-wlan.html"><span class="t">Lab — Stand Up a Guest BYOD Wireless Network</span><span class="m">3.3 Protecting Networks: Segmentation · Sec+ 2.5, 4.1</span></a></li>
-<li><a href="unit-3/splus-screened-subnet.html"><span class="t">Lab — Deploy a Screened Subnet (Sentinel Gateway OS)</span><span class="m">3.3 Protecting Networks: Segmentation · Sec+ 3.2, 4.5</span></a></li>
-</ul>
-<h3 class="topic">3.4 Protecting Networks: Firewalls <span class="tc">4 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-3/splus-router-acl-permit.html"><span class="t">Permit Traffic on a Standard ACL</span><span class="m">3.4 Protecting Networks: Firewalls · Sec+ 2.5, 4.5</span></a></li>
-<li><a href="unit-3/splus-std-acl-block-hosts.html"><span class="t">Standard ACL: Block Source Hosts</span><span class="m">3.4 Protecting Networks: Firewalls · Sec+ 2.5, 4.5</span></a></li>
-<li><a href="unit-3/splus-edge-appliance-setup.html"><span class="t">AegisWall Console — Edge Appliance Setup Lab</span><span class="m">3.4 Protecting Networks: Firewalls · Sec+ 3.2</span></a></li>
-<li><a href="unit-3/splus-perimeter-firewall.html"><span class="t">Lab: Publish a DMZ Web Server Through the Perimeter Firewall</span><span class="m">3.4 Protecting Networks: Firewalls · Sec+ 3.2, 4.5</span></a></li>
-</ul>
-<h3 class="topic">3.5 Detecting Network Attacks <span class="tc">7 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-3/splus-rogue-ap-hardening.html"><span class="t">WaveCore Controller — RF Hardening Lab</span><span class="m">3.5 Detecting Network Attacks · Sec+ 2.2, 2.4, 4.1</span></a></li>
-<li><a href="unit-3/splus-syn-flood-analysis.html"><span class="t">Lab — Analyze a SYN Flood Attack</span><span class="m">3.5 Detecting Network Attacks · Sec+ 2.4</span></a></li>
-<li><a href="unit-3/splus-wips-controller.html"><span class="t">Lab — Configure Wireless Intrusion Prevention (Halonet WC-7)</span><span class="m">3.5 Detecting Network Attacks · Sec+ 2.4, 4.1</span></a></li>
-<li><a href="unit-3/splus-arp-wireshark.html"><span class="t">Lab — Detect ARP Poisoning with a Packet Capture</span><span class="m">3.5 Detecting Network Attacks · Sec+ 2.4, 4.9</span></a></li>
-<li><a href="unit-3/splus-onpath-dns-spoof.html"><span class="t">On-Path DNS Spoofing — Security+ Lab</span><span class="m">3.5 Detecting Network Attacks · Sec+ 2.4</span></a></li>
-<li><a href="unit-3/splus-snort-ips-edge.html"><span class="t">Edge IPS Lab — Configure Snort Inline Protection (pfSense)</span><span class="m">3.5 Detecting Network Attacks · Sec+ 3.2, 4.5</span></a></li>
-<li><a href="unit-3/splus-switch-log-severity.html"><span class="t">Severity-Tiered Switch Logging — Security+ Lab</span><span class="m">3.5 Detecting Network Attacks · Sec+ 4.4, 4.9</span></a></li>
-</ul>
-</section>
-<section><h2>Unit 4 — Securing Devices <span class="ct">39 labs</span></h2>
-<h3 class="topic empty">4.1 Securing Devices — Foundations <span class="soon">coming soon · 0 labs</span></h3>
-<h3 class="topic">4.2 Authentication <span class="tc">22 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-4/splus-ad-create-group.html"><span class="t">Lab — Create a Security Group (Directory Console)</span><span class="m">4.2 Authentication · Sec+ 1.1, 4.6</span></a></li>
-<li><a href="unit-4/splus-ad-user-provisioning.html"><span class="t">Provision Active Directory User Accounts — Security+ Lab</span><span class="m">4.2 Authentication · Sec+ 1.2, 2.5, 4.6</span></a></li>
-<li><a href="unit-4/splus-rainbow-tables.html"><span class="t">Hashfall — Rainbow Table Hash Recovery</span><span class="m">4.2 Authentication · Sec+ 1.4, 2.4</span></a></li>
-<li><a href="unit-4/splus-password-audit-jtr.html"><span class="t">Password-Strength Audit Lab — Northwind Diagnostics</span><span class="m">4.2 Authentication · Sec+ 1.4, 2.4</span></a></li>
-<li><a href="unit-4/splus-local-password-lockout.html"><span class="t">Lab — Configure Account Password &amp; Lockout Policies</span><span class="m">4.2 Authentication · Sec+ 2.4, 4.5, 4.6</span></a></li>
-<li><a href="unit-4/splus-linux-passwd-reset.html"><span class="t">Account Recovery Lab — Reset a Linux User Password</span><span class="m">4.2 Authentication · Sec+ 4.6, 2.5</span></a></li>
-<li><a href="unit-4/splus-harden-default-accounts.html"><span class="t">Lab — Harden Default &amp; Local Accounts</span><span class="m">4.2 Authentication · Sec+ 2.5, 4.6</span></a></li>
-<li><a href="unit-4/splus-linux-passwd-rotate.html"><span class="t">Lab — Rotate Your Linux Account Password</span><span class="m">4.2 Authentication · Sec+ 4.6, 2.5</span></a></li>
-<li><a href="unit-4/splus-linux-account-lockunlock.html"><span class="t">Lab: Lock and Unlock Linux User Accounts — Tidewater Marine Analytics</span><span class="m">4.2 Authentication · Sec+ 2.5, 4.6</span></a></li>
-<li><a href="unit-4/splus-ad-ou-structure.html"><span class="t">Build an Active Directory OU Structure — Security+ Lab</span><span class="m">4.2 Authentication · Sec+ 4.5, 4.6</span></a></li>
-<li><a href="unit-4/splus-restrict-local-admins.html"><span class="t">Lab — Lock Down the Local Administrators Group (Group Policy)</span><span class="m">4.2 Authentication · Sec+ 4.5, 4.6</span></a></li>
-<li><a href="unit-4/splus-ad-delete-ous.html"><span class="t">Lab — Remove Redundant Organizational Units (AD)</span><span class="m">4.2 Authentication · Sec+ 4.5, 4.6</span></a></li>
-<li><a href="unit-4/splus-linux-group-removal.html"><span class="t">Lab · Revoke Supplementary Group Access</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-linux-deprovision-user.html"><span class="t">Lab — Deprovision a Departed Linux User</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-ad-account-lifecycle.html"><span class="t">Lab — Manage Domain User Accounts (LARK-DC01)</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-linux-secondary-group.html"><span class="t">Lab: Add Users to a Secondary Group (Linux) — Security+ SY0-701</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-smartcard-logon-gpo.html"><span class="t">Lab: Enforce Smart Card Logon via Group Policy</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-linux-group-split.html"><span class="t">Lab: Reorganize Linux Groups — Provisioning &amp; De-provisioning</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-linux-delete-user.html"><span class="t">Offboarding: Remove a Departed Linux User — Security+ Lab</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-linux-user-provisioning.html"><span class="t">Provisioning Desk — Create a Linux User Account</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-account-rename.html"><span class="t">Rename and Relocate a Linux User Account</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-<li><a href="unit-4/splus-shadow-groups.html"><span class="t">Shadow Groups Lab — Helmsman Directory Console</span><span class="m">4.2 Authentication · Sec+ 4.6</span></a></li>
-</ul>
-<h3 class="topic">4.3 Protecting Devices <span class="tc">16 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-4/splus-gpo-create-link.html"><span class="t">Lab — Create, Link, and Harden a GPO</span><span class="m">4.3 Protecting Devices · Sec+ 1.2, 4.1, 4.5</span></a></li>
-<li><a href="unit-4/splus-create-virtual-machines.html"><span class="t">Bench Lab — Stand Up Two Virtual Machines</span><span class="m">4.3 Protecting Devices · Sec+ 2.3, 3.1</span></a></li>
-<li><a href="unit-4/splus-configure-microsoft-defender.html"><span class="t">Configure Microsoft Defender</span><span class="m">4.3 Protecting Devices · Sec+ 2.5, 4.1</span></a></li>
-<li><a href="unit-4/splus-dep-config.html"><span class="t">Data Execution Prevention (DEP) Configuration</span><span class="m">4.3 Protecting Devices · Sec+ 2.5, 4.1</span></a></li>
-<li><a href="unit-4/splus-host-firewall-public.html"><span class="t">Host Firewall Lab — Protect the Public Profile</span><span class="m">4.3 Protecting Devices · Sec+ 2.5, 4.5</span></a></li>
-<li><a href="unit-4/splus-applocker-allowlist.html"><span class="t">Lab — Application Allowlisting with AppLocker</span><span class="m">4.3 Protecting Devices · Sec+ 2.5, 4.1</span></a></li>
-<li><a href="unit-4/splus-uac-hardening.html"><span class="t">Lab — Harden User Account Control (UAC)</span><span class="m">4.3 Protecting Devices · Sec+ 2.5, 4.5</span></a></li>
-<li><a href="unit-4/splus-update-policy-config.html"><span class="t">Lab — Tuning the Update Cadence on a Workstation</span><span class="m">4.3 Protecting Devices · Sec+ 2.5, 4.1</span></a></li>
-<li><a href="unit-4/splus-clear-browser-cache.html"><span class="t">Lab: Clear Browsing Data — Aurora Browser (Security+ SY0-701)</span><span class="m">4.3 Protecting Devices · Sec+ 2.5, 3.2</span></a></li>
-<li><a href="unit-4/splus-virtual-switches.html"><span class="t">Virtual Switch Manager Lab — Northwind Cyber Range</span><span class="m">4.3 Protecting Devices · Sec+ 3.1</span></a></li>
-<li><a href="unit-4/splus-mobile-mail-browser-harden.html"><span class="t">Lab: Harden Mobile Mail &amp; Browser on a Tablet</span><span class="m">4.3 Protecting Devices · Sec+ 4.1, 3.2</span></a></li>
-<li><a href="unit-4/splus-filehistory-backup.html"><span class="t">Configure File History Backups</span><span class="m">4.3 Protecting Devices · Sec+ 3.4</span></a></li>
-<li><a href="unit-4/splus-filehistory-recovery.html"><span class="t">Recover Prior File Versions with File History</span><span class="m">4.3 Protecting Devices · Sec+ 3.4</span></a></li>
-<li><a href="unit-4/splus-dc-system-state-backup.html"><span class="t">Sentinel Backup Console — DC System State Lab</span><span class="m">4.3 Protecting Devices · Sec+ 3.4</span></a></li>
-<li><a href="unit-4/splus-harden-tablet.html"><span class="t">Lab — Harden a Front-Desk Tablet (SY0-701 4.1)</span><span class="m">4.3 Protecting Devices · Sec+ 4.1</span></a></li>
-<li><a href="unit-4/splus-host-firewall-public-profile.html"><span class="t">Lab — Host Firewall for Untrusted Networks</span><span class="m">4.3 Protecting Devices · Sec+ 4.5</span></a></li>
-</ul>
-<h3 class="topic">4.4 Detecting Attacks on Devices <span class="tc">1 lab</span></h3>
-<ul class="grid">
-<li><a href="unit-4/splus-advanced-audit-policy.html"><span class="t">Lab — Configure an Advanced Audit Policy</span><span class="m">4.4 Detecting Attacks on Devices · Sec+ 4.4, 5.1</span></a></li>
-</ul>
-</section>
-<section><h2>Unit 5 — Securing Applications and Data <span class="ct">9 labs</span></h2>
-<h3 class="topic">5.1 Application and Data Vulnerabilities and Attacks <span class="tc">1 lab</span></h3>
-<ul class="grid">
-<li><a href="unit-5/splus-sqli-account-lookup.html"><span class="t">SQLi Lab — Account Lookup Tampering</span><span class="m">5.1 Application and Data Vulnerabilities and Attacks · Sec+ 2.3, 4.1</span></a></li>
-</ul>
-<h3 class="topic">5.2 Protecting Applications and Data: Managerial Controls and Access Controls <span class="tc">2 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-5/splus-ntfs-disable-inheritance.html"><span class="t">Lab — Restrict a Folder with NTFS Permissions &amp; Disable Inheritance</span><span class="m">5.2 Protecting Applications and Data: Managerial Controls and Access Controls · Sec+ 2.5, 4.6</span></a></li>
-<li><a href="unit-5/splus-ntfs-acl-hardening.html"><span class="t">Lock Down Shared Folders with NTFS Permissions</span><span class="m">5.2 Protecting Applications and Data: Managerial Controls and Access Controls · Sec+ 2.5, 4.6</span></a></li>
-</ul>
-<h3 class="topic">5.3 Protecting Stored Data with Cryptography <span class="tc">4 labs</span></h3>
-<ul class="grid">
-<li><a href="unit-5/splus-md5-integrity-check.html"><span class="t">Lab · Verify a Download with an MD5 Hash</span><span class="m">5.3 Protecting Stored Data with Cryptography · Sec+ 1.4</span></a></li>
-<li><a href="unit-5/splus-stego-recipient-marker.html"><span class="t">Lab — Hide a Recipient Marker with OpenStego (Steganography)</span><span class="m">5.3 Protecting Stored Data with Cryptography · Sec+ 1.4, 4.1</span></a></li>
-<li><a href="unit-5/splus-efs-folder-encryption.html"><span class="t">Lab — Protect Bid Files with EFS</span><span class="m">5.3 Protecting Stored Data with Cryptography · Sec+ 1.4, 2.5</span></a></li>
-<li><a href="unit-5/splus-bitlocker-tpm.html"><span class="t">Lab: Encrypt the System Volume with BitLocker and a TPM</span><span class="m">5.3 Protecting Stored Data with Cryptography · Sec+ 1.4, 2.5</span></a></li>
-</ul>
-<h3 class="topic">5.4 Asymmetric Cryptography <span class="tc">1 lab</span></h3>
-<ul class="grid">
-<li><a href="unit-5/splus-pki-ca-lifecycle.html"><span class="t">Lab: Manage Certificates on an Issuing CA</span><span class="m">5.4 Asymmetric Cryptography · Sec+ 1.4</span></a></li>
-</ul>
-<h3 class="topic">5.5 Protecting Applications <span class="tc">1 lab</span></h3>
-<ul class="grid">
-<li><a href="unit-5/splus-https-binding.html"><span class="t">Lab: Enable HTTPS on a Web Server Binding — Security+ SY0-701</span><span class="m">5.5 Protecting Applications · Sec+ 1.4, 3.2</span></a></li>
-</ul>
-<h3 class="topic empty">5.6 Securing Applications and Data — Capstone <span class="soon">coming soon · 0 labs</span></h3>
-</section>
+  <div class="tracks">
+    <a class="track" href="/labs/cyber/">
+      <span class="eyebrow">AP Cybersecurity &middot; Security+ SY0-701</span>
+      <h2>AP Cyber Simulations</h2>
+      <span class="count">81 browser-based labs &middot; Units 1&ndash;5</span>
+      <p>Hands-on labs spanning social engineering and physical security, network vulnerability scanning and defense, switch, router, and wireless hardening, device and account security, and application &amp; data protection with cryptography. Each lab maps to AP Cybersecurity (CED) topics and CompTIA Security+ objectives.</p>
+      <ul class="units">
+        <li>1 &middot; Introduction to Security</li>
+        <li>2 &middot; Securing Spaces</li>
+        <li>3 &middot; Securing Networks</li>
+        <li>4 &middot; Securing Devices</li>
+        <li>5 &middot; Applications &amp; Data</li>
+      </ul>
+      <span class="go">Open the AP Cyber catalog &rarr;</span>
+    </a>
+    <a class="track" href="/labs/networking/">
+      <span class="eyebrow">AP Networking &middot; Network+ N10-009</span>
+      <h2>AP Networking Simulations</h2>
+      <span class="count">124 browser-based labs &middot; Units 1&ndash;4</span>
+      <p>Hands-on labs covering NIC and Wi-Fi setup, IP addressing, switching and VLANs, routing, DHCP and DNS services, structured cabling and PoE, network monitoring and packet analysis, and global connectivity and defense. Each lab maps to AP Networking topics and CompTIA Network+ objectives.</p>
+      <ul class="units">
+        <li>1 &middot; Managing My Connections</li>
+        <li>2 &middot; My Shared Connections</li>
+        <li>3 &middot; Managing Many Connections</li>
+        <li>4 &middot; Our Global Connections</li>
+      </ul>
+      <span class="go">Open the AP Networking catalog &rarr;</span>
+    </a>
+  </div>
 </main>
-<footer>Labs are grouped by unit, then topic (ascending), then ordered by lowest Security+ objective. Empty topics show as “coming soon.” &copy; 2026 [AUTHOR / INSTITUTION] · apcyber.net · Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</footer>
+<footer>&copy; 2026 [AUTHOR / INSTITUTION] &middot; apcyber.net &middot; Independent educational resource. Not affiliated with, endorsed by, or sponsored by the College Board. AP&reg; is a registered trademark of the College Board.</footer>
 </body></html>
