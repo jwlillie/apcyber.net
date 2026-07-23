@@ -1256,17 +1256,16 @@ function closeMobileNav(){var d=document.getElementById('mobile-nav-drawer'),b=d
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
 </script>
 
-<!-- ===== AP Cyber suggestion widget (emails via Netlify Forms) ===== -->
+<!-- ===== AP Cyber suggestion widget (posts to /.netlify/functions/suggest) ===== -->
 <style>
-  :root{--apc-accent:#00d4c8;--apc-accent-dark:#00a89f;--apc-radius:14px}
-  .apc-sug-fab{position:fixed;right:22px;bottom:22px;z-index:9998;display:inline-flex;align-items:center;gap:9px;background:var(--apc-accent);color:#06253a;border:none;cursor:pointer;font:600 15px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:14px 18px;border-radius:999px;box-shadow:0 6px 20px rgba(20,50,110,.32);transition:transform .15s ease,background .15s ease,box-shadow .15s ease}
-  .apc-sug-fab:hover{background:var(--apc-accent-dark);transform:translateY(-2px);box-shadow:0 10px 26px rgba(20,50,110,.38)}
+  .apc-sug-fab{position:fixed;right:22px;bottom:22px;z-index:9998;display:inline-flex;align-items:center;gap:9px;background:#00d4c8;color:#06253a;border:none;cursor:pointer;font:600 15px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:14px 18px;border-radius:999px;box-shadow:0 6px 20px rgba(0,60,60,.32);transition:transform .15s ease,background .15s ease,box-shadow .15s ease}
+  .apc-sug-fab:hover{background:#00a89f;transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,60,60,.4)}
   .apc-sug-fab:focus-visible{outline:3px solid #f5a623;outline-offset:2px}
   .apc-sug-fab svg{width:19px;height:19px;flex:none}
   @media (max-width:520px){.apc-sug-fab span{display:none}.apc-sug-fab{padding:15px;border-radius:50%}}
-  .apc-sug-overlay{position:fixed;inset:0;z-index:9999;display:none;background:rgba(15,28,52,.55);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:20px}
+  .apc-sug-overlay{position:fixed;inset:0;z-index:9999;display:none;background:rgba(6,20,35,.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:20px}
   .apc-sug-overlay.apc-open{display:flex}
-  .apc-sug-modal{background:#fff;width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:var(--apc-radius);box-shadow:0 24px 60px rgba(10,25,55,.35);animation:apc-pop .18s ease;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .apc-sug-modal{background:#fff;width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:14px;box-shadow:0 24px 60px rgba(4,15,30,.45);animation:apc-pop .18s ease;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
   @keyframes apc-pop{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
   .apc-sug-head{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 14px;border-bottom:1px solid #eef1f6}
   .apc-sug-head h2{margin:0;font-size:19px;color:#0b1628}
@@ -1278,11 +1277,11 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileN
   .apc-sug-field label{display:block;font-size:13px;font-weight:600;color:#33405a;margin-bottom:5px}
   .apc-req{color:#c0392b}
   .apc-sug-body input[type=text],.apc-sug-body input[type=email],.apc-sug-body select,.apc-sug-body textarea{width:100%;box-sizing:border-box;font:15px inherit;color:#1e2530;padding:10px 12px;border:1px solid #d4dae5;border-radius:10px;background:#fbfcfe;transition:border-color .15s,box-shadow .15s}
-  .apc-sug-body input:focus,.apc-sug-body select:focus,.apc-sug-body textarea:focus{outline:none;border-color:var(--apc-accent);box-shadow:0 0 0 3px rgba(0,212,200,.25);background:#fff}
+  .apc-sug-body input:focus,.apc-sug-body select:focus,.apc-sug-body textarea:focus{outline:none;border-color:#00a89f;box-shadow:0 0 0 3px rgba(0,212,200,.25);background:#fff}
   .apc-sug-body textarea{min-height:110px;resize:vertical}
   .apc-sug-hp{position:absolute;left:-5000px}
-  .apc-sug-submit{width:100%;margin-top:4px;background:var(--apc-accent);color:#06253a;border:none;cursor:pointer;font:600 15.5px inherit;padding:13px;border-radius:11px;transition:background .15s}
-  .apc-sug-submit:hover{background:var(--apc-accent-dark)}
+  .apc-sug-submit{width:100%;margin-top:4px;background:#00d4c8;color:#06253a;border:none;cursor:pointer;font:600 15.5px inherit;padding:13px;border-radius:11px;transition:background .15s}
+  .apc-sug-submit:hover{background:#00a89f}
   .apc-sug-submit:disabled{opacity:.6;cursor:default}
   .apc-sug-foot{margin-top:11px;font-size:12px;color:#8a93a5;text-align:center;line-height:1.5}
   .apc-sug-msg{display:none;text-align:center;padding:26px 10px}
@@ -1304,13 +1303,11 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileN
       <button class="apc-sug-x" type="button" aria-label="Close" onclick="apcSugClose()">&times;</button>
     </div>
     <div class="apc-sug-body">
-      <form id="apcSugForm" name="site-suggestions" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-        <input type="hidden" name="form-name" value="site-suggestions">
-        <input type="hidden" name="subject" value="New AP Cyber site suggestion">
-        <p class="apc-sug-hp"><label>Don't fill this out: <input name="bot-field"></label></p>
+      <form id="apcSugForm">
+        <p class="apc-sug-hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
         <div class="apc-sug-field">
           <label for="apcType">What kind of suggestion? <span class="apc-req">*</span></label>
-          <select id="apcType" name="Suggestion type" required>
+          <select id="apcType" name="type" required>
             <option value="" disabled selected>Choose one&hellip;</option>
             <option>Edit to existing content</option>
             <option>New resource to add</option>
@@ -1320,15 +1317,15 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileN
         </div>
         <div class="apc-sug-field">
           <label for="apcWhere">Which page or unit? <span style="font-weight:400;color:#9aa4b6">(optional)</span></label>
-          <input type="text" id="apcWhere" name="Page or unit" placeholder="e.g. Unit 3 Socratic Guide">
+          <input type="text" id="apcWhere" name="where" placeholder="e.g. Unit 3 Socratic Guide, or a URL">
         </div>
         <div class="apc-sug-field">
           <label for="apcMsg">Your suggestion <span class="apc-req">*</span></label>
-          <textarea id="apcMsg" name="Suggestion" required placeholder="Describe the edit, or paste a link to the resource you'd like added&hellip;"></textarea>
+          <textarea id="apcMsg" name="suggestion" required placeholder="Describe the edit, or paste a link to the resource you'd like added&hellip;"></textarea>
         </div>
         <div class="apc-sug-field">
           <label for="apcName">Your name <span style="font-weight:400;color:#9aa4b6">(optional)</span></label>
-          <input type="text" id="apcName" name="Name" placeholder="So I can thank you">
+          <input type="text" id="apcName" name="name" placeholder="So I can thank you">
         </div>
         <div class="apc-sug-field">
           <label for="apcEmail">Your email <span style="font-weight:400;color:#9aa4b6">(optional &mdash; only if you'd like a reply)</span></label>
@@ -1352,14 +1349,24 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileN
   document.addEventListener('keydown',function(e){if(e.key==='Escape')apcSugClose();});
   document.getElementById('apcSugForm').addEventListener('submit',function(e){
     e.preventDefault();
-    var form=this,btn=form.querySelector('.apc-sug-submit');
-    var msg=document.getElementById('apcSugMsg'),msgTitle=document.getElementById('apcSugMsgTitle'),msgText=document.getElementById('apcSugMsgText');
-    function showSuccess(){form.style.display='none';msg.style.display='block';}
-    function showError(){msgTitle.textContent='Hmm, that did not send';msgText.textContent='Please try again in a moment, or email jonathan.lillie@gmail.com directly.';msg.querySelector('svg').style.color='#c0392b';form.style.display='none';msg.style.display='block';}
+    var form=this;
+    if(form.querySelector('[name=bot-field]').value){return;}
+    var btn=form.querySelector('.apc-sug-submit');
+    var msg=document.getElementById('apcSugMsg'),mt=document.getElementById('apcSugMsgTitle'),mx=document.getElementById('apcSugMsgText');
+    var type=document.getElementById('apcType').value;
+    var where=document.getElementById('apcWhere').value.trim();
+    var sug=document.getElementById('apcMsg').value.trim();
+    var nm=document.getElementById('apcName').value.trim();
+    var em=document.getElementById('apcEmail').value.trim();
+    var NL=String.fromCharCode(10);
+    var content='Suggestion type: '+type+NL+'Page/Unit: '+(where||'(not specified)')+NL+NL+sug+NL+NL+'Reply email: '+(em||'(none provided)');
+    var url=/^https?:\/\//i.test(where)?where:location.href;
+    var payload={content:content,name:(nm||'AP Cyber site visitor'),url:url,email:em,type:type,suggestion:sug,page:where};
+    function ok(){form.style.display='none';msg.style.display='block';}
+    function bad(){mt.textContent='Hmm, that did not send';mx.textContent='Please try again in a moment.';msg.querySelector('svg').style.color='#c0392b';form.style.display='none';msg.style.display='block';}
     btn.disabled=true;btn.textContent='Sending...';
-    fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(new FormData(form)).toString()})
-      .then(function(r){r.ok?showSuccess():showError();})
-      .catch(function(){showError();});
+    fetch('/.netlify/functions/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+      .then(function(r){r.ok?ok():bad();}).catch(function(){bad();});
   });
 </script>
 
