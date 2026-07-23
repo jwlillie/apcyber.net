@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  ============================================================================
+  AP Cybersecurity Lab · Asymmetric Encryption — Encrypt & Sign with RSA Key Pairs
+  assignmentId: splus-asymmetric-encryption
+  Unit 5 · Topic 5.4 Asymmetric Cryptography · CompTIA Security+ SY0-701 1.4
+  ----------------------------------------------------------------------------
+  Paired, browser-based activity. Students generate real 2048-bit RSA key pairs
+  (Web Crypto API: RSA-OAEP for encryption, RSA-PSS for signatures), exchange
+  public keys, and send each other a confidential, signed message.
+  Self-contained and dependency-free (Google Fonts only). All cryptography runs
+  locally in the browser; no data leaves the machine.
+  Consolidated from a 4-page activity into one file for the apcyber.net labs.
+  ============================================================================
+-->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Lab: Encrypt &amp; Sign a Message with RSA Key Pairs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{
+    --navy:#0b1628; --navy-mid:#132040; --navy-light:#1e2e52;
+    --cyan:#00d4c8; --cyan-dim:#00a89f; --amber:#f5a623;
+    --white:#f2f5fb; --muted:#8899bb; --card-bg:#111e38;
+    --border:rgba(0,212,200,0.15); --good:#3ddc84;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--navy); color:var(--white); font-family:"DM Sans",sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 20px 90px}
+  header.hero{text-align:center; margin-bottom:14px}
+  header.hero h1{font-family:"DM Serif Display",serif; font-weight:700; font-size:clamp(2.1rem,5.5vw,3.4rem); margin:0 0 10px; line-height:1.1;}
+  header.hero p.sub{color:var(--muted); font-size:1.1rem; margin:0 auto; max-width:620px}
+
+  .overview{background:rgba(0,212,200,0.08); border:1px solid var(--border); border-left:4px solid var(--cyan); border-radius:12px; padding:22px 24px; margin:34px 0 12px;}
+  .overview h2{font-family:"DM Serif Display",serif; margin:0 0 8px; font-size:1.4rem; color:var(--cyan)}
+  .overview p{margin:8px 0 0}
+  .pill{display:inline-block; background:var(--navy-mid); border:1px solid var(--border); color:var(--muted); border-radius:999px; padding:5px 14px; font-size:.82rem; margin:4px 6px 0 0}
+
+  h2.section{font-family:"DM Serif Display",serif; font-size:1.7rem; margin:44px 0 6px}
+  .lead{color:var(--muted); margin:0 0 20px}
+
+  .steps-grid{display:grid; grid-template-columns:1fr; gap:16px}
+  @media(min-width:680px){.steps-grid{grid-template-columns:repeat(3,1fr)}}
+  a.step-card{
+    display:flex; flex-direction:column; text-decoration:none; color:var(--white);
+    background:var(--card-bg); border:1px solid var(--border); border-radius:14px;
+    padding:22px; transition:all .16s ease; position:relative; overflow:hidden;
+  }
+  a.step-card:hover{transform:translateY(-3px); border-color:var(--cyan-dim); box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .step-num{font-family:"DM Serif Display",serif; font-size:2.1rem; color:var(--cyan); line-height:1; margin-bottom:6px}
+  .step-card h3{margin:0 0 8px; font-size:1.12rem}
+  .step-card p{margin:0; color:var(--muted); font-size:.9rem; flex:1}
+  .step-card .go{margin-top:14px; color:var(--cyan); font-weight:700; font-size:.9rem}
+
+  .start-row{text-align:center; margin:30px 0 0}
+  a.start-btn{display:inline-block; text-decoration:none; background:var(--cyan); color:var(--navy); font-weight:700; font-size:1.05rem; padding:15px 34px; border-radius:12px; transition:all .16s ease;}
+  a.start-btn:hover{background:#1ee0d5; transform:translateY(-1px)}
+
+  /* teacher's guide */
+  details.tg{
+    margin:52px 0 0; background:var(--card-bg); border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  }
+  details.tg > summary{
+    cursor:pointer; list-style:none; padding:22px 24px; font-family:"DM Serif Display",serif;
+    font-size:1.4rem; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  details.tg > summary::-webkit-details-marker{display:none}
+  details.tg > summary .chev{color:var(--cyan); font-size:1rem; transition:transform .2s ease}
+  details.tg[open] > summary .chev{transform:rotate(180deg)}
+  details.tg > summary .tag{font-family:"DM Sans",sans-serif; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; background:rgba(245,166,35,0.15); color:var(--amber); border:1px solid rgba(245,166,35,0.35); padding:3px 10px; border-radius:999px;}
+  .tg-body{padding:2px 24px 26px; border-top:1px solid var(--border)}
+  .tg-body h3{font-family:"DM Serif Display",serif; font-size:1.25rem; margin:24px 0 6px; color:var(--cyan)}
+  .tg-body h4{margin:18px 0 4px; font-size:1.02rem}
+  .tg-body p{margin:6px 0}
+  .tg-body ul{margin:8px 0; padding-left:22px}
+  .tg-body li{margin:6px 0}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 4px}
+  .meta{background:var(--navy); border:1px solid var(--border); border-radius:10px; padding:10px 14px; font-size:.88rem; color:var(--muted)}
+  .meta strong{color:var(--white); display:block; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em}
+
+  .lo{background:var(--navy); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin:12px 0}
+  .lo .code{display:inline-block; font-weight:700; color:var(--navy); background:var(--cyan); border-radius:6px; padding:2px 9px; font-size:.82rem; margin-bottom:8px}
+  .lo ul{margin:6px 0 0}
+  .lo .ek{color:var(--muted); font-size:.9rem}
+  .lo .ek b{color:var(--white)}
+
+  table.map{width:100%; border-collapse:collapse; margin:12px 0; font-size:.92rem}
+  table.map th,table.map td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top}
+  table.map th{color:var(--cyan); font-size:.8rem; text-transform:uppercase; letter-spacing:.04em}
+  table.map td .c{color:var(--cyan); font-weight:700; white-space:nowrap}
+
+  .disc{background:rgba(0,212,200,0.06); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin:14px 0}
+  .disc ol{margin:6px 0; padding-left:22px}
+  .disc li{margin:8px 0}
+
+  .note{font-size:.84rem; color:var(--muted); border-top:1px solid var(--border); margin-top:24px; padding-top:14px}
+  .note a{color:var(--cyan)}
+  footer.foot{text-align:center; color:var(--muted); font-size:.85rem; margin-top:48px}
+  footer.foot a{color:var(--cyan); text-decoration:none}
+
+
+  :root{
+    --navy:#0b1628; --navy-mid:#132040; --navy-light:#1e2e52;
+    --cyan:#00d4c8; --cyan-dim:#00a89f; --amber:#f5a623;
+    --white:#f2f5fb; --muted:#8899bb; --card-bg:#111e38;
+    --border:rgba(0,212,200,0.15); --danger:#ff6b6b;
+    --good:#3ddc84;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--navy); color:var(--white);
+    font-family:"DM Sans",sans-serif; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:40px 20px 80px}
+  header.hero{text-align:center; margin-bottom:28px}
+  header.hero h1{
+    font-family:"DM Serif Display",serif; font-weight:700;
+    font-size:clamp(2rem,5vw,3.2rem); margin:0 0 8px; line-height:1.1;
+  }
+  header.hero p.sub{color:var(--muted); font-size:1.05rem; margin:0}
+  /* step nav */
+  nav.steps{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    margin:0 0 32px;
+  }
+  nav.steps a{
+    text-decoration:none; color:var(--muted);
+    background:var(--navy-mid); border:1px solid var(--border);
+    padding:10px 18px; border-radius:10px; font-weight:500; font-size:.92rem;
+    transition:all .15s ease; white-space:nowrap;
+  }
+  nav.steps a:hover{color:var(--white); border-color:var(--cyan-dim)}
+  nav.steps a.active{
+    background:var(--cyan); color:var(--navy); font-weight:700; border-color:var(--cyan);
+  }
+  h2.step-title{
+    font-family:"DM Serif Display",serif; font-weight:700;
+    font-size:clamp(1.5rem,3.5vw,2.1rem); margin:0 0 20px;
+  }
+  .card{
+    background:var(--card-bg); border:1px solid var(--border);
+    border-radius:14px; padding:24px; margin-bottom:20px;
+  }
+  .info{
+    background:rgba(0,212,200,0.08); border:1px solid var(--border);
+    border-left:4px solid var(--cyan); border-radius:10px; padding:18px 20px; margin-bottom:22px;
+  }
+  .info h3{margin:0 0 10px; font-size:1.05rem; color:var(--cyan)}
+  .info ul{margin:8px 0 0; padding-left:20px}
+  .info li{margin:6px 0}
+  .warn{
+    background:rgba(245,166,35,0.10); border:1px solid rgba(245,166,35,0.35);
+    border-left:4px solid var(--amber); border-radius:10px; padding:14px 18px; margin:0 0 14px;
+    color:#ffd98a; font-size:.94rem;
+  }
+  .label{font-weight:700; font-size:1.05rem; margin:0 0 4px}
+  .hint{color:var(--muted); font-size:.9rem; margin:0 0 12px}
+  .keybox{
+    width:100%; background:var(--navy); border:1px solid var(--border);
+    border-radius:10px; color:var(--white); font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:.82rem; padding:14px; resize:vertical; min-height:96px; line-height:1.5;
+    word-break:break-all;
+  }
+  .keybox:focus{outline:none; border-color:var(--cyan)}
+  .keybox[readonly]{color:var(--cyan)}
+  .privhidden{
+    background:var(--navy); border:1px dashed rgba(245,166,35,0.4);
+    border-radius:10px; padding:16px; text-align:center; color:var(--amber);
+    font-weight:500; font-size:.95rem;
+  }
+  .btn{
+    background:var(--cyan); color:var(--navy); border:none; cursor:pointer;
+    font-family:"DM Sans",sans-serif; font-weight:700; font-size:.95rem;
+    padding:13px 26px; border-radius:10px; transition:all .15s ease;
+  }
+  .btn:hover{background:#1ee0d5; transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn:disabled{opacity:.5; cursor:not-allowed; transform:none}
+  .btn.ghost{
+    background:transparent; color:var(--cyan); border:1px solid var(--cyan-dim);
+    font-weight:500; padding:9px 16px; font-size:.85rem;
+  }
+  .btn.ghost:hover{background:rgba(0,212,200,0.1); transform:none}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+  .btn.big{width:100%; padding:16px; font-size:1.05rem; margin-top:8px}
+  .success{
+    background:rgba(61,220,132,0.1); border:1px solid rgba(61,220,132,0.35);
+    border-left:4px solid var(--good); border-radius:10px; padding:14px 18px;
+    color:#a8f0c6; font-size:.94rem; margin-top:18px; display:none;
+  }
+  .success.show{display:block}
+  .nav-next{display:flex; justify-content:flex-end; margin-top:24px}
+  .nav-next a{
+    text-decoration:none; background:var(--cyan); color:var(--navy);
+    font-weight:700; padding:13px 26px; border-radius:10px; transition:all .15s ease;
+  }
+  .nav-next a:hover{background:#1ee0d5}
+  .hidden{display:none !important}
+  .copied{color:var(--good) !important; border-color:var(--good) !important}
+  .pair-note{
+    text-align:center; color:var(--muted); font-size:.92rem;
+    background:var(--navy-mid); border:1px solid var(--border);
+    border-radius:12px; padding:12px 18px; margin:0 0 26px;
+  }
+  .pair-note strong{color:var(--white)}
+
+
+  :root{
+    --navy:#0b1628; --navy-mid:#132040; --navy-light:#1e2e52;
+    --cyan:#00d4c8; --cyan-dim:#00a89f; --amber:#f5a623;
+    --white:#f2f5fb; --muted:#8899bb; --card-bg:#111e38;
+    --border:rgba(0,212,200,0.15); --danger:#ff6b6b; --good:#3ddc84;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--navy); color:var(--white); font-family:"DM Sans",sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:820px; margin:0 auto; padding:40px 20px 80px}
+  header.hero{text-align:center; margin-bottom:28px}
+  header.hero h1{font-family:"DM Serif Display",serif; font-weight:700; font-size:clamp(2rem,5vw,3.2rem); margin:0 0 8px; line-height:1.1;}
+  header.hero p.sub{color:var(--muted); font-size:1.05rem; margin:0}
+  nav.steps{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:0 0 32px;}
+  nav.steps a{text-decoration:none; color:var(--muted); background:var(--navy-mid); border:1px solid var(--border); padding:10px 18px; border-radius:10px; font-weight:500; font-size:.92rem; transition:all .15s ease; white-space:nowrap;}
+  nav.steps a:hover{color:var(--white); border-color:var(--cyan-dim)}
+  nav.steps a.active{background:var(--cyan); color:var(--navy); font-weight:700; border-color:var(--cyan);}
+  h2.step-title{font-family:"DM Serif Display",serif; font-weight:700; font-size:clamp(1.5rem,3.5vw,2.1rem); margin:0 0 20px;}
+  .card{background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:20px;}
+  .info{background:rgba(0,212,200,0.08); border:1px solid var(--border); border-left:4px solid var(--cyan); border-radius:10px; padding:18px 20px; margin-bottom:22px;}
+  .info h3{margin:0 0 10px; font-size:1.05rem; color:var(--cyan)}
+  .info ul{margin:8px 0 0; padding-left:20px}
+  .info li{margin:6px 0}
+  .label{font-weight:700; font-size:1.05rem; margin:0 0 4px}
+  .hint{color:var(--muted); font-size:.9rem; margin:0 0 12px}
+  .field{margin-bottom:20px}
+  .keybox,.msgbox{width:100%; background:var(--navy); border:1px solid var(--border); border-radius:10px; color:var(--white); padding:14px; resize:vertical; line-height:1.5;}
+  .keybox{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.82rem; min-height:80px; word-break:break-all;}
+  .msgbox{font-family:"DM Sans",sans-serif; font-size:1rem; min-height:90px;}
+  .keybox:focus,.msgbox:focus{outline:none; border-color:var(--cyan)}
+  .keybox[readonly]{color:var(--cyan)}
+  .counter{text-align:right; color:var(--muted); font-size:.85rem; margin-top:6px}
+  .counter.over{color:var(--danger); font-weight:700}
+  .btn{background:var(--cyan); color:var(--navy); border:none; cursor:pointer; font-family:"DM Sans",sans-serif; font-weight:700; font-size:.95rem; padding:13px 26px; border-radius:10px; transition:all .15s ease;}
+  .btn:hover{background:#1ee0d5; transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn:disabled{opacity:.5; cursor:not-allowed; transform:none}
+  .btn.ghost{background:transparent; color:var(--cyan); border:1px solid var(--cyan-dim); font-weight:500; padding:9px 16px; font-size:.85rem;}
+  .btn.ghost:hover{background:rgba(0,212,200,0.1); transform:none}
+  .btn.big{width:100%; padding:16px; font-size:1.05rem}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+  .autofill{color:var(--good); font-size:.82rem; margin:6px 0 0}
+  .error{background:rgba(255,107,107,0.1); border:1px solid rgba(255,107,107,0.4); border-left:4px solid var(--danger); border-radius:10px; padding:12px 16px; color:#ffb3b3; font-size:.9rem; margin-top:12px; display:none;}
+  .error.show{display:block}
+  .result{margin-top:22px; display:none}
+  .result.show{display:block}
+  .result .label{color:var(--cyan)}
+  .nav-row{display:flex; justify-content:space-between; margin-top:24px; gap:12px; flex-wrap:wrap}
+  .nav-row a{text-decoration:none; padding:13px 26px; border-radius:10px; font-weight:700; transition:all .15s ease;}
+  .nav-row a.prev{background:var(--navy-mid); color:var(--white); border:1px solid var(--border)}
+  .nav-row a.prev:hover{border-color:var(--cyan-dim)}
+  .nav-row a.next{background:var(--cyan); color:var(--navy)}
+  .nav-row a.next:hover{background:#1ee0d5}
+  .lock-ico{color:var(--cyan)} .sign-ico{color:var(--amber)}
+  .pair-note{text-align:center; color:var(--muted); font-size:.92rem; background:var(--navy-mid); border:1px solid var(--border); border-radius:12px; padding:12px 18px; margin:0 0 26px;}
+  .pair-note strong{color:var(--white)}
+
+
+  :root{
+    --navy:#0b1628; --navy-mid:#132040; --navy-light:#1e2e52;
+    --cyan:#00d4c8; --cyan-dim:#00a89f; --amber:#f5a623;
+    --white:#f2f5fb; --muted:#8899bb; --card-bg:#111e38;
+    --border:rgba(0,212,200,0.15); --danger:#ff6b6b; --good:#3ddc84;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--navy); color:var(--white); font-family:"DM Sans",sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:820px; margin:0 auto; padding:40px 20px 80px}
+  header.hero{text-align:center; margin-bottom:28px}
+  header.hero h1{font-family:"DM Serif Display",serif; font-weight:700; font-size:clamp(2rem,5vw,3.2rem); margin:0 0 8px; line-height:1.1;}
+  header.hero p.sub{color:var(--muted); font-size:1.05rem; margin:0}
+  nav.steps{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:0 0 32px;}
+  nav.steps a{text-decoration:none; color:var(--muted); background:var(--navy-mid); border:1px solid var(--border); padding:10px 18px; border-radius:10px; font-weight:500; font-size:.92rem; transition:all .15s ease; white-space:nowrap;}
+  nav.steps a:hover{color:var(--white); border-color:var(--cyan-dim)}
+  nav.steps a.active{background:var(--cyan); color:var(--navy); font-weight:700; border-color:var(--cyan);}
+  h2.step-title{font-family:"DM Serif Display",serif; font-weight:700; font-size:clamp(1.5rem,3.5vw,2.1rem); margin:0 0 20px;}
+  .card{background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:20px;}
+  .info{background:rgba(0,212,200,0.08); border:1px solid var(--border); border-left:4px solid var(--cyan); border-radius:10px; padding:18px 20px; margin-bottom:22px;}
+  .info h3{margin:0 0 10px; font-size:1.05rem; color:var(--cyan)}
+  .info ul{margin:8px 0 0; padding-left:20px}
+  .info li{margin:6px 0}
+  .label{font-weight:700; font-size:1.05rem; margin:0 0 4px}
+  .hint{color:var(--muted); font-size:.9rem; margin:0 0 12px}
+  .field{margin-bottom:20px}
+  .keybox{width:100%; background:var(--navy); border:1px solid var(--border); border-radius:10px; color:var(--white); padding:14px; resize:vertical; line-height:1.5; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.82rem; min-height:80px; word-break:break-all;}
+  .keybox:focus{outline:none; border-color:var(--cyan)}
+  .btn{background:var(--cyan); color:var(--navy); border:none; cursor:pointer; font-family:"DM Sans",sans-serif; font-weight:700; font-size:.95rem; padding:13px 26px; border-radius:10px; transition:all .15s ease;}
+  .btn:hover{background:#1ee0d5; transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn.big{width:100%; padding:16px; font-size:1.05rem}
+  .autofill{color:var(--good); font-size:.82rem; margin:6px 0 0}
+  .error{background:rgba(255,107,107,0.1); border:1px solid rgba(255,107,107,0.4); border-left:4px solid var(--danger); border-radius:10px; padding:12px 16px; color:#ffb3b3; font-size:.9rem; margin-top:12px; display:none;}
+  .error.show{display:block}
+  .result{margin-top:22px; display:none}
+  .result.show{display:block}
+  .msg-out{
+    background:var(--navy); border:1px solid var(--border); border-radius:10px;
+    padding:18px 20px; font-size:1.15rem; color:var(--white); line-height:1.5;
+    word-break:break-word; white-space:pre-wrap;
+  }
+  .badge{display:flex; align-items:center; gap:10px; padding:14px 18px; border-radius:10px; margin-top:16px; font-weight:700;}
+  .badge.valid{background:rgba(61,220,132,0.12); border:1px solid rgba(61,220,132,0.4); color:#a8f0c6;}
+  .badge.invalid{background:rgba(255,107,107,0.12); border:1px solid rgba(255,107,107,0.45); color:#ffb3b3;}
+  .badge .big-ico{font-size:1.4rem}
+  .badge small{display:block; font-weight:400; font-size:.85rem; opacity:.9; margin-top:2px}
+  .nav-row{display:flex; justify-content:space-between; margin-top:24px; gap:12px; flex-wrap:wrap}
+  .nav-row a{text-decoration:none; padding:13px 26px; border-radius:10px; font-weight:700; transition:all .15s ease;}
+  .nav-row a.prev{background:var(--navy-mid); color:var(--white); border:1px solid var(--border)}
+  .nav-row a.prev:hover{border-color:var(--cyan-dim)}
+  .lock-ico{color:var(--cyan)} .verify-ico{color:var(--amber)}
+  .pair-note{text-align:center; color:var(--muted); font-size:.92rem; background:var(--navy-mid); border:1px solid var(--border); border-radius:12px; padding:12px 18px; margin:0 0 26px;}
+  .pair-note strong{color:var(--white)}
+/* ---- consolidated single-page view switching ---- */
+.view{display:none}
+.view.active{display:block}
+.wrap{max-width:880px}
+nav.steps{margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <h1>Asymmetric Encryption Interactive</h1>
+    <p class="sub">Explore how public and private keys secure digital communication — a paired, hands-on AP Cybersecurity 5.4 activity.</p>
+  </header>
+  <nav class="steps" id="topnav">
+    <a href="#home" data-view="home">Overview</a>
+    <a href="#step1" data-view="step1">Step 1: Generate Keys</a>
+    <a href="#step2" data-view="step2">Step 2: Encrypt &amp; Sign</a>
+    <a href="#step3" data-view="step3">Step 3: Decrypt &amp; Verify</a>
+  </nav>
+
+  <section class="view active" id="view-home">
+<div class="overview">
+    <h2>About This Activity</h2>
+    <p>You and a partner will use <strong>real cryptography</strong> — the same RSA public-key math that protects websites, email, and messaging — to send each other a secret message that only the intended person can read, and to prove who really sent it.</p>
+    <p>Work through the three steps below. Each of you is on your own device; you'll trade <em>public</em> keys and encrypted messages back and forth, while carefully guarding your <em>private</em> key.</p>
+    <div style="margin-top:12px">
+      <span class="pill">👥 Pairs</span>
+      <span class="pill">⏱️ ~20–30 minutes</span>
+      <span class="pill">💻 2 devices</span>
+      <span class="pill">🔐 Real 2048-bit RSA</span>
+      <span class="pill">📘 AP Cyber Unit 5.4</span>
+    </div>
+  </div>
+
+  <h2 class="section">The Three Steps</h2>
+  <p class="lead">Complete them in order. Both partners do all three.</p>
+
+  <div class="steps-grid">
+    <a class="step-card" href="#step1" data-view="step1">
+      <div class="step-num">1</div>
+      <h3>Generate Keys</h3>
+      <p>Create your own key pair. Keep the private key; share the public key with your partner.</p>
+      <span class="go">Start Step 1 →</span>
+    </a>
+    <a class="step-card" href="#step2" data-view="step2">
+      <div class="step-num">2</div>
+      <h3>Encrypt &amp; Sign</h3>
+      <p>Lock a message with your partner's public key and sign it with your private key.</p>
+      <span class="go">Go to Step 2 →</span>
+    </a>
+    <a class="step-card" href="#step3" data-view="step3">
+      <div class="step-num">3</div>
+      <h3>Decrypt &amp; Verify</h3>
+      <p>Unlock your partner's message with your private key and verify their signature.</p>
+      <span class="go">Go to Step 3 →</span>
+    </a>
+  </div>
+
+  <div class="start-row">
+    <a class="start-btn" href="#step1" data-view="step1">Begin the Activity →</a>
+  </div>
+
+  <!-- ===================== TEACHER'S GUIDE ===================== -->
+  <details class="tg">
+    <summary>
+      <span>Teacher's Guide</span>
+      <span style="display:flex;align-items:center;gap:12px"><span class="tag">For Educators</span><span class="chev">▾</span></span>
+    </summary>
+    <div class="tg-body">
+
+      <div class="meta-row">
+        <div class="meta"><strong>Course</strong>AP Cybersecurity</div>
+        <div class="meta"><strong>Unit 5</strong>Securing Applications &amp; Data</div>
+        <div class="meta"><strong>Topic 5.4</strong>Asymmetric Cryptography</div>
+        <div class="meta"><strong>Skill</strong>Mitigate Risk</div>
+        <div class="meta"><strong>Grouping</strong>Pairs · ~20–30 min</div>
+      </div>
+
+      <h3>Overview</h3>
+      <p>This activity makes public-key cryptography concrete. Rather than reading about RSA, students generate live 2048-bit key pairs in the browser, exchange public keys, and send each other a message that is both <strong>confidential</strong> (encrypted) and <strong>authenticated</strong> (digitally signed). It is a hands-on companion to the OpenSSL work in Topic 5.4 — the browser's Web Crypto API stands in for <code>openssl genrsa</code> / <code>pkeyutl</code>, letting students <em>see</em> the encryption direction and signature check that the CED asks them to reason about.</p>
+
+      <h3>Learning Objectives (AP Cybersecurity CED)</h3>
+      <p class="lead" style="margin:0 0 12px">Objectives below are aligned to Unit 5, Topic 5.4 (Asymmetric Cryptography). Essential-knowledge statements are paraphrased for brevity — confirm exact wording against your current official CED.</p>
+
+      <div class="lo">
+        <span class="code">LO 5.4.A</span> &nbsp;Explain how an asymmetric key pair enables secure communication.
+        <ul class="ek">
+          <li><b>5.4.A.1</b> — Asymmetric encryption allows secure communication <b>without pre-arranging a shared secret key.</b></li>
+          <li><b>5.4.A.2</b> — A key pair is generated together as mathematical inverses; one key is designated public and one private, and only the partner key can undo what the other did.</li>
+          <li><b>5.4.A.3</b> — If a private key is compromised, the correct response is to <b>delete the entire key pair and generate a new one.</b></li>
+          <li><b>5.4.A.4</b> — To send confidentially, the sender encrypts with the <b>receiver's public key</b>; only the <b>receiver's private key</b> can decrypt.</li>
+        </ul>
+      </div>
+
+      <div class="lo">
+        <span class="code">LO 5.4.B</span> &nbsp;Reason about key length and its effect on security.
+        <ul class="ek">
+          <li><b>5.4.B.1–2</b> — An <i>n</i>-bit key defines a keyspace of 2<sup>n</sup>; brute force averages 2<sup>n−1</sup> attempts.</li>
+          <li><b>5.4.B.3–4</b> — Longer keys give more security at higher computational cost, and recommended lengths rise over time as computing power grows.</li>
+          <li><b>5.4.B.5</b> — Key-length comparisons are only meaningful <b>within the same algorithm</b> (e.g., RSA-2048 vs RSA-4096).</li>
+        </ul>
+      </div>
+
+      <div class="lo">
+        <span class="code">LO 5.4.C</span> &nbsp;Identify and apply common asymmetric algorithms.
+        <ul class="ek">
+          <li><b>5.4.C.1</b> — <b>RSA and ECC</b> are common asymmetric algorithms, used in <b>digital signatures and certificates.</b></li>
+          <li><b>5.4.C.2–3</b> — Students interpret and write OpenSSL commands such as <code>genrsa</code>, <code>rsa -pubout</code>, and <code>pkeyutl -encrypt/-decrypt</code>. <i>This activity mirrors those operations visually in the browser.</i></li>
+        </ul>
+      </div>
+
+      <h3>What Each Step Demonstrates</h3>
+      <table class="map">
+        <thead><tr><th>Step</th><th>Students do</th><th>Concept demonstrated</th><th>CED link</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="c">1 · Generate</span></td>
+            <td>Create a 2048-bit key pair; keep the private key, share the public key.</td>
+            <td>Keys are <b>born as a pair</b> and are mathematical inverses. The public key can be shared openly; the private key must be protected — the whole security model rests on this asymmetry.</td>
+            <td class="c">5.4.A.1–.3, 5.4.B</td>
+          </tr>
+          <tr>
+            <td><span class="c">2 · Encrypt &amp; Sign</span></td>
+            <td>Encrypt a message with the partner's public key; sign it with their own private key.</td>
+            <td><b>Encryption direction</b>: you lock with the <i>receiver's</i> public key so only they can open it. <b>Signing</b> with your own private key proves authorship and integrity.</td>
+            <td class="c">5.4.A.4, 5.4.C.1</td>
+          </tr>
+          <tr>
+            <td><span class="c">3 · Decrypt &amp; Verify</span></td>
+            <td>Decrypt with their own private key; verify the signature with the partner's public key.</td>
+            <td>Only the matching <b>private key</b> decrypts. Verifying the signature with the sender's <b>public key</b> confirms authenticity — and a tampered or wrongly-signed message fails the check.</td>
+            <td class="c">5.4.A.4, 5.4.C.1</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Facilitation Notes</h3>
+      <h4>Before you start</h4>
+      <ul>
+        <li>Put students in <strong>pairs</strong>, each at their own device. Any modern browser works; nothing is installed and no data leaves the machine — all crypto runs locally.</li>
+        <li>Decide how partners will <strong>exchange text</strong> (public keys and encrypted messages): a shared doc, chat channel, email, or even copying to a neighboring computer. Keys and messages are long, so copy/paste beats retyping.</li>
+      </ul>
+      <h4>The exchange loop</h4>
+      <ul>
+        <li>Both partners complete <strong>Step 1</strong> and trade <em>public</em> keys.</li>
+        <li>Each partner uses <strong>Step 2</strong> to send the other a message, then pastes the encrypted result to their partner.</li>
+        <li>Each partner uses <strong>Step 3</strong> to open and verify the message they received.</li>
+      </ul>
+      <h4>Watch for</h4>
+      <ul>
+        <li><b>Sharing the wrong key.</b> Students sometimes share their private key by mistake — a perfect teachable moment for 5.4.A.3. If it happens, have them regenerate.</li>
+        <li><b>Wrong-key errors.</b> Trying to decrypt with the wrong private key fails on purpose. Ask <i>why</i> before helping.</li>
+        <li><b>Tampering.</b> Have a pair change one character of an encrypted message before Step 3 to see decryption/verification fail — this shows integrity protection in action.</li>
+      </ul>
+
+      <h3>Discussion Questions</h3>
+      <div class="disc">
+        <ol>
+          <li>Why can you post your <strong>public</strong> key anywhere, but never share your <strong>private</strong> key? (5.4.A.1–.2)</li>
+          <li>Whose key do you use to <strong>encrypt</strong> a message, and whose key <strong>decrypts</strong> it? Why that direction? (5.4.A.4)</li>
+          <li>How does a <strong>digital signature</strong> prove who sent a message — and what happens to the signature check if even one character is altered? (5.4.C.1)</li>
+          <li>If your private key is exposed, why isn't it enough to just "change your password"? What must you do instead? (5.4.A.3)</li>
+          <li>This demo uses a 2048-bit key. What are the trade-offs of going to 4096 bits, and why do recommended key lengths keep rising? (5.4.B)</li>
+        </ol>
+      </div>
+
+      <h3>Extension &amp; Assessment Ideas</h3>
+      <ul>
+        <li>Have students reproduce Step 1–3 with the real OpenSSL commands from 5.4.C and compare the outputs to the browser version.</li>
+        <li>Exit ticket: given a scenario ("Ana wants to send Ben a private message"), students state which key encrypts, which decrypts, and which signs/verifies.</li>
+        <li>Connect to Unit 5.6 (detecting data attacks): the signature check here is the same idea as verifying a file's hash to detect tampering.</li>
+      </ul>
+
+      <p class="note">The learning-objective and essential-knowledge codes above are aligned to the AP Cybersecurity Course and Exam Description (Unit 5: Securing Applications and Data, Topic 5.4). The <a href="https://apcentral.collegeboard.org/media/pdf/ap-cybersecurity-course-and-exam-description.pdf" target="_blank" rel="noopener">official College Board CED</a> is the authoritative source — verify exact codes and wording against your current edition. AP and Advanced Placement are trademarks of the College Board, which is not affiliated with and does not endorse this activity.</p>
+
+    </div>
+  </details>
+
+  <footer class="foot">
+    Part of <a href="https://apcyber.net">apcyber.net</a> · Runs entirely in your browser — no data is sent anywhere.
+  </footer>
+  </section>
+
+  <section class="view" id="view-step1">
+<div class="pair-note">👥 <strong>Paired activity</strong> — you and your partner each work on your own device. Here in Step 1 you both generate your own keys, then swap <em>public</em> keys with each other.</div>
+
+  <h2 class="step-title">Step 1: Generate Your Key Pair</h2>
+
+  <div class="info">
+    <h3>How Asymmetric Encryption Works</h3>
+    <p style="margin:0">Think of it like a locked mailbox:</p>
+    <ul>
+      <li><strong>Public Key</strong> = The mail slot. Anyone can drop a message in, but they can't open the box to read what's inside.</li>
+      <li><strong>Private Key</strong> = The key to the mailbox. Only you can open it and read the messages.</li>
+    </ul>
+    <p style="margin:10px 0 0">You generate both keys together as a pair. Share your public key freely — but <strong>never</strong> share your private key.</p>
+  </div>
+
+  <div class="card" style="text-align:center">
+    <button id="s1_genBtn" class="btn big">Generate Key Pair</button>
+    <p class="hint" id="s1_genStatus" style="margin:14px 0 0">Click to create a real 2048-bit RSA key pair in your browser.</p>
+  </div>
+
+  <div id="s1_results" class="hidden">
+    <div class="card">
+      <p class="label">Your Public Key</p>
+      <p class="hint">Share this with your partner. They will use it to encrypt messages to you.</p>
+      <textarea id="s1_pubKey" class="keybox" readonly></textarea>
+      <div class="btn-row">
+        <button class="btn ghost" id="s1_copyPub">Copy Public Key</button>
+        <button class="btn ghost" id="s1_pemToggle">Show PEM Format</button>
+      </div>
+      <textarea id="s1_pemBox" class="keybox hidden" readonly style="margin-top:12px"></textarea>
+    </div>
+
+    <div class="card">
+      <p class="label">Your Private Key</p>
+      <div class="warn"><strong>NEVER share this!</strong> It stays with you. Your private key decrypts messages sent to you and signs messages you send.</div>
+      <div class="privhidden" id="s1_privHidden">🔒 Private Key Stored Securely in Memory</div>
+      <textarea id="s1_privKey" class="keybox hidden" readonly></textarea>
+      <div class="btn-row">
+        <button class="btn ghost" id="s1_privToggle">Reveal Private Key</button>
+        <button class="btn ghost" id="s1_copyPriv">Copy Private Key</button>
+      </div>
+      <p class="hint" style="margin-top:10px">Keep your private key handy — you'll paste it in Steps 2 and 3. (If your browser allows, it's remembered automatically for this session.)</p>
+    </div>
+
+    <div class="success show" id="s1_doneMsg">
+      Key pair generated! Share your public key with your partner, then continue to the next step.
+    </div>
+
+    <div class="nav-next">
+      <a href="#step2" data-view="step2">Continue to Step 2 →</a>
+    </div>
+  </div>
+  </section>
+
+  <section class="view" id="view-step2">
+<div class="pair-note">👥 <strong>Paired activity</strong> — write a secret message <em>to your partner</em>. You'll lock it with the public key they shared with you, then send them the result.</div>
+
+  <h2 class="step-title">Step 2: Encrypt &amp; Sign a Message</h2>
+
+  <div class="info">
+    <h3>What Happens in This Step</h3>
+    <ul>
+      <li><span class="lock-ico">🔒</span> <strong>Encrypt</strong> — You use your <em>partner's public key</em> to lock the message so only they can read it.</li>
+      <li><span class="sign-ico">✍️</span> <strong>Sign</strong> — You use your <em>own private key</em> to add a digital signature, proving the message is from you.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <p class="label">Partner's Public Key</p>
+      <p class="hint">Paste the public key your partner shared with you.</p>
+      <textarea id="s2_partnerPub" class="keybox" placeholder="Paste your partner's public key here…"></textarea>
+    </div>
+
+    <div class="field">
+      <p class="label">Your Private Key</p>
+      <p class="hint">Used to sign the message so your partner knows it's really from you.</p>
+      <textarea id="s2_myPriv" class="keybox" placeholder="Paste your private key from Step 1…"></textarea>
+      <p class="autofill" id="s2_autofillNote" style="display:none">✓ Auto-filled from Step 1 (this session).</p>
+    </div>
+
+    <div class="field">
+      <p class="label">Your Secret Message</p>
+      <textarea id="s2_message" class="msgbox" maxlength="150" placeholder="Type a short secret message…"></textarea>
+      <div class="counter" id="s2_counter">0/150 characters</div>
+    </div>
+
+    <button id="s2_encBtn" class="btn big">Encrypt &amp; Sign</button>
+    <div class="error" id="s2_err"></div>
+
+    <div class="result" id="s2_result">
+      <p class="label">🔐 Encrypted &amp; Signed Message</p>
+      <p class="hint">Copy this and send it to your partner. Only their private key can decrypt it, and your signature proves it's from you.</p>
+      <textarea id="s2_bundle" class="keybox" readonly style="min-height:120px"></textarea>
+      <div class="btn-row">
+        <button class="btn ghost" id="s2_copyBundle">Copy Encrypted Message</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-row">
+    <a href="#step1" data-view="step1" class="prev">← Back to Step 1</a>
+    <a href="#step3" data-view="step3" class="next">Continue to Step 3 →</a>
+  </div>
+  </section>
+
+  <section class="view" id="view-step3">
+<div class="pair-note">👥 <strong>Paired activity</strong> — open the message <em>your partner</em> sent you. Unlock it with your own private key, then use their public key to confirm they really sent it.</div>
+
+  <h2 class="step-title">Step 3: Decrypt &amp; Verify</h2>
+
+  <div class="info">
+    <h3>What Happens in This Step</h3>
+    <ul>
+      <li><span class="lock-ico">🔓</span> <strong>Decrypt</strong> — You use your <em>own private key</em> to unlock and read the message. Only you can do this.</li>
+      <li><span class="verify-ico">🛡️</span> <strong>Verify</strong> — You use your <em>partner's public key</em> to confirm the signature. This proves the message really came from them and wasn't altered.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <p class="label">Your Private Key</p>
+      <p class="hint">Used to decrypt the message that was locked with your public key.</p>
+      <textarea id="s3_myPriv" class="keybox" placeholder="Paste your private key from Step 1…"></textarea>
+      <p class="autofill" id="s3_autofillNote" style="display:none">✓ Auto-filled from Step 1 (this session).</p>
+    </div>
+
+    <div class="field">
+      <p class="label">Partner's Public Key (for verification)</p>
+      <p class="hint">Used to check the signature and confirm the message really came from your partner.</p>
+      <textarea id="s3_partnerPub" class="keybox" placeholder="Paste your partner's public key here…"></textarea>
+    </div>
+
+    <div class="field">
+      <p class="label">Encrypted Message from Partner</p>
+      <p class="hint">Paste the encrypted message your partner sent you.</p>
+      <textarea id="s3_bundle" class="keybox" placeholder="Paste the encrypted message here…" style="min-height:110px"></textarea>
+    </div>
+
+    <button id="s3_decBtn" class="btn big">Decrypt &amp; Verify</button>
+    <div class="error" id="s3_err"></div>
+
+    <div class="result" id="s3_result">
+      <p class="label" style="color:var(--cyan)">📨 Decrypted Message</p>
+      <div class="msg-out" id="s3_msgOut"></div>
+      <div id="s3_badge"></div>
+    </div>
+  </div>
+
+  <div class="nav-row">
+    <a href="#step2" data-view="step2" class="prev">← Back to Step 2</a>
+    <a href="#step1" data-view="step1" class="prev" style="background:var(--cyan);color:var(--navy);border:none">Start Over ↻</a>
+  </div>
+  </section>
+</div>
+
+<script>;(function(){
+
+/* ---------- helpers ---------- */
+function ab2b64(buf){let s='';const b=new Uint8Array(buf);const chunk=0x8000;for(let i=0;i<b.length;i+=chunk){s+=String.fromCharCode.apply(null,b.subarray(i,i+chunk));}return btoa(s);}
+function pemWrap(b64,label){let out='-----BEGIN '+label+'-----\n';for(let i=0;i<b64.length;i+=64){out+=b64.slice(i,i+64)+'\n';}return out+'-----END '+label+'-----';}
+function store(k,v){try{sessionStorage.setItem(k,v);}catch(e){}}
+
+/* ---------- key generation ---------- */
+async function generateIdentity(){
+  const encPair = await crypto.subtle.generateKey(
+    {name:'RSA-OAEP', modulusLength:2048, publicExponent:new Uint8Array([1,0,1]), hash:'SHA-256'},
+    true, ['encrypt','decrypt']);
+  const sigPair = await crypto.subtle.generateKey(
+    {name:'RSA-PSS', modulusLength:2048, publicExponent:new Uint8Array([1,0,1]), hash:'SHA-256'},
+    true, ['sign','verify']);
+  const encPub  = ab2b64(await crypto.subtle.exportKey('spki',  encPair.publicKey));
+  const encPriv = ab2b64(await crypto.subtle.exportKey('pkcs8', encPair.privateKey));
+  const sigPub  = ab2b64(await crypto.subtle.exportKey('spki',  sigPair.publicKey));
+  const sigPriv = ab2b64(await crypto.subtle.exportKey('pkcs8', sigPair.privateKey));
+  const pub  = btoa(JSON.stringify({enc:encPub,  sig:sigPub}));
+  const priv = btoa(JSON.stringify({enc:encPriv, sig:sigPriv}));
+  return {pub, priv, encPubRaw:encPub};
+}
+
+/* ---------- UI ---------- */
+const genBtn=document.getElementById('s1_genBtn');
+const genStatus=document.getElementById('s1_genStatus');
+const results=document.getElementById('s1_results');
+const pubKey=document.getElementById('s1_pubKey');
+const privKey=document.getElementById('s1_privKey');
+const pemBox=document.getElementById('s1_pemBox');
+let pemRaw='';
+
+genBtn.addEventListener('click', async ()=>{
+  genBtn.disabled=true; genStatus.textContent='Generating 2048-bit key pair…';
+  try{
+    const {pub, priv, encPubRaw} = await generateIdentity();
+    pubKey.value=pub; privKey.value=priv;
+    pemRaw=pemWrap(encPubRaw,'PUBLIC KEY');
+    pemBox.value=pemRaw;
+    store('ae_pub',pub); store('ae_priv',priv);
+    results.classList.remove('hidden');
+    genStatus.textContent='Done! Your keys are ready below.';
+    genBtn.textContent='Regenerate Key Pair';
+    results.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    genStatus.textContent='Error generating keys: '+e.message;
+  }finally{ genBtn.disabled=false; }
+});
+
+function copyFrom(el,btn){
+  navigator.clipboard.writeText(el.value).then(()=>{
+    const t=btn.textContent; btn.textContent='Copied ✓'; btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent=t; btn.classList.remove('copied');},1400);
+  }).catch(()=>{ el.select(); document.execCommand('copy'); });
+}
+document.getElementById('s1_copyPub').addEventListener('click',function(){copyFrom(pubKey,this);});
+document.getElementById('s1_copyPriv').addEventListener('click',function(){copyFrom(privKey,this);});
+
+document.getElementById('s1_pemToggle').addEventListener('click',function(){
+  const hidden=pemBox.classList.toggle('hidden');
+  this.textContent=hidden?'Show PEM Format':'Hide PEM Format';
+});
+document.getElementById('s1_privToggle').addEventListener('click',function(){
+  const ph=document.getElementById('s1_privHidden');
+  const nowHidden=privKey.classList.toggle('hidden');
+  if(nowHidden){ph.classList.remove('hidden'); this.textContent='Reveal Private Key';}
+  else{ph.classList.add('hidden'); this.textContent='Hide Private Key';}
+});
+
+})();</script>
+<script>;(function(){
+
+/* ---------- helpers ---------- */
+function ab2b64(buf){let s='';const b=new Uint8Array(buf);const chunk=0x8000;for(let i=0;i<b.length;i+=chunk){s+=String.fromCharCode.apply(null,b.subarray(i,i+chunk));}return btoa(s);}
+function b642ab(b64){const s=atob(b64);const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer;}
+function load(k){try{return sessionStorage.getItem(k)||'';}catch(e){return '';}}
+
+async function importEncPublic(pubStr){
+  const {enc}=JSON.parse(atob(pubStr.trim()));
+  return crypto.subtle.importKey('spki', b642ab(enc), {name:'RSA-OAEP', hash:'SHA-256'}, false, ['encrypt']);
+}
+async function importSigPrivate(privStr){
+  const {sig}=JSON.parse(atob(privStr.trim()));
+  return crypto.subtle.importKey('pkcs8', b642ab(sig), {name:'RSA-PSS', hash:'SHA-256'}, false, ['sign']);
+}
+async function encryptAndSign(partnerPub, myPriv, message){
+  const encKey=await importEncPublic(partnerPub);
+  const sigKey=await importSigPrivate(myPriv);
+  const data=new TextEncoder().encode(message);
+  if(data.length>190) throw new Error('Message is too long once encoded ('+data.length+' bytes). Please shorten it.');
+  const ct=await crypto.subtle.encrypt({name:'RSA-OAEP'}, encKey, data);
+  const signature=await crypto.subtle.sign({name:'RSA-PSS', saltLength:32}, sigKey, data);
+  return btoa(JSON.stringify({ct:ab2b64(ct), sig:ab2b64(signature)}));
+}
+
+/* ---------- UI ---------- */
+const message=document.getElementById('s2_message');
+const counter=document.getElementById('s2_counter');
+const err=document.getElementById('s2_err');
+const result=document.getElementById('s2_result');
+const bundle=document.getElementById('s2_bundle');
+const myPriv=document.getElementById('s2_myPriv');
+
+// auto-fill private key from Step 1 if available this session
+const savedPriv=load('ae_priv');
+if(savedPriv){ myPriv.value=savedPriv; document.getElementById('s2_autofillNote').style.display='block'; }
+
+message.addEventListener('input',()=>{
+  const n=message.value.length;
+  counter.textContent=n+'/150 characters';
+  counter.classList.toggle('over', n>=150);
+});
+
+function showErr(msg){ err.textContent='⚠ '+msg; err.classList.add('show'); result.classList.remove('show'); }
+
+document.getElementById('s2_encBtn').addEventListener('click', async ()=>{
+  err.classList.remove('show');
+  const pub=document.getElementById('s2_partnerPub').value.trim();
+  const priv=myPriv.value.trim();
+  const msg=message.value;
+  if(!pub) return showErr("Please paste your partner's public key.");
+  if(!priv) return showErr('Please paste your private key (needed to sign the message).');
+  if(!msg.trim()) return showErr('Please type a message to encrypt.');
+  try{
+    const b=await encryptAndSign(pub, priv, msg);
+    bundle.value=b;
+    result.classList.add('show');
+    result.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){
+    showErr('Could not encrypt/sign. Check that the keys are pasted correctly. ('+e.message+')');
+  }
+});
+
+document.getElementById('s2_copyBundle').addEventListener('click',function(){
+  navigator.clipboard.writeText(bundle.value).then(()=>{
+    const t=this.textContent; this.textContent='Copied ✓';
+    setTimeout(()=>this.textContent=t,1400);
+  }).catch(()=>{bundle.select();document.execCommand('copy');});
+});
+
+})();</script>
+<script>;(function(){
+
+/* ---------- helpers ---------- */
+function b642ab(b64){const s=atob(b64);const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer;}
+function load(k){try{return sessionStorage.getItem(k)||'';}catch(e){return '';}}
+
+async function importEncPrivate(privStr){
+  const {enc}=JSON.parse(atob(privStr.trim()));
+  return crypto.subtle.importKey('pkcs8', b642ab(enc), {name:'RSA-OAEP', hash:'SHA-256'}, false, ['decrypt']);
+}
+async function importSigPublic(pubStr){
+  const {sig}=JSON.parse(atob(pubStr.trim()));
+  return crypto.subtle.importKey('spki', b642ab(sig), {name:'RSA-PSS', hash:'SHA-256'}, false, ['verify']);
+}
+async function decryptAndVerify(myPriv, partnerPub, bundleStr){
+  const {ct, sig}=JSON.parse(atob(bundleStr.trim()));
+  const decKey=await importEncPrivate(myPriv);
+  const plainBuf=await crypto.subtle.decrypt({name:'RSA-OAEP'}, decKey, b642ab(ct));
+  const message=new TextDecoder().decode(plainBuf);
+  let valid=false;
+  try{
+    const verKey=await importSigPublic(partnerPub);
+    valid=await crypto.subtle.verify({name:'RSA-PSS', saltLength:32}, verKey, b642ab(sig), plainBuf);
+  }catch(e){ valid=false; }
+  return {message, valid};
+}
+
+/* ---------- UI ---------- */
+const err=document.getElementById('s3_err');
+const result=document.getElementById('s3_result');
+const msgOut=document.getElementById('s3_msgOut');
+const badge=document.getElementById('s3_badge');
+const myPriv=document.getElementById('s3_myPriv');
+
+const savedPriv=load('ae_priv');
+if(savedPriv){ myPriv.value=savedPriv; document.getElementById('s3_autofillNote').style.display='block'; }
+
+function showErr(msg){ err.textContent='⚠ '+msg; err.classList.add('show'); result.classList.remove('show'); }
+
+document.getElementById('s3_decBtn').addEventListener('click', async ()=>{
+  err.classList.remove('show');
+  const priv=myPriv.value.trim();
+  const pub=document.getElementById('s3_partnerPub').value.trim();
+  const bundle=document.getElementById('s3_bundle').value.trim();
+  if(!priv) return showErr('Please paste your private key (needed to decrypt).');
+  if(!pub) return showErr("Please paste your partner's public key (needed to verify the signature).");
+  if(!bundle) return showErr('Please paste the encrypted message from your partner.');
+  try{
+    const {message, valid}=await decryptAndVerify(priv, pub, bundle);
+    msgOut.textContent=message;
+    if(valid){
+      badge.className='badge valid';
+      badge.innerHTML='<span class="big-ico">✅</span><div>Signature Verified<small>This message genuinely came from your partner and was not altered.</small></div>';
+    }else{
+      badge.className='badge invalid';
+      badge.innerHTML='<span class="big-ico">⚠️</span><div>Signature Invalid<small>The message decrypted, but the signature does not match. It may have been altered or signed with a different key.</small></div>';
+    }
+    result.classList.add('show');
+    result.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){
+    showErr('Could not decrypt. Make sure you used YOUR private key (the one matching the public key your partner encrypted to) and that the message was pasted completely.');
+  }
+});
+
+})();</script>
+<script>
+(function(){
+  var views=['home','step1','step2','step3'];
+  var nav=document.getElementById('topnav');
+  function show(v){
+    if(views.indexOf(v)<0) v='home';
+    views.forEach(function(x){
+      var el=document.getElementById('view-'+x);
+      if(el) el.classList.toggle('active', x===v);
+    });
+    Array.prototype.forEach.call(nav.querySelectorAll('a'), function(a){
+      a.classList.toggle('active', a.getAttribute('data-view')===v);
+    });
+    try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
+    if(history && history.replaceState) history.replaceState(null,'','#'+v);
+  }
+  document.addEventListener('click', function(e){
+    var a=e.target.closest ? e.target.closest('[data-view]') : null;
+    if(a){ e.preventDefault(); show(a.getAttribute('data-view')); }
+  });
+  var init=(location.hash||'#home').slice(1);
+  show(init);
+})();
+</script>
+</body>
+</html>
