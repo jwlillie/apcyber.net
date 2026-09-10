@@ -477,6 +477,11 @@ function renderApiKeyBannerExpanded(containerId) {
 }
 
 
+// Gemini model ID. Google retires old models periodically — if you see a
+// "model is no longer available" error, update this one line.
+// Current stable Flash models: https://ai.google.dev/gemini-api/docs/models
+var GEMINI_MODEL = 'gemini-3.6-flash';
+
 async function callAI(prompt, systemPrompt, conversationMessages) {
   var info = getSavedApiKey();
   if (!info.key) throw new Error('No API key set. Please enter your API key to use this tool.');
@@ -494,20 +499,31 @@ async function callAI(prompt, systemPrompt, conversationMessages) {
       contents = [{ parts: [{text: prompt || ''}] }];
     }
     // Build request body - use system_instruction for system prompt (correct Gemini format)
+    // Gemini 3.x notes: temperature/top_p/top_k are deprecated (ignored now, HTTP 400 in
+    // future models), and "thinking" tokens share the output budget, so the limit is
+    // higher than the old 2000 to keep answers from being cut off.
     var reqBody = {
       contents: contents,
-      generationConfig: {maxOutputTokens:2000, temperature:0.7}
+      generationConfig: {maxOutputTokens: 8192}
     };
     if (systemPrompt) {
       reqBody.system_instruction = { parts: [{text: systemPrompt}] };
     }
-    var resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key,
-      { method:'POST', headers:{'Content-Type':'application/json'},
+    // Key goes in a header instead of the URL so it doesn't end up in browser history or logs.
+    var resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent',
+      { method:'POST', headers:{'Content-Type':'application/json', 'x-goog-api-key': key},
         body: JSON.stringify(reqBody) });
     var data = await resp.json();
     if (data.error) throw new Error('Gemini: ' + data.error.message);
     if (!data.candidates || !data.candidates.length) throw new Error('Gemini returned no response.');
-    return (data.candidates[0].content || {parts:[{text:''}]}).parts.map(function(p){return p.text||'';}).join('');
+    var cand = data.candidates[0];
+    var text = ((cand.content && cand.content.parts) || [])
+      .filter(function(p){ return !p.thought; })   // skip internal reasoning parts
+      .map(function(p){ return p.text || ''; }).join('');
+    if (!text.trim()) {
+      throw new Error('Gemini returned an empty answer' + (cand.finishReason ? ' (' + cand.finishReason + ')' : '') + '. Try rephrasing or asking a shorter question.');
+    }
+    return text;
 
   } else if (provider === 'openai') {
     var messages = [];
@@ -1030,7 +1046,12 @@ async function sendMessage() {
   } catch(err) {
     var streamRow = document.getElementById("streaming-msg");
     if (streamRow) streamRow.remove();
-    addMessage("ai", "Please enter a valid API key above to use the AI Tutor. try again. (Error: " + err.message + ")");
+    // Only blame the API key when the error is actually about the key
+    var msg = err.message || String(err);
+    var keyProblem = /api key|api_key|no api key|invalid.*key|unauthori[sz]ed|permission|401|403|authentication/i.test(msg);
+    addMessage("ai", keyProblem
+      ? "There's a problem with your API key. Check it in the box above and try again. (Error: " + msg + ")"
+      : "Sorry, something went wrong reaching the AI Tutor. Please try again. (Error: " + msg + ")");
   }
 
   isStreaming = false;
